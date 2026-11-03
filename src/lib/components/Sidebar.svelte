@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from './Logo.svelte';
   // Barre latérale : navigation, stores, carte « En jeu », bouton « Ajouter un jeu ».
   import { STORES } from '../stores-meta';
   import { library, presentStores } from '../stores/library.svelte';
@@ -32,28 +33,7 @@
 
 <aside class:rail aria-label="Navigation">
   <div class="logo">
-    <svg width="30" height="30" viewBox="0 0 1024 1024" aria-hidden="true"
-      ><defs
-        ><linearGradient id="hgl" x1="0" y1="0" x2="1" y2="1"
-          ><stop offset="0" stop-color="#8b5cf6"></stop><stop offset=".55" stop-color="#6366f1"></stop><stop
-            offset="1"
-            stop-color="#22d3ee"
-          ></stop></linearGradient
-        ></defs
-      ><rect x="64" y="64" width="896" height="896" rx="220" fill="url(#hgl)"></rect><path
-        d="M272 760 V470 Q272 300 512 268 Q752 300 752 470 V760"
-        fill="none"
-        stroke="#fff"
-        stroke-width="72"
-        stroke-linecap="round"
-      ></path><path
-        d="M452 520 L612 610 L452 700 Z"
-        fill="#fff"
-        stroke="#fff"
-        stroke-width="28"
-        stroke-linejoin="round"
-      ></path></svg
-    >
+    <Logo size={30} />
     {#if !rail}<span>Hangar</span>{/if}
   </div>
 

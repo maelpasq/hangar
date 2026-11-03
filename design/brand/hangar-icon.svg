@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#17131f"/>
+      <stop offset="1" stop-color="#08070c"/>
+    </linearGradient>
+    <radialGradient id="g1" cx="0" cy="0" r="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5a2fd6" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#5a2fd6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="1024" cy="1024" r="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6a3cf0" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#6a3cf0" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="clip"><rect x="40" y="40" width="944" height="944" rx="216"/></clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="1024" height="1024" fill="url(#tile)"/>
+    <rect width="1024" height="1024" fill="url(#g1)"/>
+    <rect width="1024" height="1024" fill="url(#g2)"/>
+  </g>
+  <rect x="40.5" y="40.5" width="943" height="943" rx="216" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="3"/>
+  <g transform="translate(512 528) scale(0.8) translate(-465 -362)">
+  
+  <defs>
+    <!-- Arche : lavande clair en haut, gris violacé en bas -->
+    <linearGradient id="hg-arch" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dcd8e3"/>
+      <stop offset="0.42" stop-color="#d4cfde"/>
+      <stop offset="1" stop-color="#6f6683"/>
+    </linearGradient>
+    <!-- Lueur violette sur la jambe gauche -->
+    <radialGradient id="hg-glow" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6e3bf6"/>
+      <stop offset="0.5" stop-color="#7a52f0" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#8a6ff0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hg-star" x1="0" y1="345" x2="0" y2="575" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7440f4"/>
+      <stop offset="1" stop-color="#652cee"/>
+    </linearGradient>
+    <path id="hg-arch-path" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
+  </defs>
+  <use href="#hg-arch-path" fill="url(#hg-arch)"/>
+  <use href="#hg-arch-path" fill="url(#hg-glow)"/>
+  <path d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hg-star)"/>
+</g>
+</svg>

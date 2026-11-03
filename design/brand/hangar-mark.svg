@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 930 720" width="930" height="720">
+  <title>Hangar</title>
+  <defs>
+    <!-- Arche : lavande clair en haut, gris violacé en bas -->
+    <linearGradient id="hg-arch" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dcd8e3"/>
+      <stop offset="0.42" stop-color="#d4cfde"/>
+      <stop offset="1" stop-color="#6f6683"/>
+    </linearGradient>
+    <!-- Lueur violette sur la jambe gauche -->
+    <radialGradient id="hg-glow" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6e3bf6"/>
+      <stop offset="0.5" stop-color="#7a52f0" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#8a6ff0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hg-star" x1="0" y1="345" x2="0" y2="575" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7440f4"/>
+      <stop offset="1" stop-color="#652cee"/>
+    </linearGradient>
+    <path id="hg-arch-path" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
+  </defs>
+  <use href="#hg-arch-path" fill="url(#hg-arch)"/>
+  <use href="#hg-arch-path" fill="url(#hg-glow)"/>
+  <path d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hg-star)"/>
+</svg>

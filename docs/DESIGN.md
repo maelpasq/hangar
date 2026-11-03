@@ -166,3 +166,12 @@ Icônes au trait, 18 px, épaisseur 1,8, bouts arrondis (style Lucide). Utiliser
 Accueil, Bibliothèque, Favoris, Paramètres, Stores, Ajouter un jeu, Rechercher parmi N jeux, Reprendre, Tes dernières sessions, Favoris / N jeux épinglés, Les plus joués, Toute la bibliothèque, Jouer, Voir la fiche, En cours, Arrêter, Se lance via <launcher>, Activité, Temps de jeu, Dernière session, Lancements, Taille, 14 derniers jours, heures par jour, Informations, Emplacement, Lanceur, Ajouté, Ouvrir le dossier, Renommer, Changer la jaquette, Masquer de la bibliothèque, Aussi dans ta bibliothèque, Ouverture de <launcher>…, Démarrage de <jeu>…, Bon jeu !, Annuler, Stores détectés, Dossiers de jeux locaux, Ajouter un dossier, Couleur d'accent, Comportement, Aujourd'hui, Hier, Il y a N jours.
 
 Le tutoiement est utilisé partout.
+
+## 8. Identité visuelle (logo)
+
+Source : la DA fournie par l'utilisateur, `design/brand/da-hangar.webp`.
+
+- Le logo est une arche de hangar en dégradé (lavande `#dcd8e3` en haut, violet `#6e3bf6` en bas à gauche, gris violacé `#6f6683` en bas à droite) avec une étoile à 4 branches violette (`#7440f4` vers `#652cee`). Il est redessiné en vectoriel dans `design/brand/hangar-mark.svg` (référence), et repris dans `src/lib/components/Logo.svelte`.
+- `design/brand/hangar-wordmark.png` : le texte « Hangar » extrait de la DA, fond transparent. `design/brand/hangar-logo.png` : logo complet (arche + texte).
+- `design/brand/hangar-icon.svg` / `hangar-icon-1024.png` : icône d'application (tuile sombre arrondie avec les lueurs violettes de la DA).
+- `npm run brand` régénère l'icône, le favicon (`public/favicon.svg`, `public/favicon-32.png`) et les icônes Tauri (`src-tauri/icons/`, dont `icon.ico` pour l'exe et l'installeur).

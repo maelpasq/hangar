@@ -32,3 +32,9 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Genre non rempli : l'API `appdetails` de Steam n'est pas dans la liste réseau autorisée.
 - Non fait (facultatif) : temps de jeu Steam lu dans `localconfig.vdf`.
 - « Annuler » pendant un lancement ferme l'overlay mais ne coupe pas le suivi : un launcher déjà sollicité ne peut pas être annulé.
+
+## Identité visuelle
+
+- Le logo de la DA est redessiné en SVG (plutôt que découpé dans l'image) pour rester net à toutes les tailles, de 16 px (favicon) à 1024 px. Seul le texte « Hangar » est extrait de l'image, faute de connaître la police exacte.
+- Icône d'app : le logo sur une tuile sombre arrondie, pour rester lisible sur une barre des tâches claire comme sombre.
+- La couleur d'accent par défaut de l'interface reste `#7c6cff` (maquette validée) ; le violet du logo est un peu plus saturé.
