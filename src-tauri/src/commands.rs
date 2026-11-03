@@ -1,6 +1,7 @@
 //! Commandes Tauri : fines, elles délèguent aux modules.
 
 use crate::art::{self, Art, SteamHit};
+use crate::artwork::{Artwork, Artworks};
 use crate::model::Game;
 use crate::size::Sizes;
 use crate::state::{self, Known, Paths};
@@ -17,6 +18,7 @@ pub struct Ctx {
     pub known: Known,
     pub tracker: Tracker,
     pub art: Arc<Art>,
+    pub artwork: Arc<Artworks>,
     pub sizes: Arc<Sizes>,
     pub xbox_busy: Arc<AtomicBool>,
 }
@@ -142,6 +144,19 @@ pub async fn search_steam(ctx: Ctxs<'_>, query: String) -> Result<Vec<SteamHit>,
 pub async fn image(ctx: Ctxs<'_>, url: String) -> Result<Option<String>, String> {
     let art = ctx.art.clone();
     blocking(move || art.image(&url).map(|p| p.to_string_lossy().into_owned())).await
+}
+
+/// Jaquette et bannière d'un jeu connu, trouvées automatiquement (jamais d'erreur : vide si rien).
+#[tauri::command]
+pub async fn find_artwork(
+    ctx: Ctxs<'_>,
+    game_id: String,
+    steam_grid_key: Option<String>,
+    refresh: bool,
+) -> Result<Artwork, String> {
+    let Some(game) = ctx.known.get(&game_id) else { return Ok(Artwork::default()) };
+    let aw = ctx.artwork.clone();
+    blocking(move || aw.find(&game, steam_grid_key.as_deref(), refresh)).await
 }
 
 #[tauri::command]

@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod art;
+mod artwork;
 mod commands;
 mod launcher;
 mod model;
@@ -53,8 +54,10 @@ fn main() {
                     log::error!("dossier {} : {e}", d.display());
                 }
             }
+            let art = Arc::new(art::Art::new(&paths.cache));
             let ctx = commands::Ctx {
-                art: Arc::new(art::Art::new(&paths.cache)),
+                artwork: Arc::new(artwork::Artworks::new(art.clone(), &paths.cache)),
+                art,
                 sizes: Arc::new(size::Sizes::new(&paths.cache)),
                 tracker: tracker::Tracker::start(app.handle().clone()),
                 known: state::Known::default(),
@@ -84,6 +87,7 @@ fn main() {
             commands::resolve_steam_id,
             commands::search_steam,
             commands::image,
+            commands::find_artwork,
             commands::exe_icon,
             commands::folder_size,
             commands::set_autostart,

@@ -1,4 +1,5 @@
-//! Images : cache disque des jaquettes du CDN Steam, recherche Steam, icônes d'exe,
+//! Images : cache disque des jaquettes (CDN Steam, Epic, GOG, Microsoft Store, SteamGridDB),
+//! recherche Steam, icônes d'exe,
 //! jaquettes personnalisées.
 
 use serde::Serialize;
@@ -22,11 +23,41 @@ pub fn hash(s: &str) -> String {
     format!("{h:016x}")
 }
 
-/// N'autorise que le CDN Steam en HTTPS.
+/// Hôtes d'images autorisés (HTTPS uniquement) : CDN Steam, Epic, GOG, Microsoft Store, SteamGridDB.
+const ALLOWED_SUFFIXES: &[&str] = &["steamstatic.com", "epicgames.com", "gog-statics.com", "steamgriddb.com"];
+const ALLOWED_HOSTS: &[&str] = &[
+    "store.steampowered.com",
+    "api.gog.com",
+    "gamesdb.gog.com",
+    "images.gog.com",
+    "store-images.s-microsoft.com",
+    "displaycatalog.mp.microsoft.com",
+];
+
 pub fn allowed_url(url: &str) -> bool {
     let Some(rest) = url.strip_prefix("https://") else { return false };
     let host = rest.split(['/', '?', '#']).next().unwrap_or("").to_lowercase();
-    !host.contains(':') && !host.contains('@') && (host == "steamstatic.com" || host.ends_with(".steamstatic.com"))
+    if host.contains(':') || host.contains('@') {
+        return false;
+    }
+    ALLOWED_HOSTS.contains(&host.as_str())
+        || ALLOWED_SUFFIXES.iter().any(|s| host == *s || host.ends_with(&format!(".{s}")))
+}
+
+/// Encode les caractères qu'une URL ne peut pas contenir tels quels (espaces des images Epic...).
+pub fn sanitize_url(url: &str) -> String {
+    let mut out = String::with_capacity(url.len());
+    for c in url.chars() {
+        if c.is_ascii_graphic() && c != '"' && c != '<' && c != '>' && c != '\\' {
+            out.push(c);
+        } else {
+            let mut buf = [0u8; 4];
+            for b in c.encode_utf8(&mut buf).bytes() {
+                out.push_str(&format!("%{b:02X}"));
+            }
+        }
+    }
+    out
 }
 
 /// Sémaphore simple : au plus N téléchargements simultanés.
@@ -88,6 +119,7 @@ impl Art {
 
     /// Chemin local d'une image distante, téléchargée si absente. `None` si introuvable.
     pub fn image(&self, url: &str) -> Option<PathBuf> {
+        let url = &sanitize_url(url);
         if !allowed_url(url) {
             log::warn!("image refusée (hôte non autorisé) : {url}");
             return None;
@@ -140,6 +172,29 @@ impl Art {
         }
     }
 
+    /// Appel JSON vers une API d'images autorisée. Erreur : code HTTP, ou 0 (réseau, JSON).
+    pub fn get_json(&self, url: &str, bearer: Option<&str>) -> Result<serde_json::Value, u16> {
+        if !allowed_url(url) {
+            log::warn!("API refusée (hôte non autorisé) : {url}");
+            return Err(0);
+        }
+        let mut req = self.agent.get(url).set("Accept", "application/json");
+        if let Some(k) = bearer {
+            req = req.set("Authorization", &format!("Bearer {k}"));
+        }
+        match req.call() {
+            Ok(r) => r.into_json().map_err(|_| 0),
+            Err(ureq::Error::Status(code, _)) => {
+                log::debug!("API {code} : {url}");
+                Err(code)
+            }
+            Err(e) => {
+                log::info!("API indisponible ({e}) : {url}");
+                Err(0)
+            }
+        }
+    }
+
     fn store_search(&self, term: &str) -> Vec<SteamHit> {
         let url = format!("https://store.steampowered.com/api/storesearch/?term={}&l=english&cc=US", urlencode(term));
         let v: Option<serde_json::Value> = self.agent.get(&url).call().ok().and_then(|r| r.into_json().ok());
@@ -167,6 +222,16 @@ impl Art {
             return None;
         }
         pick_match(&self.store_search(&clean), &clean)
+    }
+
+    /// Comme `resolve_steam_id`, mais seulement sur un nom identique (après normalisation).
+    pub fn resolve_steam_id_exact(&self, name: &str) -> Option<u32> {
+        let clean = clean_name(name);
+        let target = crate::scanner::norm(&clean);
+        if target.is_empty() {
+            return None;
+        }
+        self.store_search(&clean).into_iter().find(|h| crate::scanner::norm(&h.name) == target).map(|h| h.id)
     }
 
     /// 5 premiers résultats de recherche Steam ; un nombre est pris comme ID direct.
@@ -394,6 +459,22 @@ mod tests {
         assert!(!allowed_url("https://steamstatic.com.evil.io/x.jpg"));
         assert!(!allowed_url("https://evil.io/steamstatic.com/x.jpg"));
         assert!(!allowed_url("https://user@cdn.steamstatic.com/x.jpg"));
+        assert!(allowed_url("https://cdn1.epicgames.com/item/fn/x"));
+        assert!(allowed_url("https://images-3.gog-statics.com/x.jpg"));
+        assert!(allowed_url("https://images.gog.com/x.jpg?namespace=gamesdb"));
+        assert!(allowed_url("https://store-images.s-microsoft.com/image/apps.1"));
+        assert!(allowed_url("https://cdn2.steamgriddb.com/grid/a.png"));
+        assert!(allowed_url("https://www.steamgriddb.com/api/v2/grids/steam/1"));
+        assert!(!allowed_url("https://gog.com.evil.io/x.jpg"));
+        assert!(!allowed_url("https://evil-gog.com/x.jpg"));
+        assert!(!allowed_url("https://example.com/x.jpg"));
+    }
+
+    #[test]
+    fn url_nettoyee() {
+        assert_eq!(sanitize_url("https://cdn1.epicgames.com/a b (c).jpg"), "https://cdn1.epicgames.com/a%20b%20(c).jpg");
+        assert_eq!(sanitize_url("https://x.com/é"), "https://x.com/%C3%A9");
+        assert_eq!(sanitize_url("https://x.com/a?b=1&c=%20"), "https://x.com/a?b=1&c=%20");
     }
 
     #[test]
