@@ -1,5 +1,5 @@
 //! Détection des jeux installés : Steam, Epic, GOG, Ubisoft, EA, Battle.net,
-//! Riot, Xbox / Microsoft Store et dossiers locaux.
+//! Riot, Xbox / Microsoft Store, jeux installés hors store et dossiers locaux.
 //!
 //! Chaque détecteur renvoie une liste vide en cas d'erreur (store absent, clé
 //! de registre manquante, fichier corrompu) et journalise la raison.
@@ -9,6 +9,7 @@ pub mod ea;
 pub mod epic;
 pub mod exe;
 pub mod gog;
+pub mod installed;
 pub mod local;
 pub mod registry;
 pub mod riot;
@@ -99,6 +100,7 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
         ("ea", ea::detect),
         ("battlenet", battlenet::detect),
         ("riot", riot::detect),
+        ("installés", installed::detect),
     ];
     let mut games: Vec<Game> = std::thread::scope(|s| {
         let handles: Vec<_> = detectors
@@ -116,7 +118,7 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
             .collect()
     });
     games = games.into_iter().map(finalize).collect();
-    dedupe(games)
+    dedupe(installed::drop_nested(games))
 }
 
 /// Scan Xbox (lent) : à lancer en tâche de fond. Écarte les dossiers déjà connus

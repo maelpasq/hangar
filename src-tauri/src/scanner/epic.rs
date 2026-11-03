@@ -31,9 +31,9 @@ pub fn parse_manifest(text: &str) -> Option<Game> {
     if !it.app_categories.is_empty() && !it.app_categories.iter().any(|c| c == "games") {
         return None;
     }
-    // Les DLC ont un MainGameAppName différent de leur AppName
+    // Les DLC ont un MainGameAppName différent de leur AppName (vide = jeu principal)
     if let (Some(m), Some(a)) = (&it.main_game_app_name, &it.app_name) {
-        if m != a {
+        if !m.is_empty() && m != a {
             return None;
         }
     }
@@ -105,6 +105,13 @@ mod tests {
         );
         assert!(g.exe_path.unwrap().ends_with("FortniteLauncher.exe"));
         assert_eq!(g.launcher_name, "Epic Games Launcher");
+    }
+
+    #[test]
+    fn main_game_app_name_vide_est_un_jeu() {
+        // Cas réel : les manifestes récents laissent MainGameAppName vide.
+        let g = parse_manifest(&ITEM.replace("\"MainGameAppName\": \"Fortnite\"", "\"MainGameAppName\": \"\""));
+        assert_eq!(g.unwrap().id, "epic:Fortnite");
     }
 
     #[test]
