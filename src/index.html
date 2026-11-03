@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hangar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient" id="ambient"></div>
+
+  <header class="titlebar" data-tauri-drag-region>
+    <div class="brand" data-tauri-drag-region>
+      <img src="logo.png" alt="" />
+      <span>Hangar</span>
+    </div>
+    <label class="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" type="text" placeholder="Rechercher un jeu" autocomplete="off" spellcheck="false" />
+      <kbd>Ctrl K</kbd>
+    </label>
+    <div class="tb-actions">
+      <button class="icon-btn" id="btn-rescan" title="Actualiser la bibliothèque">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-settings" title="Paramètres">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <div class="win-ctrl">
+        <button id="win-min" title="Réduire"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+        <button id="win-max" title="Agrandir"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1.2"/></svg></button>
+        <button id="win-close" class="close" title="Fermer"><svg viewBox="0 0 12 12"><path d="m3 3 6 6M9 3l-6 6"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <nav>
+        <p class="nav-label">Bibliothèque</p>
+        <div id="nav-main"></div>
+        <p class="nav-label">Stores</p>
+        <div id="nav-stores"></div>
+      </nav>
+      <button class="add-btn" id="btn-add">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Ajouter un jeu</span>
+      </button>
+    </aside>
+
+    <main class="content" id="content">
+      <section class="hero" id="hero"></section>
+      <section id="recent-section" class="row-section">
+        <div class="section-head"><h2>Récemment lancés</h2></div>
+        <div class="row" id="recent-row"></div>
+      </section>
+      <section class="grid-section">
+        <div class="section-head">
+          <h2 id="grid-title">Tous les jeux</h2>
+          <span class="count" id="grid-count"></span>
+          <div class="spacer"></div>
+          <div class="segmented" id="sort">
+            <button data-sort="az">A-Z</button>
+            <button data-sort="recent">Récents</button>
+            <button data-sort="store">Store</button>
+          </div>
+          <input type="range" id="size" min="140" max="260" step="10" title="Taille des jaquettes" />
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="empty" hidden></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="menu" id="menu" hidden></div>
+  <div class="modal-backdrop" id="modal" hidden><div class="modal" id="modal-body"></div></div>
+  <div class="toasts" id="toasts"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
