@@ -55,11 +55,11 @@ Fais les étapes dans l'ordre. Chacune se termine par : `npm run check`, `npm ru
 - [x] Autostart, single-instance (ramène la fenêtre existante), window-state (taille et position mémorisées).
 
 ## Étape 9 - Finitions
-- [ ] `prefers-reduced-motion`, navigation clavier complète, focus visibles, contrastes AA.
-- [ ] Grille virtualisée au-delà de 150 jeux, mesure du démarrage (< 1 s jusqu'au premier affichage depuis le cache).
-- [ ] Journal (`tauri-plugin-log`) dans `%LOCALAPPDATA%\studio.pamal.hangar\logs`.
-- [ ] Supprimer `legacy/`, mettre à jour README.md (captures, fonctionnalités, build).
-- [ ] `npm run build` : exe portable + installeur NSIS. Tester l'installeur sur Windows 11.
+- [x] `prefers-reduced-motion`, navigation clavier complète, focus visibles, contrastes AA.
+- [x] Grille virtualisée au-delà de 150 jeux, mesure du démarrage (< 1 s jusqu'au premier affichage depuis le cache).
+- [x] Journal (`tauri-plugin-log`) dans `%LOCALAPPDATA%\studio.pamal.hangar\logs`.
+- [x] Supprimer `legacy/`, mettre à jour README.md (captures, fonctionnalités, build).
+- [x] `npm run build` : exe portable + installeur NSIS. Tester l'installeur sur Windows 11 (exe vérifié, installeur à tester par l'utilisateur).
 
 ## Étape 10 - Recette sur le PC de l'utilisateur
 Liste à faire valider par l'utilisateur (lui demander de lancer l'app et de cocher) :

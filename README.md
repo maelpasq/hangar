@@ -1,10 +1,10 @@
 # Hangar
 
-> Pour développer avec Claude Code : voir `PROMPT.md` (message à coller) et `CLAUDE.md`.
+> Pour développer avec Claude Code : voir `CLAUDE.md` et `docs/` (SPEC, DESIGN, ARCHITECTURE, PLAN, DECISIONS).
 
-Bibliothèque de jeux unifiée pour Windows (Tauri 2 + Rust).
+Bibliothèque de jeux unifiée pour Windows 10/11 (Tauri 2 + Rust, interface Svelte 5).
 
-Détecte automatiquement les jeux installés et les lance via leur launcher (ou directement l'exécutable s'il n'y en a pas) :
+Au premier démarrage, Hangar détecte tous les jeux installés, affiche leurs vraies jaquettes et les lance via leur launcher (ou directement l'exécutable s'il n'y en a pas) :
 
 | Source | Détection | Lancement |
 |---|---|---|
@@ -17,11 +17,19 @@ Détecte automatiquement les jeux installés et les lance via leur launcher (ou 
 | Riot Games | `ProgramData\Riot Games\Metadata` | `RiotClientServices.exe --launch-product=...` |
 | Xbox / Microsoft Store | `Get-AppxPackage` + `MicrosoftGame.config` | `shell:AppsFolder\<famille>!<app>` |
 | Dossiers locaux | Un jeu par sous-dossier, exe choisi automatiquement (launcher prioritaire) | Exe |
-| Ajout manuel | Exe choisi par toi | Exe + arguments |
+| Ajout manuel | Exe, raccourci ou `.bat` choisi par toi | Exe + arguments |
 
-Fonctions : jaquettes automatiques (CDN Steam, recherche Steam pour les jeux hors Steam), recherche instantanée (tape n'importe où, Entrée lance le 1er résultat), filtres par store, favoris, récemment lancés, renommer, masquer, corriger la jaquette, ouvrir le dossier.
+## Fonctionnalités
 
-Données sauvegardées dans `%APPDATA%\studio.pamal.hangar\state.json`.
+- Accueil avec carrousel des jeux mis en avant, « Reprendre », favoris et « Les plus joués ».
+- Bibliothèque filtrable par store, triable (Récents, A-Z, Temps de jeu), grille virtualisée pour les grandes collections.
+- Page de jeu : temps de jeu, dernière session, lancements, taille sur le disque, histogramme des 14 derniers jours.
+- Suivi des parties : Hangar détecte le processus du jeu, chronomètre la session et peut l'arrêter.
+- Jaquettes automatiques (CDN Steam, recherche Steam pour les jeux hors Steam), mises en cache sur le disque ; jaquette personnalisée ou générée.
+- Recherche instantanée (`Ctrl K` ou tape n'importe où, `Entrée` ouvre, `Ctrl Entrée` lance).
+- Renommer, masquer (avec Annuler), favoris, dossiers locaux, stores désactivables, couleur d'accent, démarrage avec Windows.
+
+Données : `%APPDATA%\studio.pamal.hangar\state.json` (réglages, favoris, temps de jeu), cache dans `%LOCALAPPDATA%\studio.pamal.hangar\cache`, journal dans `%LOCALAPPDATA%\studio.pamal.hangar\logs`.
 
 ## Compiler (sur Windows)
 
@@ -40,6 +48,14 @@ npm run build
 
 Résultats :
 - Exe portable : `src-tauri\target\release\hangar.exe`
-- Installeur : `src-tauri\target\release\bundle\nsis\Hangar_1.0.0_x64-setup.exe`
+- Installeur (par utilisateur, sans droits admin) : `src-tauri\target\release\bundle\nsis\Hangar_1.0.0_x64-setup.exe`
 
-Mode développement (rechargement à chaud de l'interface) : `npm run dev`.
+## Développer
+
+```bash
+npm run dev        # app Tauri avec rechargement à chaud
+npm run dev:web    # interface seule dans un navigateur, avec 36 jeux de démo
+npm run check      # svelte-check + tsc
+npm run test       # tests frontend (vitest)
+cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
+```
