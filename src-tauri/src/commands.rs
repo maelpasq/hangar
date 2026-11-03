@@ -2,6 +2,7 @@
 
 use crate::art::{self, Art, SteamHit};
 use crate::artwork::{Artwork, Artworks};
+use crate::info::{GameInfo, Infos};
 use crate::model::Game;
 use crate::size::Sizes;
 use crate::state::{self, Known, Paths};
@@ -19,6 +20,7 @@ pub struct Ctx {
     pub tracker: Tracker,
     pub art: Arc<Art>,
     pub artwork: Arc<Artworks>,
+    pub info: Arc<Infos>,
     pub sizes: Arc<Sizes>,
     pub xbox_busy: Arc<AtomicBool>,
 }
@@ -157,6 +159,14 @@ pub async fn find_artwork(
     let Some(game) = ctx.known.get(&game_id) else { return Ok(Artwork::default()) };
     let aw = ctx.artwork.clone();
     blocking(move || aw.find(&game, steam_grid_key.as_deref(), refresh)).await
+}
+
+/// Genre d'un jeu (API appdetails de Steam, en cache). Jamais d'erreur.
+#[tauri::command]
+pub async fn game_info(ctx: Ctxs<'_>, game_id: String) -> Result<GameInfo, String> {
+    let Some(game) = ctx.known.get(&game_id) else { return Ok(GameInfo::default()) };
+    let info = ctx.info.clone();
+    blocking(move || info.get(&game)).await
 }
 
 #[tauri::command]

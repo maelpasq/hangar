@@ -266,6 +266,11 @@ impl Artworks {
         })
     }
 
+    /// appid Steam retrouvé par le nom (même cache que les jaquettes).
+    pub fn steam_id(&self, name: &str) -> Option<u32> {
+        self.steam_id_for(name)
+    }
+
     /// appid Steam d'un jeu hors Steam (cache 3 jours pour un échec).
     fn steam_id_for(&self, name: &str) -> Option<u32> {
         let k = crate::scanner::norm(name);

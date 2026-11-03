@@ -13,8 +13,10 @@ pub mod installed;
 pub mod local;
 pub mod registry;
 pub mod riot;
+pub mod stats;
 pub mod steam;
 pub mod ubisoft;
+pub mod vdf;
 pub mod xbox;
 
 use crate::model::Game;
@@ -118,7 +120,9 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
             .collect()
     });
     games = games.into_iter().map(finalize).collect();
-    dedupe(installed::drop_nested(games))
+    let mut games = dedupe(installed::drop_nested(games));
+    stats::enrich(&mut games);
+    games
 }
 
 /// Scan Xbox (lent) : à lancer en tâche de fond. Écarte les dossiers déjà connus
@@ -127,7 +131,9 @@ pub fn scan_xbox(known: &[Game]) -> Vec<Game> {
     let taken: HashSet<String> =
         known.iter().filter(|g| priority(&g.store) < priority("xbox")).map(dir_key).collect();
     let games = run_detector("xbox", xbox::detect);
-    games.into_iter().filter(|g| !taken.contains(&dir_key(g))).map(finalize).collect()
+    let mut games: Vec<Game> = games.into_iter().filter(|g| !taken.contains(&dir_key(g))).map(finalize).collect();
+    stats::enrich(&mut games);
+    games
 }
 
 #[cfg(test)]

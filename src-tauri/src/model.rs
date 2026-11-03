@@ -38,6 +38,18 @@ pub struct Game {
     pub process_names: Vec<String>,
     #[serde(default)]
     pub genre: Option<String>,
+    /// Temps de jeu total connu du store (ms).
+    #[serde(default)]
+    pub store_play_ms: Option<u64>,
+    /// Dernière session connue du store (ms epoch).
+    #[serde(default)]
+    pub store_last_played: Option<u64>,
+    /// Taille sur disque donnée par le store ou le registre (octets).
+    #[serde(default)]
+    pub size_bytes: Option<u64>,
+    /// Date d'installation (ms epoch).
+    #[serde(default)]
+    pub installed_at: Option<u64>,
 }
 
 /// Session envoyée au frontend : `{ gameId, start, end }` en millisecondes epoch.

@@ -3,6 +3,7 @@
 mod art;
 mod artwork;
 mod commands;
+mod info;
 mod launcher;
 mod model;
 mod scanner;
@@ -55,8 +56,10 @@ fn main() {
                 }
             }
             let art = Arc::new(art::Art::new(&paths.cache));
+            let artworks = Arc::new(artwork::Artworks::new(art.clone(), &paths.cache));
             let ctx = commands::Ctx {
-                artwork: Arc::new(artwork::Artworks::new(art.clone(), &paths.cache)),
+                info: Arc::new(info::Infos::new(art.clone(), artworks.clone(), &paths.cache)),
+                artwork: artworks,
                 art,
                 sizes: Arc::new(size::Sizes::new(&paths.cache)),
                 tracker: tracker::Tracker::start(app.handle().clone()),
@@ -88,6 +91,7 @@ fn main() {
             commands::search_steam,
             commands::image,
             commands::find_artwork,
+            commands::game_info,
             commands::exe_icon,
             commands::folder_size,
             commands::set_autostart,

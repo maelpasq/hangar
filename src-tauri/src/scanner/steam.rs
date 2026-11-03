@@ -23,7 +23,7 @@ pub fn vdf_values(text: &str, key: &str) -> Vec<String> {
         .collect()
 }
 
-fn steam_root() -> Option<PathBuf> {
+pub fn steam_root() -> Option<PathBuf> {
     #[cfg(windows)]
     if let Some(p) = super::registry::reg_str(super::registry::HKCU, r"Software\Valve\Steam", "SteamPath") {
         let p = PathBuf::from(p.replace('/', "\\"));
@@ -55,6 +55,7 @@ pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     let mut g = Game::new(format!("steam:{appid}"), name, "steam", uri(format!("steam://rungameid/{appid}")));
     g.install_dir = dir.map(|d| d.to_string_lossy().into_owned());
     g.steam_app_id = Some(appid);
+    g.size_bytes = vdf_values(text, "SizeOnDisk").first().and_then(|s| s.parse().ok()).filter(|s: &u64| *s > 0);
     Some(g)
 }
 
@@ -120,6 +121,7 @@ mod tests {
         assert_eq!(g.launch.target, "steam://rungameid/526870");
         assert_eq!(g.launcher_name, "Steam");
         assert!(g.install_dir.unwrap().ends_with("Satisfactory"));
+        assert!(g.size_bytes.unwrap_or(0) > 0, "SizeOnDisk du manifeste");
     }
 
     #[test]

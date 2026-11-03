@@ -20,6 +20,8 @@ struct EpicItem {
     incomplete: bool,
     #[serde(default, rename = "MainGameAppName")]
     main_game_app_name: Option<String>,
+    #[serde(default)]
+    install_size: Option<u64>,
 }
 
 /// Lit un manifeste `.item`. Ignore les installations incomplètes, les DLC et les non-jeux.
@@ -54,6 +56,7 @@ pub fn parse_manifest(text: &str) -> Option<Game> {
     );
     g.install_dir = it.install_location;
     g.exe_path = exe_path;
+    g.size_bytes = it.install_size.filter(|s| *s > 0);
     Some(g)
 }
 
@@ -91,7 +94,8 @@ mod tests {
         "CatalogItemId": "4fe75bbc5a674f4f9b356b5c90567da5",
         "AppName": "Fortnite",
         "MainGameAppName": "Fortnite",
-        "AppCategories": ["public", "games", "applications"]
+        "AppCategories": ["public", "games", "applications"],
+        "InstallSize": 32212254720
     }"#;
 
     #[test]
@@ -105,6 +109,7 @@ mod tests {
         );
         assert!(g.exe_path.unwrap().ends_with("FortniteLauncher.exe"));
         assert_eq!(g.launcher_name, "Epic Games Launcher");
+        assert_eq!(g.size_bytes, Some(32_212_254_720));
     }
 
     #[test]
