@@ -4,10 +4,13 @@
   "version": "1.0.0",
   "identifier": "studio.pamal.hangar",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev:web",
+    "beforeBuildCommand": "npm run build:web"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "label": "main",
@@ -18,11 +21,16 @@
         "minHeight": 600,
         "decorations": false,
         "center": true,
-        "backgroundColor": "#0b0c10"
+        "backgroundColor": "#0a0b0f"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: https://*.steamstatic.com https://*.akamaihd.net; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self' http://localhost:1420; img-src 'self' asset: http://asset.localhost data: http://localhost:1420; style-src 'self' 'unsafe-inline' http://localhost:1420; script-src 'self' http://localhost:1420; font-src 'self' data: http://localhost:1420; connect-src ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPLOCALDATA/cache/**", "$APPDATA/covers/**"]
+      }
     }
   },
   "bundle": {

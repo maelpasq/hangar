@@ -1,0 +1,168 @@
+/* Animations de la maquette (DESIGN.md, section 4). */
+@keyframes hgIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hgRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hgKen {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.14) translate(-1.5%, -1%);
+  }
+}
+
+@keyframes hgBar {
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes hgFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hgPop {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hgFloat {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes hgGlow {
+  50% {
+    opacity: 0.45;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes hgSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hgProg {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes hgPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(52, 211, 153, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+@keyframes hgPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hgToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hgShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.screen {
+  animation: hgIn 0.5s var(--ease) both;
+}
+
+.rise {
+  animation: hgRise 0.55s var(--ease) both;
+}
+
+.spin {
+  animation: hgSpin 1s linear infinite;
+}
+
+.pulse {
+  animation: hgPulse 1.6s ease-in-out infinite;
+}
+
+.lcover {
+  animation:
+    hgPop 0.7s var(--ease-pop) both,
+    hgFloat 3.2s ease-in-out 0.7s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.12s !important;
+    scroll-behavior: auto !important;
+  }
+
+  .lcover,
+  .pulse,
+  .spin {
+    animation: hgFade 0.2s both !important;
+  }
+}

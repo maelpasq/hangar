@@ -1,0 +1,19 @@
+"AppState"
+{
+	"appid"		"526870"
+	"universe"		"1"
+	"name"		"Satisfactory"
+	"StateFlags"		"4"
+	"installdir"		"Satisfactory"
+	"LastUpdated"		"1730000000"
+	"SizeOnDisk"		"23000000000"
+	"buildid"		"16000000"
+	"InstalledDepots"
+	{
+		"526871"
+		{
+			"manifest"		"1234567890"
+			"size"		"23000000000"
+		}
+	}
+}

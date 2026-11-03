@@ -3,56 +3,56 @@
 Fais les étapes dans l'ordre. Chacune se termine par : `npm run check`, `npm run test`, `cargo test`, `cargo clippy -- -D warnings`, la vérification « aucun tiret cadratin », puis un commit. Coche les cases au fur et à mesure dans ce fichier.
 
 ## Étape 0 - Préparation
-- [ ] Lire CLAUDE.md, SPEC.md, DESIGN.md, ARCHITECTURE.md et la maquette.
-- [ ] `git init` si besoin, `.gitignore` (node_modules, target, gen, dist).
-- [ ] Déplacer l'ancienne UI `src/` vers `legacy/`.
-- [ ] Créer `docs/DECISIONS.md` (vide, avec un titre).
+- [x] Lire CLAUDE.md, SPEC.md, DESIGN.md, ARCHITECTURE.md et la maquette.
+- [x] `git init` si besoin, `.gitignore` (node_modules, target, gen, dist).
+- [x] Déplacer l'ancienne UI `src/` vers `legacy/`.
+- [x] Créer `docs/DECISIONS.md` (vide, avec un titre).
 
 ## Étape 1 - Squelette Svelte
-- [ ] Vite + Svelte 5 + TypeScript, `npm run dev`, `npm run dev:web`, `npm run check`, `npm run test`.
-- [ ] `tauri.conf.json` : `frontendDist: ../dist`, `devUrl`, `beforeDevCommand`, `beforeBuildCommand`, fenêtre sans décorations 1320 × 840 (min 900 × 600), fond `#0a0b0f`, CSP de ARCHITECTURE.md.
-- [ ] Tokens, base.css, motion.css, police Geist embarquée.
-- [ ] `types.ts`, `api.ts`, `mock.ts` avec les 36 jeux de démo.
+- [x] Vite + Svelte 5 + TypeScript, `npm run dev`, `npm run dev:web`, `npm run check`, `npm run test`.
+- [x] `tauri.conf.json` : `frontendDist: ../dist`, `devUrl`, `beforeDevCommand`, `beforeBuildCommand`, fenêtre sans décorations 1320 × 840 (min 900 × 600), fond `#0a0b0f`, CSP de ARCHITECTURE.md.
+- [x] Tokens, base.css, motion.css, police Geist embarquée.
+- [x] `types.ts`, `api.ts`, `mock.ts` avec les 36 jeux de démo.
 - **Vérif** : `npm run dev:web` affiche une page vide aux bonnes couleurs et à la bonne police.
 
 ## Étape 2 - Coque de l'app
-- [ ] `Sidebar`, `TopBar` (contrôles de fenêtre fonctionnels, zone de déplacement, double-clic), routeur d'écrans avec l'animation d'entrée, lumière d'ambiance.
-- [ ] Rail replié sous 1000 px.
+- [x] `Sidebar`, `TopBar` (contrôles de fenêtre fonctionnels, zone de déplacement, double-clic), routeur d'écrans avec l'animation d'entrée, lumière d'ambiance.
+- [x] Rail replié sous 1000 px.
 - **Vérif** : comparaison visuelle avec la maquette (barre latérale et barre du haut).
 
 ## Étape 3 - Composants de base
-- [ ] `Cover` (chaîne de repli des images + jaquette générée), `GameCard` (survol, focus, étoile, double-clic, clic droit), `PlayButton`, `FavButton`, `Chip`, `Segmented`, `Toggle`, `Toast`, `Modal`, `ContextMenu`.
-- [ ] Tests Vitest : hash couleur stable, format des durées et des dates relatives (« Aujourd'hui », « Hier », « Il y a N jours »), recherche sans accents.
+- [x] `Cover` (chaîne de repli des images + jaquette générée), `GameCard` (survol, focus, étoile, double-clic, clic droit), `PlayButton`, `FavButton`, `Chip`, `Segmented`, `Toggle`, `Toast`, `Modal`, `ContextMenu`.
+- [x] Tests Vitest : hash couleur stable, format des durées et des dates relatives (« Aujourd'hui », « Hier », « Il y a N jours »), recherche sans accents.
 
 ## Étape 4 - Écrans
-- [ ] Accueil : carrousel (auto, pause au survol / focus perdu / recherche, miniatures avec barre), Reprendre, Favoris, Les plus joués.
-- [ ] Bibliothèque / Favoris / filtre store : tri mémorisé, puces, grille avec cascade, états vides.
-- [ ] Page de jeu : bannière Ken Burns sous la barre du haut, jaquette qui chevauche, activité (4 tuiles + histogramme 14 jours), informations, actions, « Aussi dans ta bibliothèque », bouton Retour.
-- [ ] Paramètres : stores, dossiers, accent (appliqué en direct), comportement, jeux masqués, jeux manuels.
-- [ ] Recherche : panneau, raccourcis clavier (Ctrl K, /, flèches, Entrée, Ctrl Entrée, Échap).
+- [x] Accueil : carrousel (auto, pause au survol / focus perdu / recherche, miniatures avec barre), Reprendre, Favoris, Les plus joués.
+- [x] Bibliothèque / Favoris / filtre store : tri mémorisé, puces, grille avec cascade, états vides.
+- [x] Page de jeu : bannière Ken Burns sous la barre du haut, jaquette qui chevauche, activité (4 tuiles + histogramme 14 jours), informations, actions, « Aussi dans ta bibliothèque », bouton Retour.
+- [x] Paramètres : stores, dossiers, accent (appliqué en direct), comportement, jeux masqués, jeux manuels.
+- [x] Recherche : panneau, raccourcis clavier (Ctrl K, /, flèches, Entrée, Ctrl Entrée, Échap).
 - **Vérif** : en mode web, chacun des 5 écrans correspond à la maquette. Faire des captures 1440 × 900 avec Playwright et les comparer à l'œil à la maquette.
 
 ## Étape 5 - Backend : détection
-- [ ] Découper `scanner.rs` en modules, scan parallèle, dédoublonnage, `launcherName`, `exePath`, `processNames`.
-- [ ] Événement `scan://partial` pour Xbox.
-- [ ] Tests unitaires : parseur VDF (fichiers d'exemple dans `src-tauri/tests/fixtures`), manifeste Epic, YAML Riot, heuristique `best_exe`.
-- [ ] Brancher `api.ts` sur les vraies commandes ; cache d'affichage instantané au démarrage.
+- [x] Découper `scanner.rs` en modules, scan parallèle, dédoublonnage, `launcherName`, `exePath`, `processNames`.
+- [x] Événement `scan://partial` pour Xbox.
+- [x] Tests unitaires : parseur VDF (fichiers d'exemple dans `src-tauri/tests/fixtures`), manifeste Epic, YAML Riot, heuristique `best_exe`.
+- [x] Brancher `api.ts` sur les vraies commandes ; cache d'affichage instantané au démarrage.
 
 ## Étape 6 - Backend : lancement et suivi
-- [ ] `launcher.rs` (ShellExecuteW), `tracker.rs` (sysinfo), événements `launch://*`.
-- [ ] `LaunchOverlay` piloté par les événements (fermeture au premier processus ou à 4 s), réduction de la fenêtre selon le réglage, retour au premier plan à la fin.
-- [ ] `RunningCard` + état « En cours » + « Arrêter » avec confirmation.
-- [ ] Sessions et totaux enregistrés, histogramme alimenté par les vraies sessions.
+- [x] `launcher.rs` (ShellExecuteW), `tracker.rs` (sysinfo), événements `launch://*`.
+- [x] `LaunchOverlay` piloté par les événements (fermeture au premier processus ou à 4 s), réduction de la fenêtre selon le réglage, retour au premier plan à la fin.
+- [x] `RunningCard` + état « En cours » + « Arrêter » avec confirmation.
+- [x] Sessions et totaux enregistrés, histogramme alimenté par les vraies sessions.
 
 ## Étape 7 - Images, icônes, tailles
-- [ ] `art.rs` : cache disque, file de téléchargement, `.miss`, protocole asset.
-- [ ] Résolution Steam des jeux hors Steam (respecte « Jaquettes automatiques »), modale « Changer la jaquette » avec aperçus.
-- [ ] Icônes d'exe 256 px pour les jaquettes générées.
-- [ ] `folder_size` en tâche de fond.
+- [x] `art.rs` : cache disque, file de téléchargement, `.miss`, protocole asset.
+- [x] Résolution Steam des jeux hors Steam (respecte « Jaquettes automatiques »), modale « Changer la jaquette » avec aperçus.
+- [x] Icônes d'exe 256 px pour les jaquettes générées.
+- [x] `folder_size` en tâche de fond.
 
 ## Étape 8 - Gestion
-- [ ] Ajouter un jeu (exe ou dossier), Renommer, Masquer (toast avec Annuler), favoris partout, dossiers locaux, stores désactivés.
-- [ ] Autostart, single-instance (ramène la fenêtre existante), window-state (taille et position mémorisées).
+- [x] Ajouter un jeu (exe ou dossier), Renommer, Masquer (toast avec Annuler), favoris partout, dossiers locaux, stores désactivés.
+- [x] Autostart, single-instance (ramène la fenêtre existante), window-state (taille et position mémorisées).
 
 ## Étape 9 - Finitions
 - [ ] `prefers-reduced-motion`, navigation clavier complète, focus visibles, contrastes AA.

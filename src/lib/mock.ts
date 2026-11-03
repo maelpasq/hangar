@@ -1,0 +1,192 @@
+// Implémentation de démo de api.ts pour `npm run dev:web` : les 36 jeux de la maquette,
+// des sessions et favoris fictifs, un lancement simulé.
+
+import demo from '../../design/reference/demo-games.json';
+import type { Api } from './api';
+import { STORES } from './stores-meta';
+import type { Game, LaunchEvent, PersistedState, Session, StoreId } from './types';
+import { defaultState } from './util/state';
+
+interface DemoGame {
+  id: string;
+  name: string;
+  store: string;
+  steamAppId: number | null;
+  genre: string;
+  hours: number;
+  lastDays: number;
+  sizeGb: number;
+}
+
+const DAY = 86_400_000;
+const HOUR = 3_600_000;
+
+const PATHS: Record<string, (n: string) => string> = {
+  steam: (n) => `C:\\Program Files (x86)\\Steam\\steamapps\\common\\${n}`,
+  epic: (n) => `C:\\Program Files\\Epic Games\\${n.replace(/\s/g, '')}`,
+  gog: (n) => `C:\\GOG Games\\${n}`,
+  ubisoft: (n) => `C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\games\\${n}`,
+  ea: (n) => `C:\\Program Files\\EA Games\\${n}`,
+  battlenet: (n) => `C:\\Program Files (x86)\\${n}`,
+  xbox: (n) => `C:\\XboxGames\\${n}\\Content`,
+  riot: (n) => `C:\\Riot Games\\${n}`,
+  local: (n) => `D:\\Jeux\\${n}`
+};
+
+const games: DemoGame[] = (demo as { games: DemoGame[] }).games;
+
+function toGame(d: DemoGame): Game {
+  const store = d.store as StoreId;
+  const dir = (PATHS[store] ?? PATHS.local)(d.name);
+  return {
+    id: `${store}:${d.id}`,
+    name: d.name,
+    store,
+    installDir: dir,
+    launch: { kind: 'uri', target: `demo://${d.id}`, args: '' },
+    launcherName: STORES[store].launcher,
+    steamAppId: store === 'steam' ? d.steamAppId : null,
+    exePath: null,
+    processNames: [],
+    genre: d.genre
+  };
+}
+
+/** Pseudo-aléatoire déterministe pour que la démo soit stable d'un rechargement à l'autre. */
+function rnd(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
+
+function demoState(now: number): PersistedState {
+  const s = defaultState();
+  const today = new Date(now);
+  today.setHours(20, 0, 0, 0);
+  const evening = today.getTime();
+  s.favorites = (demo as { favorites: string[] }).favorites.map((id) => {
+    const g = games.find((x) => x.id === id)!;
+    return `${g.store}:${g.id}`;
+  });
+  games.forEach((d, i) => {
+    const id = `${d.store}:${d.id}`;
+    const last = Math.min(now - 5 * 60_000, evening - d.lastDays * DAY);
+    s.totals[id] = { playMs: d.hours * HOUR, launches: Math.round(d.hours * 1.7 + 3), lastPlayed: last };
+    s.firstSeen[id] = now - (40 + ((i * 37) % 200)) * DAY;
+    if (d.store !== 'steam' && d.steamAppId) s.steamIdCache[id] = d.steamAppId;
+    // Sessions des 14 derniers jours pour l'histogramme.
+    for (let day = d.lastDays; day < 14; day++) {
+      if (day !== d.lastDays && rnd(i * 31 + day) < 0.45) continue;
+      const len = (0.4 + rnd(i * 7 + day) * 3.2) * HOUR;
+      const end = day === d.lastDays ? last : evening - day * DAY;
+      s.sessions.push({ gameId: id, start: end - len, end });
+    }
+  });
+  s.localFolders = ['D:\\Jeux', 'E:\\Emulation'];
+  return s;
+}
+
+export function mockApi(): Api {
+  const now = Date.now();
+  let state: unknown = demoState(now);
+  let library: Game[] = [];
+  const lib = games.map(toGame);
+  const listeners = new Set<(e: LaunchEvent) => void>();
+  const running = new Map<string, { start: number; timers: number[] }>();
+  const emit = (e: LaunchEvent) => listeners.forEach((l) => l(e));
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const imgCache = new Map<string, Promise<string | null>>();
+
+  return {
+    isTauri: false,
+    scanGames: async () => {
+      await wait(700);
+      return lib;
+    },
+    loadState: async () => state,
+    saveState: async (s) => {
+      state = JSON.parse(JSON.stringify(s));
+    },
+    loadLibrary: async () => library,
+    saveLibrary: async (g) => {
+      library = g;
+    },
+    launchGame: async (gameId) => {
+      if (running.has(gameId)) return;
+      const entry = { start: 0, timers: [] as number[] };
+      running.set(gameId, entry);
+      entry.timers.push(window.setTimeout(() => emit({ type: 'started', gameId }), 1000));
+      entry.timers.push(
+        window.setTimeout(() => {
+          entry.start = Date.now();
+          emit({ type: 'running', gameId, pid: 4242 });
+        }, 2100)
+      );
+    },
+    stopGame: async (gameId) => {
+      const r = running.get(gameId);
+      if (!r) return;
+      r.timers.forEach(clearTimeout);
+      running.delete(gameId);
+      await wait(300);
+      const session: Session | null = r.start ? { gameId, start: r.start, end: Date.now() } : null;
+      emit({ type: 'ended', gameId, session });
+    },
+    openFolder: async () => {},
+    resolveSteamId: async () => null,
+    searchSteam: async (query) => {
+      await wait(250);
+      const q = query.trim().toLowerCase();
+      if (/^\d+$/.test(q)) return [{ id: Number(q), name: `ID ${q}` }];
+      return games
+        .filter((g) => g.steamAppId && g.name.toLowerCase().includes(q))
+        .slice(0, 5)
+        .map((g) => ({ id: g.steamAppId!, name: g.name }));
+    },
+    image: (url) => {
+      let p = imgCache.get(url);
+      if (!p) {
+        p = new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(url);
+          img.onerror = () => resolve(null);
+          img.src = url;
+        });
+        imgCache.set(url, p);
+      }
+      return p;
+    },
+    exeIcon: async () => null,
+    folderSize: async (path) => {
+      const g = games.find((d) => (PATHS[d.store] ?? PATHS.local)(d.name) === path);
+      return g ? g.sizeGb * 1_000_000_000 : null;
+    },
+    setAutostart: async () => {},
+    importCover: async (_id, path) => path,
+    localSrc: (path) => path,
+    pickExe: async () => 'D:\\Jeux\\Mon jeu\\MonJeu.exe',
+    pickFolder: async () => 'F:\\Jeux portables',
+    pickImage: async () => null,
+    onLaunch: async (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    onScanPartial: async () => () => {},
+    win: {
+      minimize: async () => {},
+      toggleMaximize: async () => {},
+      close: async () => {},
+      isMaximized: async () => false,
+      restore: async () => {},
+      onFocusChange: async (cb) => {
+        const f = () => cb(true);
+        const b = () => cb(false);
+        window.addEventListener('focus', f);
+        window.addEventListener('blur', b);
+        return () => {
+          window.removeEventListener('focus', f);
+          window.removeEventListener('blur', b);
+        };
+      }
+    }
+  };
+}
