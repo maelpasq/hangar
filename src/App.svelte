@@ -3,7 +3,6 @@
   import { onMount } from 'svelte';
   import { rescan } from './lib/actions';
   import { api } from './lib/api';
-  import { art } from './lib/art.svelte';
   import ContextMenu from './lib/components/ContextMenu.svelte';
   import LaunchOverlay from './lib/components/LaunchOverlay.svelte';
   import Sidebar from './lib/components/Sidebar.svelte';
@@ -49,14 +48,12 @@
         api.onLaunch((e) => runner.handle(e)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
-          art.resolveSteamIds();
         }),
         api.win.onFocusChange((f) => (ui.windowFocused = f))
       ]);
       offs.push(a, b, c);
       if (!alive) offs.forEach((o) => o());
       await library.load();
-      art.resolveSteamIds();
       await rescan();
     })();
     return () => {

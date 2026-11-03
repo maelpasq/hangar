@@ -13,19 +13,35 @@
 
   const PERIOD = 6500;
 
-  let { games }: { games: Game[] } = $props();
+  let { games: all }: { games: Game[] } = $props();
 
-  let idx = $state(0);
+  // Miniatures : 62 px + 10 px d'écart (48 px + 8 px en mode compact quand la place manque).
+  // On garde au moins 440 px à gauche pour le titre et les boutons ; le carrousel ne montre
+  // que les jeux dont la miniature tient, pour qu'aucune ne soit coupée.
+  const COPY_MIN = 440;
+  let width = $state(0);
+  const room = $derived(width - 28 - 44 - COPY_MIN);
+  const fitFor = (step: number, gap: number) => Math.max(1, Math.floor((room + gap) / step));
+  const compact = $derived(!!width && fitFor(72, 10) < Math.min(5, all.length));
+  const step = $derived(compact ? 56 : 72);
+  const gap = $derived(compact ? 8 : 10);
+  const fit = $derived(width ? fitFor(step, gap) : all.length);
+  const games = $derived(all.slice(0, Math.min(all.length, fit)));
+  const thumbsWidth = $derived(games.length * step - gap);
+  const copyMax = $derived(
+    width ? Math.max(360, Math.min(560, width - 44 - (games.length > 1 ? thumbsWidth + 28 + 32 : 44))) : 560
+  );
+
+  // Le jeu affiché est suivi par son identifiant : quand la liste se réordonne (un jeu vient
+  // d'être lancé et devient le plus récent), le carrousel ne saute pas sur un autre jeu.
+  let activeId = $state<string | null>(null);
+  const idx = $derived(Math.max(0, games.findIndex((g) => g.id === activeId)));
   let hover = $state(false);
   let focusInside = $state(false);
   let progress = 0;
 
   const paused = $derived(hover || focusInside || !ui.windowFocused || !!ui.query || !!runner.launching);
-  const active = $derived(games[Math.min(idx, games.length - 1)]);
-
-  $effect(() => {
-    if (idx >= games.length) idx = 0;
-  });
+  const active = $derived(games[idx]);
 
   // Ambiance : la bannière du jeu mis en avant.
   $effect(() => {
@@ -41,7 +57,7 @@
       last = now;
       if (progress >= PERIOD) {
         progress = 0;
-        idx = (idx + 1) % games.length;
+        activeId = games[(idx + 1) % games.length].id;
       }
     }, 100);
     return () => clearInterval(t);
@@ -49,15 +65,17 @@
 
   function pick(i: number) {
     progress = 0;
-    idx = i;
+    activeId = games[i].id;
   }
 
   function meta(g: Game): string {
     const t = library.totals(g.id);
     const parts: string[] = [];
-    if (g.genre) parts.push(g.genre);
-    parts.push(`${hoursLabel(t.playMs)} de jeu`);
+    const genre = library.genre(g);
+    if (genre) parts.push(genre);
+    if (t.playMs > 0) parts.push(`${hoursLabel(t.playMs)} de jeu`);
     if (t.lastPlayed) parts.push(`dernière session ${relativeDay(t.lastPlayed).toLowerCase()}`);
+    else if (t.playMs <= 0) parts.push('Pas encore lancé avec Hangar');
     return parts.join(' · ');
   }
 </script>
@@ -67,6 +85,7 @@
   class:paused
   aria-roledescription="carrousel"
   aria-label="Jeux mis en avant"
+  bind:clientWidth={width}
   onmouseenter={() => (hover = true)}
   onmouseleave={() => (hover = false)}
   onfocusin={() => (focusInside = true)}
@@ -82,11 +101,13 @@
   {#each games as g, i (g.id)}
     {@const t = library.totals(g.id)}
     {@const st = STORES[g.store]}
-    <div class="copy" class:on={i === idx} aria-hidden={i !== idx} inert={i !== idx}>
+    <div class="copy" class:on={i === idx} aria-hidden={i !== idx} inert={i !== idx} style:max-width="{copyMax}px">
       <div class="pill">
-        <span class="dot" style:background={st.color}></span>{st.label} · {t.lastPlayed && daysAgo(t.lastPlayed) <= 2
-          ? 'Reprendre'
-          : 'À redécouvrir'}
+        <span class="dot" style:background={st.color}></span>{st.label} · {!t.lastPlayed
+          ? 'À découvrir'
+          : daysAgo(t.lastPlayed) <= 2
+            ? 'Reprendre'
+            : 'À redécouvrir'}
       </div>
       <h1>{library.name(g)}</h1>
       <p>{meta(g)}</p>
@@ -97,7 +118,8 @@
       </div>
     </div>
   {/each}
-  <div class="thumbs" role="tablist" aria-label="Choisir un jeu">
+  {#if games.length > 1}
+  <div class="thumbs" class:compact role="tablist" aria-label="Choisir un jeu">
     {#each games as g, i (g.id)}
       <button
         class="thumb"
@@ -112,6 +134,7 @@
       </button>
     {/each}
   </div>
+  {/if}
 </section>
 
 <style>
@@ -171,6 +194,13 @@
 
   h1 {
     margin: 16px 0 10px;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-bottom: 0.06em;
     font-size: 54px;
     line-height: 1;
     font-weight: 800;
@@ -219,6 +249,16 @@
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
 
+  .compact {
+    gap: 8px;
+  }
+
+  .compact .thumb {
+    width: 48px;
+    height: 68px;
+    border-radius: 8px;
+  }
+
   .thumb:hover {
     opacity: 0.9;
     transform: translateY(-3px);
@@ -249,9 +289,6 @@
   }
 
   @media (max-width: 1180px) {
-    .thumbs .thumb:nth-child(n + 5) {
-      display: none;
-    }
     h1 {
       font-size: 44px;
     }

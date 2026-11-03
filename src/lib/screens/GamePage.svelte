@@ -14,6 +14,7 @@
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { Game } from '../types';
+  import { generatedBackground } from '../util/color';
   import { dateLabel, formatNumber, hoursLabel, relativeDay, sizeLabel } from '../util/format';
 
   let { game }: { game: Game } = $props();
@@ -26,12 +27,13 @@
   const banner = $derived(hero || cover?.src || null);
   const running = $derived(runner.isRunning(game.id));
   const sessions = $derived(library.state.sessions.filter((s) => s.gameId === game.id));
-  const added = $derived(library.state.firstSeen[game.id]);
+  const added = $derived(library.addedAt(game));
+  const genre = $derived(library.genre(game));
   const location = $derived(game.installDir || game.launch.target);
 
   const similar = $derived(
     library.visible
-      .filter((x) => x.id !== game.id && (x.store === game.store || (!!game.genre && x.genre === game.genre)))
+      .filter((x) => x.id !== game.id && (x.store === game.store || (!!genre && library.genre(x) === genre)))
       .slice(0, 9)
   );
 
@@ -40,6 +42,10 @@
   $effect(() => {
     const dir = game.installDir;
     size = undefined;
+    if (game.sizeBytes) {
+      size = game.sizeBytes;
+      return;
+    }
     if (!dir) {
       size = null;
       return;
@@ -59,14 +65,15 @@
   });
 </script>
 
-<div class="screen scroll page">
+<div class="screen scroll page" onscroll={(e) => (ui.pageScrolled = e.currentTarget.scrollTop > 40)}>
   <section class="banner">
     {#if banner}
       {#key banner}
         <img src={banner} alt="" class:blurred={!hero} />
       {/key}
     {:else}
-      <div class="fallback" aria-hidden="true"></div>
+      <!-- Ni bannière ni jaquette : le dégradé de la jaquette générée, flouté. -->
+      <div class="fallback" aria-hidden="true" style:background={generatedBackground(game.id)}></div>
     {/if}
     <div class="shade" aria-hidden="true"></div>
   </section>
@@ -79,9 +86,9 @@
     </div>
     <div class="headline">
       <div class="pill">
-        <span class="dot" style:background={st.color}></span>{st.label}{game.genre ? ` · ${game.genre}` : ''}
+        <span class="dot" style:background={st.color}></span>{st.label}{genre ? ` · ${genre}` : ''}
       </div>
-      <h1>{name}</h1>
+      <h1 class:long={name.length > 36} title={name}>{name}</h1>
       <div class="actions">
         {#if running}
           <span class="live num"><span class="pulse dotg"></span>En cours · {runner.elapsed(game.id)}</span>
@@ -183,8 +190,9 @@
 
   .fallback {
     position: absolute;
-    inset: 0;
-    background: #12141b;
+    inset: -60px;
+    filter: blur(50px) saturate(1.2) brightness(0.55);
+    animation: hgFade 0.6s ease both;
   }
 
   .shade {
@@ -236,6 +244,18 @@
     font-weight: 800;
     letter-spacing: -1.6px;
     overflow-wrap: anywhere;
+    /* Nom très long : 3 lignes au plus. */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-bottom: 0.06em;
+  }
+
+  h1.long {
+    font-size: 40px;
+    letter-spacing: -1px;
   }
 
   .actions {

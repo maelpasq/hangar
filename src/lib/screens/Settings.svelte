@@ -19,17 +19,22 @@
     return library.all.filter((g) => g.store === 'local' && (g.installDir ?? '').toLowerCase().startsWith(d)).length;
   }
 
-  const prefs: { key: keyof Prefs; label: string; desc: string }[] = [
+  type BoolPref = Exclude<keyof Prefs, 'steamGridDbKey'>;
+  const prefs: { key: BoolPref; label: string; desc: string }[] = [
     {
       key: 'minimizeOnLaunch',
       label: "Réduire Hangar au lancement d'un jeu",
       desc: 'La fenêtre revient quand tu quittes le jeu'
     },
     { key: 'startWithWindows', label: 'Démarrer avec Windows', desc: "Hangar s'ouvre en arrière-plan à la connexion" },
-    { key: 'autoCovers', label: 'Jaquettes automatiques', desc: 'Recherche les jaquettes des jeux hors Steam' }
+    {
+      key: 'autoCovers',
+      label: 'Jaquettes automatiques',
+      desc: 'Cherche jaquette et bannière de chaque jeu (store, Steam, SteamGridDB)'
+    }
   ];
 
-  async function setPref(key: keyof Prefs, on: boolean) {
+  async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
     library.save();
     if (key === 'startWithWindows') {
@@ -41,7 +46,21 @@
         ui.toast(`Impossible de modifier le démarrage automatique : ${String(e)}`, { error: true });
       }
     }
-    if (key === 'autoCovers' && on) art.resolveSteamIds();
+    if (key === 'autoCovers') art.reset();
+  }
+
+  let gridKey = $state(library.state.prefs.steamGridDbKey);
+  let showKey = $state(false);
+  const keyDirty = $derived(gridKey.trim() !== library.state.prefs.steamGridDbKey);
+
+  function saveGridKey(e?: Event) {
+    e?.preventDefault();
+    const k = gridKey.trim();
+    if (k === library.state.prefs.steamGridDbKey) return;
+    library.state.prefs.steamGridDbKey = k;
+    library.save();
+    art.reset();
+    ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
   }
 
   function setAccent(c: string) {
@@ -127,6 +146,31 @@
             <Toggle on={library.state.prefs[p.key]} label={p.label} onchange={(v) => setPref(p.key, v)} />
           </div>
         {/each}
+        <form class="gridkey" onsubmit={saveGridKey}>
+          <label class="field" for="sgdb-key">
+            <span class="txt"
+              ><span class="lbl">Clé API SteamGridDB <span class="meta">(facultatif)</span></span><span class="meta"
+                >Trouve les jaquettes et bannières des jeux absents de Steam (Hytale, Roblox, VALORANT...). Clé
+                gratuite sur steamgriddb.com, menu Préférences puis API.</span
+              ></span
+            >
+          </label>
+          <div class="keyrow">
+            <input
+              id="sgdb-key"
+              type={showKey ? 'text' : 'password'}
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Colle ta clé ici"
+              bind:value={gridKey}
+              onblur={() => saveGridKey()}
+            />
+            <button type="button" class="chip-btn" onclick={() => (showKey = !showKey)}
+              >{showKey ? 'Masquer' : 'Afficher'}</button
+            >
+            <button type="submit" class="chip-btn" disabled={!keyDirty}>Enregistrer</button>
+          </div>
+        </form>
       </section>
 
       <section class="card-section">
@@ -187,6 +231,66 @@
     margin-bottom: 14px;
   }
 
+  .gridkey {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0 2px;
+    border-top: 1px solid var(--border-1);
+  }
+
+  .gridkey .lbl {
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  .gridkey .txt {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  /* La description est longue : elle passe à la ligne (les autres .meta restent sur une ligne). */
+  .gridkey .meta {
+    white-space: normal;
+    line-height: 1.45;
+  }
+
+  .gridkey .lbl .meta {
+    white-space: nowrap;
+  }
+
+  .keyrow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .keyrow input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+  }
+
+  .keyrow input:focus {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+
+  .keyrow .chip-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
   .mb6 {
     margin-bottom: 6px;
   }
@@ -202,6 +306,11 @@
 
   .line.pref {
     padding: 12px 0;
+  }
+
+  /* Descriptions des réglages : à la ligne si la colonne est étroite. */
+  .line.pref .meta {
+    white-space: normal;
   }
 
   .grow {

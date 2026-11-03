@@ -1,7 +1,8 @@
 <script lang="ts">
-  // Changer la jaquette : recherche Steam (nom ou ID), image locale, ou jaquette générée.
+  // Changer la jaquette : recherche Steam (nom ou ID), image locale, jaquette générée,
+  // ou nouvelle recherche automatique (store, Steam, SteamGridDB).
   import { api } from '../api';
-  import { steamCover, type CoverResult } from '../art.svelte';
+  import { art, steamCover, type CoverResult } from '../art.svelte';
   import GeneratedCover from '../components/GeneratedCover.svelte';
   import Icon from '../components/Icon.svelte';
   import Modal from '../components/Modal.svelte';
@@ -76,6 +77,8 @@
 
   function auto() {
     library.setCustomCover(gameId, null);
+    const g = library.get(gameId);
+    if (g) art.refresh(g);
     close();
   }
 </script>
@@ -120,9 +123,9 @@
     <button class="opt" onclick={none}>
       <span class="mini"><GeneratedCover {game} showName={false} /></span>Pas de jaquette
     </button>
-    {#if custom}
-      <button class="opt" onclick={auto}><Icon name="refresh" size={17} />Revenir à la jaquette automatique</button>
-    {/if}
+    <button class="opt" onclick={auto}
+      ><Icon name="refresh" size={17} />{custom ? 'Revenir à la jaquette automatique' : 'Relancer la recherche automatique'}</button
+    >
   </div>
 </Modal>
 

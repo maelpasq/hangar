@@ -1,5 +1,6 @@
 <script lang="ts">
   import Logo from './Logo.svelte';
+  import { plural } from '../util/format';
   // Barre latérale : navigation, stores, carte « En jeu », bouton « Ajouter un jeu ».
   import { STORES } from '../stores-meta';
   import { library, presentStores } from '../stores/library.svelte';
@@ -65,7 +66,7 @@
         class="navb store"
         class:on
         aria-current={on ? 'page' : undefined}
-        aria-label={rail ? `${STORES[s].label}, ${library.counts[s]} jeux` : undefined}
+        aria-label={rail ? `${STORES[s].label}, ${plural(library.counts[s] ?? 0, 'jeu', 'jeux')}` : undefined}
         title={rail ? STORES[s].label : undefined}
         onclick={() => ui.storeFilter(s)}
       >
@@ -147,8 +148,12 @@
 
   .list {
     flex: 1;
+    min-height: 0;
     margin-right: -6px;
     padding-right: 6px;
+    padding-bottom: 14px;
+    /* Fondu en bas : une liste qui défile ne coupe pas net la dernière entrée. */
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
   }
 
   .rail .list {

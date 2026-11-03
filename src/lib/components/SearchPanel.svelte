@@ -87,8 +87,10 @@
     transition: background 0.12s;
   }
 
+  /* Ligne choisie (souris ou flèches) : assez contrastée pour se voir au clavier. */
   .res.sel {
-    background: var(--surface-3);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
   .thumb {

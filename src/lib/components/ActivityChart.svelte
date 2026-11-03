@@ -30,6 +30,7 @@
   });
 
   const max = $derived(Math.max(1, ...days.map((d) => d.ms)));
+  const empty = $derived(days.every((d) => d.ms === 0));
 </script>
 
 <div class="chart" role="img" aria-label="Temps de jeu des 14 derniers jours">
@@ -45,10 +46,14 @@
       <span>{d.letter}</span>
     </div>
   {/each}
+  {#if empty}
+    <p class="none">Aucune partie ces 14 derniers jours</p>
+  {/if}
 </div>
 
 <style>
   .chart {
+    position: relative;
     display: flex;
     align-items: flex-end;
     gap: 8px;
@@ -79,6 +84,16 @@
 
   .bar.today {
     background: var(--accent);
+  }
+
+  .none {
+    position: absolute;
+    inset: 0 0 22px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    color: var(--muted);
+    pointer-events: none;
   }
 
   span {

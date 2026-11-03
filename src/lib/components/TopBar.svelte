@@ -53,7 +53,7 @@
   }
 </script>
 
-<header data-tauri-drag-region class:over={ui.screen === 'game'}>
+<header data-tauri-drag-region class:over={ui.screen === 'game'} class:solid={ui.screen === 'game' && ui.pageScrolled}>
   {#if ui.screen === 'game'}
     <button class="ibtn" onclick={() => ui.back()} aria-label="Retour" title="Retour"
       ><Icon name="back" stroke={2} /></button
@@ -69,7 +69,7 @@
         type="text"
         spellcheck="false"
         autocomplete="off"
-        placeholder="Rechercher parmi {formatNumber(library.visible.length)} jeux"
+        placeholder="Rechercher parmi {formatNumber(library.visible.length)} {library.visible.length > 1 ? 'jeux' : 'jeu'}"
         role="combobox"
         aria-expanded={show}
         aria-controls="search-results"
@@ -135,6 +135,16 @@
     padding: 0 0 0 28px;
     position: relative;
     z-index: 20;
+    transition:
+      background 0.25s,
+      box-shadow 0.25s;
+  }
+
+  /* Page de jeu défilée : le contenu ne doit pas se voir derrière la recherche. */
+  header.solid {
+    background: rgba(10, 11, 15, 0.78);
+    backdrop-filter: blur(24px) saturate(1.3);
+    box-shadow: 0 1px 0 var(--border-1);
   }
 
   .mid {

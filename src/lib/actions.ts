@@ -1,7 +1,6 @@
 // Actions qui touchent à la fois la bibliothèque et l'interface.
 
 import { api } from './api';
-import { art } from './art.svelte';
 import { library } from './stores/library.svelte';
 import { ui } from './stores/ui.svelte';
 import { plural } from './util/format';
@@ -32,7 +31,6 @@ export async function rescan(announce = false): Promise<void> {
   try {
     const n = await library.scan();
     if (announce) ui.toast(`${plural(n, 'jeu', 'jeux')} dans ta bibliothèque`);
-    art.resolveSteamIds();
   } catch (e) {
     ui.toast(`Le scan a échoué : ${String(e)}`, { error: true });
   }

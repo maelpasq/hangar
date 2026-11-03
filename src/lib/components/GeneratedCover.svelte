@@ -41,6 +41,13 @@
     line-height: 1.05;
     overflow-wrap: anywhere;
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    /* Nom très long : 5 lignes au plus, puis ellipse (le haut reste libre pour l'icône). */
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-bottom: 0.06em;
   }
 
   .badge {

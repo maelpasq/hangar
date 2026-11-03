@@ -152,7 +152,8 @@ Courbe par défaut : `cubic-bezier(.2,.8,.2,1)`. Tous les mouvements sont désac
 
 - Jeux Steam : `https://shared.steamstatic.com/store_item_assets/steam/apps/<appid>/library_600x900_2x.jpg`, repli `https://cdn.cloudflare.steamstatic.com/steam/apps/<appid>/library_600x900_2x.jpg`, puis `header.jpg` affiché en mode paysage (image centrée sur un fond flou d'elle-même), puis jaquette générée.
 - Bannière : `library_hero.jpg` (mêmes hôtes). Sans bannière : la jaquette floutée.
-- Jeux hors Steam : l'ID Steam est trouvé via `store.steampowered.com/api/storesearch/?term=<nom>&l=english&cc=US` (correspondance exacte du nom normalisé, puis préfixe). Résultat mis en cache (0 = introuvable). L'utilisateur peut corriger.
+- Jeux hors Steam (`find_artwork` côté backend) : d'abord l'image native du store (catalogue local Epic, API GOG, catalogue Microsoft Store pour Xbox), puis l'ID Steam trouvé via `store.steampowered.com/api/storesearch/?term=<nom>&l=english&cc=US` (nom normalisé exact, puis préfixe), puis SteamGridDB (jaquettes 600x900 et bannières) si une clé API est saisie dans les Paramètres. Résultats mis en cache. L'utilisateur peut corriger via « Changer la jaquette ».
+- Jeux Steam sans jaquette sur le CDN : même repli vers SteamGridDB.
 - Jaquette personnalisée : image locale copiée dans `%APPDATA%\studio.pamal.hangar\covers\`.
 - Les images distantes sont mises en cache disque par le backend (voir ARCHITECTURE.md) pour un affichage instantané hors ligne.
 - Apparition des images : opacité 0 → 1 en 0,4 s une fois chargées, fond `#151821` en attendant (ou un léger shimmer).

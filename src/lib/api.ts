@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { Game, LaunchEvent, PersistedState, Session, SteamHit } from './types';
+import type { Artwork, Game, LaunchEvent, PersistedState, Session, SteamHit } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -25,11 +25,15 @@ export interface Api {
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
+  /** Jaquette et bannière d'un jeu, toutes sources confondues (store, Steam, SteamGridDB). */
+  findArtwork(gameId: string, steamGridKey: string | null, refresh: boolean): Promise<Artwork>;
   /** Source affichable d'une image distante (en cache disque côté Tauri), ou null si introuvable. */
   image(url: string): Promise<string | null>;
   /** Icône 256 px d'un exécutable (ou d'un logo Xbox), source affichable ou null. */
   exeIcon(path: string): Promise<string | null>;
   folderSize(path: string): Promise<number | null>;
+  /** Genre en français (Steam), en cache côté backend. */
+  gameInfo(gameId: string): Promise<{ genre: string | null }>;
   setAutostart(on: boolean): Promise<void>;
   /** Copie une image locale dans le dossier des jaquettes et renvoie son chemin. */
   importCover(gameId: string, path: string): Promise<string>;
@@ -73,6 +77,19 @@ async function tauriApi(): Promise<Api> {
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),
+    findArtwork: async (gameId, steamGridKey, refresh) => {
+      type Img = { path: string; landscape: boolean } | null;
+      const a = await invoke<{ cover: Img; hero: Img; source: string }>('find_artwork', {
+        gameId,
+        steamGridKey,
+        refresh
+      });
+      return {
+        cover: a.cover ? { src: convertFileSrc(a.cover.path), landscape: a.cover.landscape } : null,
+        hero: a.hero ? convertFileSrc(a.hero.path) : null,
+        source: a.source
+      };
+    },
     image: async (url) => {
       const p = await invoke<string | null>('image', { url });
       return p ? convertFileSrc(p) : null;
@@ -82,6 +99,7 @@ async function tauriApi(): Promise<Api> {
       return p ? convertFileSrc(p) : null;
     },
     folderSize: (path) => invoke('folder_size', { path }),
+    gameInfo: (gameId) => invoke('game_info', { gameId }),
     setAutostart: (on) => invoke('set_autostart', { on }),
     importCover: (gameId, path) => invoke('import_cover', { gameId, path }),
     localSrc: (path) => convertFileSrc(path),

@@ -87,7 +87,7 @@
   <div class="head">
     <div>
       <h1>{title}</h1>
-      <p>{plural(list.length, 'jeu', 'jeux')} · {formatNumber(totalHours)} heures de jeu au total</p>
+      <p>{plural(list.length, 'jeu', 'jeux')} · {formatNumber(totalHours)} {totalHours > 1 ? 'heures' : 'heure'} de jeu au total</p>
     </div>
     <span class="grow"></span>
     <Segmented

@@ -32,6 +32,14 @@ export interface Game {
   logo?: string | null;
   processNames: string[];
   genre?: string | null;
+  /** Temps de jeu connu du store (Steam, GOG Galaxy), en ms. */
+  storePlayMs?: number | null;
+  /** Dernière session connue du store, ms epoch. */
+  storeLastPlayed?: number | null;
+  /** Taille sur disque donnée par le store, en octets. */
+  sizeBytes?: number | null;
+  /** Date d'installation, ms epoch. */
+  installedAt?: number | null;
 }
 
 export interface Session {
@@ -52,6 +60,8 @@ export interface Prefs {
   minimizeOnLaunch: boolean;
   startWithWindows: boolean;
   autoCovers: boolean;
+  /** Clé API SteamGridDB (facultative) pour les jeux absents de Steam. */
+  steamGridDbKey: string;
 }
 
 export interface PersistedState {
@@ -72,6 +82,13 @@ export interface PersistedState {
   accent: string;
   sort: SortKey;
   prefs: Prefs;
+}
+
+/** Images trouvées automatiquement par le backend (sources multiples). */
+export interface Artwork {
+  cover: { src: string; landscape: boolean } | null;
+  hero: string | null;
+  source: string;
 }
 
 export interface SteamHit {

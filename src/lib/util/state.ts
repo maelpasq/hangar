@@ -19,7 +19,7 @@ export function defaultState(): PersistedState {
     disabledStores: [],
     accent: '#7c6cff',
     sort: 'recent',
-    prefs: { minimizeOnLaunch: true, startWithWindows: false, autoCovers: true }
+    prefs: { minimizeOnLaunch: true, startWithWindows: false, autoCovers: true, steamGridDbKey: '' }
   };
 }
 
@@ -61,6 +61,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (typeof p.minimizeOnLaunch === 'boolean') s.prefs.minimizeOnLaunch = p.minimizeOnLaunch;
     if (typeof p.startWithWindows === 'boolean') s.prefs.startWithWindows = p.startWithWindows;
     if (typeof p.autoCovers === 'boolean') s.prefs.autoCovers = p.autoCovers;
+    if (typeof p.steamGridDbKey === 'string') s.prefs.steamGridDbKey = p.steamGridDbKey.trim();
   }
   if (Array.isArray(raw.manualGames)) {
     s.manualGames = raw.manualGames.filter(isObj).map((g) => manualGame(g as unknown as Game)).filter((g) => g !== null);

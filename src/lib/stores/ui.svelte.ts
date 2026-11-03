@@ -45,6 +45,8 @@ class Ui {
   toasts = $state<Toast[]>([]);
 
   windowFocused = $state(true);
+  /** Page de jeu défilée : la barre du haut (transparente sur la bannière) prend un fond. */
+  pageScrolled = $state(false);
   /** Image de la lumière d'ambiance. */
   ambient = $state<string | null>(null);
 
@@ -62,6 +64,7 @@ class Ui {
     this.store = p.store ?? 'all';
     this.gameId = p.gameId ?? this.gameId;
     this.menu = null;
+    this.pageScrolled = false;
     this.navKey++;
   }
 

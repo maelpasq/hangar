@@ -29,8 +29,6 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Parseur VDF : une ligne qui ouvre un bloc n'est plus prise pour une valeur.
 - Riot : `LeagueClient.exe` compte comme League of Legends.
 - Xbox : `ExecutableList` de `MicrosoftGame.config` alimente `processNames`.
-- Genre non rempli : l'API `appdetails` de Steam n'est pas dans la liste réseau autorisée.
-- Non fait (facultatif) : temps de jeu Steam lu dans `localconfig.vdf`.
 - « Annuler » pendant un lancement ferme l'overlay mais ne coupe pas le suivi : un launcher déjà sollicité ne peut pas être annulé.
 
 ## Identité visuelle
@@ -46,3 +44,10 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Exclus : désinstalleurs, exe de Windows et de `WindowsApps`, launchers de stores (même rangés dans « Jeux »), jeux déjà déclarés par un store, et tout exe situé dans le dossier d'un jeu déjà trouvé.
 - Le suffixe « Launcher » est retiré du nom affiché (« Hytale Launcher » devient « Hytale », lancé via « Hytale Launcher ») ; l'identifiant suit le dossier stable du jeu pour que le temps de jeu survive aux mises à jour.
 - Correction Epic : un `MainGameAppName` vide n'est plus pris pour un DLC (Fortnite et Surviving Mars manquaient).
+
+## Données réelles des stores et images
+
+- Temps de jeu, dernière session : le plus élevé entre la mesure de Hangar et le store (Steam `localconfig.vdf`, GOG Galaxy `galaxy-2.0.db`). Epic, Ubisoft, Riot, Xbox et les jeux hors store ne gardent rien en local : seul Hangar mesure.
+- Taille : donnée par le store quand elle existe (Steam `SizeOnDisk`, Epic `InstallSize`, `EstimatedSize` du registre), sinon calcul du dossier. Date « Ajouté » : date d'installation, sinon première détection.
+- Genre : API `appdetails` de Steam en français (commande `game_info`, en cache), pour les jeux qui ont un appid Steam.
+- Jaquettes et bannières (`find_artwork`) : image native du store (Epic, GOG, Ubisoft via gamesdb, Xbox), puis Steam, puis SteamGridDB si une clé est saisie dans les Paramètres.

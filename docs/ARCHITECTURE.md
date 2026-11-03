@@ -118,6 +118,7 @@ interface PersistedState {
 | `pick_exe()` / `pick_folder()` | Via `tauri-plugin-dialog` côté frontend directement |
 | `resolve_steam_id(name) -> number?` | Recherche Steam |
 | `search_steam(name) -> {id,name}[]` | Pour la modale « Changer la jaquette » (5 résultats) |
+| `find_artwork(gameId, steamGridKey, refresh) -> {cover, hero, source}` | Jaquette et bannière d'un jeu : image native du store (Epic, GOG, Xbox), puis Steam, puis SteamGridDB ; résultat mis en cache (`cachertwork.json`) |
 | `image(url) -> string` | Renvoie un chemin local en cache (servi via le protocole `asset:`), télécharge si absent |
 | `exe_icon(path) -> string?` | Icône d'exe extraite en PNG 256 px (IShellItemImageFactory), en cache |
 | `folder_size(path) -> number` | Taille en octets, calculée en tâche de fond et mise en cache 24 h |

@@ -103,13 +103,17 @@ dd {
   background-clip: padding-box;
 }
 
+/* Rangée horizontale de jaquettes. La marge interne laisse la place au survol
+   (soulèvement, anneau et lueur de la carte) ; la marge négative garde l'alignement
+   avec les titres de section. */
 .row {
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding: 8px 4px 12px;
-  margin: -8px -4px 0;
+  padding: 18px 24px 30px;
+  margin: -18px -24px -18px;
   scrollbar-width: none;
+  scroll-padding-inline: 24px;
 }
 
 .row::-webkit-scrollbar {

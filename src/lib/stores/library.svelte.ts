@@ -30,6 +30,8 @@ class Library {
   favorites = $derived(this.visible.filter((g) => this.state.favorites.includes(g.id)));
   maxPlayMs = $derived(Math.max(1, ...this.visible.map((g) => this.totals(g.id).playMs)));
 
+  genres = $state<Record<string, string | null>>({});
+  private genreAsked = new Set<string>();
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private libTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -45,8 +47,41 @@ class Library {
     return this.state.favorites.includes(id);
   }
 
+  /**
+   * Temps de jeu, lancements et dernière session : le plus élevé entre ce que Hangar a
+   * mesuré et ce que le store sait (Steam, GOG Galaxy). Les nouvelles sessions s'ajoutent
+   * à cette valeur, ce qui reste juste puisque le store les comptera aussi.
+   */
   totals(id: string): Totals {
-    return this.state.totals[id] ?? EMPTY_TOTALS;
+    const own = this.state.totals[id] ?? EMPTY_TOTALS;
+    const g = this.byId.get(id);
+    if (!g || (!g.storePlayMs && !g.storeLastPlayed)) return own;
+    return {
+      playMs: Math.max(own.playMs, g.storePlayMs ?? 0),
+      launches: own.launches,
+      lastPlayed: Math.max(own.lastPlayed, g.storeLastPlayed ?? 0)
+    };
+  }
+
+  /** Date d'ajout : installation connue, sinon première détection par Hangar. */
+  addedAt(g: Game): number | undefined {
+    return g.installedAt || this.state.firstSeen[g.id] || undefined;
+  }
+
+  /** Genre : donné par le scan, sinon cherché une fois sur Steam (game_info). */
+  genre(g: Game): string | null {
+    if (g.genre) return g.genre;
+    if (g.id in this.genres) return this.genres[g.id];
+    if (!this.genreAsked.has(g.id)) {
+      this.genreAsked.add(g.id);
+      queueMicrotask(() => {
+        api
+          .gameInfo(g.id)
+          .then((r) => (this.genres[g.id] = r.genre || null))
+          .catch(() => (this.genres[g.id] = null));
+      });
+    }
+    return null;
   }
 
   /** Enregistre l'état (regroupe les écritures rapprochées). */

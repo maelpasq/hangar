@@ -14,10 +14,12 @@
 
   // Position recalculée à chaque ouverture pour rester dans la fenêtre.
   $effect(() => {
-    const r = menu.getBoundingClientRect();
+    // offsetWidth/Height : taille réelle, sans l'échelle de l'animation d'ouverture.
+    const w = menu.offsetWidth;
+    const h = menu.offsetHeight;
     pos = {
-      left: Math.max(8, Math.min(x, window.innerWidth - r.width - 8)),
-      top: Math.max(8, Math.min(y, window.innerHeight - r.height - 8))
+      left: Math.max(8, Math.min(x, window.innerWidth - w - 8)),
+      top: Math.max(8, Math.min(y, window.innerHeight - h - 8))
     };
     menu.querySelector<HTMLElement>('button')?.focus();
   });
@@ -39,8 +41,10 @@
   ]);
 
   onMount(() => {
+    // La cible est la fenêtre elle-même pour « blur » : ce n'est pas un nœud, on ferme.
     const close = (e: Event) => {
-      if (!menu.contains(e.target as Node)) ui.menu = null;
+      const t = e.target;
+      if (!(t instanceof Node) || !menu.contains(t)) ui.menu = null;
     };
     const t = setTimeout(() => {
       window.addEventListener('mousedown', close);

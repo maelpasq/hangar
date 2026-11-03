@@ -97,7 +97,7 @@
     <div class="info" class:inrow={variant === 'row'}>
       <div class="name">{name}</div>
       {#if meta !== 'none'}
-        <div class="meta"><span class="dot" style:background={store.color}></span>{metaText}</div>
+        <div class="meta"><span class="dot" style:background={store.color}></span><span class="mt">{metaText}</span></div>
       {/if}
     </div>
   {/if}
@@ -225,6 +225,11 @@
     font-size: 12px;
     color: var(--muted);
     margin-top: 3px;
+    min-width: 0;
+  }
+
+  .mt {
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

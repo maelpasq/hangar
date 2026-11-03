@@ -85,11 +85,52 @@ function demoState(now: number): PersistedState {
   return s;
 }
 
+/**
+ * Mode `?demo=reel` : proche d'un vrai premier lancement (peu de jeux, aucun historique,
+ * pas de genre, beaucoup de jaquettes générées, noms et chemins très longs).
+ */
+function reelLibrary(): Game[] {
+  const g = (id: string, name: string, store: StoreId, steamAppId: number | null, dir: string): Game => ({
+    id: `${store}:${id}`,
+    name,
+    store,
+    installDir: dir,
+    launch: { kind: 'uri', target: `demo://${id}`, args: '' },
+    launcherName: STORES[store].launcher,
+    steamAppId,
+    exePath: null,
+    processNames: [],
+    genre: null
+  });
+  return [
+    g('284160', 'BeamNG.drive', 'steam', 284160, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\BeamNG.drive'),
+    g('1248130', 'Farming Simulator 22', 'steam', 1248130, 'D:\\SteamLibrary\\steamapps\\common\\Farming Simulator 22'),
+    g('620', 'Portal 2', 'steam', 620, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Portal 2'),
+    g('526870', 'Satisfactory', 'steam', 526870, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Satisfactory'),
+    g('fortnite', 'Fortnite', 'epic', null, 'C:\\Program Files\\Epic Games\\Fortnite'),
+    g('trackmania', 'Trackmania', 'ubisoft', null, 'C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\games\\Trackmania'),
+    g('valorant', 'VALORANT', 'riot', null, 'C:\\Riot Games\\VALORANT\\live'),
+    g('minecraft', 'Minecraft Launcher', 'xbox', null, 'C:\\XboxGames\\Minecraft Launcher\\Content'),
+    g('aniimo', 'Aniimo', 'local', null, 'C:\\Users\\Joueur\\AppData\\Local\\Programs\\Aniimo'),
+    g('hytale', 'Hytale', 'local', null, 'C:\\Users\\Joueur\\AppData\\Roaming\\Hytale'),
+    g('lunar', 'Lunar Client', 'local', null, 'C:\\Users\\Joueur\\AppData\\Local\\Programs\\lunarclient'),
+    g(
+      'long',
+      "Un jeu au nom vraiment très très long pour tester les ellipses partout dans l'interface : Édition Ultime",
+      'local',
+      null,
+      'E:\\Jeux indépendants\\Collection personnelle\\Prototypes et essais\\Un jeu au nom vraiment très très long\\Binaries\\Win64'
+    )
+  ];
+}
+
+const REEL = typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === 'reel';
+
 export function mockApi(): Api {
   const now = Date.now();
-  let state: unknown = demoState(now);
+  let state: unknown = REEL ? defaultState() : demoState(now);
   let library: Game[] = [];
-  const lib = games.map(toGame);
+  const lib = REEL ? reelLibrary() : games.map(toGame);
   const listeners = new Set<(e: LaunchEvent) => void>();
   const running = new Map<string, { start: number; timers: number[] }>();
   const emit = (e: LaunchEvent) => listeners.forEach((l) => l(e));
@@ -142,6 +183,7 @@ export function mockApi(): Api {
         .slice(0, 5)
         .map((g) => ({ id: g.steamAppId!, name: g.name }));
     },
+    findArtwork: async () => ({ cover: null, hero: null, source: '' }),
     image: (url) => {
       let p = imgCache.get(url);
       if (!p) {
@@ -156,6 +198,7 @@ export function mockApi(): Api {
       return p;
     },
     exeIcon: async () => null,
+    gameInfo: async () => ({ genre: null }),
     folderSize: async (path) => {
       const g = games.find((d) => (PATHS[d.store] ?? PATHS.local)(d.name) === path);
       return g ? g.sizeGb * 1_000_000_000 : null;

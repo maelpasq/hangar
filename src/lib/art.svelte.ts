@@ -1,9 +1,10 @@
-// Jaquettes, bannières et icônes : chaîne de repli, cache mémoire, résolution des ID Steam.
-// Toutes les images distantes passent par api.image (cache disque côté backend).
+// Jaquettes, bannières et icônes : chaîne de repli et cache mémoire.
+// Jeux Steam : CDN Steam (api.image). Sinon, ou en repli : api.findArtwork, qui cherche
+// côté backend dans le store d'origine, sur Steam puis sur SteamGridDB.
 
 import { api } from './api';
 import { library } from './stores/library.svelte';
-import type { Game } from './types';
+import type { Artwork, Game } from './types';
 
 export interface CoverResult {
   src: string;
@@ -55,9 +56,11 @@ class Art {
   heroes = $state<Record<string, string | null>>({});
   icons = $state<Record<string, string | null>>({});
   private pending = new Set<string>();
-  private resolving = false;
+  /** Recherche multi-sources du backend, une seule par jeu. */
+  private auto = new Map<string, Promise<Artwork>>();
+  private refreshNext = new Set<string>();
 
-  /** ID Steam effectif d'un jeu (jaquette choisie, natif, ou résolu). */
+  /** ID Steam effectif d'un jeu (jaquette choisie, natif, ou connu). */
   steamId(g: Game): number | null {
     const custom = library.state.customCovers[g.id];
     if (custom?.startsWith('steam:')) return Number(custom.slice(6)) || null;
@@ -66,13 +69,35 @@ class Art {
     return c && c > 0 ? c : null;
   }
 
+  private autoOn(g: Game): boolean {
+    return library.state.prefs.autoCovers && !library.state.customCovers[g.id];
+  }
+
+  /** Peut avoir une bannière (pour le carrousel). */
+  mayHaveHero(g: Game): boolean {
+    return !!this.steamId(g) || this.autoOn(g);
+  }
+
   /** Clé de cache de la jaquette, ou null pour une jaquette générée. */
   coverKey(g: Game): string | null {
     const custom = library.state.customCovers[g.id];
     if (custom === 'none') return null;
     if (custom && !custom.startsWith('steam:')) return `file:${custom}`;
     const id = this.steamId(g);
-    return id ? `steam:${id}` : null;
+    if (id) return `steam:${id}|${g.id}`;
+    return this.autoOn(g) ? `auto:${g.id}` : null;
+  }
+
+  private findAuto(g: Game): Promise<Artwork> {
+    const key = library.state.prefs.steamGridDbKey.trim();
+    const memo = `${g.id}|${key ? 'k' : ''}`;
+    let p = this.auto.get(memo);
+    if (!p) {
+      const refresh = this.refreshNext.delete(g.id);
+      p = api.findArtwork(g.id, key || null, refresh).catch(() => ({ cover: null, hero: null, source: '' }));
+      this.auto.set(memo, p);
+    }
+    return p;
   }
 
   /** undefined = en cours, null = jaquette générée. */
@@ -81,22 +106,28 @@ class Art {
     if (!key) return null;
     if (key in this.covers) return this.covers[key];
     this.load(`c|${key}`, async () => {
-      let r: CoverResult | null;
+      let r: CoverResult | null = null;
       if (key.startsWith('file:')) r = { src: api.localSrc(key.slice(5)), landscape: false };
-      else r = await steamCover(Number(key.slice(6)));
+      else if (key.startsWith('steam:')) {
+        r = await steamCover(Number(key.slice(6).split('|')[0]));
+        // Pas de jaquette sur le CDN Steam : autres sources (SteamGridDB...).
+        if (!r && this.autoOn(g)) r = (await this.findAuto(g)).cover;
+      } else r = (await this.findAuto(g)).cover;
       this.covers[key] = r;
     });
     return undefined;
   }
 
-  /** Bannière library_hero ; undefined = en cours, null = aucune. */
+  /** Bannière ; undefined = en cours, null = aucune. */
   hero(g: Game): string | null | undefined {
     const id = this.steamId(g);
-    if (!id) return null;
-    const key = String(id);
+    if (!id && !this.autoOn(g)) return null;
+    const key = `${id ?? 'auto'}|${g.id}|${library.state.prefs.steamGridDbKey ? 'k' : ''}`;
     if (key in this.heroes) return this.heroes[key];
     this.load(`h|${key}`, async () => {
-      this.heroes[key] = await firstImage(heroUrls(id));
+      let h = id ? await firstImage(heroUrls(id)) : null;
+      if (!h && this.autoOn(g)) h = (await this.findAuto(g)).hero;
+      this.heroes[key] = h;
     });
     return undefined;
   }
@@ -117,41 +148,29 @@ class Art {
     this.covers[key] = null;
   }
 
+  /** Oublie les résultats automatiques (clé SteamGridDB modifiée, réglage réactivé). */
+  reset(): void {
+    this.auto.clear();
+    for (const k of Object.keys(this.covers)) if (!k.startsWith('file:')) delete this.covers[k];
+    for (const k of Object.keys(this.heroes)) delete this.heroes[k];
+    for (const k of [...this.pending]) if (!k.startsWith('i|')) this.pending.delete(k);
+  }
+
+  /** Relance la recherche automatique d'un jeu en ignorant le cache du backend. */
+  refresh(g: Game): void {
+    this.refreshNext.add(g.id);
+    for (const m of [...this.auto.keys()]) if (m.startsWith(`${g.id}|`)) this.auto.delete(m);
+    for (const k of Object.keys(this.covers)) if (k.endsWith(`|${g.id}`) || k === `auto:${g.id}`) delete this.covers[k];
+    for (const k of Object.keys(this.heroes)) if (k.includes(`|${g.id}|`)) delete this.heroes[k];
+    for (const k of [...this.pending]) if (k.includes(g.id)) this.pending.delete(k);
+  }
+
   private load(key: string, fn: () => Promise<void>): void {
     if (this.pending.has(key)) return;
     this.pending.add(key);
     queueMicrotask(() => {
       fn().catch((e) => console.warn('image', key, e));
     });
-  }
-
-  /** Cherche l'ID Steam des jeux hors Steam (si « Jaquettes automatiques » est actif). */
-  async resolveSteamIds(): Promise<void> {
-    if (this.resolving || !library.state.prefs.autoCovers) return;
-    this.resolving = true;
-    try {
-      const todo = library.visible.filter(
-        (g) =>
-          !g.steamAppId && !(g.id in library.state.steamIdCache) && !library.state.customCovers[g.id]
-      );
-      const queue = [...todo];
-      const worker = async () => {
-        for (let g = queue.shift(); g; g = queue.shift()) {
-          if (!library.state.prefs.autoCovers) return;
-          let id: number | null = null;
-          try {
-            id = await api.resolveSteamId(library.name(g));
-          } catch {
-            id = null;
-          }
-          library.state.steamIdCache[g.id] = id ?? 0;
-          library.save();
-        }
-      };
-      await Promise.all([worker(), worker(), worker()]);
-    } finally {
-      this.resolving = false;
-    }
   }
 }
 

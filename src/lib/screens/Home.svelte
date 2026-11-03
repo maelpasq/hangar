@@ -30,7 +30,7 @@
       ? [...played, ...library.favorites, ...byHours]
       : [...vis].sort((a, b) => library.name(a).localeCompare(library.name(b), 'fr'));
     const seen = new Set<string>();
-    return list.filter((g) => art.steamId(g) && !seen.has(g.id) && seen.add(g.id));
+    return list.filter((g) => art.mayHaveHero(g) && !seen.has(g.id) && seen.add(g.id));
   });
 
   // On n'ajoute un jeu qu'une fois les bannières des précédents connues : l'ordre reste stable.
@@ -93,7 +93,7 @@
     {/if}
 
     {#if library.favorites.length}
-      <div class="section-head">
+      <div class="section-head" class:first-head={!recent.length}>
         <h2>Favoris</h2>
         <span class="sub">{plural(library.favorites.length, 'jeu épinglé', 'jeux épinglés')}</span>
       </div>
@@ -112,7 +112,7 @@
       </div>
       <TopPlayedList games={top} />
     {:else}
-      <div class="section-head center">
+      <div class="section-head center" class:first-head={!recent.length && !library.favorites.length}>
         <h2>Ta bibliothèque</h2>
         <span class="grow"></span>
         <button class="link" onclick={() => ui.libraryAll()}>Toute la bibliothèque</button>
