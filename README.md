@@ -8,7 +8,7 @@ Hangar trouve tout seul les jeux installés sur ton ordinateur (Steam, Epic, GOG
 
 ### [⬇ Télécharger Hangar](https://github.com/maelpasq/hangar/releases/latest)
 
-[Code signing policy](#code-signing-policy) · [Licence MIT](LICENSE)
+[Licence MIT](LICENSE)
 
 </div>
 
@@ -88,16 +88,7 @@ Hangar ne supprime jamais rien : « Masquer » cache seulement un jeu dans Hanga
 
 Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows et `~/Library/Application Support/studio.pamal.hangar` sous macOS.
 
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-Seuls les binaires construits par le workflow GitHub Actions de ce dépôt, à partir de son code source, sont signés. Chaque release est approuvée à la main avant signature.
-
-- Committers et reviewers : [maelpasq](https://github.com/maelpasq)
-- Approvers : [maelpasq](https://github.com/maelpasq)
-
-### Confidentialité
+## Confidentialité
 
 Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne transfère d'information vers d'autres systèmes en réseau que pour les fonctions suivantes :
 

@@ -67,7 +67,7 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 
 ## Signature du code Windows
 
-- Choix : SignPath Foundation (gratuit pour l'open source). Microsoft Artifact Signing n'accepte pas les particuliers en France ; un certificat Certum demande de signer depuis le PC à chaque release.
-- Prérequis SignPath ajoutés : licence MIT (`LICENSE`, copyright pamal Studio), section « Code signing policy » (attribution, rôles, confidentialité) dans le README et lien dans chaque release.
+- Reporté (novembre 2026) : pas de demande SignPath pour l'instant, l'exe reste non signé (avertissement SmartScreen expliqué dans le README). Option retenue le jour venu : SignPath Foundation (gratuit pour l'open source). Microsoft Artifact Signing n'accepte pas les particuliers en France ; un certificat Certum demande de signer depuis le PC à chaque release.
+- Gardés : licence MIT (`LICENSE`, copyright pamal Studio) et section Confidentialité du README. Retirés en attendant : la section « Code signing policy » (attribution SignPath, rôles) et son lien dans les releases, à remettre lors de la demande.
 - Éditeur de l'app : « pamal Studio » (`bundle.publisher`). L'installeur range désormais son chemin d'installation sous `HKCU\Software\pamal Studio\Hangar` ; l'ancienne clé `Software\pamal\Hangar` reste orpheline, sans effet (même dossier d'installation par défaut).
 - Le branchement dans `release.yml` attend l'accord de SignPath (identifiants d'organisation, de projet et de politique de signature, jeton d'API en secret).
