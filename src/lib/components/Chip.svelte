@@ -1,18 +1,21 @@
 <script lang="ts">
   // Puce de filtre (store) avec point de couleur et compteur.
   import type { Snippet } from 'svelte';
+  import type { StoreId } from '../types';
+  import StoreLogo from './StoreLogo.svelte';
 
   let {
     on = false,
     color,
+    store,
     count,
     onclick,
     children
-  }: { on?: boolean; color?: string; count?: number; onclick: () => void; children: Snippet } = $props();
+  }: { on?: boolean; color?: string; store?: StoreId; count?: number; onclick: () => void; children: Snippet } = $props();
 </script>
 
 <button class="chip" class:on aria-pressed={on} {onclick}>
-  {#if color}<span class="d" style:background={color}></span>{/if}
+  {#if store}<StoreLogo {store} size={13} />{:else if color}<span class="d" style:background={color}></span>{/if}
   {@render children()}
   {#if count !== undefined}<span class="c num">{count}</span>{/if}
 </button>
@@ -47,6 +50,11 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
+  }
+
+  /* sur la puce active (fond blanc), le logo passe en sombre pour rester lisible */
+  .chip.on :global(.slogo) {
+    color: #0a0b0f !important;
   }
 
   .c {

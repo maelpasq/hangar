@@ -9,6 +9,7 @@
   import Cover from './Cover.svelte';
   import FavButton from './FavButton.svelte';
   import Icon from './Icon.svelte';
+  import StoreLogo from './StoreLogo.svelte';
 
   let {
     game,
@@ -97,7 +98,7 @@
     <div class="info" class:inrow={variant === 'row'}>
       <div class="name">{name}</div>
       {#if meta !== 'none'}
-        <div class="meta"><span class="dot" style:background={store.color}></span><span class="mt">{metaText}</span></div>
+        <div class="meta"><StoreLogo store={game.store} size={12} /><span class="mt">{metaText}</span></div>
       {/if}
     </div>
   {/if}

@@ -5,6 +5,7 @@
   import type { Game } from '../types';
   import { hoursLabel } from '../util/format';
   import Cover from './Cover.svelte';
+  import StoreLogo from './StoreLogo.svelte';
 
   let {
     results,
@@ -39,7 +40,7 @@
       <span class="txt">
         <span class="nm">{library.name(g)}</span>
         <span class="meta"
-          ><span class="dot" style:background={STORES[g.store].color}></span>{STORES[g.store].label} · {hoursLabel(
+          ><StoreLogo store={g.store} size={12} />{STORES[g.store].label} · {hoursLabel(
             library.totals(g.id).playMs
           )}</span
         >

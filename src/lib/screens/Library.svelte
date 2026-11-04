@@ -1,6 +1,7 @@
 <script lang="ts">
   // Bibliothèque / Favoris / filtre store : tri, puces, grille (virtualisée au-delà de 150 jeux).
   import Chip from '../components/Chip.svelte';
+  import StoreLogo from '../components/StoreLogo.svelte';
   import GameCard from '../components/GameCard.svelte';
   import Icon from '../components/Icon.svelte';
   import Segmented from '../components/Segmented.svelte';
@@ -86,7 +87,7 @@
 >
   <div class="head">
     <div>
-      <h1>{title}</h1>
+      <h1>{#if !ui.favOnly && ui.store !== 'all'}<StoreLogo store={ui.store} size={26} glow />{/if} {title}</h1>
       <p>{plural(list.length, 'jeu', 'jeux')} · {formatNumber(totalHours)} {totalHours > 1 ? 'heures' : 'heure'} de jeu au total</p>
     </div>
     <span class="grow"></span>
@@ -106,7 +107,7 @@
     <div class="chips" role="group" aria-label="Filtrer par store">
       <Chip on={ui.store === 'all'} color="#ffffff" count={base.length} onclick={() => (ui.store = 'all')}>Tous</Chip>
       {#each presentStores(counts) as s (s)}
-        <Chip on={ui.store === s} color={STORES[s].color} count={counts[s]} onclick={() => (ui.store = s)}
+        <Chip on={ui.store === s} store={s} count={counts[s]} onclick={() => (ui.store = s)}
           >{STORES[s].label}</Chip
         >
       {/each}

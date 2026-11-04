@@ -10,6 +10,7 @@
   import Cover from './Cover.svelte';
   import FavButton from './FavButton.svelte';
   import PlayButton from './PlayButton.svelte';
+  import StoreLogo from './StoreLogo.svelte';
 
   const PERIOD = 6500;
 
@@ -103,7 +104,7 @@
     {@const st = STORES[g.store]}
     <div class="copy" class:on={i === idx} aria-hidden={i !== idx} inert={i !== idx} style:max-width="{copyMax}px">
       <div class="pill">
-        <span class="dot" style:background={st.color}></span>{st.label} · {!t.lastPlayed
+        <StoreLogo store={g.store} size={14} />{st.label} · {!t.lastPlayed
           ? 'À découvrir'
           : daysAgo(t.lastPlayed) <= 2
             ? 'Reprendre'

@@ -3,6 +3,7 @@
   import { addFolder, removeFolder } from '../actions';
   import { api } from '../api';
   import Icon from '../components/Icon.svelte';
+  import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
@@ -80,7 +81,7 @@
         {#each stores as s (s)}
           {@const on = !library.state.disabledStores.includes(s)}
           <div class="line">
-            <span class="sdot" style:background={STORES[s].color}></span>
+            <StoreLogo store={s} size={16} />
             <span class="grow">{STORES[s].label}</span>
             <span class="meta">{plural(library.countsAll[s] ?? 0, 'jeu', 'jeux')}</span>
             <Toggle {on} label="Activer {STORES[s].label}" onchange={(v) => library.setStoreEnabled(s, v)} />
@@ -93,7 +94,7 @@
         <p class="desc">Ils restent installés, Hangar ne les affiche simplement plus.</p>
         {#each hidden as g (g.id)}
           <div class="line">
-            <span class="sdot" style:background={STORES[g.store].color}></span>
+            <StoreLogo store={g.store} size={16} />
             <span class="grow ell">{library.name(g)}</span>
             <button class="chip-btn" onclick={() => library.unhide(g.id)}><Icon name="eye" size={15} />Afficher</button>
           </div>
@@ -334,13 +335,6 @@
     font-size: 12px;
     color: var(--muted);
     white-space: nowrap;
-  }
-
-  .sdot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    flex-shrink: 0;
   }
 
   .none {

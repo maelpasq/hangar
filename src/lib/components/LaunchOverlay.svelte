@@ -5,6 +5,8 @@
   import { runner, type Launching } from '../stores/runner.svelte';
   import type { Game } from '../types';
   import Cover from './Cover.svelte';
+  import StoreLogo from './StoreLogo.svelte';
+  import { STORE_LOGOS } from '../store-logos';
 
   let { launching, game }: { launching: Launching; game: Game } = $props();
 
@@ -38,6 +40,7 @@
         ><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,.15)"></circle><path d="M21 12a9 9 0 0 0-9-9" stroke="#fff"
         ></path></svg
       >
+      {#if launching.step === 0 && STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={16} />{/if}
       <span>{text}</span>
     </div>
     <div class="track"><div class="prog"></div></div>
@@ -45,7 +48,7 @@
       {#each steps as s, i (i)}
         {@const color = i < launching.step ? 'var(--success-text)' : i === launching.step ? '#ffffff' : 'var(--muted-2)'}
         <span class="step" style:color style:opacity={i <= launching.step ? 1 : 0.6}
-          ><span class="d" style:background={color}></span>{s}</span
+          ><span class="d" style:background={color}></span>{#if i === 0 && STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={12} />{/if}{s}</span
         >
       {/each}
     </div>

@@ -9,6 +9,8 @@
   import GameCard from '../components/GameCard.svelte';
   import Icon from '../components/Icon.svelte';
   import PlayButton from '../components/PlayButton.svelte';
+  import StoreLogo from '../components/StoreLogo.svelte';
+  import { STORE_LOGOS } from '../store-logos';
   import { STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
@@ -86,7 +88,7 @@
     </div>
     <div class="headline">
       <div class="pill">
-        <span class="dot" style:background={st.color}></span>{st.label}{genre ? ` · ${genre}` : ''}
+        <StoreLogo store={game.store} size={14} />{st.label}{genre ? ` · ${genre}` : ''}
       </div>
       <h1 class:long={name.length > 36} title={name}>{name}</h1>
       <div class="actions">
@@ -97,7 +99,7 @@
           <PlayButton gameId={game.id} large />
         {/if}
         <FavButton gameId={game.id} variant="ghost" size={52} />
-        <span class="via">Se lance via {game.launcherName}</span>
+        <span class="via">Se lance via {#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</span>
       </div>
     </div>
   </div>
@@ -126,7 +128,7 @@
         <dt>Emplacement</dt>
         <dd class="path">{location}</dd>
         <dt>Lanceur</dt>
-        <dd>{game.launcherName}</dd>
+        <dd>{#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</dd>
         <dt>Ajouté</dt>
         <dd>{added ? dateLabel(added) : '-'}</dd>
       </dl>
