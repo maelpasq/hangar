@@ -34,6 +34,16 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Hangar ${{ github.ref_name }}
-          releaseBody: "Télécharge l'installeur Windows (.exe) ou macOS (.dmg) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar."
+          releaseBody: "Télécharge Hangar-Setup.exe (Windows) ou le .dmg (macOS) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar."
           releaseDraft: false
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+      # Installeur Hangar : embarque le NSIS (toujours utilisé par l'updater), nom stable pour un lien direct.
+      - name: installeur Hangar
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build:setup
+          cp installer/target/release/hangar-setup.exe Hangar-Setup.exe
+          gh release upload "${{ github.ref_name }}" Hangar-Setup.exe --clobber

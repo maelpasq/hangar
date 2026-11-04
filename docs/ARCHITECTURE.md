@@ -169,5 +169,6 @@ Reprendre `best_exe` de `scanner.rs` : exes jusqu'à 4 niveaux, liste d'exclusio
 ## 6. Build et distribution
 
 - `npm run build` produit `src-tauri/target/release/hangar.exe` (portable) et `bundle/nsis/Hangar_<version>_x64-setup.exe` (installation par utilisateur).
+- `npm run build:setup` produit ensuite `installer/target/release/hangar-setup.exe` : l'installeur aux couleurs de Hangar (petite app Tauri, `installer/`) qui embarque ce NSIS et l'exécute en silencieux. Le NSIS seul reste utilisé par l'updater.
 - Workflow GitHub Actions `.github/workflows/build.yml` (déjà présent) : build sur `windows-latest`, artefacts exe + installeur.
 - Identifiant d'app : `studio.pamal.hangar`. Version dans `package.json` et `tauri.conf.json`, synchronisées.

@@ -33,14 +33,14 @@ Va sur la **[page des releases](https://github.com/maelpasq/hangar/releases/late
 
 | Système | Fichier |
 |---|---|
-| Windows 10/11 | `Hangar_x.y.z_x64-setup.exe` |
+| Windows 10/11 | `Hangar-Setup.exe` |
 | macOS (Intel et Apple Silicon) | `Hangar_x.y.z_universal.dmg` |
 
 Les autres fichiers de la release servent aux mises à jour automatiques, tu n'en as pas besoin.
 
 ### Windows
 
-Lance `Hangar_x.y.z_x64-setup.exe`. L'installation se fait dans ton compte, sans droits administrateur.
+Lance `Hangar-Setup.exe`, puis clique sur **Installer**. L'installation se fait dans ton compte, sans droits administrateur.
 
 Si Windows affiche « Windows a protégé votre ordinateur », clique sur **Informations complémentaires** puis **Exécuter quand même**. Ce message apparaît pour toutes les apps qui ne sont pas signées par un certificat payant.
 
@@ -130,7 +130,15 @@ npm run dev:web
 npm run build
 ```
 
-L'installeur est créé dans `src-tauri/target/release/bundle/` : `nsis/` (`.exe`) sous Windows, `dmg/` sous macOS. Sous Windows, `build.bat` fait tout en un double-clic.
+L'installeur est créé dans `src-tauri/target/release/bundle/` : `nsis/` (`.exe`) sous Windows, `dmg/` sous macOS.
+
+Sous Windows, l'installeur aux couleurs de Hangar (`installer/`) embarque ce NSIS et se compile ensuite :
+
+```bash
+npm run build:setup
+```
+
+Il est créé dans `installer/target/release/hangar-setup.exe`. `build.bat` fait tout en un double-clic.
 
 ### Vérifier avant de proposer un changement
 

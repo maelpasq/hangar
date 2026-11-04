@@ -37,10 +37,18 @@ jobs:
           cargo clippy --all-targets -- -D warnings 2>&1 | tee clippy.log; s=${PIPESTATUS[0]}
           grep -E -A1 "^error" clippy.log | grep -v "^--" | paste - - | sed 's/^/::error::/' || true
           exit $s
+      - name: installeur Hangar
+        if: runner.os == 'Windows'
+        working-directory: installer
+        run: |
+          cargo test --release
+          cargo clippy --release --all-targets -- -D warnings
+          cargo build --release
       - uses: actions/upload-artifact@v4
         with:
           name: hangar-${{ runner.os }}
           path: |
             src-tauri/target/release/hangar.exe
             src-tauri/target/release/bundle/nsis/*.exe
+            installer/target/release/hangar-setup.exe
             src-tauri/target/release/bundle/dmg/*.dmg

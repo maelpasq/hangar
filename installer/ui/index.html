@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation de Hangar</title>
+<style>
+  @font-face {
+    font-family: 'Geist';
+    src: url('fonts/geist-latin-wght-normal.woff2') format('woff2');
+    font-weight: 100 900;
+  }
+  :root {
+    --bg: #0a0b0f;
+    --panel: #14161d;
+    --surface-2: rgba(255,255,255,.045);
+    --surface-3: rgba(255,255,255,.07);
+    --border-2: rgba(255,255,255,.08);
+    --text: #eef0f6;
+    --text-3: #a7acbd;
+    --muted: #8b90a3;
+    --accent: #7c6cff;
+    --accent-soft: rgba(139,123,255,.14);
+    --success: #6ee7b7;
+    --danger: #ff8f94;
+    --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 'Geist', 'Segoe UI Variable Display', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    cursor: default;
+  }
+
+  /* Fond : vagues violettes de la DA + grain */
+  .bg { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .wave {
+    position: absolute; width: 620px; height: 620px; border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+    filter: blur(2px);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  .wave.a {
+    top: -400px; left: -260px;
+    background: radial-gradient(circle at 70% 75%, rgba(110,59,246,.42), rgba(70,40,160,.18) 45%, transparent 70%);
+    box-shadow: inset -18px -18px 40px -20px rgba(140,110,255,.6);
+  }
+  .wave.b {
+    bottom: -430px; right: -240px;
+    background: radial-gradient(circle at 25% 25%, rgba(110,59,246,.6), rgba(70,40,160,.25) 45%, transparent 70%);
+    box-shadow: inset 18px 18px 40px -20px rgba(140,110,255,.65);
+    animation-duration: 22s; animation-direction: alternate-reverse;
+  }
+  @keyframes drift {
+    from { transform: rotate(0deg) scale(1); }
+    to   { transform: rotate(14deg) scale(1.06); }
+  }
+  .grain {
+    position: absolute; inset: 0; opacity: .05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Mur de jaquettes qui défile : tous les stores, une seule bibliothèque */
+  .wall {
+    position: fixed; top: -120px; right: -70px; width: 470px; height: 780px;
+    display: flex; gap: 14px;
+    transform: rotate(-12deg);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 34%), linear-gradient(transparent, #000 18%, #000 82%, transparent);
+    -webkit-mask-composite: source-in;
+    pointer-events: none;
+    opacity: .9;
+  }
+  .col { flex: 1; display: flex; flex-direction: column; gap: 14px; animation: scroll 42s linear infinite; }
+  .col:nth-child(2) { animation-duration: 54s; animation-direction: reverse; }
+  .col:nth-child(3) { animation-duration: 47s; }
+  @keyframes scroll { to { transform: translateY(-50%); } }
+  .tile {
+    position: relative; flex: none; aspect-ratio: 2 / 3; border-radius: 16px; overflow: hidden;
+    background: var(--g);
+    box-shadow: 0 18px 40px -18px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.07);
+  }
+  .tile::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(120% 80% at 30% 10%, rgba(255,255,255,.18), transparent 55%),
+                linear-gradient(transparent 55%, rgba(5,6,9,.75));
+  }
+  .tile span {
+    position: absolute; left: 10px; bottom: 10px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px 3px 7px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; color: #eef0f6;
+    background: rgba(10,11,15,.55); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.1);
+  }
+  .tile span::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--dot); }
+
+  /* Barre de titre */
+  .titlebar { position: fixed; top: 0; left: 0; right: 0; height: 44px; display: flex; justify-content: flex-end; align-items: center; gap: 4px; padding: 0 10px; z-index: 5; }
+  .icon-btn {
+    width: 32px; height: 28px; display: grid; place-items: center;
+    border: 0; border-radius: 9px; background: transparent; color: var(--text-3); cursor: pointer;
+    transition: background .2s var(--ease), color .2s var(--ease);
+  }
+  .icon-btn:hover { background: var(--surface-3); color: var(--text); }
+  .icon-btn.close:hover { background: rgba(229,72,77,.18); color: var(--danger); }
+  .icon-btn:disabled { opacity: .3; pointer-events: none; }
+  .icon-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; fill: none; }
+
+  /* Contenu */
+  main {
+    position: relative; z-index: 2; height: 100%;
+    display: flex; flex-direction: column;
+    padding: 88px 0 0 64px; width: 470px;
+  }
+  .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; }
+  .mark { width: 66px; height: auto; filter: drop-shadow(0 10px 30px rgba(110,59,246,.45)); }
+  .mark .star { transform-origin: 467px 460px; transform-box: view-box; }
+  .wordmark { height: 44px; width: auto; }
+  .version {
+    align-self: flex-start; margin-top: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: .4px; color: var(--muted);
+    padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border-2);
+    font-variant-numeric: tabular-nums;
+  }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -.6px; line-height: 1.15; }
+  .lead { margin-top: 10px; color: var(--text-3); font-size: 14.5px; max-width: 360px; }
+
+  .step { display: none; }
+  .step.on { display: block; animation: rise .55s var(--ease) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+  .actions { margin-top: 30px; display: flex; flex-direction: column; gap: 14px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 52px; padding: 0 30px; border: 0; border-radius: 15px; cursor: pointer;
+    font: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: -.1px;
+    color: #fff; background: var(--accent);
+    box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--accent) 80%, transparent), inset 0 1px 0 rgba(255,255,255,.22);
+    transition: transform .25s var(--ease), box-shadow .25s var(--ease), filter .25s var(--ease);
+    align-self: flex-start; min-width: 220px;
+  }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 20px 40px -12px color-mix(in srgb, var(--accent) 90%, transparent), inset 0 1px 0 rgba(255,255,255,.22); }
+  .btn:active { transform: translateY(0) scale(.98); }
+  .btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.ghost { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-2); color: var(--text); min-width: 0; height: 44px; font-size: 14px; padding: 0 20px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .path {
+    display: flex; align-items: center; gap: 10px; max-width: 380px;
+    padding: 9px 9px 9px 14px; border-radius: 13px;
+    background: var(--surface-2); border: 1px solid var(--border-2);
+  }
+  .path svg { flex: none; width: 16px; height: 16px; stroke: var(--muted); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .path div { flex: 1; min-width: 0; }
+  .path label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .path output { display: block; font: 12.5px ui-monospace, Consolas, monospace; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .link {
+    flex: none; border: 0; background: transparent; color: var(--text); cursor: pointer;
+    font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 9px;
+  }
+  .link:hover { background: var(--surface-3); }
+  .fine { font-size: 12px; color: var(--muted); }
+
+  /* Progression */
+  .progress { margin-top: 30px; max-width: 360px; }
+  .bar { position: relative; height: 6px; border-radius: 999px; background: rgba(255,255,255,.07); overflow: hidden; }
+  .bar i {
+    position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit;
+    background: linear-gradient(90deg, #6e3bf6, var(--accent) 60%, #b3a8ff);
+    box-shadow: 0 0 18px rgba(124,108,255,.8);
+    transition: width .6s var(--ease);
+  }
+  .bar i::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    animation: shimmer 1.3s linear infinite;
+  }
+  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  .status { margin-top: 12px; display: flex; justify-content: space-between; font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+  .installing .mark .star { animation: spin 1.6s var(--ease) infinite; }
+  @keyframes spin { 50% { transform: rotate(90deg) scale(1.25); } 100% { transform: rotate(180deg) scale(1); } }
+  .idle .mark .star { animation: twinkle 3.2s ease-in-out infinite; }
+  @keyframes twinkle { 50% { transform: scale(1.15); filter: brightness(1.35); } }
+
+  /* Terminé */
+  .done-badge {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px;
+    padding: 5px 12px 5px 8px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; color: var(--success);
+    background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.22);
+  }
+  .done-badge svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .done-badge path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw .5s .25s var(--ease) forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .error-badge { color: var(--danger); background: rgba(229,72,77,.1); border-color: rgba(229,72,77,.25); }
+  .row { display: flex; gap: 10px; align-items: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body class="idle">
+  <div class="bg" aria-hidden="true">
+    <div class="wave a"></div>
+    <div class="wave b"></div>
+    <div class="grain"></div>
+  </div>
+  <div class="wall" aria-hidden="true" id="wall"></div>
+
+  <div class="titlebar" data-tauri-drag-region>
+    <button class="icon-btn" id="min" aria-label="Réduire"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button class="icon-btn close" id="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <main data-tauri-drag-region>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 930 720" aria-hidden="true">
+        <defs>
+          <linearGradient id="a" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#dcd8e3"/><stop offset=".42" stop-color="#d4cfde"/><stop offset="1" stop-color="#6f6683"/></linearGradient>
+          <radialGradient id="g" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6e3bf6"/><stop offset=".5" stop-color="#7a52f0" stop-opacity=".75"/><stop offset="1" stop-color="#8a6ff0" stop-opacity="0"/></radialGradient>
+          <linearGradient id="s" x1="0" y1="345" x2="0" y2="575" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8a5cff"/><stop offset="1" stop-color="#652cee"/></linearGradient>
+          <path id="p" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
+        </defs>
+        <use href="#p" fill="url(#a)"/><use href="#p" fill="url(#g)"/>
+        <path class="star" d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#s)"/>
+      </svg>
+      <img class="wordmark" src="wordmark.png" alt="Hangar">
+      <span class="version" id="version"></span>
+    </div>
+
+    <!-- 1. Accueil -->
+    <section class="step on" id="welcome" aria-labelledby="t-welcome">
+      <h1 id="t-welcome">Tous tes jeux.<br>Une seule bibliothèque.</h1>
+      <p class="lead">Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul.</p>
+      <div class="actions">
+        <button class="btn" id="install">
+          <svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          <span id="install-label">Installer</span>
+        </button>
+        <div class="path">
+          <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <div><label for="dir">Emplacement</label><output id="dir"></output></div>
+          <button class="link" id="change">Modifier</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Installation -->
+    <section class="step" id="installing" aria-labelledby="t-installing">
+      <h1 id="t-installing">Installation en cours</h1>
+      <p class="lead">Ça ne prend que quelques secondes.</p>
+      <div class="progress">
+        <div class="bar" role="progressbar" aria-labelledby="t-installing" aria-valuemin="0" aria-valuemax="100" id="bar"><i id="fill"></i></div>
+        <div class="status" aria-live="polite"><span id="status">Préparation</span><span id="pct">0 %</span></div>
+      </div>
+    </section>
+
+    <!-- 3. Terminé -->
+    <section class="step" id="done" aria-labelledby="t-done">
+      <span class="done-badge"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Installé</span>
+      <h1 id="t-done">Hangar est prêt.</h1>
+      <p class="lead">Ta bibliothèque se remplit dès le premier lancement. Un raccourci t'attend aussi sur le Bureau.</p>
+      <div class="actions">
+        <button class="btn" id="launch">
+          <svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg>
+          Lancer Hangar
+        </button>
+      </div>
+    </section>
+
+    <!-- Erreur -->
+    <section class="step" id="error" aria-labelledby="t-error">
+      <span class="done-badge error-badge">Échec</span>
+      <h1 id="t-error">L'installation n'a pas abouti.</h1>
+      <p class="lead" id="error-msg"></p>
+      <div class="actions row">
+        <button class="btn" id="retry">Réessayer</button>
+        <button class="btn ghost" id="quit">Fermer</button>
+      </div>
+    </section>
+  </main>
+
+<script>
+  // API : Tauri dans l'installeur, simulation dans un navigateur (aperçu du design).
+  const T = window.__TAURI__;
+  const api = T ? {
+    info: () => T.core.invoke('info'),
+    pick: (dir) => T.core.invoke('pick_dir', { dir }),
+    install: (dir) => T.core.invoke('install', { dir }),
+    launch: (dir) => T.core.invoke('launch', { dir }),
+    minimize: () => T.window.getCurrentWindow().minimize(),
+    close: () => T.window.getCurrentWindow().close(),
+  } : {
+    info: async () => ({ version: '1.0.3', dir: 'C:\\Users\\Joueur\\AppData\\Local\\Hangar', update: false }),
+    pick: async (dir) => dir,
+    install: () => new Promise((ok, ko) => setTimeout(location.hash === '#fail' ? () => ko('Code de sortie 2') : ok, 2600)),
+    launch: async () => {},
+    minimize: () => {}, close: () => {},
+  };
+
+  const $ = (id) => document.getElementById(id);
+  let dir = '';
+
+  // Mur de jaquettes : dégradés générés et puce du store (jamais de logos de marque).
+  const stores = [['Steam','#66c0f4'],['Epic Games','#d9d9d9'],['GOG','#c084fc'],['Ubisoft','#60a5fa'],['EA app','#ff6b6b'],['Battle.net','#38a3ff'],['Xbox','#4ade80'],['Riot Games','#ff5c6c'],['Local','#f5a524']];
+  const hues = [262, 210, 330, 18, 190, 280, 150, 240, 350, 45, 225, 300];
+  // Styles posés par le CSSOM : la CSP de Tauri bloque les attributs style="".
+  for (let c = 0; c < 3; c++) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    for (let k = 0; k < 12; k++) { // deux fois 6 tuiles pour une boucle continue
+      const i = k % 6;
+      const h = hues[(i * 5 + c * 4) % hues.length];
+      const [name, dot] = stores[(i * 2 + c * 3) % stores.length];
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.style.setProperty('--g', `linear-gradient(160deg,hsl(${h} 60% 42%),hsl(${(h + 40) % 360} 55% 18%) 70%,hsl(${h} 40% 9%))`);
+      tile.style.setProperty('--dot', dot);
+      const chip = document.createElement('span');
+      chip.textContent = name;
+      tile.appendChild(chip);
+      col.appendChild(tile);
+    }
+    $('wall').appendChild(col);
+  }
+
+  function show(step) {
+    document.querySelectorAll('.step').forEach((s) => s.classList.toggle('on', s.id === step));
+    document.body.className = step === 'installing' ? 'installing' : 'idle';
+    $('close').disabled = $('min').disabled = false;
+    if (step === 'installing') $('close').disabled = true;
+    const focus = { welcome: 'install', done: 'launch', error: 'retry' }[step];
+    if (focus) $(focus).focus();
+  }
+
+  // Progression : NSIS silencieux ne donne pas d'avancement, on avance vers 90 % puis on termine.
+  const phases = ['Préparation', 'Copie des fichiers', 'Création des raccourcis', 'Finalisation'];
+  function progress() {
+    let p = 0;
+    const set = (v) => {
+      p = v;
+      $('fill').style.width = p + '%';
+      $('pct').textContent = Math.round(p) + ' %';
+      $('bar').setAttribute('aria-valuenow', Math.round(p));
+      $('status').textContent = phases[Math.min(phases.length - 1, Math.floor(p / 25))];
+    };
+    set(0);
+    const timer = setInterval(() => set(p + (90 - p) * 0.06), 120);
+    return () => { clearInterval(timer); set(100); };
+  }
+
+  async function install() {
+    show('installing');
+    const finish = progress();
+    const started = Date.now();
+    try {
+      await api.install(dir);
+      // Laisse le temps de voir la barre, même si l'installation est instantanée.
+      await new Promise((r) => setTimeout(r, Math.max(0, 1800 - (Date.now() - started))));
+      finish();
+      setTimeout(() => show('done'), 450);
+    } catch (e) {
+      finish();
+      $('error-msg').textContent = String(e);
+      show('error');
+    }
+  }
+
+  $('install').onclick = install;
+  $('retry').onclick = install;
+  $('change').onclick = async () => { const d = await api.pick(dir); if (d) { dir = d; $('dir').value = d; } };
+  $('launch').onclick = () => api.launch(dir);
+  $('quit').onclick = api.close;
+  $('close').onclick = api.close;
+  $('min').onclick = api.minimize;
+
+  api.info().then((i) => {
+    dir = i.dir;
+    $('dir').value = i.dir;
+    $('version').textContent = 'v' + i.version;
+    if (i.update) {
+      $('install-label').textContent = 'Mettre à jour';
+      $('t-welcome').innerHTML = 'Une nouvelle version<br>de Hangar t\u2019attend.';
+    }
+  });
+</script>
+</body>
+</html>

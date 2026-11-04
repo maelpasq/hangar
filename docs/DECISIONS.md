@@ -71,3 +71,13 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Gardés : licence MIT (`LICENSE`, copyright pamal Studio) et section Confidentialité du README. Retirés en attendant : la section « Code signing policy » (attribution SignPath, rôles) et son lien dans les releases, à remettre lors de la demande.
 - Éditeur de l'app : « pamal Studio » (`bundle.publisher`). L'installeur range désormais son chemin d'installation sous `HKCU\Software\pamal Studio\Hangar` ; l'ancienne clé `Software\pamal\Hangar` reste orpheline, sans effet (même dossier d'installation par défaut).
 - Le branchement dans `release.yml` attend l'accord de SignPath (identifiants d'organisation, de projet et de politique de signature, jeton d'API en secret).
+
+## Installeur Windows aux couleurs de Hangar
+
+- `installer/` : une petite app Tauri (`hangar-setup.exe`, fenêtre sans cadre 860 x 520) qui reprend la DA (vagues violettes, logo, Geist, accent `#7c6cff`) et un mur de jaquettes générées qui défile avec les puces des stores. Trois écrans : accueil (Installer / Mettre à jour, emplacement modifiable), progression, terminé (Lancer Hangar). Une erreur propose Réessayer.
+- Elle embarque l'installeur NSIS de Tauri (`include_bytes!`, trouvé par `build.rs` dans `src-tauri/target/release/bundle/nsis/`) et l'exécute en silencieux (`/S /D=<dossier>`, `CREATE_NO_WINDOW`). Raccourcis, désinstalleur, registre et fermeture de Hangar s'il tourne restent gérés par NSIS : rien n'est réécrit.
+- NSIS silencieux ne donne pas d'avancement : la barre avance vers 90 %, puis termine à la fin réelle (1,8 s minimum à l'écran).
+- L'updater intégré continue d'utiliser le NSIS (`latest.json` inchangé). La release ajoute `Hangar-Setup.exe` (nom stable, lien direct possible).
+- Sans WebView2 (rare sur Windows 10), la fenêtre ne peut pas s'ouvrir : l'installeur NSIS classique prend le relais, il sait installer WebView2.
+- Les données WebView2 de l'installeur vont dans `%TEMP%`, pour ne rien laisser dans AppData.
+- Désinstallation : celle de NSIS, inchangée.
