@@ -3,6 +3,7 @@
   import { plural } from '../util/format';
   // Barre latérale : navigation, stores, carte « En jeu », bouton « Ajouter un jeu ».
   import { STORES } from '../stores-meta';
+  import { STORE_LOGOS } from '../store-logos';
   import { library, presentStores } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import Icon, { type IconName } from './Icon.svelte';
@@ -70,7 +71,13 @@
         title={rail ? STORES[s].label : undefined}
         onclick={() => ui.storeFilter(s)}
       >
-        <span class="sdot" style:background={STORES[s].color} style:box-shadow="0 0 10px {STORES[s].color}"></span>
+        <span class="ic slogo" style:color={STORES[s].color} aria-hidden="true">
+          {#if STORE_LOGOS[s]}
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d={STORE_LOGOS[s]} /></svg>
+          {:else}
+            <Icon name={s === 'manual' ? 'plus' : 'folder'} size={17} />
+          {/if}
+        </span>
         {#if !rail}
           <span>{STORES[s].label}</span>
           <span class="count num">{library.counts[s]}</span>
@@ -221,12 +228,9 @@
     place-items: center;
   }
 
-  .sdot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    margin: 0 4px;
+  .slogo {
     flex-shrink: 0;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor 45%, transparent));
   }
 
   .count {

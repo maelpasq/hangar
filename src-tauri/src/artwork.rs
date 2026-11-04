@@ -106,7 +106,8 @@ impl Artworks {
     /// Jaquette et bannière d'un jeu (cache, puis chaîne de sources).
     pub fn find(&self, game: &Game, sgdb_key: Option<&str>, refresh: bool) -> Artwork {
         let key = sgdb_key.map(str::trim).filter(|k| !k.is_empty());
-        let ck = format!("{}|{}", game.id, if key.is_some() { "sgdb" } else { "-" });
+        // « v2 » : nouvelle source (Microsoft Store par le nom), les anciens échecs sont retentés.
+        let ck = format!("{}|{}|v2", game.id, if key.is_some() { "sgdb" } else { "-" });
         if !refresh {
             if let Some(e) = self.lock().entries.get(&ck).cloned() {
                 if entry_usable(&e, now()) {
@@ -206,7 +207,17 @@ impl Artworks {
             }
         }
 
-        // 3. SteamGridDB (clé de l'utilisateur).
+        // 3. Microsoft Store, par le nom (jeux hors Steam : VALORANT, Roblox...).
+        if !done(&out) && game.store != "xbox" {
+            if let Some(id) = self.ms_store_id(&game.name) {
+                let url = format!("https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds={id}&market=FR&languages=fr-fr");
+                if let Ok(v) = self.json(&url, None) {
+                    apply(xbox_candidates(&v), "xbox", &mut out);
+                }
+            }
+        }
+
+        // 4. SteamGridDB (clé de l'utilisateur).
         if !done(&out) {
             if let Some(k) = key {
                 match self.steamgriddb(k, steam_id, &game.name) {
@@ -294,6 +305,17 @@ impl Artworks {
         id
     }
 
+    /// ProductId Microsoft Store d'un jeu dont le titre correspond exactement au nom.
+    fn ms_store_id(&self, name: &str) -> Option<String> {
+        name_variants(name).iter().find_map(|n| {
+            let url = format!(
+                "https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/autosuggest?market=FR&languages=fr-fr&productFamilyNames=Games&query={}",
+                enc(n)
+            );
+            ms_pick(&self.json(&url, None).ok()?, n)
+        })
+    }
+
     fn steamgriddb(&self, key: &str, steam_id: Option<u32>, name: &str) -> Result<Found, HttpErr> {
         const API: &str = "https://www.steamgriddb.com/api/v2";
         let base = match steam_id {
@@ -358,7 +380,7 @@ fn enc(s: &str) -> String {
 pub fn name_variants(name: &str) -> Vec<String> {
     let clean = name.replace(['™', '®', '©'], "").split_whitespace().collect::<Vec<_>>().join(" ");
     let mut out = vec![clean.clone()];
-    const SUFFIXES: &[&str] = &["launcher", "enhanced", "edition", "remastered", "definitive edition"];
+    const SUFFIXES: &[&str] = &["launcher", "player", "enhanced", "edition", "remastered", "definitive edition"];
     let mut cur = clean;
     loop {
         let lower = cur.to_lowercase();
@@ -510,6 +532,23 @@ pub fn xbox_candidates(v: &Value) -> Found {
     f
 }
 
+/// Résultat d'`autosuggest` : premier jeu dont le titre (sans « - Windows », « - Xbox »...)
+/// est exactement `name`, pour éviter les faux amis (Robux, guides...).
+pub fn ms_pick(v: &Value, name: &str) -> Option<String> {
+    let want = crate::scanner::norm(name);
+    v.get("Results")?.as_array()?.iter().flat_map(|r| r.get("Products").and_then(Value::as_array).into_iter().flatten()).find_map(|p| {
+        if p.get("Type")?.as_str()? != "Game" {
+            return None;
+        }
+        let title = p.get("Title")?.as_str()?;
+        let base = [" - Windows", " - Xbox", " pour Windows", " for Windows", " (PC)"]
+            .iter()
+            .find_map(|s| title.strip_suffix(s))
+            .unwrap_or(title);
+        (crate::scanner::norm(base) == want).then(|| p.get("ProductId")?.as_str().map(String::from))?
+    })
+}
+
 // ───────────────────────────── SteamGridDB ─────────────────────────────
 
 pub fn sgdb_first_id(v: &Value) -> Option<u64> {
@@ -604,6 +643,20 @@ mod tests {
     }
 
     #[test]
+    fn recherche_microsoft_store() {
+        let v = json!({ "Results": [
+            { "Products": [{ "ProductId": "C3S", "Type": "Consumable", "Title": "Roblox" }] },
+            { "Products": [{ "ProductId": "BQ1", "Type": "Game", "Title": "Roblox - Xbox" }] },
+            { "Products": [{ "ProductId": "9NK", "Type": "Game", "Title": "PC VALORANT Guide" }] },
+            { "Products": [{ "ProductId": "9N1", "Type": "Game", "Title": "VALORANT" }] }
+        ]});
+        assert_eq!(ms_pick(&v, "Roblox").as_deref(), Some("BQ1"));
+        assert_eq!(ms_pick(&v, "Valorant").as_deref(), Some("9N1"));
+        assert_eq!(ms_pick(&v, "Hytale"), None);
+        assert_eq!(ms_pick(&json!({ "Results": [] }), "Roblox"), None);
+    }
+
+    #[test]
     fn reponses_steamgriddb() {
         let s = json!({ "success": true, "data": [{ "id": 5261, "name": "Hytale" }, { "id": 9 }] });
         assert_eq!(sgdb_first_id(&s), Some(5261));
@@ -625,6 +678,7 @@ mod tests {
             vec!["Grand Theft Auto V Enhanced", "Grand Theft Auto V"]
         );
         assert_eq!(name_variants("Rocket League®"), vec!["Rocket League"]);
+        assert_eq!(name_variants("Roblox Player"), vec!["Roblox Player", "Roblox"]);
         assert_eq!(name_variants("Launcher"), vec!["Launcher"]);
     }
 
