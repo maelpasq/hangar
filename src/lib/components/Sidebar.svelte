@@ -1,5 +1,6 @@
 <script lang="ts">
   import Logo from './Logo.svelte';
+  import { isMac } from '../util/platform';
   import { plural } from '../util/format';
   // Barre latérale : navigation, stores, carte « En jeu », bouton « Ajouter un jeu ».
   import { STORES } from '../stores-meta';
@@ -33,7 +34,11 @@
   const stores = $derived(presentStores(library.counts));
 </script>
 
-<aside class:rail aria-label="Navigation">
+<aside class:rail class:mac={isMac} aria-label="Navigation">
+  {#if isMac}
+    <!-- macOS : bande où se posent les boutons natifs, sert aussi à déplacer la fenêtre -->
+    <div class="titlebar" data-tauri-drag-region></div>
+  {/if}
   <div class="logo">
     <Logo size={30} />
     {#if !rail}<span>Hangar</span>{/if}
@@ -111,6 +116,16 @@
     width: 76px;
     padding: 18px 12px 16px;
     align-items: stretch;
+  }
+
+  aside.mac {
+    padding-top: 56px;
+  }
+
+  .titlebar {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 52px;
   }
 
   .logo {
