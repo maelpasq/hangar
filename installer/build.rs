@@ -26,5 +26,9 @@ fn main() {
     });
     println!("cargo:rerun-if-changed={}", nsis.display());
     println!("cargo:rustc-env=HANGAR_NSIS={}", nsis.display());
+    // La config versionnée s'appelle setup.conf.json : tauri-action prend le premier
+    // tauri.conf.json du dépôt et confondrait l'installeur avec l'app (release sans artefacts).
+    println!("cargo:rerun-if-changed=setup.conf.json");
+    std::fs::copy("setup.conf.json", "tauri.conf.json").expect("copie de setup.conf.json");
     tauri_build::build();
 }
