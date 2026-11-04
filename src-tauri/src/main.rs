@@ -1,4 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Hors Windows, les parseurs des stores Windows restent compilés (et testés) sans être appelés.
+#![cfg_attr(not(windows), allow(dead_code))]
 
 mod art;
 mod artwork;

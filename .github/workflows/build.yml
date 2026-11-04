@@ -19,6 +19,7 @@ jobs:
       - run: npm run build
       # Les erreurs sont aussi publiées en annotations (lisibles sans être connecté).
       - name: cargo test
+        env: { CARGO_TERM_COLOR: never } # sans codes ANSI, pour les annotations
         working-directory: src-tauri
         shell: bash
         run: |
@@ -26,6 +27,7 @@ jobs:
           grep -E "^test .* FAILED|panicked at|^error" test.log | sed 's/^/::error::/' || true
           exit $s
       - name: cargo clippy
+        env: { CARGO_TERM_COLOR: never } # sans codes ANSI, pour les annotations
         if: success() || failure()
         working-directory: src-tauri
         shell: bash
