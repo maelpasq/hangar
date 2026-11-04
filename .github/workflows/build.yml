@@ -23,6 +23,7 @@ jobs:
         working-directory: src-tauri
         shell: bash
         run: |
+          set +e # le bash de GitHub sort au premier échec : publier d'abord les erreurs
           cargo test --no-fail-fast 2>&1 | tee test.log; s=${PIPESTATUS[0]}
           grep -E "^test .* FAILED|panicked at|^error" test.log | sed 's/^/::error::/' || true
           exit $s
@@ -32,6 +33,7 @@ jobs:
         working-directory: src-tauri
         shell: bash
         run: |
+          set +e
           cargo clippy --all-targets -- -D warnings 2>&1 | tee clippy.log; s=${PIPESTATUS[0]}
           grep -E -A1 "^error" clippy.log | grep -v "^--" | paste - - | sed 's/^/::error::/' || true
           exit $s

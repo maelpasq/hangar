@@ -306,7 +306,7 @@ fn request_close(pid: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{exe, uri, Launch};
+    use crate::model::{uri, Launch};
 
     #[test]
     fn reconnait_par_dossier_et_par_nom() {
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     #[cfg(windows)] // chemin Windows : sous macOS `D:\...` n'a pas de dossier parent
     fn jeu_manuel_sans_dossier_et_racine_refusee() {
-        let g = Game::new("manual:x".into(), "X".into(), "manual", exe(Path::new(r"D:\Jeux\X\x.exe"), ""));
+        let g = Game::new("manual:x".into(), "X".into(), "manual", crate::model::exe(Path::new(r"D:\Jeux\X\x.exe"), ""));
         let s = Spec::from_game(&g);
         assert!(s.matches("x.exe", Some(r"D:\Jeux\X\x.exe")));
         let mut r = Game::new("local:c".into(), "C".into(), "local", uri("x"));
