@@ -17,8 +17,22 @@ jobs:
       - run: npm run check
       - run: npm run test
       - run: npm run build
-      - run: cargo test && cargo clippy --all-targets -- -D warnings
+      # Les erreurs sont aussi publiées en annotations (lisibles sans être connecté).
+      - name: cargo test
         working-directory: src-tauri
+        shell: bash
+        run: |
+          cargo test --no-fail-fast 2>&1 | tee test.log; s=${PIPESTATUS[0]}
+          grep -E "^test .* FAILED|panicked at|^error" test.log | sed 's/^/::error::/' || true
+          exit $s
+      - name: cargo clippy
+        if: success() || failure()
+        working-directory: src-tauri
+        shell: bash
+        run: |
+          cargo clippy --all-targets -- -D warnings 2>&1 | tee clippy.log; s=${PIPESTATUS[0]}
+          grep -E -A1 "^error" clippy.log | grep -v "^--" | paste - - | sed 's/^/::error::/' || true
+          exit $s
       - uses: actions/upload-artifact@v4
         with:
           name: hangar-${{ runner.os }}

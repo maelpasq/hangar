@@ -335,6 +335,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)] // chemin Windows : sous macOS `D:\...` n'a pas de dossier parent
     fn jeu_manuel_sans_dossier_et_racine_refusee() {
         let g = Game::new("manual:x".into(), "X".into(), "manual", exe(Path::new(r"D:\Jeux\X\x.exe"), ""));
         let s = Spec::from_game(&g);

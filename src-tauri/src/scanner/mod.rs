@@ -188,6 +188,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)] // chemin Windows : sous macOS `C:\...` n'a pas de séparateur
     fn finalize_ajoute_le_nom_de_l_exe() {
         let mut x = g("local:a", "local", r"C:\Jeux\A");
         x.exe_path = Some(r"C:\Jeux\A\Game.exe".into());
