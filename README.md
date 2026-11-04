@@ -1,80 +1,143 @@
+<div align="center">
+
 # Hangar
 
-> Pour développer avec Claude Code : voir `CLAUDE.md` et `docs/` (SPEC, DESIGN, ARCHITECTURE, PLAN, DECISIONS).
+**Tous tes jeux, un seul launcher.** Pour Windows 10/11 et macOS.
 
-Bibliothèque de jeux unifiée pour Windows 10/11 et macOS (Tauri 2 + Rust, interface Svelte 5).
+Hangar trouve tout seul les jeux installés sur ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic.
 
-Au premier démarrage, Hangar détecte tous les jeux installés, affiche leurs vraies jaquettes et les lance via leur launcher (ou directement l'exécutable s'il n'y en a pas) :
+### [⬇ Télécharger Hangar](https://github.com/maelpasq/hangar/releases/latest)
 
-| Source | Détection | Lancement |
-|---|---|---|
-| Steam | `libraryfolders.vdf` + `appmanifest_*.acf` | `steam://rungameid/<id>` |
-| Epic Games | `ProgramData\Epic\...\Manifests\*.item` | `com.epicgames.launcher://apps/...?action=launch` |
-| GOG | Registre `GOG.com\Games` | GOG Galaxy `/command=runGame`, sinon l'exe |
-| Ubisoft Connect | Registre `Ubisoft\Launcher\Installs` | `uplay://launch/<id>/0` |
-| EA app | Clés de désinstallation + dossier `__Installer` | Exe du jeu (ouvre l'EA app) |
-| Battle.net | Clés de désinstallation (`--uid=`) | `Battle.net.exe --exec="launch <code>"` |
-| Riot Games | `ProgramData\Riot Games\Metadata` | `RiotClientServices.exe --launch-product=...` |
-| Xbox / Microsoft Store | `Get-AppxPackage` + `MicrosoftGame.config` | `shell:AppsFolder\<famille>!<app>` |
-| Dossiers locaux | Un jeu par sous-dossier, exe choisi automatiquement (launcher prioritaire) | Exe |
-| Ajout manuel | Exe, raccourci ou `.bat` choisi par toi | Exe + arguments |
+</div>
 
-Sur macOS : Steam (`~/Library/Application Support/Steam`), Epic (`~/Library/Application Support/Epic/.../Manifests`), Riot (`/Users/Shared/Riot Games`), les apps de la catégorie Jeux de `/Applications` (jeux GOG reconnus à leur `goggame-*.info`), les dossiers locaux (`.app`) et l'ajout manuel. Ubisoft, EA, Battle.net et Xbox n'ont pas de détection Mac. Lancement via `open`.
+![Accueil de Hangar](docs/images/accueil.png)
 
-## Fonctionnalités
+## Ce que fait Hangar
 
-- Accueil avec carrousel des jeux mis en avant, « Reprendre », favoris et « Les plus joués ».
-- Bibliothèque filtrable par store, triable (Récents, A-Z, Temps de jeu), grille virtualisée pour les grandes collections.
-- Page de jeu : temps de jeu, dernière session, lancements, taille sur le disque, histogramme des 14 derniers jours.
-- Suivi des parties : Hangar détecte le processus du jeu, chronomètre la session et peut l'arrêter.
-- Jaquettes automatiques (CDN Steam, recherche Steam pour les jeux hors Steam), mises en cache sur le disque ; jaquette personnalisée ou générée.
-- Recherche instantanée (`Ctrl K` ou tape n'importe où, `Entrée` ouvre, `Ctrl Entrée` lance).
-- Renommer, masquer (avec Annuler), favoris, dossiers locaux, stores désactivables, couleur d'accent, démarrage avec Windows.
+- **Détection automatique** de tous tes jeux, quel que soit le store, plus tes dossiers de jeux et les jeux que tu ajoutes à la main.
+- **Vraies jaquettes et bannières**, trouvées automatiquement (Steam, stores, SteamGridDB) et gardées en cache.
+- **Lancement en un clic**, via le launcher du jeu ou directement son exécutable.
+- **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
+- **Recherche instantanée** (`Ctrl K` / `⌘ K`), favoris, tri, filtres par store, jeux masqués, couleur d'accent.
+- **Mises à jour intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour » apparaît dans Hangar.
 
-Données : `%APPDATA%\studio.pamal.hangar\state.json` (réglages, favoris, temps de jeu), cache dans `%LOCALAPPDATA%\studio.pamal.hangar\cache`, journal dans `%LOCALAPPDATA%\studio.pamal.hangar\logs`.
+![Bibliothèque](docs/images/bibliotheque.png)
 
-## Compiler (sur Windows)
+![Page d'un jeu](docs/images/jeu.png)
 
-Prérequis : Rust (rustup, toolchain MSVC), Node.js, et les « Build Tools for Visual Studio » (charge de travail C++). WebView2 est déjà présent sur Windows 10/11.
+## Installer
 
-```bat
-build.bat
+Va sur la **[page des releases](https://github.com/maelpasq/hangar/releases/latest)** et télécharge le fichier de ton système :
+
+| Système | Fichier |
+|---|---|
+| Windows 10/11 | `Hangar_x.y.z_x64-setup.exe` |
+| macOS (Intel et Apple Silicon) | `Hangar_x.y.z_universal.dmg` |
+
+Les autres fichiers de la release servent aux mises à jour automatiques, tu n'en as pas besoin.
+
+### Windows
+
+Lance `Hangar_x.y.z_x64-setup.exe`. L'installation se fait dans ton compte, sans droits administrateur.
+
+Si Windows affiche « Windows a protégé votre ordinateur », clique sur **Informations complémentaires** puis **Exécuter quand même**. Ce message apparaît pour toutes les apps qui ne sont pas signées par un certificat payant.
+
+### macOS
+
+Ouvre le `.dmg` et glisse **Hangar** dans **Applications**.
+
+Hangar n'est pas signé par Apple. Au premier lancement, macOS peut dire que l'app est « endommagée » ou d'un « développeur non identifié ». Ouvre le Terminal et lance une seule fois :
+
+```bash
+xattr -cr /Applications/Hangar.app
 ```
 
-ou à la main :
+Tu peux aussi passer par **Réglages Système > Confidentialité et sécurité > Ouvrir quand même**. Les mises à jour suivantes se font depuis Hangar, sans rien refaire.
 
-```bat
+## ⚠ Indispensable : ta clé SteamGridDB
+
+Sans clé SteamGridDB, beaucoup de jeux (ceux qui ne sont pas sur Steam : Epic, Riot, jeux locaux...) restent sans jaquette. La clé est gratuite et prend deux minutes :
+
+1. Crée un compte sur **[steamgriddb.com](https://www.steamgriddb.com)** (connexion avec Steam possible).
+2. Va dans **[Préférences > API](https://www.steamgriddb.com/profile/preferences/api)** et génère ta clé.
+3. Dans Hangar, ouvre **Paramètres**, colle la clé dans **Clé API SteamGridDB** puis clique sur **Enregistrer**.
+
+Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur ton ordinateur et n'est envoyée qu'à SteamGridDB.
+
+## Jeux détectés
+
+| Store | Windows | macOS |
+|---|---|---|
+| Steam | ✓ | ✓ |
+| Epic Games | ✓ | ✓ |
+| GOG | ✓ | ✓ (jeux installés dans Applications) |
+| Ubisoft Connect | ✓ | |
+| EA app | ✓ | |
+| Battle.net | ✓ | |
+| Riot Games | ✓ | ✓ |
+| Xbox / Microsoft Store | ✓ | |
+| Jeux installés hors store | ✓ (raccourcis et programmes installés) | ✓ (apps de la catégorie Jeux) |
+| Dossiers de jeux locaux | ✓ | ✓ |
+| Ajout manuel | ✓ | ✓ |
+
+Un jeu manque ? Ajoute son dossier dans **Paramètres > Dossiers de jeux locaux**, ou utilise **Ajouter un jeu** en bas de la barre latérale.
+
+Hangar ne supprime jamais rien : « Masquer » cache seulement un jeu dans Hangar. Il ne contacte que les sources d'images des jeux et GitHub pour les mises à jour, sans aucune télémétrie.
+
+Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows et `~/Library/Application Support/studio.pamal.hangar` sous macOS.
+
+---
+
+## Pour les développeurs
+
+Hangar est fait avec [Tauri 2](https://tauri.app) (Rust) et une interface [Svelte 5](https://svelte.dev).
+
+### Prérequis
+
+- [Node.js](https://nodejs.org) 22 ou plus et [Rust](https://rustup.rs) (stable).
+- **Windows** : les « Build Tools for Visual Studio » (charge de travail « Développement Desktop en C++ »). WebView2 est déjà présent sur Windows 10/11.
+- **macOS** : les outils en ligne de commande Xcode (`xcode-select --install`).
+
+### Récupérer et lancer le projet
+
+```bash
+git clone https://github.com/maelpasq/hangar.git
+cd hangar
 npm install
+npm run dev
+```
+
+`npm run dev` ouvre l'app avec rechargement à chaud. Pour travailler sur l'interface seule dans un navigateur, avec 36 jeux de démo :
+
+```bash
+npm run dev:web
+```
+
+### Compiler un installeur
+
+```bash
 npm run build
 ```
 
-Résultats :
-- Exe portable : `src-tauri\target\release\hangar.exe`
-- Installeur (par utilisateur, sans droits admin) : `src-tauri\target\release\bundle\nsis\Hangar_1.0.0_x64-setup.exe`
+L'installeur est créé dans `src-tauri/target/release/bundle/` : `nsis/` (`.exe`) sous Windows, `dmg/` sous macOS. Sous Windows, `build.bat` fait tout en un double-clic.
 
-## Publier une version (Windows + Mac) et mise à jour intégrée
-
-Le workflow `.github/workflows/release.yml` construit l'installeur Windows et le `.dmg` macOS (universel Intel + Apple Silicon), les publie dans une release GitHub et génère `latest.json`. Hangar le lit au démarrage et via Paramètres > Mise à jour : le bouton « Mettre à jour » télécharge, vérifie la signature, installe et redémarre.
-
-Une seule fois :
-1. Créer le dépôt GitHub `maelpasq/hangar` (public, sinon `latest.json` n'est pas lisible ; sinon changer `plugins.updater.endpoints` dans `src-tauri/tauri.conf.json`).
-2. Secrets du dépôt : `TAURI_SIGNING_PRIVATE_KEY` = contenu de `~/.tauri/hangar.key`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` vide. Ne jamais perdre cette clé : sans elle, les versions installées ne peuvent plus se mettre à jour.
-
-À chaque version :
+### Vérifier avant de proposer un changement
 
 ```bash
-npm version patch        # ou minor / major : met à jour la version et crée le tag vX.Y.Z
-git push --follow-tags   # lance la release
-```
-
-L'app Mac n'est pas signée par Apple : au premier lancement, clic droit sur Hangar > Ouvrir (ou `xattr -cr /Applications/Hangar.app`). Les mises à jour suivantes passent par le bouton.
-
-## Développer
-
-```bash
-npm run dev        # app Tauri avec rechargement à chaud
-npm run dev:web    # interface seule dans un navigateur, avec 36 jeux de démo
-npm run check      # svelte-check + tsc
-npm run test       # tests frontend (vitest)
+npm run check
+npm run test
 cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
 ```
+
+Le CI (`.github/workflows/build.yml`) relance tout ça sur Windows et macOS à chaque push.
+
+### Publier une version (mainteneur)
+
+```bash
+npm version patch
+git push --follow-tags
+```
+
+Le workflow `release.yml` construit l'installeur Windows et le `.dmg` macOS universel, les publie dans une release GitHub et génère `latest.json`, que lit le bouton « Mettre à jour ». Il a besoin du secret `TAURI_SIGNING_PRIVATE_KEY` (contenu de la clé privée de signature des mises à jour). Si cette clé est perdue, les versions installées ne peuvent plus se mettre à jour.
+
+La documentation du projet (spécification, design system, architecture, décisions) est dans [`docs/`](docs). Pour développer avec Claude Code, voir [`CLAUDE.md`](CLAUDE.md).
