@@ -15,7 +15,7 @@ jobs:
         include:
           - os: windows-latest
             args: ''
-          - os: macos-latest
+          - os: macos-15-intel # Intel : les Mac arm64 de GitHub sont souvent saturés ; l'app reste universelle
             args: '--target universal-apple-darwin'
     runs-on: ${{ matrix.os }}
     steps:
@@ -24,7 +24,7 @@ jobs:
         with: { node-version: 22 }
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.os == 'macos-15-intel' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
       - run: npm install
       - uses: tauri-apps/tauri-action@v0
         env:
