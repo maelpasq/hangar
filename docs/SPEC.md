@@ -59,8 +59,8 @@ Premier lancement (aucun historique) : le carrousel montre les jeux avec banniè
 - Tri segmenté : Récents, A-Z, Temps de jeu. Le choix est mémorisé.
 - Puces de filtre : « Tous » puis chaque store présent avec son compteur.
 - Grille de jaquettes 2:3 (min 172 px de large), nom, « Store · N h ».
-- Survol d'une jaquette : elle se soulève, anneau lumineux couleur d'accent, bouton blanc « Ouvrir » qui glisse en bas, étoile favori en haut à droite.
-- Clic gauche : page du jeu. Double-clic : lance le jeu. Clic droit : menu contextuel (Jouer, Ajouter/Retirer des favoris, Renommer, Changer la jaquette, Ouvrir le dossier, Masquer).
+- Survol d'une jaquette : elle se soulève, anneau lumineux couleur d'accent, bouton blanc « Lancer » qui glisse en bas, étoile favori en haut à droite.
+- Clic sur la jaquette : page du jeu. Bouton « Lancer » ou double-clic : lance le jeu. Clic droit : menu contextuel (Jouer, Ajouter/Retirer des favoris, Renommer, Changer la jaquette, Ouvrir le dossier, Masquer).
 - État vide : bibliothèque vide (avec bouton « Ajouter un jeu »), favoris vides (« Clique sur l'étoile d'une jaquette... »), filtre sans résultat.
 
 ### 3.5 Page de jeu

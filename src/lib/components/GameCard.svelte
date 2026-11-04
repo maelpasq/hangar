@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Carte de jeu (jaquette 2:3) : clic = fiche, double-clic = lancer, clic droit = menu.
+  // Carte de jeu (jaquette 2:3) : clic = fiche, bouton « Lancer » ou double-clic = lancer, clic droit = menu.
   import { STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
@@ -79,18 +79,23 @@
   style:width={width ? `${width}px` : null}
   style:animation-delay={animate ? `${Math.min(index, 24) * 35}ms` : null}
 >
-  <button
-    class="cover"
-    aria-label={name}
-    title={name}
-    {onclick}
-    {ondblclick}
-    {oncontextmenu}
-    {onkeydown}
-  >
-    <Cover {game} fontSize={gen.f} padding={gen.p} />
-    <span class="ov"><span>{#if variant !== 'small'}<Icon name="play" size={12} />{/if}Ouvrir</span></span>
-  </button>
+  <div class="frame">
+    <button
+      class="cover"
+      aria-label={name}
+      title={name}
+      {onclick}
+      {ondblclick}
+      {oncontextmenu}
+      {onkeydown}
+    >
+      <Cover {game} fontSize={gen.f} padding={gen.p} />
+      <span class="ov"></span>
+    </button>
+    <button class="play" aria-label="Lancer {name}" onclick={() => runner.play(game.id)}
+      >{#if variant !== 'small'}<Icon name="play" size={12} />{/if}Lancer</button
+    >
+  </div>
   {#if fav}<FavButton gameId={game.id} />{/if}
   {#if variant === 'small'}
     <div class="name small">{name}</div>
@@ -114,6 +119,11 @@
     flex-shrink: 0;
   }
 
+  .frame {
+    position: relative;
+    transition: transform 0.4s var(--ease);
+  }
+
   .cover {
     position: relative;
     display: block;
@@ -123,9 +133,7 @@
     overflow: hidden;
     background: var(--cover-bg);
     box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.9);
-    transition:
-      transform 0.4s var(--ease),
-      box-shadow 0.4s var(--ease);
+    transition: box-shadow 0.4s var(--ease);
   }
 
   .cover::after {
@@ -137,9 +145,13 @@
     pointer-events: none;
   }
 
+  .card:hover .frame,
+  .frame:focus-within {
+    transform: translateY(-6px) scale(1.025);
+  }
+
   .card:hover .cover,
   .cover:focus-visible {
-    transform: translateY(-6px) scale(1.025);
     box-shadow:
       0 0 0 2px var(--accent-ring),
       0 26px 50px -16px var(--accent-glow);
@@ -160,21 +172,20 @@
   .ov {
     position: absolute;
     inset: 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 14px;
     background: linear-gradient(0deg, rgba(0, 0, 0, 0.7), transparent 55%);
     opacity: 0;
     transition: opacity 0.25s;
   }
 
   .card:hover .ov,
-  .cover:focus-visible .ov {
+  .frame:focus-within .ov {
     opacity: 1;
   }
 
-  .ov span {
+  .play {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
     height: 36px;
     padding: 0 16px 0 13px;
     display: flex;
@@ -185,13 +196,22 @@
     color: #0a0b0f;
     font-weight: 650;
     font-size: 13px;
-    transform: translateY(10px);
-    transition: transform 0.35s var(--ease);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, 10px);
+    transition:
+      opacity 0.25s,
+      transform 0.35s var(--ease);
   }
 
-  .card:hover .ov span,
-  .cover:focus-visible .ov span {
-    transform: none;
+  .card:hover .play,
+  .frame:focus-within .play {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  .play:hover {
+    transform: translate(-50%, 0) scale(1.05);
   }
 
   .info {
