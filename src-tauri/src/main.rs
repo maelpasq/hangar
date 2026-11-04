@@ -17,6 +17,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
+use tauri_plugin_window_state::StateFlags;
 
 fn main() {
     tauri::Builder::default()
@@ -43,7 +44,12 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
         ))
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Le cadre vient de la config (natif sur macOS), jamais de l'état mémorisé d'une ancienne version.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::all() - StateFlags::DECORATIONS)
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
