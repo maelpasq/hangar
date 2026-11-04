@@ -1,6 +1,6 @@
 //! Dossiers locaux : un jeu par sous-dossier, exécutable choisi par heuristique.
 
-use super::exe::best_exe;
+use super::exe::{best_exe, is_app};
 use crate::model::{exe, Game};
 use std::fs;
 use std::path::Path;
@@ -15,11 +15,18 @@ pub fn detect_folder(root: &Path) -> Vec<Game> {
         if !e.file_type().map(|t| t.is_dir()).unwrap_or(false) {
             continue;
         }
-        let name = e.file_name().to_string_lossy().to_string();
+        let mut name = e.file_name().to_string_lossy().to_string();
         if name.starts_with('.') || name.starts_with('$') {
             continue;
         }
-        let Some(x) = best_exe(&e.path(), &name) else { continue };
+        // macOS : un `Jeu.app` posé directement dans le dossier est un jeu à lui seul.
+        let x = if is_app(&e.path()) {
+            name = e.path().file_stem().unwrap_or_default().to_string_lossy().into_owned();
+            Some(e.path())
+        } else {
+            best_exe(&e.path(), &name)
+        };
+        let Some(x) = x else { continue };
         let p = e.path().to_string_lossy().into_owned();
         let mut g = Game::new(format!("local:{}", p.to_lowercase()), name, "local", exe(&x, ""));
         g.install_dir = Some(p);

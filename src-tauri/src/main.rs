@@ -42,6 +42,8 @@ fn main() {
             Some(vec!["--hidden"]),
         ))
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let p = app.path();
             let config = p.app_config_dir()?;
@@ -69,7 +71,7 @@ fn main() {
             };
             app.manage(ctx);
 
-            // Démarrage avec Windows : la fenêtre s'ouvre réduite.
+            // Démarrage avec le système : la fenêtre s'ouvre réduite.
             if std::env::args().any(|a| a == "--hidden") {
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.minimize();

@@ -61,7 +61,11 @@ pub fn parse_manifest(text: &str) -> Option<Game> {
 }
 
 pub fn detect() -> Vec<Game> {
-    let dir = super::program_data().join(r"Epic\EpicGamesLauncher\Data\Manifests");
+    let dir = if cfg!(target_os = "macos") {
+        super::mac_support().join("Epic/EpicGamesLauncher/Data/Manifests")
+    } else {
+        super::program_data().join(r"Epic\EpicGamesLauncher\Data\Manifests")
+    };
     let Ok(rd) = fs::read_dir(&dir) else {
         log::info!("Epic : pas de manifestes ({})", dir.display());
         return vec![];

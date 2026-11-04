@@ -24,6 +24,9 @@ const LAUNCHER_PROCESSES: &[&str] = &[
     "riotclientcrashhandler.exe", "galaxyclient.exe", "galaxyclient helper.exe", "galaxycommunication.exe",
     "upc.exe", "uplaywebcore.exe", "ubisoftconnect.exe", "eadesktop.exe", "eabackgroundservice.exe",
     "eaconnect_microsoft.exe", "xboxapp.exe", "gamingservices.exe",
+    // macOS
+    "steam_osx", "steam helper", "epicgameslauncher", "epicwebhelper", "battle.net", "riotclientservices",
+    "riot client", "gog galaxy",
 ];
 
 pub fn is_launcher_process(name: &str) -> bool {
@@ -46,8 +49,13 @@ pub struct Spec {
     ignore_exes: Vec<String>,
 }
 
+/// Chemin comparable : minuscules, séparateurs `\` (les chemins macOS en `/` aussi).
+fn norm_path(p: &str) -> String {
+    p.replace('/', "\\").to_lowercase()
+}
+
 fn norm_dir(d: &str) -> Option<String> {
-    let d = d.replace('/', "\\").trim_end_matches('\\').to_lowercase();
+    let d = norm_path(d).trim_end_matches('\\').to_string();
     // Un dossier racine (« c: ») reconnaîtrait n'importe quel processus.
     (d.len() > 3).then(|| format!("{d}\\"))
 }
@@ -64,7 +72,7 @@ impl Spec {
         }
         s.names = g.process_names.iter().map(|n| n.to_lowercase()).collect();
         if g.launch.kind == "exe" && matches!(g.store.as_str(), "riot" | "gog" | "battlenet") {
-            s.ignore_exes.push(g.launch.target.to_lowercase());
+            s.ignore_exes.push(norm_path(&g.launch.target));
         }
         s
     }
@@ -75,7 +83,7 @@ impl Spec {
         if is_launcher_process(&name) {
             return false;
         }
-        let exe = exe.map(|e| e.to_lowercase());
+        let exe = exe.map(norm_path);
         if let Some(e) = &exe {
             if self.ignore_exes.iter().any(|x| x == e) {
                 return false;
@@ -289,9 +297,10 @@ fn request_close(pid: u32) {
         .output();
 }
 
+/// Demande la fermeture d'un processus (SIGTERM, le jeu peut sauvegarder).
 #[cfg(not(windows))]
 fn request_close(pid: u32) {
-    log::info!("[hors Windows] fermeture demandée du pid {pid}");
+    let _ = std::process::Command::new("kill").arg(pid.to_string()).output();
 }
 
 #[cfg(test)]

@@ -2,6 +2,7 @@
   // Coque de l'app : barre latérale, barre du haut, écran courant, overlays.
   import { onMount } from 'svelte';
   import { rescan } from './lib/actions';
+  import { updater } from './lib/stores/update.svelte';
   import { api } from './lib/api';
   import ContextMenu from './lib/components/ContextMenu.svelte';
   import LaunchOverlay from './lib/components/LaunchOverlay.svelte';
@@ -55,6 +56,7 @@
       if (!alive) offs.forEach((o) => o());
       await library.load();
       await rescan();
+      void updater.check(true);
     })();
     return () => {
       alive = false;

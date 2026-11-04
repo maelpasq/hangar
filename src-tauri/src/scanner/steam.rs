@@ -31,7 +31,11 @@ pub fn steam_root() -> Option<PathBuf> {
             return Some(p);
         }
     }
-    let p = PathBuf::from(r"C:\Program Files (x86)\Steam");
+    let p = if cfg!(target_os = "macos") {
+        super::mac_support().join("Steam")
+    } else {
+        PathBuf::from(r"C:\Program Files (x86)\Steam")
+    };
     p.exists().then_some(p)
 }
 

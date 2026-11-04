@@ -11,6 +11,7 @@ pub mod exe;
 pub mod gog;
 pub mod installed;
 pub mod local;
+pub mod macapps;
 pub mod registry;
 pub mod riot;
 pub mod stats;
@@ -28,8 +29,26 @@ pub const STORE_PRIORITY: &[&str] = &[
     "steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "xbox", "local", "manual",
 ];
 
+/// Données partagées des launchers : `%PROGRAMDATA%` sous Windows, `/Users/Shared` sous macOS.
 pub fn program_data() -> PathBuf {
+    if cfg!(target_os = "macos") {
+        return PathBuf::from("/Users/Shared");
+    }
     std::env::var("PROGRAMDATA").map(PathBuf::from).unwrap_or_else(|_| PathBuf::from(r"C:\ProgramData"))
+}
+
+/// `~/Library/Application Support` (macOS).
+pub fn mac_support() -> PathBuf {
+    PathBuf::from(std::env::var("HOME").unwrap_or_default()).join("Library").join("Application Support")
+}
+
+/// Chemin écrit avec des `/` (fichiers des launchers) vers le séparateur du système.
+pub fn native_sep(s: &str) -> String {
+    if cfg!(windows) {
+        s.replace('/', "\\")
+    } else {
+        s.to_string()
+    }
 }
 
 /// Normalise un nom pour les comparaisons (alphanumérique, minuscules).

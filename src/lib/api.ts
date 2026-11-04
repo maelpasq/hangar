@@ -44,6 +44,11 @@ export interface Api {
   pickImage(): Promise<string | null>;
   onLaunch(cb: (e: LaunchEvent) => void): Promise<() => void>;
   onScanPartial(cb: (games: Game[]) => void): Promise<() => void>;
+  appVersion(): Promise<string>;
+  /** Nouvelle version publiée sur GitHub, ou null si Hangar est à jour. */
+  checkUpdate(): Promise<{ version: string } | null>;
+  /** Télécharge et installe la version trouvée par checkUpdate, puis redémarre Hangar. */
+  installUpdate(onProgress: (ratio: number | null) => void): Promise<void>;
   win: WindowApi;
 }
 
@@ -56,6 +61,10 @@ async function tauriApi(): Promise<Api> {
   const { listen } = await import('@tauri-apps/api/event');
   const { getCurrentWindow } = await import('@tauri-apps/api/window');
   const dialog = await import('@tauri-apps/plugin-dialog');
+  const updater = await import('@tauri-apps/plugin-updater');
+  const { relaunch } = await import('@tauri-apps/plugin-process');
+  const { getVersion } = await import('@tauri-apps/api/app');
+  let pending: Awaited<ReturnType<typeof updater.check>> = null;
   const w = getCurrentWindow();
 
   const pick = async (opts: Parameters<typeof dialog.open>[0]) => {
@@ -106,7 +115,7 @@ async function tauriApi(): Promise<Api> {
     pickExe: () =>
       pick({
         title: 'Choisir le jeu',
-        filters: [{ name: 'Jeux et raccourcis', extensions: ['exe', 'lnk', 'url', 'bat'] }]
+        filters: [{ name: 'Jeux et raccourcis', extensions: ['exe', 'lnk', 'url', 'bat', 'app'] }]
       }),
     pickFolder: () => pick({ title: 'Choisir un dossier de jeux', directory: true }),
     pickImage: () =>
@@ -121,6 +130,25 @@ async function tauriApi(): Promise<Api> {
       return () => offs.forEach((o) => o());
     },
     onScanPartial: (cb) => on<Game[]>('scan://partial', cb),
+    appVersion: () => getVersion(),
+    checkUpdate: async () => {
+      pending = await updater.check();
+      return pending ? { version: pending.version } : null;
+    },
+    installUpdate: async (onProgress) => {
+      if (!pending) throw new Error('Aucune mise à jour à installer.');
+      let total = 0;
+      let done = 0;
+      await pending.downloadAndInstall((e) => {
+        if (e.event === 'Started') total = e.data.contentLength ?? 0;
+        else if (e.event === 'Progress') {
+          done += e.data.chunkLength;
+          onProgress(total ? done / total : null);
+        }
+      });
+      // Sous Windows l'installeur ferme déjà Hangar ; sous macOS il faut relancer.
+      await relaunch();
+    },
     win: {
       minimize: () => w.minimize(),
       toggleMaximize: () => w.toggleMaximize(),

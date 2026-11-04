@@ -11,13 +11,23 @@
   import type { Prefs } from '../types';
   import { art } from '../art.svelte';
   import { plural } from '../util/format';
+  import { isMac } from '../util/platform';
+  import { updater } from '../stores/update.svelte';
+
+  let version = $state('');
+  api.appVersion().then(
+    (v) => (version = v),
+    () => {}
+  );
 
   const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
   const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
 
   function folderCount(dir: string): number {
-    const d = dir.toLowerCase().replace(/[\\/]+$/, '') + '\\';
-    return library.all.filter((g) => g.store === 'local' && (g.installDir ?? '').toLowerCase().startsWith(d)).length;
+    // Chemins Windows (\) et macOS (/) comparés sous la même forme.
+    const norm = (p: string) => p.toLowerCase().replace(/\//g, '\\');
+    const d = norm(dir).replace(/\\+$/, '') + '\\';
+    return library.all.filter((g) => g.store === 'local' && norm(g.installDir ?? '').startsWith(d)).length;
   }
 
   type BoolPref = Exclude<keyof Prefs, 'steamGridDbKey'>;
@@ -27,7 +37,7 @@
       label: "Réduire Hangar au lancement d'un jeu",
       desc: 'La fenêtre revient quand tu quittes le jeu'
     },
-    { key: 'startWithWindows', label: 'Démarrer avec Windows', desc: "Hangar s'ouvre en arrière-plan à la connexion" },
+    { key: 'startWithWindows', label: `Démarrer avec ${isMac ? 'macOS' : 'Windows'}`, desc: "Hangar s'ouvre en arrière-plan à la connexion" },
     {
       key: 'autoCovers',
       label: 'Jaquettes automatiques',
@@ -101,6 +111,24 @@
         {:else}
           <p class="none">Aucun jeu masqué.</p>
         {/each}
+      </section>
+
+      <section class="card-section">
+        <h2>Mise à jour</h2>
+        <p class="desc">Hangar {version}. Les nouvelles versions s'installent sans repasser par l'installeur.</p>
+        <div class="line">
+          <span class="grow" aria-live="polite">{updater.label}</span>
+          {#if updater.phase === 'available'}
+            <button class="chip-btn primary" onclick={() => updater.install()}>Installer et redémarrer</button>
+          {:else}
+            <button
+              class="chip-btn"
+              disabled={updater.phase === 'checking' || updater.phase === 'installing'}
+              onclick={() => updater.check()}
+              ><Icon name="refresh" size={15} class={updater.phase === 'checking' ? 'spin' : ''} />Rechercher</button
+            >
+          {/if}
+        </div>
       </section>
     </div>
 
@@ -287,7 +315,18 @@
     box-shadow: 0 0 0 4px var(--accent-soft);
   }
 
-  .keyrow .chip-btn:disabled {
+  .chip-btn.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .chip-btn.primary:hover {
+    background: color-mix(in srgb, var(--accent) 85%, #fff);
+  }
+
+  .chip-btn:disabled {
     opacity: 0.45;
     cursor: default;
   }

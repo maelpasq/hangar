@@ -9,7 +9,7 @@ pub fn parse_install_path(yaml: &str) -> Option<String> {
     yaml.lines().find_map(|l| {
         let l = l.trim();
         l.strip_prefix("product_install_full_path:")
-            .map(|v| v.trim().trim_matches('"').trim_matches('\'').replace('/', "\\"))
+            .map(|v| super::native_sep(v.trim().trim_matches('"').trim_matches('\'')))
             .filter(|v| !v.is_empty())
     })
 }
@@ -39,7 +39,7 @@ pub fn detect() -> Vec<Game> {
     let client = fs::read_to_string(base.join("RiotClientInstalls.json"))
         .ok()
         .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
-        .and_then(|v| v.get("rc_default").and_then(|x| x.as_str()).map(|s| s.replace('/', "\\")));
+        .and_then(|v| v.get("rc_default").and_then(|x| x.as_str()).map(super::native_sep));
     let Some(client) = client else {
         log::info!("Riot : client non installé");
         return vec![];
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn yaml_riot() {
         let y = "product_install_full_path: \"C:/Riot Games/VALORANT/live\"\nproduct_install_root: \"C:/Riot Games\"\n";
-        assert_eq!(parse_install_path(y).as_deref(), Some(r"C:\Riot Games\VALORANT\live"));
+        assert_eq!(parse_install_path(y), Some(crate::scanner::native_sep("C:/Riot Games/VALORANT/live")));
         assert_eq!(parse_install_path("autre: 1"), None);
         assert_eq!(parse_install_path("product_install_full_path: \"\""), None);
     }

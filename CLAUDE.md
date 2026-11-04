@@ -1,6 +1,6 @@
 # Hangar - instructions pour Claude Code
 
-Hangar est un launcher de jeux pour Windows 10/11 : il détecte automatiquement tous les jeux installés (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox / Microsoft Store, dossiers locaux, ajouts manuels), les affiche avec leurs vraies jaquettes et les lance via leur launcher, ou directement via l'exécutable quand il n'y a pas de launcher.
+Hangar est un launcher de jeux pour Windows 10/11 et macOS : il détecte automatiquement tous les jeux installés (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox / Microsoft Store, dossiers locaux, ajouts manuels), les affiche avec leurs vraies jaquettes et les lance via leur launcher, ou directement via l'exécutable quand il n'y a pas de launcher.
 
 ## Documents à lire avant de coder
 
@@ -17,9 +17,9 @@ La source de la maquette est dans `design/reference/maquette-hangar.dc.html`. C'
 
 - **Langue** : toute l'interface et tous les messages sont en français. Les commentaires du code peuvent être en français.
 - **Jamais de tiret cadratin** (le caractère U+2014) nulle part : code, UI, commentaires, docs, messages de commit. Utilise un tiret simple `-`. Vérifie avec `rg -n '\x{2014}' --glob '!node_modules' --glob '!target' .` (doit ne rien afficher) avant chaque commit.
-- **Windows d'abord** : la cible est `x86_64-pc-windows-msvc`. Tout code spécifique à Windows est sous `#[cfg(windows)]`, avec un équivalent vide ou simulé ailleurs pour que `cargo check` passe aussi sous Linux/macOS.
+- **Windows et macOS** : cibles `x86_64-pc-windows-msvc` et `universal-apple-darwin`. Tout code spécifique à Windows est sous `#[cfg(windows)]`. Le code macOS passe de préférence par `cfg!(target_os = "macos")` (compilé et testé aussi sous Windows) ; le CI (`build.yml`) compile, teste et passe clippy sur les deux systèmes.
 - **Aucune fenêtre console** ne doit s'ouvrir : chaque `Command` (PowerShell, etc.) utilise `CREATE_NO_WINDOW` (0x08000000).
-- **Pas de réseau inutile** : seules les sources d'images des jeux sont appelées, depuis le backend uniquement : CDN et recherche Steam (`*.steamstatic.com`, `store.steampowered.com/api/storesearch`), images Epic (`*.epicgames.com`), GOG (`api.gog.com`, `gamesdb.gog.com`, `*.gog-statics.com`), Microsoft Store (`displaycatalog.mp.microsoft.com`, `store-images.s-microsoft.com`) et SteamGridDB (`*.steamgriddb.com`, seulement si l'utilisateur a saisi sa clé). Pas de télémétrie. Les polices sont embarquées dans l'app (pas de Google Fonts au runtime).
+- **Pas de réseau inutile** : seules les sources d'images des jeux sont appelées, depuis le backend uniquement : CDN et recherche Steam (`*.steamstatic.com`, `store.steampowered.com/api/storesearch`), images Epic (`*.epicgames.com`), GOG (`api.gog.com`, `gamesdb.gog.com`, `*.gog-statics.com`), Microsoft Store (`displaycatalog.mp.microsoft.com`, `store-images.s-microsoft.com`) et SteamGridDB (`*.steamgriddb.com`, seulement si l'utilisateur a saisi sa clé). Plus la mise à jour de Hangar : `latest.json` et les installeurs des releases GitHub (`github.com`, `objects.githubusercontent.com`). Pas de télémétrie. Les polices sont embarquées dans l'app (pas de Google Fonts au runtime).
 - **Robustesse de la détection** : un store absent, une clé de registre manquante ou un fichier corrompu ne doivent jamais faire planter le scan. Chaque détecteur renvoie une liste vide en cas d'erreur et journalise la raison.
 - **Ne jamais supprimer de fichiers de l'utilisateur.** « Masquer » cache un jeu dans Hangar, rien de plus.
 - **Accessibilité** : vrais `<button>`, `<input>` avec `<label>`, `aria-label` sur les boutons-icônes, focus visible, navigation clavier, respect de `prefers-reduced-motion`.

@@ -51,9 +51,35 @@ pub fn shell_open(target: &str, args: &str, cwd: Option<&str>, verb: &str) -> Re
 }
 
 #[cfg(not(windows))]
-pub fn shell_open(target: &str, args: &str, _cwd: Option<&str>, _verb: &str) -> Result<(), String> {
-    log::info!("[hors Windows] lancement simulé : {target} {args}");
-    Ok(())
+pub fn shell_open(target: &str, args: &str, cwd: Option<&str>, _verb: &str) -> Result<(), String> {
+    unix_open(target, args, cwd)
+}
+
+/// macOS : un binaire est lancé directement, le reste (URI, `.app`, dossier) passe par `open`.
+/// Compilé partout pour être vérifié par `cargo clippy` sous Windows.
+#[cfg_attr(windows, allow(dead_code))]
+fn unix_open(target: &str, args: &str, cwd: Option<&str>) -> Result<(), String> {
+    use std::process::Command;
+    // shortcut: arguments découpés aux espaces (pas de guillemets), suffisant pour Riot et les jeux locaux.
+    let args: Vec<&str> = args.split_whitespace().collect();
+    if Path::new(target).is_file() {
+        let mut c = Command::new(target);
+        c.args(&args);
+        if let Some(d) = cwd.filter(|d| Path::new(d).is_dir()) {
+            c.current_dir(d);
+        }
+        return c.spawn().map(|_| ()).map_err(|e| format!("Impossible de lancer le jeu : {e}"));
+    }
+    let mut c = Command::new("open");
+    c.arg(target);
+    if !args.is_empty() {
+        c.arg("--args").args(&args);
+    }
+    match c.status() {
+        Ok(s) if s.success() => Ok(()),
+        Ok(_) => Err("Aucune application n'est associée à ce lien : le launcher du jeu est-il installé ?".into()),
+        Err(e) => Err(format!("Impossible de lancer le jeu : {e}")),
+    }
 }
 
 /// Lance un jeu selon sa description de lancement.

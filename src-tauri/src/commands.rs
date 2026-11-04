@@ -186,7 +186,7 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
     use tauri_plugin_autostart::ManagerExt;
     let al = app.autolaunch();
     let r = if on { al.enable() } else { al.disable() };
-    r.map_err(|e| format!("Impossible de modifier le démarrage avec Windows : {e}"))
+    r.map_err(|e| format!("Impossible de modifier le démarrage automatique : {e}"))
 }
 
 #[tauri::command]

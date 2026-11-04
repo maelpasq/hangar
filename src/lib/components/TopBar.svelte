@@ -3,6 +3,8 @@
   import { api } from '../api';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
+  import { updater } from '../stores/update.svelte';
+  import { isMac } from '../util/platform';
   import { ui } from '../stores/ui.svelte';
   import type { Game } from '../types';
   import { formatNumber } from '../util/format';
@@ -40,7 +42,7 @@
       selected = Math.max(0, selected - 1);
     } else if (e.key === 'Enter') {
       const g = results[selected];
-      if (g) pick(g, e.ctrlKey);
+      if (g) pick(g, e.ctrlKey || e.metaKey);
     } else if (e.key === 'Escape') {
       ui.query = '';
       input?.blur();
@@ -78,13 +80,22 @@
         onblur={() => setTimeout(() => (ui.searchOpen = false), 120)}
         {onkeydown}
       />
-      <kbd>Ctrl K</kbd>
+      <kbd>{isMac ? '⌘ K' : 'Ctrl K'}</kbd>
     </label>
     {#if show}
       <SearchPanel {results} total={matches.length} {selected} onpick={pick} onhover={(i) => (selected = i)} />
     {/if}
   </div>
   <div class="right">
+    {#if updater.phase === 'available' || updater.phase === 'installing'}
+      <button
+        class="update"
+        disabled={updater.phase === 'installing'}
+        title="Installer Hangar {updater.version} et redémarrer"
+        onclick={() => updater.install()}
+        >{updater.phase === 'installing' ? updater.label : 'Mettre à jour'}</button
+      >
+    {/if}
     <button
       class="ibtn"
       aria-label="Actualiser la bibliothèque"
@@ -195,6 +206,27 @@
 
   input::placeholder {
     color: var(--muted);
+  }
+
+  .update {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.18s;
+  }
+
+  .update:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 85%, #fff);
+  }
+
+  .update:disabled {
+    cursor: default;
+    opacity: 0.85;
   }
 
   kbd {

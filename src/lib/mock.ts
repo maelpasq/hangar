@@ -214,6 +214,17 @@ export function mockApi(): Api {
       return () => listeners.delete(cb);
     },
     onScanPartial: async () => () => {},
+    appVersion: async () => '1.0.0',
+    checkUpdate: async () => {
+      await new Promise((r) => setTimeout(r, 600));
+      return { version: '1.1.0' };
+    },
+    installUpdate: async (onProgress) => {
+      for (let i = 1; i <= 10; i++) {
+        await new Promise((r) => setTimeout(r, 150));
+        onProgress(i / 10);
+      }
+    },
     win: {
       minimize: async () => {},
       toggleMaximize: async () => {},

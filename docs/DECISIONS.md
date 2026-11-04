@@ -53,3 +53,14 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Jaquettes et bannières (`find_artwork`) : image native du store (Epic, GOG, Ubisoft via gamesdb, Xbox), puis Steam, puis SteamGridDB si une clé est saisie dans les Paramètres.
 - Jaquettes des jeux hors Steam : recherche par nom sur le Microsoft Store (titre exact, type « Game ») entre Steam et SteamGridDB, sans clé (VALORANT, Roblox...). Ce qui n'existe sur aucune source reste en jaquette générée avec l'icône de l'exe, ou passe par SteamGridDB.
 - Barre latérale : logo de chaque store (tracés Simple Icons, CC0, dans `src/lib/store-logos.ts`) teinté de sa couleur, à la place du point de la maquette. Local et Ajoutés gardent les icônes dossier et plus.
+
+## macOS et mise à jour intégrée
+
+- Même code pour Windows et macOS. Détection Mac : Steam et Epic dans `~/Library/Application Support`, Riot dans `/Users/Shared` (même format qu'en Windows), apps de `/Applications` (et un niveau de sous-dossiers) dont `LSApplicationCategoryType` est une catégorie Jeux, `goggame-*.info` pour GOG. Ubisoft, EA, Battle.net et Xbox : pas de détection Mac (pas de données locales simples).
+- Lancement Mac : un binaire est lancé directement, le reste (URI, `.app`, dossier) passe par `open`. Arrêt d'un jeu : `kill` (SIGTERM).
+- Le suivi de processus compare les chemins avec des `\` partout, pour les chemins Mac en `/` aussi.
+- Fenêtre Mac : même barre personnalisée que sous Windows (pas de boutons « feux tricolores » natifs), pour garder la maquette.
+- Mise à jour : `tauri-plugin-updater` + releases GitHub (`maelpasq/hangar`). Recherche discrète au démarrage (un toast si une version existe, rien si hors ligne), bouton « Mettre à jour » dans la barre du haut quand une version est disponible, et section Paramètres > Mise à jour pour vérifier à la main.
+- Version unique dans `package.json` (`tauri.conf.json` pointe dessus) : `npm version` + `git push --follow-tags` publie. Les artefacts signés ne sont produits qu'en release (`tauri.release.conf.json`), pour que `npm run build` local marche sans la clé privée.
+- App Mac non signée par Apple (pas de compte développeur) : premier lancement par clic droit > Ouvrir.
+

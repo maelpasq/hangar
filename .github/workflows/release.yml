@@ -1,0 +1,39 @@
+# Publie une version : `npm version patch` (ou minor/major) puis `git push --follow-tags`.
+# Construit Windows (installeur NSIS) et macOS (dmg universel Intel + Apple Silicon),
+# les attache à la release GitHub et génère latest.json, lu par le bouton « Mettre à jour ».
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: ''
+          - os: macos-latest
+            args: '--target universal-apple-darwin'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - run: npm install
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Hangar ${{ github.ref_name }}
+          releaseBody: Télécharge l'installeur Windows (.exe) ou macOS (.dmg) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.
+          releaseDraft: false
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json

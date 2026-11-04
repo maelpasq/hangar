@@ -34,7 +34,7 @@
       tabindex="-1"
       onmousedown={(e) => e.preventDefault()}
       onmouseenter={() => onhover(i)}
-      onclick={(e) => onpick(g, e.ctrlKey)}
+      onclick={(e) => onpick(g, e.ctrlKey || e.metaKey)}
     >
       <span class="thumb"><Cover game={g} showName={false} eager /></span>
       <span class="txt">

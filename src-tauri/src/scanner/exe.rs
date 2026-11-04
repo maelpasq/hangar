@@ -15,6 +15,11 @@ const EXE_BLACKLIST: &[&str] = &[
 const IGNORED_DIRS: &[&str] =
     &["_commonredist", "redist", "directx", "vcredist", "__installer", "support", "tools", "engine"];
 
+/// Paquet d'application macOS (`Jeu.app`) : c'est l'exécutable, on ne descend pas dedans.
+pub fn is_app(p: &Path) -> bool {
+    cfg!(target_os = "macos") && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("app"))
+}
+
 fn collect_exes(dir: &Path, depth: u32, max: u32, out: &mut Vec<(PathBuf, u32, u64)>) {
     if depth > max || out.len() > 400 {
         return;
@@ -23,7 +28,9 @@ fn collect_exes(dir: &Path, depth: u32, max: u32, out: &mut Vec<(PathBuf, u32, u
     for e in rd.flatten() {
         let p = e.path();
         let Ok(ft) = e.file_type() else { continue };
-        if ft.is_dir() {
+        if ft.is_dir() && is_app(&p) {
+            out.push((p, depth, 0));
+        } else if ft.is_dir() {
             let n = e.file_name().to_string_lossy().to_lowercase();
             if IGNORED_DIRS.iter().any(|x| n == *x) {
                 continue;

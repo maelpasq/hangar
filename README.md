@@ -2,7 +2,7 @@
 
 > Pour développer avec Claude Code : voir `CLAUDE.md` et `docs/` (SPEC, DESIGN, ARCHITECTURE, PLAN, DECISIONS).
 
-Bibliothèque de jeux unifiée pour Windows 10/11 (Tauri 2 + Rust, interface Svelte 5).
+Bibliothèque de jeux unifiée pour Windows 10/11 et macOS (Tauri 2 + Rust, interface Svelte 5).
 
 Au premier démarrage, Hangar détecte tous les jeux installés, affiche leurs vraies jaquettes et les lance via leur launcher (ou directement l'exécutable s'il n'y en a pas) :
 
@@ -18,6 +18,8 @@ Au premier démarrage, Hangar détecte tous les jeux installés, affiche leurs v
 | Xbox / Microsoft Store | `Get-AppxPackage` + `MicrosoftGame.config` | `shell:AppsFolder\<famille>!<app>` |
 | Dossiers locaux | Un jeu par sous-dossier, exe choisi automatiquement (launcher prioritaire) | Exe |
 | Ajout manuel | Exe, raccourci ou `.bat` choisi par toi | Exe + arguments |
+
+Sur macOS : Steam (`~/Library/Application Support/Steam`), Epic (`~/Library/Application Support/Epic/.../Manifests`), Riot (`/Users/Shared/Riot Games`), les apps de la catégorie Jeux de `/Applications` (jeux GOG reconnus à leur `goggame-*.info`), les dossiers locaux (`.app`) et l'ajout manuel. Ubisoft, EA, Battle.net et Xbox n'ont pas de détection Mac. Lancement via `open`.
 
 ## Fonctionnalités
 
@@ -49,6 +51,23 @@ npm run build
 Résultats :
 - Exe portable : `src-tauri\target\release\hangar.exe`
 - Installeur (par utilisateur, sans droits admin) : `src-tauri\target\release\bundle\nsis\Hangar_1.0.0_x64-setup.exe`
+
+## Publier une version (Windows + Mac) et mise à jour intégrée
+
+Le workflow `.github/workflows/release.yml` construit l'installeur Windows et le `.dmg` macOS (universel Intel + Apple Silicon), les publie dans une release GitHub et génère `latest.json`. Hangar le lit au démarrage et via Paramètres > Mise à jour : le bouton « Mettre à jour » télécharge, vérifie la signature, installe et redémarre.
+
+Une seule fois :
+1. Créer le dépôt GitHub `maelpasq/hangar` (public, sinon `latest.json` n'est pas lisible ; sinon changer `plugins.updater.endpoints` dans `src-tauri/tauri.conf.json`).
+2. Secrets du dépôt : `TAURI_SIGNING_PRIVATE_KEY` = contenu de `~/.tauri/hangar.key`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` vide. Ne jamais perdre cette clé : sans elle, les versions installées ne peuvent plus se mettre à jour.
+
+À chaque version :
+
+```bash
+npm version patch        # ou minor / major : met à jour la version et crée le tag vX.Y.Z
+git push --follow-tags   # lance la release
+```
+
+L'app Mac n'est pas signée par Apple : au premier lancement, clic droit sur Hangar > Ouvrir (ou `xattr -cr /Applications/Hangar.app`). Les mises à jour suivantes passent par le bouton.
 
 ## Développer
 
