@@ -48,7 +48,7 @@
     gap: 14px;
     border-radius: 16px;
     background: var(--surface-1);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgb(var(--ink) / 0.06);
     transition: background 0.12s;
   }
 

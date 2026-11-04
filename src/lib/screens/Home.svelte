@@ -147,7 +147,7 @@
   .hero-ph {
     height: 440px;
     border-radius: var(--r-hero);
-    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.025) 50%, transparent 70%) #12141b;
+    background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / 0.025) 50%, transparent 70%) var(--cover-bg);
     background-size: 200% 100%;
     animation: hgShimmer 1.8s linear infinite;
   }

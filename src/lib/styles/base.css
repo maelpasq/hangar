@@ -21,6 +21,10 @@ body {
   height: 100%;
 }
 
+.on-dark {
+  color: var(--text);
+}
+
 button {
   font: inherit;
   color: inherit;
@@ -97,7 +101,7 @@ dd {
 }
 
 .scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--ink) / 0.1);
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: padding-box;
@@ -142,11 +146,12 @@ dd {
   padding: 22px;
   border-radius: var(--r-section);
   background: var(--surface-1);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(var(--ink) / 0.06);
   min-width: 0;
 }
 
-.card-section h2 {
+.card-section h2,
+.card-section h3 {
   font-size: 16px;
   font-weight: 650;
 }
@@ -164,12 +169,12 @@ dd {
   height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--ink) / 0.1);
   backdrop-filter: blur(16px);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3px;
-  color: #e6e8ef;
+  color: var(--text);
 }
 
 .pill .dot {
@@ -192,7 +197,7 @@ dd {
 }
 
 .ghost:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgb(var(--ink) / 0.18);
 }
 
 .ghost.on svg {
@@ -206,7 +211,7 @@ dd {
   display: grid;
   place-items: center;
   border-radius: var(--r-btn);
-  color: #9ea3b5;
+  color: var(--text-nav);
   transition:
     background 0.15s,
     color 0.15s;
@@ -214,7 +219,7 @@ dd {
 
 .ibtn:hover {
   background: var(--surface-3);
-  color: #fff;
+  color: var(--strong);
 }
 
 .btn {
@@ -228,14 +233,14 @@ dd {
   font-weight: 600;
   font-size: 13.5px;
   border: 1px solid var(--border-3);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--ink) / 0.06);
   transition:
     background 0.15s,
     filter 0.15s;
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--ink) / 0.12);
 }
 
 .btn.primary {
@@ -273,7 +278,7 @@ dd {
   border-radius: 11px;
   background: var(--surface-2);
   border: 1px solid var(--border-2);
-  color: #fff;
+  color: var(--strong);
   font-size: 14px;
   outline: none;
   min-width: 0;
@@ -309,5 +314,5 @@ dd {
 }
 
 .link:hover {
-  color: #fff;
+  color: var(--strong);
 }

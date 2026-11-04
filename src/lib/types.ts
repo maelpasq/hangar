@@ -64,6 +64,9 @@ export interface Prefs {
   steamGridDbKey: string;
 }
 
+/** « system » suit le réglage clair / sombre de l'appareil. */
+export type Theme = 'dark' | 'light' | 'system';
+
 export interface PersistedState {
   version: 1;
   favorites: string[];
@@ -80,6 +83,7 @@ export interface PersistedState {
   manualGames: Game[];
   disabledStores: StoreId[];
   accent: string;
+  theme: Theme;
   sort: SortKey;
   prefs: Prefs;
 }

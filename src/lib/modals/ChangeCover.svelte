@@ -168,7 +168,7 @@
     border-radius: 12px;
     overflow: hidden;
     background: var(--cover-bg);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 0 0 1px rgb(var(--ink) / 0.09);
     transition:
       transform 0.25s var(--ease),
       box-shadow 0.25s;
@@ -220,7 +220,7 @@
   .shim {
     position: absolute;
     inset: 0;
-    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.05) 50%, transparent 70%);
+    background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / 0.05) 50%, transparent 70%);
     background-size: 200% 100%;
     animation: hgShimmer 1.4s linear infinite;
   }
@@ -255,13 +255,13 @@
     gap: 12px;
     padding: 0 12px;
     border-radius: 11px;
-    color: #d7dae4;
+    color: var(--text-soft);
     text-align: left;
     transition: background 0.15s;
   }
 
   .opt:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(var(--ink) / 0.06);
   }
 
   .mini {

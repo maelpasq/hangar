@@ -19,6 +19,7 @@
 <style>
   .seg {
     display: flex;
+    width: fit-content;
     padding: 3px;
     border-radius: 11px;
     background: var(--surface-2);
@@ -35,11 +36,11 @@
   }
 
   button:hover {
-    color: #fff;
+    color: var(--strong);
   }
 
   button.on {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    background: rgb(var(--ink) / 0.12);
+    color: var(--strong);
   }
 </style>

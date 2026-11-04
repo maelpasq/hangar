@@ -120,7 +120,7 @@
   .shimmer {
     position: absolute;
     inset: 0;
-    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.04) 50%, transparent 70%) var(--cover-bg);
+    background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / 0.04) 50%, transparent 70%) var(--cover-bg);
     background-size: 200% 100%;
     animation: hgShimmer 1.6s linear infinite;
   }

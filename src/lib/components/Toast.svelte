@@ -51,7 +51,7 @@
     min-height: 48px;
     max-width: min(560px, calc(100vw - 40px));
     padding: 10px 16px 10px 10px;
-    background: rgba(24, 26, 34, 0.9);
+    background: rgb(var(--popover) / 0.9);
     backdrop-filter: blur(24px);
     border: 1px solid var(--border-3);
     border-radius: 14px;
@@ -101,6 +101,6 @@
 
   .act:hover {
     background: var(--surface-3);
-    color: #fff;
+    color: var(--strong);
   }
 </style>

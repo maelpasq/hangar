@@ -22,7 +22,7 @@ export const STORE_ORDER: StoreId[] = [
 
 export const STORES: Record<StoreId, StoreMeta> = {
   steam: { label: 'Steam', color: '#66c0f4', launcher: 'Steam' },
-  epic: { label: 'Epic Games', color: '#d9d9d9', launcher: 'Epic Games Launcher' },
+  epic: { label: 'Epic Games', color: 'var(--epic)', launcher: 'Epic Games Launcher' },
   gog: { label: 'GOG', color: '#c084fc', launcher: 'GOG Galaxy' },
   ubisoft: { label: 'Ubisoft Connect', color: '#60a5fa', launcher: 'Ubisoft Connect' },
   ea: { label: 'EA app', color: '#ff6b6b', launcher: 'EA app' },

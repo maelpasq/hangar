@@ -200,7 +200,7 @@
   .shade {
     position: absolute;
     inset: 0;
-    background: linear-gradient(0deg, var(--bg) 0%, rgba(10, 11, 15, 0.55) 45%, rgba(10, 11, 15, 0.25) 100%);
+    background: linear-gradient(0deg, var(--bg) 0%, rgb(var(--glass) / 0.55) 45%, rgb(var(--glass) / 0.25) 100%);
   }
 
   .top {
@@ -226,7 +226,7 @@
     background: var(--cover-bg);
     box-shadow:
       0 40px 80px -20px rgba(0, 0, 0, 0.9),
-      0 0 0 1px rgba(255, 255, 255, 0.1);
+      0 0 0 1px rgb(var(--ink) / 0.1);
   }
 
   .headline {
@@ -331,7 +331,7 @@
   .tile {
     padding: 14px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgb(var(--ink) / 0.04);
     min-width: 0;
   }
 
@@ -379,7 +379,7 @@
   }
 
   dd {
-    color: #d7dae4;
+    color: var(--text-soft);
     user-select: text;
   }
 
@@ -389,7 +389,7 @@
 
   .sep {
     height: 1px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(var(--ink) / 0.06);
     margin: 16px 0 8px;
   }
 
@@ -401,14 +401,14 @@
     gap: 12px;
     padding: 0 14px;
     border-radius: 11px;
-    color: #d7dae4;
+    color: var(--text-soft);
     font-size: 14px;
     text-align: left;
     transition: background 0.15s;
   }
 
   .act:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(var(--ink) / 0.06);
   }
 
   .act:disabled {

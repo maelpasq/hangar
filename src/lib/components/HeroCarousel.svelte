@@ -82,7 +82,7 @@
 </script>
 
 <section
-  class="hero"
+  class="hero on-dark"
   class:paused
   aria-roledescription="carrousel"
   aria-label="Jeux mis en avant"

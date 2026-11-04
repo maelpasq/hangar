@@ -42,6 +42,11 @@ describe('état persistant', () => {
     expect(s.disabledStores).toEqual(['steam']);
   });
 
+  it('garde un thème valide, sombre sinon', () => {
+    expect(normalizeState({ version: 1, theme: 'light' }).theme).toBe('light');
+    expect(normalizeState({ version: 1, theme: 'bleu' }).theme).toBe('dark');
+  });
+
   it('garde la clé SteamGridDB, sans espaces', () => {
     expect(normalizeState({ version: 1, prefs: { steamGridDbKey: '  abc123 ' } }).prefs.steamGridDbKey).toBe('abc123');
     expect(normalizeState({ version: 1 }).prefs.steamGridDbKey).toBe('');

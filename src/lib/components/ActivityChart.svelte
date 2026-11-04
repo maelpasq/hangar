@@ -74,12 +74,12 @@
     width: 100%;
     max-width: 30px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgb(var(--ink) / 0.08);
     transition: height 0.6s var(--ease);
   }
 
   .bar.played {
-    background: rgba(255, 255, 255, 0.22);
+    background: rgb(var(--ink) / 0.22);
   }
 
   .bar.today {

@@ -18,6 +18,7 @@ export function defaultState(): PersistedState {
     manualGames: [],
     disabledStores: [],
     accent: '#7c6cff',
+    theme: 'dark',
     sort: 'recent',
     prefs: { minimizeOnLaunch: true, startWithWindows: false, autoCovers: true, steamGridDbKey: '' }
   };
@@ -55,6 +56,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   s.localFolders = strArr(raw.localFolders);
   s.disabledStores = strArr(raw.disabledStores).filter((x): x is StoreId => STORE_ORDER.includes(x as StoreId));
   if (typeof raw.accent === 'string' && /^#[0-9a-f]{6}$/i.test(raw.accent)) s.accent = raw.accent;
+  if (raw.theme === 'dark' || raw.theme === 'light' || raw.theme === 'system') s.theme = raw.theme;
   if (raw.sort === 'recent' || raw.sort === 'az' || raw.sort === 'hours') s.sort = raw.sort as SortKey;
   if (isObj(raw.prefs)) {
     const p = raw.prefs;

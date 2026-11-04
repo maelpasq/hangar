@@ -7,7 +7,6 @@
     | 'back'
     | 'search'
     | 'refresh'
-    | 'gear'
     | 'plus'
     | 'play'
     | 'folder'
@@ -20,7 +19,9 @@
     | 'stop'
     | 'check'
     | 'alert'
-    | 'user'
+    | 'sun'
+    | 'moon'
+    | 'monitor'
     | 'upload';
 </script>
 
@@ -72,10 +73,6 @@
     <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
   {:else if name === 'refresh'}
     <path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 4v5h-5" />
-  {:else if name === 'gear'}
-    <circle cx="12" cy="12" r="3" /><path
-      d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"
-    />
   {:else if name === 'plus'}
     <path d="M12 5v14M5 12h14" />
   {:else if name === 'play'}
@@ -102,8 +99,12 @@
     <path d="m5 12 5 5 9-10" />
   {:else if name === 'alert'}
     <circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5h0" />
-  {:else if name === 'user'}
-    <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+  {:else if name === 'sun'}
+    <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  {:else if name === 'moon'}
+    <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+  {:else if name === 'monitor'}
+    <rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />
   {:else if name === 'upload'}
     <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
   {/if}

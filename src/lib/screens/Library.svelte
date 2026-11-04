@@ -105,7 +105,7 @@
 
   {#if base.length}
     <div class="chips" role="group" aria-label="Filtrer par store">
-      <Chip on={ui.store === 'all'} color="#ffffff" count={base.length} onclick={() => (ui.store = 'all')}>Tous</Chip>
+      <Chip on={ui.store === 'all'} color="var(--strong)" count={base.length} onclick={() => (ui.store = 'all')}>Tous</Chip>
       {#each presentStores(counts) as s (s)}
         <Chip on={ui.store === s} store={s} count={counts[s]} onclick={() => (ui.store = s)}
           >{STORES[s].label}</Chip

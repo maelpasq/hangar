@@ -107,7 +107,7 @@
     z-index: 90;
     min-width: 220px;
     padding: 6px;
-    background: rgba(24, 26, 34, 0.86);
+    background: rgb(var(--popover) / 0.86);
     backdrop-filter: blur(30px) saturate(1.4);
     border: 1px solid var(--border-3);
     border-radius: 14px;
@@ -125,14 +125,14 @@
     padding: 0 12px;
     border-radius: 9px;
     font-size: 13.5px;
-    color: #d7dae4;
+    color: var(--text-soft);
     text-align: left;
   }
 
   button:hover:not(:disabled),
   button:focus-visible {
     background: var(--surface-3);
-    color: #fff;
+    color: var(--strong);
     outline: none;
   }
 

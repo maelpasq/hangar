@@ -60,9 +60,9 @@
     width: min(560px, 100%);
     padding: 8px;
     border-radius: 16px;
-    background: rgba(22, 24, 32, 0.92);
+    background: rgb(var(--popover) / 0.92);
     backdrop-filter: blur(30px) saturate(1.4);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgb(var(--ink) / 0.12);
     box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
     animation: hgIn 0.25s both;
     z-index: 30;
@@ -90,8 +90,8 @@
 
   /* Ligne choisie (souris ou flèches) : assez contrastée pour se voir au clavier. */
   .res.sel {
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background: rgb(var(--ink) / 0.1);
+    box-shadow: inset 0 0 0 1px rgb(var(--ink) / 0.08);
   }
 
   .thumb {
@@ -130,7 +130,7 @@
   .open {
     font-size: 12px;
     color: var(--muted);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgb(var(--ink) / 0.12);
     border-radius: 7px;
     padding: 3px 8px;
   }

@@ -1,33 +1,49 @@
 /* Design system Hangar - valeurs de docs/DESIGN.md et de la maquette validée. */
-:root {
+/* .on-dark : zones posées sur une image (hero, overlay de lancement) qui restent sombres en thème clair. */
+:root,
+.on-dark {
+  color-scheme: dark;
+  /* Canaux RVB : --ink pour les voiles et bordures, --glass pour les fonds translucides. */
+  --ink: 255 255 255;
+  --glass: 10 11 15;
+  --popover: 24 26 34;
   --bg: #0a0b0f;
   --bg-deep: #07080b;
   --panel: #14161d;
-  --sidebar: rgba(10, 11, 15, 0.55);
-  --surface-1: rgba(255, 255, 255, 0.035);
-  --surface-2: rgba(255, 255, 255, 0.045);
-  --surface-3: rgba(255, 255, 255, 0.07);
-  --surface-4: rgba(255, 255, 255, 0.1);
-  --border-1: rgba(255, 255, 255, 0.05);
-  --border-2: rgba(255, 255, 255, 0.08);
-  --border-3: rgba(255, 255, 255, 0.14);
+  --sidebar: rgb(var(--glass) / 0.55);
+  --surface-1: rgb(var(--ink) / 0.035);
+  --surface-2: rgb(var(--ink) / 0.045);
+  --surface-3: rgb(var(--ink) / 0.07);
+  --surface-4: rgb(var(--ink) / 0.1);
+  --border-1: rgb(var(--ink) / 0.05);
+  --border-2: rgb(var(--ink) / 0.08);
+  --border-3: rgb(var(--ink) / 0.14);
+  /* Texte au survol ou actif. */
+  --strong: #fff;
   --text: #eef0f6;
+  --text-soft: #d7dae4;
+  --text-nav: #9ea3b5;
   --text-2: #c3c7d4;
   --text-3: #a7acbd;
   --muted: #8b90a3;
   --muted-2: #80859a;
+  --accent-text: color-mix(in srgb, var(--accent) 45%, #fff);
+  --success-text: #6ee7b7;
+  --danger-text: #ff8f94;
+  --cover-bg: #151821;
+  /* Logo Epic : gris clair sur sombre, gris foncé sur clair. */
+  --epic: #d9d9d9;
+}
+
+:root {
   --accent: #7c6cff;
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-ring: color-mix(in srgb, var(--accent) 85%, transparent);
   --accent-glow: color-mix(in srgb, var(--accent) 60%, transparent);
   --accent-shadow: color-mix(in srgb, var(--accent) 80%, transparent);
-  --accent-text: color-mix(in srgb, var(--accent) 45%, #fff);
   --success: #34d399;
-  --success-text: #6ee7b7;
   --danger: #e5484d;
-  --danger-text: #ff8f94;
   --star: #fbbf24;
-  --cover-bg: #151821;
 
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-pop: cubic-bezier(0.2, 1.4, 0.4, 1);
@@ -39,4 +55,30 @@
 
   --font: 'Geist Variable', 'Geist', 'Segoe UI Variable Display', system-ui, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
+}
+
+/* Thème clair : mêmes rôles, valeurs inversées. App.svelte pose data-theme. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ink: 20 22 32;
+  --glass: 244 245 249;
+  --popover: 255 255 255;
+  --bg: #f4f5f9;
+  --bg-deep: #e9ebf1;
+  --panel: #ffffff;
+  --sidebar: rgb(255 255 255 / 0.6);
+  --surface-1: rgb(255 255 255 / 0.75);
+  --strong: #0d0f15;
+  --text: #171922;
+  --text-soft: #262a36;
+  --text-nav: #555b6e;
+  --text-2: #353947;
+  --text-3: #4b5062;
+  --muted: #646a7e;
+  --muted-2: #6f7589;
+  --accent-text: color-mix(in srgb, var(--accent) 75%, #000);
+  --success-text: #0f8a5f;
+  --danger-text: #c62f35;
+  --cover-bg: #dde0e8;
+  --epic: #3a3d48;
 }

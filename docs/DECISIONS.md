@@ -81,3 +81,5 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Sans WebView2 (rare sur Windows 10), la fenêtre ne peut pas s'ouvrir : l'installeur NSIS classique prend le relais, il sait installer WebView2.
 - Les données WebView2 de l'installeur vont dans `%TEMP%`, pour ne rien laisser dans AppData.
 - Désinstallation : celle de NSIS, inchangée.
+- Thème clair / sombre / appareil : le bouton de la barre du haut (à la place de l'engrenage) fait défiler les trois modes, aussi réglables dans Paramètres > Apparence. Les couleurs passent par des tokens (`--ink`, `--glass`, `--popover`, `--strong`) redéfinis sous `[data-theme='light']`. Les zones posées sur une image (hero, overlay de lancement) portent `.on-dark` et gardent les couleurs sombres. Thème par défaut : sombre (la maquette).
+- Pastille de profil retirée de la barre du haut (aucun compte dans Hangar). Couleur d'accent libre via un `<input type="color">` natif à côté des 5 pastilles.

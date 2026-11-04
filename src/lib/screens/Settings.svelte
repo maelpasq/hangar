@@ -1,14 +1,15 @@
 <script lang="ts">
-  // Paramètres : stores, dossiers locaux, accent, comportement, jeux masqués, jeux ajoutés.
+  // Paramètres, rangés par thème : apparence, bibliothèque, lancement et jaquettes, mise à jour.
   import { addFolder, removeFolder } from '../actions';
   import { api } from '../api';
   import Icon from '../components/Icon.svelte';
+  import Segmented from '../components/Segmented.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
-  import type { Prefs } from '../types';
+  import type { Prefs, Theme } from '../types';
   import { art } from '../art.svelte';
   import { plural } from '../util/format';
   import { isMac } from '../util/platform';
@@ -37,13 +38,19 @@
       label: "Réduire Hangar au lancement d'un jeu",
       desc: 'La fenêtre revient quand tu quittes le jeu'
     },
-    { key: 'startWithWindows', label: `Démarrer avec ${isMac ? 'macOS' : 'Windows'}`, desc: "Hangar s'ouvre en arrière-plan à la connexion" },
-    {
-      key: 'autoCovers',
-      label: 'Jaquettes automatiques',
-      desc: 'Cherche jaquette et bannière de chaque jeu (store, Steam, SteamGridDB)'
-    }
+    { key: 'startWithWindows', label: `Démarrer avec ${isMac ? 'macOS' : 'Windows'}`, desc: "Hangar s'ouvre en arrière-plan à la connexion" }
   ];
+
+  const themes: { value: Theme; label: string }[] = [
+    { value: 'dark', label: 'Sombre' },
+    { value: 'light', label: 'Clair' },
+    { value: 'system', label: 'Appareil' }
+  ];
+
+  function setTheme(t: Theme) {
+    library.state.theme = t;
+    library.save();
+  }
 
   async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
@@ -74,19 +81,67 @@
     ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
   }
 
-  function setAccent(c: string) {
+  const accent = $derived(library.state.accent.toLowerCase());
+  const custom = $derived(!ACCENTS.some((a) => a.color === accent));
+
+  // Pendant le glisser du sélecteur : aperçu en direct, enregistrement au relâcher.
+  function setAccent(c: string, save = true) {
     library.state.accent = c;
-    library.save();
+    if (save) library.save();
   }
 </script>
 
 <div class="screen scroll page">
   <h1>Paramètres</h1>
-  <p class="lead">Sources de ta bibliothèque, apparence et comportement au lancement.</p>
+  <p class="lead">Apparence, sources de ta bibliothèque et comportement au lancement.</p>
+
+  <h2 class="group">Apparence</h2>
+  <div class="grid">
+    <section class="card-section">
+      <h3>Thème</h3>
+      <p class="desc">« Appareil » suit le réglage clair ou sombre de {isMac ? 'macOS' : 'Windows'}.</p>
+      <Segmented value={library.state.theme} options={themes} label="Thème" onchange={setTheme} />
+    </section>
+
+    <section class="card-section">
+      <h3>Couleur d'accent</h3>
+      <p class="desc">Boutons, sélection et lueurs. Choisis une teinte ou la tienne.</p>
+      <div class="swatches">
+        <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
+          {#each ACCENTS as a (a.color)}
+            {@const on = accent === a.color}
+            <button
+              class="sw"
+              class:on
+              role="radio"
+              aria-checked={on}
+              aria-label="Accent {a.name}"
+              title={a.name}
+              style:background={a.color}
+              onclick={() => setAccent(a.color)}
+            ></button>
+          {/each}
+        </div>
+        <label class="sw custom" class:on={custom} title="Couleur personnalisée" style:background={custom ? accent : undefined}>
+          <span class="sr-only">Couleur personnalisée</span>
+          {#if !custom}<Icon name="plus" size={16} stroke={2.2} />{/if}
+          <input
+            type="color"
+            value={accent}
+            oninput={(e) => setAccent(e.currentTarget.value, false)}
+            onchange={(e) => setAccent(e.currentTarget.value)}
+          />
+        </label>
+        <span class="meta mono hex">{accent}</span>
+      </div>
+    </section>
+  </div>
+
+  <h2 class="group">Bibliothèque</h2>
   <div class="grid">
     <div class="col">
       <section class="card-section">
-        <h2>Stores détectés</h2>
+        <h3>Stores détectés</h3>
         <p class="desc">Hangar cherche automatiquement les jeux de ces launchers.</p>
         {#each stores as s (s)}
           {@const on = !library.state.disabledStores.includes(s)}
@@ -98,43 +153,11 @@
           </div>
         {/each}
       </section>
-
-      <section class="card-section">
-        <h2>Jeux masqués</h2>
-        <p class="desc">Ils restent installés, Hangar ne les affiche simplement plus.</p>
-        {#each hidden as g (g.id)}
-          <div class="line">
-            <StoreLogo store={g.store} size={16} />
-            <span class="grow ell">{library.name(g)}</span>
-            <button class="chip-btn" onclick={() => library.unhide(g.id)}><Icon name="eye" size={15} />Afficher</button>
-          </div>
-        {:else}
-          <p class="none">Aucun jeu masqué.</p>
-        {/each}
-      </section>
-
-      <section class="card-section">
-        <h2>Mise à jour</h2>
-        <p class="desc">Hangar {version}. Les nouvelles versions s'installent sans repasser par l'installeur.</p>
-        <div class="line">
-          <span class="grow" aria-live="polite">{updater.label}</span>
-          {#if updater.phase === 'available'}
-            <button class="chip-btn primary" onclick={() => updater.install()}>Installer et redémarrer</button>
-          {:else}
-            <button
-              class="chip-btn"
-              disabled={updater.phase === 'checking' || updater.phase === 'installing'}
-              onclick={() => updater.check()}
-              ><Icon name="refresh" size={15} class={updater.phase === 'checking' ? 'spin' : ''} />Rechercher</button
-            >
-          {/if}
-        </div>
-      </section>
     </div>
 
     <div class="col">
       <section class="card-section">
-        <h2>Dossiers de jeux locaux</h2>
+        <h3>Dossiers de jeux locaux</h3>
         <p class="desc">Chaque sous-dossier devient un jeu. Le launcher du jeu est lancé en priorité.</p>
         {#each library.state.localFolders as f (f)}
           <div class="folder">
@@ -149,61 +172,7 @@
       </section>
 
       <section class="card-section">
-        <h2 class="mb">Couleur d'accent</h2>
-        <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
-          {#each ACCENTS as a (a.color)}
-            {@const on = library.state.accent.toLowerCase() === a.color}
-            <button
-              class="sw"
-              class:on
-              role="radio"
-              aria-checked={on}
-              aria-label="Accent {a.name}"
-              title={a.name}
-              style:background={a.color}
-              onclick={() => setAccent(a.color)}
-            ></button>
-          {/each}
-        </div>
-      </section>
-
-      <section class="card-section">
-        <h2 class="mb6">Comportement</h2>
-        {#each prefs as p (p.key)}
-          <div class="line pref">
-            <span class="grow txt"><span>{p.label}</span><span class="meta">{p.desc}</span></span>
-            <Toggle on={library.state.prefs[p.key]} label={p.label} onchange={(v) => setPref(p.key, v)} />
-          </div>
-        {/each}
-        <form class="gridkey" onsubmit={saveGridKey}>
-          <label class="field" for="sgdb-key">
-            <span class="txt"
-              ><span class="lbl">Clé API SteamGridDB <span class="meta">(facultatif)</span></span><span class="meta"
-                >Trouve les jaquettes et bannières des jeux absents de Steam (Hytale, Roblox, VALORANT...). Clé
-                gratuite sur steamgriddb.com, menu Préférences puis API.</span
-              ></span
-            >
-          </label>
-          <div class="keyrow">
-            <input
-              id="sgdb-key"
-              type={showKey ? 'text' : 'password'}
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="Colle ta clé ici"
-              bind:value={gridKey}
-              onblur={() => saveGridKey()}
-            />
-            <button type="button" class="chip-btn" onclick={() => (showKey = !showKey)}
-              >{showKey ? 'Masquer' : 'Afficher'}</button
-            >
-            <button type="submit" class="chip-btn" disabled={!keyDirty}>Enregistrer</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="card-section">
-        <h2>Jeux ajoutés à la main</h2>
+        <h3>Jeux ajoutés à la main</h3>
         <p class="desc">Les exécutables que tu as ajoutés toi-même.</p>
         {#each library.state.manualGames as g (g.id)}
           <div class="line">
@@ -221,7 +190,92 @@
           ><Icon name="plus" size={15} stroke={2} />Ajouter un jeu</button
         >
       </section>
+
+      <section class="card-section">
+        <h3>Jeux masqués</h3>
+        <p class="desc">Ils restent installés, Hangar ne les affiche simplement plus.</p>
+        {#each hidden as g (g.id)}
+          <div class="line">
+            <StoreLogo store={g.store} size={16} />
+            <span class="grow ell">{library.name(g)}</span>
+            <button class="chip-btn" onclick={() => library.unhide(g.id)}><Icon name="eye" size={15} />Afficher</button>
+          </div>
+        {:else}
+          <p class="none">Aucun jeu masqué.</p>
+        {/each}
+      </section>
     </div>
+  </div>
+
+  <h2 class="group">Lancement et jaquettes</h2>
+  <div class="grid">
+    <section class="card-section">
+      <h3 class="mb6">Comportement</h3>
+      {#each prefs as p (p.key)}
+        <div class="line pref">
+          <span class="grow txt"><span>{p.label}</span><span class="meta">{p.desc}</span></span>
+          <Toggle on={library.state.prefs[p.key]} label={p.label} onchange={(v) => setPref(p.key, v)} />
+        </div>
+      {/each}
+    </section>
+
+    <section class="card-section">
+      <h3 class="mb6">Jaquettes</h3>
+      <div class="line pref">
+        <span class="grow txt"
+          ><span>Jaquettes automatiques</span><span class="meta"
+            >Cherche jaquette et bannière de chaque jeu (store, Steam, SteamGridDB)</span
+          ></span
+        >
+        <Toggle on={library.state.prefs.autoCovers} label="Jaquettes automatiques" onchange={(v) => setPref('autoCovers', v)} />
+      </div>
+      <form class="gridkey" onsubmit={saveGridKey}>
+        <label class="field" for="sgdb-key">
+          <span class="txt"
+            ><span class="lbl">Clé API SteamGridDB <span class="meta">(facultatif)</span></span><span class="meta"
+              >Trouve les jaquettes et bannières des jeux absents de Steam (Hytale, Roblox, VALORANT...). Clé
+              gratuite sur steamgriddb.com, menu Préférences puis API.</span
+            ></span
+          >
+        </label>
+        <div class="keyrow">
+          <input
+            id="sgdb-key"
+            type={showKey ? 'text' : 'password'}
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Colle ta clé ici"
+            bind:value={gridKey}
+            onblur={() => saveGridKey()}
+          />
+          <button type="button" class="chip-btn" onclick={() => (showKey = !showKey)}
+            >{showKey ? 'Masquer' : 'Afficher'}</button
+          >
+          <button type="submit" class="chip-btn" disabled={!keyDirty}>Enregistrer</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <h2 class="group">À propos</h2>
+  <div class="grid">
+    <section class="card-section">
+      <h3>Mise à jour</h3>
+      <p class="desc">Hangar {version}. Les nouvelles versions s'installent sans repasser par l'installeur.</p>
+      <div class="line">
+        <span class="grow" aria-live="polite">{updater.label}</span>
+        {#if updater.phase === 'available'}
+          <button class="chip-btn primary" onclick={() => updater.install()}>Installer et redémarrer</button>
+        {:else}
+          <button
+            class="chip-btn"
+            disabled={updater.phase === 'checking' || updater.phase === 'installing'}
+            onclick={() => updater.check()}
+            ><Icon name="refresh" size={15} class={updater.phase === 'checking' ? 'spin' : ''} />Rechercher</button
+          >
+        {/if}
+      </div>
+    </section>
   </div>
 </div>
 
@@ -238,13 +292,22 @@
   }
 
   .lead {
-    margin: 6px 0 26px;
+    margin: 6px 0 8px;
+    color: var(--muted);
+  }
+
+  .group {
+    margin: 28px 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     color: var(--muted);
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
     gap: 18px;
     align-items: start;
   }
@@ -254,10 +317,6 @@
     flex-direction: column;
     gap: 18px;
     min-width: 0;
-  }
-
-  .mb {
-    margin-bottom: 14px;
   }
 
   .gridkey {
@@ -304,7 +363,7 @@
     border-radius: 10px;
     background: var(--surface-2);
     border: 1px solid var(--border-2);
-    color: #fff;
+    color: var(--strong);
     font-family: var(--mono);
     font-size: 13px;
     outline: none;
@@ -389,7 +448,7 @@
     gap: 12px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgb(var(--ink) / 0.04);
     margin-bottom: 8px;
     min-width: 0;
   }
@@ -448,8 +507,8 @@
     align-items: center;
     gap: 8px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgb(var(--ink) / 0.09);
+    background: rgb(var(--ink) / 0.03);
     font-size: 13px;
     color: var(--text-3);
     transition: all 0.18s;
@@ -458,7 +517,7 @@
 
   .chip-btn:hover {
     background: var(--surface-3);
-    color: #fff;
+    color: var(--strong);
   }
 
   .chip-btn.add {
@@ -467,6 +526,7 @@
 
   .swatches {
     display: flex;
+    align-items: center;
     gap: 14px;
   }
 
@@ -485,7 +545,35 @@
 
   .sw.on {
     box-shadow:
-      0 0 0 3px #0f1117,
-      0 0 0 5px #fff;
+      0 0 0 3px var(--bg),
+      0 0 0 5px var(--strong);
+  }
+
+  /* Pastille personnalisée : l'<input type="color"> invisible la recouvre et ouvre le sélecteur. */
+  .custom {
+    position: relative;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: #fff;
+    background: conic-gradient(#f2556b, #f59e0b, #22c55e, #22b8f0, #7c6cff, #f2556b);
+  }
+
+  .custom input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .custom:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .hex {
+    text-transform: uppercase;
   }
 </style>

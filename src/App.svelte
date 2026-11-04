@@ -34,6 +34,17 @@
     document.documentElement.style.setProperty('--accent', library.state.accent);
   });
 
+  // Thème : « system » suit l'appareil, y compris quand il change en cours de route.
+  $effect(() => {
+    const t = library.state.theme;
+    const mq = matchMedia('(prefers-color-scheme: light)');
+    const apply = () => (document.documentElement.dataset.theme = t === 'system' ? (mq.matches ? 'light' : 'dark') : t);
+    apply();
+    if (t !== 'system') return;
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  });
+
   // Fiche d'un jeu qui a disparu (masqué, store désactivé) : retour.
   $effect(() => {
     if (ui.screen === 'game' && library.ready && !game) ui.home();

@@ -24,7 +24,7 @@
   );
 </script>
 
-<div class="launch" role="dialog" aria-modal="true" aria-label="Lancement de {name}">
+<div class="launch on-dark" role="dialog" aria-modal="true" aria-label="Lancement de {name}">
   {#if bg}<img class="bg" src={bg} alt="" />{/if}
   <div class="shade" aria-hidden="true"></div>
   <div class="center">

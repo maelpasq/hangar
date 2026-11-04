@@ -28,8 +28,8 @@
     align-items: center;
     gap: 8px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgb(var(--ink) / 0.09);
+    background: rgb(var(--ink) / 0.03);
     font-size: 13px;
     color: var(--text-3);
     transition: all 0.18s;
@@ -37,13 +37,13 @@
 
   .chip:hover {
     background: var(--surface-3);
-    color: #fff;
+    color: var(--strong);
   }
 
   .chip.on {
-    background: #fff;
-    color: #0a0b0f;
-    border-color: #fff;
+    background: var(--strong);
+    color: var(--bg);
+    border-color: var(--strong);
   }
 
   .d {
@@ -54,7 +54,7 @@
 
   /* sur la puce active (fond blanc), le logo passe en sombre pour rester lisible */
   .chip.on :global(.slogo) {
-    color: #0a0b0f !important;
+    color: var(--bg) !important;
   }
 
   .c {

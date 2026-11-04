@@ -186,7 +186,7 @@
     gap: 12px;
     padding: 0 12px;
     border-radius: 11px;
-    color: #9ea3b5;
+    color: var(--text-nav);
     font-size: 14px;
     text-align: left;
     transition:
@@ -211,7 +211,7 @@
 
   .navb.on {
     background: var(--border-2);
-    color: #fff;
+    color: var(--strong);
   }
 
   .navb.on::before {
@@ -248,6 +248,6 @@
     height: 44px;
     border: 1px dashed var(--border-3);
     justify-content: center;
-    color: #b4b8c8;
+    color: var(--text-3);
   }
 </style>

@@ -12,7 +12,7 @@
     height: 26px;
     flex-shrink: 0;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.14);
+    background: rgb(var(--ink) / 0.14);
     position: relative;
     transition: background 0.25s;
   }

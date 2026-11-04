@@ -1,15 +1,15 @@
 <script lang="ts">
-  // Barre du haut : retour, recherche, actualiser, paramètres, profil, contrôles de fenêtre.
+  // Barre du haut : retour, recherche, actualiser, thème, contrôles de fenêtre.
   import { api } from '../api';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { updater } from '../stores/update.svelte';
   import { isMac } from '../util/platform';
   import { ui } from '../stores/ui.svelte';
-  import type { Game } from '../types';
+  import type { Game, Theme } from '../types';
   import { formatNumber } from '../util/format';
   import { rank } from '../util/search';
-  import Icon from './Icon.svelte';
+  import Icon, { type IconName } from './Icon.svelte';
   import SearchPanel from './SearchPanel.svelte';
 
   let { onrefresh, input = $bindable() }: { onrefresh: () => void; input?: HTMLInputElement } = $props();
@@ -47,6 +47,18 @@
       ui.query = '';
       input?.blur();
     }
+  }
+
+  const THEMES: Record<Theme, { label: string; icon: IconName; next: Theme }> = {
+    dark: { label: 'sombre', icon: 'moon', next: 'light' },
+    light: { label: 'clair', icon: 'sun', next: 'system' },
+    system: { label: "celui de l'appareil", icon: 'monitor', next: 'dark' }
+  };
+  const theme = $derived(library.state.theme);
+
+  function cycleTheme() {
+    library.state.theme = THEMES[theme].next;
+    library.save();
   }
 
   async function toggleMax() {
@@ -105,10 +117,12 @@
     >
       <Icon name="refresh" class={library.scanning ? 'spin' : ''} />
     </button>
-    <button class="ibtn" onclick={() => ui.settings()} aria-label="Paramètres" title="Paramètres"
-      ><Icon name="gear" /></button
+    <button
+      class="ibtn theme"
+      onclick={cycleTheme}
+      aria-label="Thème : {THEMES[theme].label}. Passer en {THEMES[THEMES[theme].next].label}"
+      title="Thème : {THEMES[theme].label}"><Icon name={THEMES[theme].icon} /></button
     >
-    <span class="avatar" aria-hidden="true"><Icon name="user" size={16} /></span>
     <!-- macOS : boutons natifs de la fenêtre, en haut à gauche -->
     {#if !isMac}
       <button class="wbtn" aria-label="Réduire" title="Réduire" onclick={() => api.win.minimize()}>
@@ -156,7 +170,7 @@
 
   /* Page de jeu défilée : le contenu ne doit pas se voir derrière la recherche. */
   header.solid {
-    background: rgba(10, 11, 15, 0.78);
+    background: rgb(var(--glass) / 0.78);
     backdrop-filter: blur(24px) saturate(1.3);
     box-shadow: 0 1px 0 var(--border-1);
   }
@@ -187,7 +201,7 @@
   }
 
   .over .search {
-    background: rgba(10, 11, 15, 0.45);
+    background: rgb(var(--glass) / 0.45);
     backdrop-filter: blur(20px);
   }
 
@@ -203,7 +217,7 @@
     background: none;
     border: 0;
     outline: none;
-    color: #fff;
+    color: var(--strong);
     font-size: 14px;
   }
 
@@ -252,28 +266,21 @@
     gap: 2px;
   }
 
+  .theme {
+    margin-right: 8px;
+  }
+
   .ibtn:disabled {
     cursor: default;
   }
 
-  .avatar {
-    width: 34px;
-    height: 34px;
-    margin: 0 10px 0 6px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: #2a2440;
-    color: #cfc7ff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
 
   .wbtn {
     width: 46px;
     height: 44px;
     display: grid;
     place-items: center;
-    color: #8d92a4;
+    color: var(--muted);
     transition:
       background 0.12s,
       color 0.12s;
@@ -281,7 +288,7 @@
 
   .wbtn:hover {
     background: var(--surface-3);
-    color: #fff;
+    color: var(--strong);
   }
 
   .wbtn.x:hover {
@@ -291,6 +298,6 @@
 
   .over .wbtn,
   .over .ibtn {
-    color: #c3c7d4;
+    color: var(--text-2);
   }
 </style>
