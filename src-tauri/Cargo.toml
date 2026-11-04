@@ -3,6 +3,7 @@ name = "hangar"
 version = "1.0.0"
 description = "Hangar - bibliothèque de jeux unifiée"
 edition = "2021"
+license = "MIT"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

@@ -34,6 +34,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Hangar ${{ github.ref_name }}
-          releaseBody: Télécharge l'installeur Windows (.exe) ou macOS (.dmg) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.
+          releaseBody: "Télécharge l'installeur Windows (.exe) ou macOS (.dmg) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar. [Code signing policy](https://github.com/maelpasq/hangar#code-signing-policy)"
           releaseDraft: false
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json

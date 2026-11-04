@@ -8,6 +8,8 @@ Hangar trouve tout seul les jeux installés sur ton ordinateur (Steam, Epic, GOG
 
 ### [⬇ Télécharger Hangar](https://github.com/maelpasq/hangar/releases/latest)
 
+[Code signing policy](#code-signing-policy) · [Licence MIT](LICENSE)
+
 </div>
 
 ![Accueil de Hangar](docs/images/accueil.png)
@@ -85,6 +87,24 @@ Un jeu manque ? Ajoute son dossier dans **Paramètres > Dossiers de jeux locaux*
 Hangar ne supprime jamais rien : « Masquer » cache seulement un jeu dans Hangar. Il ne contacte que les sources d'images des jeux et GitHub pour les mises à jour, sans aucune télémétrie.
 
 Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows et `~/Library/Application Support/studio.pamal.hangar` sous macOS.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Seuls les binaires construits par le workflow GitHub Actions de ce dépôt, à partir de son code source, sont signés. Chaque release est approuvée à la main avant signature.
+
+- Committers et reviewers : [maelpasq](https://github.com/maelpasq)
+- Approvers : [maelpasq](https://github.com/maelpasq)
+
+### Confidentialité
+
+Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne transfère d'information vers d'autres systèmes en réseau que pour les fonctions suivantes :
+
+- **Jaquettes et infos des jeux** : le nom ou l'identifiant d'un jeu est envoyé à Steam, Epic Games, GOG, au Microsoft Store et, si tu as saisi ta clé, à SteamGridDB, pour récupérer ses images et son genre.
+- **Mises à jour** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour ».
+
+Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur.
 
 ---
 

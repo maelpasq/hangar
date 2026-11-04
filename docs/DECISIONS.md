@@ -64,3 +64,10 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Version unique dans `package.json` (`tauri.conf.json` pointe dessus) : `npm version` + `git push --follow-tags` publie. Les artefacts signés ne sont produits qu'en release (`tauri.release.conf.json`), pour que `npm run build` local marche sans la clé privée.
 - App Mac non signée par Apple (pas de compte développeur) : premier lancement par clic droit > Ouvrir.
 
+
+## Signature du code Windows
+
+- Choix : SignPath Foundation (gratuit pour l'open source). Microsoft Artifact Signing n'accepte pas les particuliers en France ; un certificat Certum demande de signer depuis le PC à chaque release.
+- Prérequis SignPath ajoutés : licence MIT (`LICENSE`, copyright pamal Studio), section « Code signing policy » (attribution, rôles, confidentialité) dans le README et lien dans chaque release.
+- Éditeur de l'app : « pamal Studio » (`bundle.publisher`). L'installeur range désormais son chemin d'installation sous `HKCU\Software\pamal Studio\Hangar` ; l'ancienne clé `Software\pamal\Hangar` reste orpheline, sans effet (même dossier d'installation par défaut).
+- Le branchement dans `release.yml` attend l'accord de SignPath (identifiants d'organisation, de projet et de politique de signature, jeton d'API en secret).

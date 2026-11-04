@@ -52,7 +52,10 @@
       "nsis": {
         "installMode": "currentUser"
       }
-    }
+    },
+    "publisher": "pamal Studio",
+    "copyright": "Copyright (c) 2026 pamal Studio",
+    "license": "MIT"
   },
   "plugins": {
     "updater": {
