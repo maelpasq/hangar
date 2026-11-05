@@ -17,7 +17,7 @@
   import { plural, relativeDay } from '../util/format';
   import { isMac } from '../util/platform';
 
-  type SectionId = 'general' | 'appearance' | 'launchers' | 'accounts' | 'library' | 'covers';
+  type SectionId = 'general' | 'appearance' | 'launchers' | 'library' | 'covers';
 
   const os = isMac ? 'macOS' : 'Windows';
 
@@ -33,11 +33,16 @@
   const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
   const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
 
-  const sections = $derived<{ id: SectionId; label: string; icon: IconName; badge?: number }[]>([
+  const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number }[]>([
     { id: 'general', label: 'Général', icon: 'sliders' },
     { id: 'appearance', label: 'Apparence', icon: 'sun' },
-    { id: 'launchers', label: 'Launchers', icon: 'grid' },
-    { id: 'accounts', label: 'Comptes', icon: 'check', badge: connectedCount || undefined },
+    {
+      id: 'launchers',
+      label: 'Launchers',
+      title: 'Launchers et comptes',
+      icon: 'grid',
+      badge: connectedCount || undefined
+    },
     { id: 'library', label: 'Bibliothèque', icon: 'folder' },
     { id: 'covers', label: 'Jaquettes', icon: 'image' }
   ]);
@@ -46,8 +51,8 @@
   const intro: Record<SectionId, string> = {
     general: 'Comportement de Hangar et mises à jour.',
     appearance: "Thème et couleur de l'interface.",
-    launchers: 'Les launchers où Hangar cherche tes jeux.',
-    accounts: 'Relie tes comptes pour retrouver tous tes jeux, même ceux qui ne sont pas sur cet appareil.',
+    launchers:
+      'Les launchers où Hangar cherche tes jeux. Relie un compte pour retrouver aussi ceux qui ne sont pas sur cet appareil.',
     library: 'Dossiers de jeux, ajouts à la main et jeux masqués.',
     covers: 'Où Hangar trouve les jaquettes et les bannières.'
   };
@@ -109,16 +114,24 @@
 
   let steamKey = $state('');
   let showSteamKey = $state(false);
+  /** Formulaire de la clé Steam, déplié sous la ligne Steam. */
+  let steamOpen = $state(false);
 
   async function connectSteam(e: Event) {
     e.preventDefault();
-    if (await accounts.connectSteam(steamKey)) steamKey = '';
+    if (await accounts.connectSteam(steamKey)) {
+      steamKey = '';
+      steamOpen = false;
+    }
   }
 
-  const loginStores: { store: StoreId; desc: string }[] = [
-    { store: 'gog', desc: 'Tous tes jeux GOG, même sans GOG Galaxy.' },
-    { store: 'epic', desc: 'Toute ta bibliothèque Epic, toujours à jour.' }
-  ];
+  /** Aide d'une ligne de launcher : jeux trouvés, puis ce que dit le compte relié. */
+  function storeHint(s: StoreId, a: AccountStatus | undefined): string {
+    const here = plural(library.countsAll[s] ?? 0, 'jeu', 'jeux');
+    if (!a?.connected) return here;
+    const synced = a.syncedAt ? `, synchronisé ${relativeDay(a.syncedAt).toLowerCase()}` : '';
+    return `${here} · ${plural(a.games, 'jeu', 'jeux')} sur le compte${synced}`;
+  }
 
   // ─── Bibliothèque ───
 
@@ -153,25 +166,6 @@
   </div>
 {/snippet}
 
-{#snippet linked(a: AccountStatus)}
-  <div class="srow">
-    <span class="ico"><StoreLogo store={a.store} size={20} /></span>
-    <span class="txt">
-      <span class="lbl">{STORES[a.store].label}{#if a.user}<span class="user"> · {a.user}</span>{/if}</span>
-      {#if a.error}
-        <span class="hint err">{a.error}</span>
-      {:else}
-        <span class="hint"
-          >{plural(a.games, 'jeu trouvé', 'jeux trouvés')}{a.syncedAt
-            ? ` · synchronisé ${relativeDay(a.syncedAt).toLowerCase()}`
-            : ''}</span
-        >
-      {/if}
-    </span>
-    <span class="tag conn">Connecté</span>
-    <button class="btn-s" onclick={() => accounts.disconnect(a.store)}>Déconnecter</button>
-  </div>
-{/snippet}
 
 <div class="screen scroll page settings-page">
   <h1>Paramètres</h1>
@@ -190,7 +184,7 @@
     <div class="panel">
       {#key section}
         <header class="phead">
-          <h2>{current.label}</h2>
+          <h2>{current.title ?? current.label}</h2>
           <p>{intro[section]}</p>
         </header>
 
@@ -268,47 +262,52 @@
               </div>
             </section>
           {:else if section === 'launchers'}
-            <section class="group" aria-label="Launchers">
-              <h3>Sources de jeux</h3>
+            <section class="group" aria-label="Launchers et comptes">
+              <h3>Tes launchers</h3>
               {#each stores as s (s)}
                 {@const on = !library.state.disabledStores.includes(s)}
                 {@const t = tag(s)}
+                {@const a = accounts.byStore.get(s)}
                 <div class="srow" class:off={!on}>
                   <span class="ico"><StoreLogo store={s} size={20} /></span>
                   <span class="txt">
-                    <span class="lbl">{STORES[s].label}</span>
-                    <span class="hint">{plural(library.countsAll[s] ?? 0, 'jeu', 'jeux')}</span>
+                    <span class="lbl ell"
+                      >{STORES[s].label}{#if a?.connected && a.user}<span class="user"> · {a.user}</span>{/if}</span
+                    >
+                    {#if a?.connected && a.error}
+                      <span class="hint err">{a.error}</span>
+                    {:else}
+                      <span class="hint">{storeHint(s, a)}</span>
+                    {/if}
                   </span>
                   {#if t}<span class="tag {t.kind}">{t.label}</span>{/if}
+                  {#if a?.connectable}
+                    {#if a.connected}
+                      <button class="btn-s" onclick={() => accounts.disconnect(s)}>Déconnecter</button>
+                    {:else if s === 'steam'}
+                      <button
+                        class="btn-s"
+                        class:primary={!steamOpen}
+                        aria-expanded={steamOpen}
+                        aria-controls="steam-form"
+                        onclick={() => (steamOpen = !steamOpen)}>{steamOpen ? 'Annuler' : 'Relier'}</button
+                      >
+                    {:else}
+                      <button class="btn-s primary" disabled={!!accounts.busy} onclick={() => accounts.connect(s)}
+                        >{accounts.busy === s ? 'Connexion...' : 'Relier'}</button
+                      >
+                    {/if}
+                  {/if}
                   <Toggle {on} label="Activer {STORES[s].label}" onchange={(v) => library.setStoreEnabled(s, v)} />
                 </div>
-              {/each}
-            </section>
-
-            <section class="group" aria-label="Jeux non installés">
-              <h3>Jeux non installés</h3>
-              {@render toggleRow(
-                'showUninstalled',
-                'Afficher les jeux non installés',
-                'Onglet « À installer » avec les jeux de tes launchers qui ne sont pas sur cet appareil.'
-              )}
-            </section>
-          {:else if section === 'accounts'}
-            <section class="group" aria-label="Steam">
-              <h3>Steam</h3>
-              {#if accounts.byStore.get('steam')?.connected}
-                {@render linked(accounts.byStore.get('steam')!)}
-              {:else}
-                <form class="srow stack" onsubmit={connectSteam}>
-                  <span class="ico"><StoreLogo store="steam" size={20} /></span>
-                  <span class="txt">
+                {#if s === 'steam' && steamOpen && !a?.connected}
+                  <form class="sub" id="steam-form" onsubmit={connectSteam}>
                     <label class="lbl" for="steam-key">Clé d'API Web Steam</label>
                     <span class="hint"
-                      >Tous tes jeux Steam et ton temps de jeu. Crée ta clé personnelle (nom de domaine : « localhost »),
-                      puis colle-la ici.</span
+                      >Pour tous tes jeux Steam et ton temps de jeu. Crée ta clé personnelle (nom de domaine :
+                      « localhost »), puis colle-la ici.</span
                     >
-                  </span>
-                  <div class="sfield">
+                    <div class="sfield">
                     <input
                       id="steam-key"
                       type={showSteamKey ? 'text' : 'password'}
@@ -329,23 +328,6 @@
                     >
                   </div>
                 </form>
-              {/if}
-            </section>
-
-            <section class="group" aria-label="GOG et Epic Games">
-              <h3>GOG et Epic Games</h3>
-              {#each loginStores as l (l.store)}
-                {@const a = accounts.byStore.get(l.store)}
-                {#if a?.connected}
-                  {@render linked(a)}
-                {:else}
-                  <div class="srow">
-                    <span class="ico"><StoreLogo store={l.store} size={20} /></span>
-                    <span class="txt"><span class="lbl">{STORES[l.store].label}</span><span class="hint">{l.desc}</span></span>
-                    <button class="btn-s primary" disabled={!!accounts.busy} onclick={() => accounts.connect(l.store)}
-                      >{accounts.busy === l.store ? 'Connexion...' : 'Se connecter'}</button
-                    >
-                  </div>
                 {/if}
               {/each}
             </section>
@@ -353,12 +335,21 @@
             <aside class="trust">
               <Icon name="check" size={16} stroke={2.2} />
               <p>
-                La connexion se fait sur la page officielle de chaque launcher : Hangar ne voit jamais ton mot de passe.
+                « Relier » ouvre la page de connexion officielle du launcher : Hangar ne voit jamais ton mot de passe.
                 Clés et jetons restent dans le coffre de {os}, jamais dans les fichiers de Hangar. Ubisoft Connect, EA app,
                 Battle.net et Xbox n'offrent pas de connexion sûre aux apps tierces : Hangar y lit seulement les jeux de
                 cet appareil.
               </p>
             </aside>
+
+            <section class="group" aria-label="Jeux non installés">
+              <h3>Jeux non installés</h3>
+              {@render toggleRow(
+                'showUninstalled',
+                'Afficher les jeux non installés',
+                'Onglet « À installer » avec les jeux de tes launchers qui ne sont pas sur cet appareil.'
+              )}
+            </section>
           {:else if section === 'library'}
             <section class="group" aria-label="Dossiers de jeux locaux">
               <h3>Dossiers de jeux locaux</h3>
@@ -624,9 +615,6 @@
     flex-basis: 100%;
   }
 
-  .srow.stack .ico + .txt + .sfield {
-    padding-left: 46px;
-  }
 
   .srow.actions {
     min-height: 0;
@@ -794,6 +782,19 @@
     cursor: default;
   }
 
+  /* Formulaire déplié sous une ligne (clé Steam). */
+  .sub {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 0 16px 46px;
+    animation: hgFade 0.25s ease both;
+  }
+
+  .sub .sfield {
+    margin-top: 6px;
+  }
+
   /* ─── Encadré de confiance (Comptes) ─── */
 
   .trust {
@@ -901,7 +902,7 @@
       height: 2px;
     }
 
-    .srow.stack .ico + .txt + .sfield {
+    .sub {
       padding-left: 0;
     }
   }

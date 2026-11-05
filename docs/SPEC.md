@@ -97,7 +97,7 @@ Premier lancement (aucun historique) : le carrousel montre les jeux avec banniè
 
 ### 3.7 Paramètres
 
-Navigation par section à gauche (Général, Apparence, Launchers, Comptes, Bibliothèque, Jaquettes ; en haut, en ligne, si la fenêtre est étroite), une section à la fois à droite. Chaque section est faite de groupes (cartes) dont les lignes suivent le même modèle : icône facultative, libellé et aide, puis le réglage à droite. Le badge de « Comptes » donne le nombre de comptes connectés.
+Navigation par section à gauche (Général, Apparence, Launchers, Bibliothèque, Jaquettes ; en haut, en ligne, si la fenêtre est étroite), une section à la fois à droite. Chaque section est faite de groupes (cartes) dont les lignes suivent le même modèle : icône facultative, libellé et aide, puis le réglage à droite. La section Launchers (« Launchers et comptes ») réunit sur une même ligne par store : jeux trouvés, tag, bouton « Relier » / « Déconnecter » du compte (Steam : le champ de clé se déplie sous la ligne) et interrupteur ; son badge donne le nombre de comptes connectés.
 
 - **Stores détectés** : un interrupteur par store (point de couleur, nom, « N jeux »). Désactiver un store retire ses jeux de l'interface sans rien supprimer.
 - **Dossiers de jeux locaux** : liste des dossiers (chemin en police monospace, « N jeux »), bouton « Retirer » au survol, bouton « Ajouter un dossier » (sélecteur de dossier Windows).
