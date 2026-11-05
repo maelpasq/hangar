@@ -20,9 +20,9 @@ jobs:
             args: '--target universal-apple-darwin'
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with: { node-version: 22, cache: npm }
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
@@ -38,6 +38,21 @@ jobs:
             installer -> target
           save-if: false
       - run: npm ci
+      # Notes de la release : la section de cette version dans docs/RELEASES.md.
+      - name: notes de version
+        id: notes
+        shell: bash
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          notes=$(awk -v h="### $v " 'index($0, h) == 1 { f = 1; next } /^### / { f = 0 } f' docs/RELEASES.md | sed '/^$/d')
+          {
+            echo 'body<<FIN_DES_NOTES'
+            [ -n "$notes" ] && printf '%s
+
+' "$notes"
+            echo 'Télécharge **Hangar-Setup.exe** (Windows) ou le **.dmg** (macOS) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.'
+            echo 'FIN_DES_NOTES'
+          } >> "$GITHUB_OUTPUT"
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,7 +61,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Hangar ${{ github.ref_name }}
-          releaseBody: "Télécharge Hangar-Setup.exe (Windows) ou le .dmg (macOS) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar."
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
       # Installeur Hangar : embarque le NSIS (toujours utilisé par l'updater), nom stable pour un lien direct.

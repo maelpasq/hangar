@@ -9,3 +9,4 @@ captures/
 .playwright-mcp/
 installer/tauri.conf.json
 *.log
+PROMPT.md

@@ -60,10 +60,7 @@ hangar/
       tracker.rs             suivi des processus et des sessions
       art.rs                 résolution Steam, cache disque des images, icônes d'exe
       size.rs                taille des dossiers (en tâche de fond, cachée)
-  legacy/                    ancienne UI vanilla (à supprimer à la fin)
 ```
-
-Le fichier actuel `src-tauri/src/scanner.rs` contient déjà tous les détecteurs. Découpe-le dans `scanner/` sans changer leur logique, puis améliore.
 
 ## 3. Modèle de données (TypeScript, miroir des structs Rust en camelCase)
 

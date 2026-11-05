@@ -31,6 +31,8 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 
 ![Page d'un jeu](docs/images/jeu.png)
 
+![Jeux web](docs/images/jeux-web.png)
+
 ## Installer
 
 Va sur la **[page des releases](https://github.com/maelpasq/hangar/releases/latest)** et télécharge le fichier de ton système :

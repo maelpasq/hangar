@@ -9,7 +9,9 @@ Lis-les dans cet ordre, au début de chaque session :
 1. `docs/SPEC.md` : ce que fait l'app, écran par écran, avec les critères d'acceptation.
 2. `docs/DESIGN.md` : le design system (couleurs, typo, rayons, animations) et chaque composant. **La maquette validée par l'utilisateur fait foi.**
 3. `docs/ARCHITECTURE.md` : stack, découpage frontend/backend, modèle de données, commandes Tauri.
-4. `docs/PLAN.md` : les étapes à suivre dans l'ordre, avec ce qu'il faut vérifier à chacune.
+4. `docs/RELEASES.md` : procédure de publication et historique des versions (chargé plus bas).
+
+`docs/PLAN.md` est le plan de la construction initiale de l'app (terminée) : à consulter comme historique, pas à suivre.
 
 La source de la maquette est dans `design/reference/maquette-hangar.dc.html`. C'est un composant de l'outil de design de Claude, pas du code à copier tel quel : le balisage `<x-dc>`, `<sc-for>`, `<sc-if>` et `{{ ... }}` est un langage de template. Sers-t'en comme référence exacte des valeurs (couleurs, tailles, espacements, keyframes, textes). Les URL `/_blob/...` ne fonctionnent pas hors de l'outil : dans l'app, les images viennent du CDN Steam (voir DESIGN.md, section Jaquettes).
 
@@ -42,10 +44,9 @@ Hors de Windows, `npm run dev:web` lance le frontend seul dans un navigateur ave
 
 ## Façon de travailler
 
-- Suis `docs/PLAN.md` étape par étape. À la fin de chaque étape : `npm run check`, `npm run test`, `cargo test`, `cargo clippy`, puis un commit avec un message clair en français.
+- À la fin de chaque changement : `npm run check`, `npm run test`, `cargo test`, `cargo clippy`, puis un commit avec un message clair en français.
 - Compare régulièrement ton UI à la maquette (`npm run dev:web` + capture d'écran avec Playwright si disponible). Les écarts visibles sont des bugs.
-- Le dossier `src-tauri/src/scanner.rs` contient déjà une détection fonctionnelle de tous les stores (version 1 de l'app). Réutilise-la et améliore-la, ne repars pas de zéro.
-- Le dossier `src/` actuel (HTML/CSS/JS vanilla) est la version 1 de l'interface. Il est remplacé par l'app Svelte décrite dans ARCHITECTURE.md. Garde-le dans `legacy/` jusqu'à ce que la nouvelle UI soit à parité, puis supprime-le.
+- La détection des stores est dans `src-tauri/src/scanner/` (un fichier par store) : améliore-la, ne repars pas de zéro.
 - Si une information manque dans les docs, choisis l'option la plus simple qui respecte la maquette, note ton choix dans `docs/DECISIONS.md` et continue.
 
 ## Publier une version
