@@ -34,12 +34,13 @@ fn process_names(product: &str) -> Vec<String> {
     names.iter().map(|s| s.to_string()).collect()
 }
 
-/// Chemin du Riot Client (`rc_default`).
-fn client() -> Option<String> {
+/// Chemin du Riot Client (`rc_default`), s'il existe encore sur le disque.
+pub fn client() -> Option<String> {
     fs::read_to_string(super::program_data().join("Riot Games").join("RiotClientInstalls.json"))
         .ok()
         .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
         .and_then(|v| v.get("rc_default").and_then(|x| x.as_str()).map(super::native_sep))
+        .filter(|p| Path::new(p).exists())
 }
 
 fn client_launch(client: &str, product: &str, patchline: &str) -> Launch {

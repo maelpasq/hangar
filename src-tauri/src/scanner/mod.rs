@@ -52,6 +52,12 @@ pub fn native_sep(s: &str) -> String {
     }
 }
 
+/// macOS : une app `<nom>.app` est-elle installée (dans /Applications ou ~/Applications) ?
+pub fn mac_app(name: &str) -> bool {
+    let home = PathBuf::from(std::env::var("HOME").unwrap_or_default());
+    [PathBuf::from("/Applications"), home.join("Applications")].iter().any(|d| d.join(format!("{name}.app")).is_dir())
+}
+
 /// Le launcher d'un store est-il présent sur cet appareil ? (tag « Détecté » des Paramètres)
 pub fn launcher_present(store: &str) -> bool {
     let pd = program_data();
@@ -59,10 +65,10 @@ pub fn launcher_present(store: &str) -> bool {
     let mac = cfg!(target_os = "macos");
     match store {
         "steam" => steam::steam_root().is_some(),
-        "epic" if mac => mac_support().join("Epic").is_dir(),
+        "epic" if mac => epic::launcher_installed(),
         "epic" => pd.join("Epic").join("EpicGamesLauncher").is_dir(),
-        "gog" => pd.join("GOG.com").join("Galaxy").is_dir(),
-        "riot" => pd.join("Riot Games").join("RiotClientInstalls.json").is_file(),
+        "gog" => gog::galaxy_installed(),
+        "riot" => riot::client().is_some(),
         _ if mac => false,
         "ubisoft" => local.join("Ubisoft Game Launcher").is_dir() || pd.join("Ubisoft").is_dir(),
         "ea" => pd.join("EA Desktop").is_dir() || local.join("Electronic Arts").join("EA Desktop").is_dir(),

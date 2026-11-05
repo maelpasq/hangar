@@ -25,7 +25,19 @@ pub fn vdf_values(text: &str, key: &str) -> Vec<String> {
         .collect()
 }
 
+/// Dossier de Steam, seulement si le client est installé : ses données (bibliothèques, cache,
+/// comptes) restent sur le disque après une désinstallation, surtout sous macOS.
 pub fn steam_root() -> Option<PathBuf> {
+    let root = steam_data_dir()?;
+    let client = if cfg!(target_os = "macos") { super::mac_app("Steam") } else { root.join("steam.exe").is_file() };
+    if !client {
+        log::info!("Steam : données présentes mais client absent ({})", root.display());
+        return None;
+    }
+    Some(root)
+}
+
+fn steam_data_dir() -> Option<PathBuf> {
     #[cfg(windows)]
     if let Some(p) = super::registry::reg_str(super::registry::HKCU, r"Software\Valve\Steam", "SteamPath") {
         let p = PathBuf::from(p.replace('/', "\\"));

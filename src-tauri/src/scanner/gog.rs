@@ -58,11 +58,25 @@ pub fn detect() -> Vec<Game> {
     vec![]
 }
 
+/// GOG Galaxy est-il installé ? (sa base reste sur le disque après une désinstallation)
+pub fn galaxy_installed() -> bool {
+    #[cfg(windows)]
+    {
+        use super::registry::{reg_str, HKLM};
+        reg_str(HKLM, r"SOFTWARE\WOW6432Node\GOG.com\GalaxyClient\paths", "client")
+            .is_some_and(|d| std::path::Path::new(&d).join("GalaxyClient.exe").is_file())
+    }
+    #[cfg(not(windows))]
+    {
+        super::mac_app("GOG Galaxy")
+    }
+}
+
 /// Jeux GOG du compte GOG Galaxy (le scan retire ensuite ceux qui sont installés).
 /// Galaxy 2 garde la bibliothèque dans `galaxy-2.0.db` (aussi sous macOS, dans /Users/Shared).
 pub fn owned() -> Vec<Game> {
     let db = super::stats::galaxy_db();
-    if !db.is_file() {
+    if !galaxy_installed() || !db.is_file() {
         return vec![];
     }
     match read_owned(&db) {

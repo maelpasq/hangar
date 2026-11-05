@@ -63,7 +63,16 @@ pub fn parse_manifest(text: &str) -> Option<Game> {
     Some(g)
 }
 
+/// macOS : les données d'Epic restent après la suppression de l'app, on exige l'app elle-même.
+pub fn launcher_installed() -> bool {
+    !cfg!(target_os = "macos") || super::mac_app("Epic Games Launcher")
+}
+
 pub fn detect() -> Vec<Game> {
+    if !launcher_installed() {
+        log::info!("Epic : launcher absent");
+        return vec![];
+    }
     let dir = if cfg!(target_os = "macos") {
         super::mac_support().join("Epic/EpicGamesLauncher/Data/Manifests")
     } else {
@@ -166,6 +175,9 @@ pub fn games_from_items(items: Vec<CatItem>) -> Vec<Game> {
 
 /// Jeux du compte Epic (le scan retire ensuite ceux qui sont installés).
 pub fn owned() -> Vec<Game> {
+    if !launcher_installed() {
+        return vec![];
+    }
     for p in catcache_paths() {
         if let Ok(raw) = fs::read(&p) {
             return parse_catalog_games(&raw);
