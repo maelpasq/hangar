@@ -2,7 +2,7 @@
 
 import { api } from '../api';
 import { STORE_ORDER } from '../stores-meta';
-import type { Game, PersistedState, Session, StoreId, Totals } from '../types';
+import type { Collection, Game, PersistedState, Session, StoreId, Totals } from '../types';
 import { dedupe } from '../util/games';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
 
@@ -207,6 +207,46 @@ class Library {
   removeManual(id: string): void {
     this.state.manualGames = this.state.manualGames.filter((x) => x.id !== id);
     this.state.favorites = this.state.favorites.filter((x) => x !== id);
+    this.save();
+  }
+
+  collection(id: string | null | undefined): Collection | undefined {
+    return id ? this.state.collections.find((c) => c.id === id) : undefined;
+  }
+
+  /** Jeux visibles d'une collection. */
+  inCollection(id: string): Game[] {
+    const c = this.collection(id);
+    return c ? this.visible.filter((g) => c.games.includes(g.id)) : [];
+  }
+
+  /** Crée une collection (avec un premier jeu éventuel) et renvoie son id. */
+  createCollection(name: string, gameId?: string): string | null {
+    const clean = name.trim().slice(0, 60);
+    if (!clean) return null;
+    const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    this.state.collections = [...this.state.collections, { id, name: clean, games: gameId ? [gameId] : [] }];
+    this.save();
+    return id;
+  }
+
+  renameCollection(id: string, name: string): void {
+    const clean = name.trim().slice(0, 60);
+    if (!clean) return;
+    this.state.collections = this.state.collections.map((c) => (c.id === id ? { ...c, name: clean } : c));
+    this.save();
+  }
+
+  /** Supprime la liste seulement : les jeux restent dans la bibliothèque. */
+  deleteCollection(id: string): void {
+    this.state.collections = this.state.collections.filter((c) => c.id !== id);
+    this.save();
+  }
+
+  toggleInCollection(id: string, gameId: string): void {
+    this.state.collections = this.state.collections.map((c) =>
+      c.id !== id ? c : { ...c, games: c.games.includes(gameId) ? c.games.filter((x) => x !== gameId) : [...c.games, gameId] }
+    );
     this.save();
   }
 

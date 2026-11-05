@@ -3,6 +3,7 @@ import { generatedBackground, hue } from './color';
 import { daysAgo, elapsed, hoursLabel, relativeDay, sizeLabel } from './format';
 import { matches, normalize, rank } from './search';
 import { dedupe } from './games';
+import { pressed } from './pad';
 import type { Game } from '../types';
 
 describe('couleur', () => {
@@ -78,5 +79,17 @@ describe('dédoublonnage', () => {
   it('garde la source prioritaire pour un même dossier', () => {
     const out = dedupe([g('local:a', 'local', 'C:\\Jeux\\A\\'), g('steam:1', 'steam', 'c:\\jeux\\a')]);
     expect(out.map((x) => x.id)).toEqual(['steam:1']);
+  });
+});
+
+describe('manette', () => {
+  const pad = (buttons: number[], axes: number[] = [0, 0]) => ({
+    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: buttons.includes(i), touched: false, value: 0 })),
+    axes
+  });
+  it('boutons et stick gauche, zone morte comprise', () => {
+    expect([...pressed(pad([0, 12]))].sort()).toEqual(['a', 'up']);
+    expect([...pressed(pad([], [0.9, -0.2]))]).toEqual(['right']);
+    expect(pressed(pad([], [0.3, 0.3])).size).toBe(0);
   });
 });

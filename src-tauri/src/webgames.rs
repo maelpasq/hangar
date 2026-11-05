@@ -2,6 +2,7 @@
 //! Le frontend n'envoie qu'un identifiant, jamais une adresse.
 
 use serde::Deserialize;
+use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 const CATALOG: &str = include_str!("../../src/lib/web-games.json");
@@ -36,6 +37,12 @@ pub fn open(app: &AppHandle, id: &str) -> Result<(), String> {
         .background_color(tauri::window::Color(10, 11, 15, 255))
         // Les liens du jeu restent en https ; le reste (schémas exotiques) est bloqué.
         .on_navigation(|u| u.scheme() == "https")
+        // Pop-ups (publicités, fenêtres annexes) et téléchargements bloqués.
+        .on_new_window(|u, _| {
+            log::info!("jeu web : pop-up bloquée ({})", u.host_str().unwrap_or("?"));
+            NewWindowResponse::Deny
+        })
+        .on_download(|_, _| false)
         .build()
         .map_err(|e| {
             log::error!("fenêtre du jeu web {id} : {e}");

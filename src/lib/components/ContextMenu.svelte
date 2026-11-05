@@ -1,7 +1,7 @@
 <script lang="ts">
   // Menu contextuel d'un jeu (clic droit).
   import { onMount } from 'svelte';
-  import { hideGame, openFolder } from '../actions';
+  import { hideGame, openFolder, uninstallGame } from '../actions';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -36,9 +36,13 @@
       icon: 'star',
       run: () => library.toggleFav(gameId)
     },
+    { label: 'Collections', icon: 'layers', run: () => { ui.modal = { kind: 'collections', gameId }; } },
     { label: 'Renommer', icon: 'edit', run: () => { ui.modal = { kind: 'rename', gameId }; } },
     { label: 'Changer la jaquette', icon: 'image', run: () => { ui.modal = { kind: 'cover', gameId }; } },
     { label: 'Ouvrir le dossier', icon: 'folder', run: () => openFolder(gameId), disabled: !game?.installDir },
+    ...(game && !game.notInstalled
+      ? [{ label: 'Désinstaller', icon: 'package' as const, run: () => uninstallGame(gameId) }]
+      : []),
     { label: 'Masquer', icon: 'eyeOff', run: () => hideGame(gameId), danger: true }
   ]);
 

@@ -203,6 +203,11 @@ export function mockApi(): Api {
       emit({ type: 'ended', gameId, session });
     },
     openFolder: async () => {},
+    uninstallGame: async (id) => `Démo : la désinstallation de ${id} s'ouvrirait dans son launcher.`,
+    setDesktop: async () => ({ presenceAvailable: true, shortcut: 'Ctrl+Alt+H', shortcutOk: true }),
+    setTrayRecents: async () => {},
+    setPresence: async () => {},
+    onTrayLaunch: async () => () => {},
     resolveSteamId: async () => null,
     searchSteam: async (query) => {
       await wait(250);
@@ -292,6 +297,10 @@ export function mockApi(): Api {
       close: async () => {},
       isMaximized: async () => false,
       restore: async () => {},
+      setFullscreen: async (on) => {
+        if (on) await document.documentElement.requestFullscreen?.().catch(() => {});
+        else if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+      },
       onFocusChange: async (cb) => {
         const f = () => cb(true);
         const b = () => cb(false);

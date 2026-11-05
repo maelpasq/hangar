@@ -108,12 +108,37 @@ impl Known {
         }
     }
 
+    /// Le chemin appartient-il à un jeu connu (dossier, exe, logo) ? Les commandes qui
+    /// reçoivent un chemin du frontend s'y limitent : pas de lecture ailleurs sur le disque
+    /// (ni de chemin réseau `\\serveur\...` qui enverrait l'identité Windows).
+    pub fn knows_path(&self, path: &str) -> bool {
+        let want = norm_path(path);
+        if want.is_empty() {
+            return false;
+        }
+        let owns = |g: &Game| {
+            [g.install_dir.as_deref(), g.exe_path.as_deref(), g.logo.as_deref()]
+                .into_iter()
+                .flatten()
+                .chain((g.launch.kind == "exe").then_some(g.launch.target.as_str()))
+                .any(|p| norm_path(p) == want)
+        };
+        let manual = self.manual.lock().unwrap_or_else(|p| p.into_inner());
+        let scanned = self.scanned.lock().unwrap_or_else(|p| p.into_inner());
+        manual.values().chain(scanned.values()).any(owns)
+    }
+
     pub fn get(&self, id: &str) -> Option<Game> {
         if let Some(g) = self.manual.lock().unwrap_or_else(|p| p.into_inner()).get(id) {
             return Some(g.clone());
         }
         self.scanned.lock().unwrap_or_else(|p| p.into_inner()).get(id).cloned()
     }
+}
+
+/// Chemin comparable : séparateurs `\`, minuscules, sans séparateur final.
+fn norm_path(p: &str) -> String {
+    p.trim().replace('/', "\\").trim_end_matches('\\').to_lowercase()
 }
 
 #[cfg(test)]
@@ -148,5 +173,8 @@ mod tests {
         }));
         assert!(k.get("manual:c:\\a.exe").is_some());
         assert!(k.get("steam:1").is_none());
+        assert!(k.knows_path("c:/A.exe"));
+        assert!(!k.knows_path(r"\\serveur\partage"));
+        assert!(!k.knows_path(""));
     }
 }

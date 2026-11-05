@@ -2,6 +2,7 @@
 
 import { api } from './api';
 import { library } from './stores/library.svelte';
+import { runner } from './stores/runner.svelte';
 import { ui } from './stores/ui.svelte';
 import { plural } from './util/format';
 
@@ -21,6 +22,18 @@ export async function openFolder(id: string): Promise<void> {
   if (!g?.installDir) return;
   try {
     await api.openFolder(g.installDir);
+  } catch (e) {
+    ui.toast(String(e), { error: true, gameId: id });
+  }
+}
+
+/** Ouvre la désinstallation dans le launcher du jeu (Hangar ne supprime rien lui-même). */
+export async function uninstallGame(id: string): Promise<void> {
+  const g = library.get(id);
+  if (!g || g.notInstalled) return;
+  try {
+    ui.toast(await api.uninstallGame(id), { gameId: id });
+    runner.watchInstall(id);
   } catch (e) {
     ui.toast(String(e), { error: true, gameId: id });
   }

@@ -37,8 +37,9 @@ class Runner {
   private clock: ReturnType<typeof setInterval> | undefined;
   private minimizedByUs = false;
   private lastFail = '';
-  /** Installations demandées dont on attend la fin (rescan au retour sur la fenêtre). */
-  private installs = new Set<string>();
+  /** Installations ou désinstallations en attente : id -> état « non installé » au départ.
+   *  Au retour sur la fenêtre, un rescan dit si elles sont faites. */
+  private installs = new Map<string, boolean>();
   private lastInstallScan = 0;
 
   isRunning(id: string): boolean {
@@ -79,11 +80,16 @@ class Runner {
     ui.menu = null;
     try {
       await api.installGame(gameId);
-      this.installs.add(gameId);
+      this.watchInstall(gameId);
       ui.toast(`Installation de ${library.name(g)} ouverte dans ${g.launcherName}`, { gameId });
     } catch (e) {
       this.fail(gameId, String(e));
     }
+  }
+
+  /** Suit une installation ou une désinstallation ouverte dans un launcher. */
+  watchInstall(gameId: string): void {
+    this.installs.set(gameId, !!library.get(gameId)?.notInstalled);
   }
 
   /** Retour sur Hangar : rescan si une installation est en cours (au plus toutes les 30 s). */
@@ -91,7 +97,14 @@ class Runner {
     if (!this.installs.size || Date.now() - this.lastInstallScan < INSTALL_RESCAN_MS) return;
     this.lastInstallScan = Date.now();
     await rescan();
-    for (const id of this.installs) if (!library.get(id)?.notInstalled) this.installs.delete(id);
+    for (const [id, was] of this.installs) if (!!library.get(id)?.notInstalled !== was) this.installs.delete(id);
+  }
+
+  /** Discord : le jeu en cours le plus récent, ou rien. */
+  private syncPresence(): void {
+    if (!library.state.prefs.discordPresence) return;
+    const id = this.current;
+    api.setPresence(id, id ? this.running[id] : 0).catch(() => {});
   }
 
   cancel(): void {
@@ -118,6 +131,7 @@ class Runner {
       case 'running':
         this.running = { ...this.running, [e.gameId]: Date.now() };
         this.tick();
+        this.syncPresence();
         if (mine) {
           this.launching = { ...l, step: 2 };
           clearTimeout(this.closeTimer);
@@ -128,6 +142,7 @@ class Runner {
         const { [e.gameId]: _gone, ...rest } = this.running;
         this.running = rest;
         if (e.session) library.recordSession(e.session);
+        this.syncPresence();
         if (mine) this.cancel();
         if (this.minimizedByUs && !Object.keys(rest).length) {
           this.minimizedByUs = false;

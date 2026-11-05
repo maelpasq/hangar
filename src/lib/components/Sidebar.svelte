@@ -18,6 +18,8 @@
         ? 'favorites'
         : ui.toInstall
           ? 'toInstall'
+          : ui.collection
+            ? `c:${ui.collection}`
           : ui.store === 'all'
           ? 'library'
           : ''
@@ -34,8 +36,13 @@
       ? [{ key: 'toInstall', label: 'À installer', icon: 'download' as const, count: library.toInstall.length, go: () => ui.toInstallList() }]
       : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
+    { key: 'big', label: 'Mode manette', icon: 'gamepad', go: () => (ui.big = true) },
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
+
+  const collections = $derived(
+    library.state.collections.map((c) => ({ ...c, count: library.inCollection(c.id).length }))
+  );
 
   const stores = $derived(presentStores(library.counts));
 </script>
@@ -70,10 +77,30 @@
     {/each}
   </nav>
 
-  {#if !rail}<p class="sec stores">Stores</p>{:else}<div class="sep"></div>{/if}
-  <nav class="scroll list" aria-label="Stores">
+  <nav class="scroll list" aria-label="Collections et stores">
+    {#if collections.length}
+      {#if !rail}<p class="sec stores">Collections</p>{:else}<div class="sep"></div>{/if}
+      {#each collections as c (c.id)}
+        {@const on = current === `c:${c.id}`}
+        <button
+          class="navb store"
+          class:on
+          aria-current={on ? 'page' : undefined}
+          aria-label={rail ? `${c.name}, ${plural(c.count, 'jeu', 'jeux')}` : undefined}
+          title={rail ? c.name : undefined}
+          onclick={() => ui.collectionView(c.id)}
+        >
+          <span class="ic" aria-hidden="true"><Icon name="layers" size={16} /></span>
+          {#if !rail}
+            <span class="cname">{c.name}</span>
+            <span class="count num">{c.count}</span>
+          {/if}
+        </button>
+      {/each}
+    {/if}
+    {#if !rail}<p class="sec stores">Stores</p>{:else}<div class="sep"></div>{/if}
     {#each stores as s (s)}
-      {@const on = ui.screen === 'library' && !ui.favOnly && !ui.toInstall && ui.store === s}
+      {@const on = ui.screen === 'library' && !ui.favOnly && !ui.toInstall && !ui.collection && ui.store === s}
       <button
         class="navb store"
         class:on
@@ -241,6 +268,13 @@
     height: 18px;
     display: grid;
     place-items: center;
+  }
+
+  .cname {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .count {

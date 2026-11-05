@@ -33,7 +33,10 @@
     | 'cube'
     | 'bolt'
     | 'users'
-    | 'bulb';
+    | 'bulb'
+    | 'gamepad'
+    | 'layers'
+    | 'package';
 </script>
 
 <script lang="ts">
@@ -140,5 +143,11 @@
     <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6" />
   {:else if name === 'bulb'}
     <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" />
+  {:else if name === 'gamepad'}
+    <path d="M7 7h10a5 5 0 0 1 4.9 6l-.8 4a2.5 2.5 0 0 1-4.3 1.2L14.5 16h-5l-2.3 2.2a2.5 2.5 0 0 1-4.3-1.2l-.8-4A5 5 0 0 1 7 7z" /><path d="M8 10v4M6 12h4M15.5 11.5h0M17.5 13h0" />
+  {:else if name === 'layers'}
+    <path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" />
+  {:else if name === 'package'}
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M9 11l3 3 3-3M12 8v6" />
   {/if}
 </svg>

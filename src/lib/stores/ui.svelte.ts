@@ -1,6 +1,6 @@
 // État de l'interface : écran courant, recherche, modales, menu contextuel, toasts.
 
-import type { StoreId } from '../types';
+import type { DesktopInfo, StoreId } from '../types';
 
 export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
 
@@ -9,7 +9,8 @@ export type Modal =
   | { kind: 'rename'; gameId: string }
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
-  | { kind: 'webGames' };
+  | { kind: 'webGames' }
+  | { kind: 'collections'; gameId: string };
 
 export interface Toast {
   id: number;
@@ -26,6 +27,8 @@ interface Place {
   favOnly: boolean;
   /** Onglet « À installer » : jeux possédés non installés. */
   toInstall: boolean;
+  /** Collection affichée (id), ou null. */
+  collection: string | null;
   store: StoreId | 'all';
   gameId: string | null;
 }
@@ -34,7 +37,12 @@ class Ui {
   screen = $state<Screen>('home');
   favOnly = $state(false);
   toInstall = $state(false);
+  collection = $state<string | null>(null);
   store = $state<StoreId | 'all'>('all');
+  /** Mode manette : interface plein écran par-dessus l'app. */
+  big = $state(false);
+  /** Ce que le bureau permet (Discord, raccourci), donné par le backend. */
+  desktop = $state<DesktopInfo | null>(null);
   gameId = $state<string | null>(null);
   /** Pile de navigation pour le bouton Retour. */
   history = $state<Place[]>([]);
@@ -57,7 +65,14 @@ class Ui {
   private toastSeq = 0;
 
   private place(): Place {
-    return { screen: this.screen, favOnly: this.favOnly, toInstall: this.toInstall, store: this.store, gameId: this.gameId };
+    return {
+      screen: this.screen,
+      favOnly: this.favOnly,
+      toInstall: this.toInstall,
+      collection: this.collection,
+      store: this.store,
+      gameId: this.gameId
+    };
   }
 
   private go(p: Partial<Place> & { screen: Screen }, push = true): void {
@@ -66,6 +81,7 @@ class Ui {
     this.screen = p.screen;
     this.favOnly = p.favOnly ?? false;
     this.toInstall = p.toInstall ?? false;
+    this.collection = p.collection ?? null;
     this.store = p.store ?? 'all';
     this.gameId = p.gameId ?? this.gameId;
     this.menu = null;
@@ -89,6 +105,10 @@ class Ui {
     this.go({ screen: 'library', toInstall: true });
   }
 
+  collectionView(id: string): void {
+    this.go({ screen: 'library', collection: id });
+  }
+
   storeFilter(store: StoreId): void {
     this.go({ screen: 'library', store });
   }
@@ -105,7 +125,14 @@ class Ui {
     this.query = '';
     this.searchOpen = false;
     if (this.screen === 'game' && this.gameId === gameId) return;
-    this.go({ screen: 'game', gameId, favOnly: this.favOnly, toInstall: this.toInstall, store: this.store });
+    this.go({
+      screen: 'game',
+      gameId,
+      favOnly: this.favOnly,
+      toInstall: this.toInstall,
+      collection: this.collection,
+      store: this.store
+    });
   }
 
   back(): void {

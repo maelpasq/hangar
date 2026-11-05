@@ -6,9 +6,11 @@ mod accounts;
 mod art;
 mod artwork;
 mod commands;
+mod desktop;
 mod info;
 mod launcher;
 mod model;
+mod presence;
 mod scanner;
 mod size;
 mod state;
@@ -57,6 +59,16 @@ fn main() {
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(desktop::shortcut_plugin())
+        // Fermer la fenêtre principale la cache dans la zone de notification (si activé).
+        .on_window_event(|w, e| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = e {
+                if w.label() == "main" && desktop::close_to_tray() {
+                    api.prevent_close();
+                    let _ = w.hide();
+                }
+            }
+        })
         .setup(|app| {
             let p = app.path();
             let config = p.app_config_dir()?;
@@ -81,9 +93,13 @@ fn main() {
                 known: state::Known::default(),
                 xbox_busy: Arc::new(AtomicBool::new(false)),
                 accounts: Arc::new(accounts::Accounts::new(&paths.config)),
+                presence: Arc::default(),
                 paths,
             };
             app.manage(ctx);
+            if let Err(e) = desktop::init_tray(app.handle()) {
+                log::error!("icône de la zone de notification : {e}");
+            }
 
             // Démarrage avec le système : la fenêtre s'ouvre réduite.
             if std::env::args().any(|a| a == "--hidden") {
@@ -119,7 +135,18 @@ fn main() {
             commands::disconnect_account,
             commands::open_link,
             commands::open_web_game,
+            commands::uninstall_game,
+            commands::set_desktop,
+            commands::set_tray_recents,
+            commands::set_presence,
         ])
-        .run(tauri::generate_context!())
-        .expect("erreur au démarrage de Hangar");
+        .build(tauri::generate_context!())
+        .expect("erreur au démarrage de Hangar")
+        .run(|_app, _event| {
+            // macOS : un clic sur l'icône du Dock rouvre la fenêtre cachée.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                desktop::show_main(_app);
+            }
+        });
 }

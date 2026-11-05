@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Bibliothèque / Favoris / À installer / filtre store : tri, puces, grille (virtualisée au-delà de 150 jeux).
+  // Bibliothèque / Favoris / À installer / collection / filtre store : tri, filtres, grille (virtualisée au-delà de 150 jeux).
   import Chip from '../components/Chip.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import GameCard from '../components/GameCard.svelte';
@@ -18,7 +18,39 @@
   /** Hauteur du nom + méta sous la jaquette. */
   const INFO_H = 48;
 
-  const base = $derived(ui.favOnly ? library.favorites : ui.toInstall ? library.toInstall : library.installed);
+  const coll = $derived(library.collection(ui.collection));
+  const base = $derived(
+    ui.favOnly
+      ? library.favorites
+      : ui.toInstall
+        ? library.toInstall
+        : ui.collection
+          ? library.inCollection(ui.collection)
+          : library.installed
+  );
+
+  // Filtres de genre et de temps de jeu (le genre est cherché une fois par jeu, en cache).
+  type PlayFilter = 'all' | 'never' | 'lt10' | 'gt10';
+  let genre = $state('');
+  let play = $state<PlayFilter>('all');
+  const genres = $derived(
+    [...new Set(base.map((g) => library.genre(g)).filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'fr'))
+  );
+  const PLAY_FILTERS: { value: PlayFilter; label: string }[] = [
+    { value: 'all', label: 'Tout temps de jeu' },
+    { value: 'never', label: 'Jamais joué' },
+    { value: 'lt10', label: 'Moins de 10 h' },
+    { value: 'gt10', label: '10 h et plus' }
+  ];
+  function playOk(g: Game): boolean {
+    const t = library.totals(g.id);
+    const h = t.playMs / 3_600_000;
+    if (play === 'never') return !t.playMs && !t.launches;
+    if (play === 'lt10') return h > 0 && h < 10;
+    if (play === 'gt10') return h >= 10;
+    return true;
+  }
+  const filtering = $derived(!!genre || play !== 'all');
   const counts = $derived.by(() => {
     const c: Partial<Record<StoreId, number>> = {};
     for (const g of base) c[g.store] = (c[g.store] ?? 0) + 1;
@@ -27,7 +59,9 @@
   const sort = $derived(library.state.sort);
 
   const list = $derived.by(() => {
-    const l = ui.store === 'all' ? base : base.filter((g) => g.store === ui.store);
+    const l = base.filter(
+      (g) => (ui.store === 'all' || g.store === ui.store) && (!genre || library.genre(g) === genre) && playOk(g)
+    );
     const name = (g: Game) => library.name(g);
     const t = (g: Game) => library.totals(g.id);
     return [...l].sort((a, b) =>
@@ -40,8 +74,44 @@
   });
 
   const title = $derived(
-    ui.favOnly ? 'Favoris' : ui.toInstall ? 'À installer' : ui.store === 'all' ? 'Bibliothèque' : STORES[ui.store].label
+    ui.favOnly
+      ? 'Favoris'
+      : ui.toInstall
+        ? 'À installer'
+        : coll
+          ? coll.name
+          : ui.store === 'all'
+            ? 'Bibliothèque'
+            : STORES[ui.store].label
   );
+
+  // Collection : renommer sur place, supprimer avec annulation.
+  let renaming = $state(false);
+  let newName = $state('');
+  function startRename() {
+    newName = coll?.name ?? '';
+    renaming = true;
+  }
+  function saveRename(e: Event) {
+    e.preventDefault();
+    if (coll) library.renameCollection(coll.id, newName);
+    renaming = false;
+  }
+  function deleteColl() {
+    if (!coll) return;
+    const c = $state.snapshot(coll);
+    library.deleteCollection(c.id);
+    ui.libraryAll();
+    ui.toast(`Collection « ${c.name} » supprimée`, {
+      action: {
+        label: 'Annuler',
+        run: () => {
+          library.state.collections = [...library.state.collections, c];
+          library.save();
+        }
+      }
+    });
+  }
   const totalHours = $derived(hours(list.reduce((a, g) => a + library.totals(g.id).playMs, 0)));
 
   function setSort(s: SortKey) {
@@ -89,7 +159,30 @@
 >
   <div class="head">
     <div>
-      <h1>{#if !ui.favOnly && !ui.toInstall && ui.store !== 'all'}<StoreLogo store={ui.store} size={26} glow />{/if} {title}</h1>
+      {#if renaming}
+        <form class="rename" onsubmit={saveRename}>
+          <label class="sr-only" for="coll-name">Nom de la collection</label>
+          <!-- svelte-ignore a11y_autofocus -->
+          <input
+            id="coll-name"
+            bind:value={newName}
+            maxlength="60"
+            autofocus
+            onkeydown={(e) => e.key === 'Escape' && (renaming = false)}
+          />
+          <button class="btn primary" type="submit">Enregistrer</button>
+          <button class="btn" type="button" onclick={() => (renaming = false)}>Annuler</button>
+        </form>
+      {:else}
+        <h1>
+          {#if coll}<Icon name="layers" size={26} />{:else if !ui.favOnly && !ui.toInstall && ui.store !== 'all'}<StoreLogo
+              store={ui.store}
+              size={26}
+              glow
+            />{/if}
+          {title}
+        </h1>
+      {/if}
       {#if ui.toInstall}
         <p>{plural(list.length, 'jeu', 'jeux')} de tes launchers, prêts à installer</p>
       {:else}
@@ -97,6 +190,10 @@
       {/if}
     </div>
     <span class="grow"></span>
+    {#if coll && !renaming}
+      <button class="btn" onclick={startRename}><Icon name="edit" size={15} />Renommer</button>
+      <button class="btn danger" onclick={deleteColl}><Icon name="trash" size={15} />Supprimer</button>
+    {/if}
     <Segmented
       label="Trier"
       value={sort}
@@ -110,13 +207,33 @@
   </div>
 
   {#if base.length}
-    <div class="chips" role="group" aria-label="Filtrer par store">
-      <Chip on={ui.store === 'all'} color="var(--strong)" count={base.length} onclick={() => (ui.store = 'all')}>Tous</Chip>
-      {#each presentStores(counts) as s (s)}
-        <Chip on={ui.store === s} store={s} count={counts[s]} onclick={() => (ui.store = s)}
-          >{STORES[s].label}</Chip
-        >
-      {/each}
+    <div class="filters">
+      <div class="chips" role="group" aria-label="Filtrer par store">
+        <Chip on={ui.store === 'all'} color="var(--strong)" count={base.length} onclick={() => (ui.store = 'all')}>Tous</Chip>
+        {#each presentStores(counts) as s (s)}
+          <Chip on={ui.store === s} store={s} count={counts[s]} onclick={() => (ui.store = s)}
+            >{STORES[s].label}</Chip
+          >
+        {/each}
+      </div>
+      <span class="grow"></span>
+      {#if genres.length}
+        <label class="sel">
+          <span class="sr-only">Genre</span>
+          <select bind:value={genre}>
+            <option value="">Tous les genres</option>
+            {#each genres as g (g)}<option value={g}>{g}</option>{/each}
+          </select>
+        </label>
+      {/if}
+      {#if !ui.toInstall}
+        <label class="sel">
+          <span class="sr-only">Temps de jeu</span>
+          <select bind:value={play}>
+            {#each PLAY_FILTERS as f (f.value)}<option value={f.value}>{f.label}</option>{/each}
+          </select>
+        </label>
+      {/if}
     </div>
   {/if}
 
@@ -137,6 +254,25 @@
       <Icon name="star" size={28} />
       <strong>Aucun favori pour l'instant</strong>
       <span>Clique sur l'étoile d'une jaquette pour épingler un jeu ici.</span>
+    </div>
+  {:else if coll && !base.length}
+    <div class="empty">
+      <Icon name="layers" size={28} />
+      <strong>Collection vide</strong>
+      <span>Fais un clic droit sur un jeu, puis « Collections », pour l'ajouter ici.</span>
+    </div>
+  {:else if filtering && base.length}
+    <div class="empty">
+      <strong>Aucun jeu ici</strong>
+      <span>Aucun jeu ne correspond à ces filtres.</span>
+      <button
+        class="btn"
+        onclick={() => {
+          genre = '';
+          play = 'all';
+          ui.store = 'all';
+        }}>Retirer les filtres</button
+      >
     </div>
   {:else if ui.toInstall}
     <div class="empty">
@@ -190,11 +326,60 @@
     flex: 1;
   }
 
+  .filters {
+    display: flex;
+    align-items: center;
+    gap: 10px 16px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+  }
+
   .chips {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 26px;
+  }
+
+  .sel select {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .sel select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .rename {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .rename input {
+    height: 44px;
+    min-width: 280px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-3);
+    background: var(--surface-2);
+    color: var(--strong);
+    font: inherit;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .grid {

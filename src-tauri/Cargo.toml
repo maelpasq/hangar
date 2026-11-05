@@ -9,7 +9,7 @@ license = "MIT"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
@@ -27,6 +27,7 @@ keyring = { version = "3", features = ["windows-native", "apple-native"] }
 plist = "1"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-global-shortcut = "2"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

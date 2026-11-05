@@ -380,7 +380,9 @@ pub fn login(app: &tauri::AppHandle, store: &str) -> Result<String, String> {
                 return false;
             }
             u.scheme() == "https"
-        });
+        })
+        // Une page de connexion n'a rien à télécharger.
+        .on_download(|_, _| false);
     if let Some(s) = script {
         b = b.initialization_script(s);
     }

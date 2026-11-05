@@ -67,6 +67,25 @@ describe('état persistant', () => {
     expect(normalizeState({ version: 1, prefs: { showUninstalled: false } }).prefs.showUninstalled).toBe(false);
   });
 
+  it('bureau : zone de notification et raccourci par défaut, Discord coupé', () => {
+    const p = normalizeState({ version: 1, prefs: {} }).prefs;
+    expect([p.closeToTray, p.globalShortcut, p.discordPresence]).toEqual([true, true, false]);
+    expect(normalizeState({ version: 1, prefs: { discordPresence: true } }).prefs.discordPresence).toBe(true);
+  });
+
+  it('nettoie les collections', () => {
+    const s = normalizeState({
+      version: 1,
+      collections: [
+        { id: 'c1', name: ' À finir ', games: ['steam:1', 'steam:1', 3] },
+        { id: 'c1', name: 'Doublon', games: [] },
+        { id: 'c2', name: '  ', games: [] },
+        'x'
+      ]
+    });
+    expect(s.collections).toEqual([{ id: 'c1', name: 'À finir', games: ['steam:1'] }]);
+  });
+
   it('nettoie les jeux manuels', () => {
     const s = normalizeState({
       version: 1,

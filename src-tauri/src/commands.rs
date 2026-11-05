@@ -25,6 +25,7 @@ pub struct Ctx {
     pub sizes: Arc<Sizes>,
     pub xbox_busy: Arc<AtomicBool>,
     pub accounts: Arc<Accounts>,
+    pub presence: Arc<crate::presence::Presence>,
 }
 
 type Ctxs<'a> = State<'a, Ctx>;
@@ -124,6 +125,42 @@ pub async fn open_web_game(app: AppHandle, id: String) -> Result<(), String> {
     crate::webgames::open(&app, &id)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DesktopInfo {
+    /// Discord Rich Presence possible (application Discord configurée dans cette version).
+    presence_available: bool,
+    shortcut: &'static str,
+    /// Faux si un autre programme utilise déjà le raccourci.
+    shortcut_ok: bool,
+}
+
+/// Réglages du bureau : fermeture dans la zone de notification, raccourci global.
+#[tauri::command]
+pub fn set_desktop(app: AppHandle, close_to_tray: bool, global_shortcut: bool) -> DesktopInfo {
+    crate::desktop::set_close_to_tray(close_to_tray);
+    DesktopInfo {
+        presence_available: !crate::presence::CLIENT_ID.is_empty(),
+        shortcut: crate::desktop::SHORTCUT_LABEL,
+        shortcut_ok: crate::desktop::set_shortcut(&app, global_shortcut),
+    }
+}
+
+/// Jeux récents du menu de l'icône : `[id, nom affiché]`, seulement des jeux connus.
+#[tauri::command]
+pub fn set_tray_recents(app: AppHandle, ctx: Ctxs<'_>, games: Vec<(String, String)>) {
+    let games = games.into_iter().filter(|(id, _)| ctx.known.get(id).is_some()).collect();
+    crate::desktop::set_recents(&app, games);
+}
+
+/// Discord : affiche le jeu connu `game_id` (début `start` en ms), ou efface (`None`).
+#[tauri::command]
+pub async fn set_presence(ctx: Ctxs<'_>, game_id: Option<String>, start: u64) -> Result<(), String> {
+    let game = game_id.and_then(|id| ctx.known.get(&id)).map(|g| g.name);
+    let p = ctx.presence.clone();
+    blocking(move || p.set(game.as_deref().map(|n| (n, start)))).await
+}
+
 #[tauri::command]
 pub fn load_state(ctx: Ctxs<'_>) -> serde_json::Value {
     let v = state::load_state(&ctx.paths.state_file());
@@ -208,9 +245,32 @@ pub fn stop_game(ctx: Ctxs<'_>, game_id: String) -> Result<(), String> {
     ctx.tracker.stop(&game_id)
 }
 
+/// Chemin reçu du frontend : seulement ceux des jeux connus.
+fn known_path(ctx: &Ctx, path: &str) -> Result<(), String> {
+    if ctx.known.knows_path(path) {
+        Ok(())
+    } else {
+        log::warn!("chemin refusé (aucun jeu connu)");
+        Err("Ce dossier n'appartient à aucun jeu de la bibliothèque.".into())
+    }
+}
+
 #[tauri::command]
-pub async fn open_folder(path: String) -> Result<(), String> {
+pub async fn open_folder(ctx: Ctxs<'_>, path: String) -> Result<(), String> {
+    known_path(&ctx, &path)?;
     blocking(move || launcher::open_folder(&path)).await?
+}
+
+/// Ouvre la désinstallation d'un jeu installé dans son launcher (ou les Applications de
+/// Windows). Hangar ne supprime rien lui-même. Renvoie le message à afficher.
+#[tauri::command]
+pub async fn uninstall_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, String> {
+    let Some(game) = ctx.known.get(&game_id).filter(|g| !g.not_installed) else {
+        return Err("Ce jeu n'est plus dans la bibliothèque. Actualise-la puis réessaie.".into());
+    };
+    let msg = blocking(move || launcher::uninstall(&game)).await??;
+    log::info!("désinstallation ouverte : {game_id}");
+    Ok(msg)
 }
 
 #[tauri::command]
@@ -254,12 +314,18 @@ pub async fn game_info(ctx: Ctxs<'_>, game_id: String) -> Result<GameInfo, Strin
 
 #[tauri::command]
 pub async fn exe_icon(ctx: Ctxs<'_>, path: String) -> Result<Option<String>, String> {
+    if known_path(&ctx, &path).is_err() {
+        return Ok(None);
+    }
     let art = ctx.art.clone();
     blocking(move || art.exe_icon(&path).map(|p| p.to_string_lossy().into_owned())).await
 }
 
 #[tauri::command]
 pub async fn folder_size(ctx: Ctxs<'_>, path: String) -> Result<Option<u64>, String> {
+    if known_path(&ctx, &path).is_err() {
+        return Ok(None);
+    }
     let sizes = ctx.sizes.clone();
     blocking(move || sizes.get(&path)).await
 }

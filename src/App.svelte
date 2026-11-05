@@ -10,6 +10,9 @@
   import Toast from './lib/components/Toast.svelte';
   import TopBar from './lib/components/TopBar.svelte';
   import AddGame from './lib/modals/AddGame.svelte';
+  import Collections from './lib/modals/Collections.svelte';
+  import BigPicture from './lib/screens/BigPicture.svelte';
+  import { gamepad } from './lib/stores/gamepad.svelte';
   import ChangeCover from './lib/modals/ChangeCover.svelte';
   import ConfirmStop from './lib/modals/ConfirmStop.svelte';
   import Rename from './lib/modals/Rename.svelte';
@@ -53,13 +56,38 @@
     if (ui.screen === 'game' && library.ready && !game) ui.home();
   });
 
+  // Bureau : fermeture dans la zone de notification et raccourci global.
+  $effect(() => {
+    const { closeToTray, globalShortcut } = library.state.prefs;
+    api
+      .setDesktop(closeToTray, globalShortcut)
+      .then((d) => {
+        ui.desktop = d;
+      })
+      .catch(() => {});
+  });
+
+  // Menu de l'icône : les 5 derniers jeux lancés.
+  let trayKey = '';
+  $effect(() => {
+    const recents = library.installed
+      .filter((g) => library.totals(g.id).lastPlayed > 0)
+      .sort((a, b) => library.totals(b.id).lastPlayed - library.totals(a.id).lastPlayed)
+      .slice(0, 5)
+      .map((g): [string, string] => [g.id, library.name(g)]);
+    const key = JSON.stringify(recents);
+    if (!library.ready || key === trayKey) return;
+    trayKey = key;
+    api.setTrayRecents(recents).catch(() => {});
+  });
+
   // Pas d'ambiance propre aux écrans Bibliothèque / Paramètres : on garde la dernière.
 
   onMount(() => {
     const offs: (() => void)[] = [];
     let alive = true;
     (async () => {
-      const [a, b, d, c] = await Promise.all([
+      const [a, b, d, c, e] = await Promise.all([
         api.onLaunch((e) => runner.handle(e)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
@@ -71,9 +99,10 @@
         api.win.onFocusChange((f) => {
           ui.windowFocused = f;
           if (f) void runner.checkInstalls();
-        })
+        }),
+        api.onTrayLaunch((id) => void runner.play(id))
       ]);
-      offs.push(a, b, d, c);
+      offs.push(a, b, d, c, e);
       if (!alive) offs.forEach((o) => o());
       await library.load();
       // Jeux web jamais proposés (installation neuve ou mise à jour) : on demande.
@@ -81,6 +110,13 @@
       await rescan();
       void updater.check(true);
     })();
+    // Manette : Start ouvre le mode manette (qui prend ensuite les commandes).
+    offs.push(gamepad.start());
+    offs.push(
+      gamepad.listen((a) => {
+        if (a === 'start' && !ui.modal && !runner.launching) ui.big = true;
+      })
+    );
     return () => {
       alive = false;
       offs.forEach((o) => o());
@@ -92,7 +128,7 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    if (ui.modal || runner.launching) return;
+    if (ui.modal || runner.launching || ui.big) return;
     const inField = isTextField(e.target);
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
@@ -151,6 +187,10 @@
     {/key}
   </main>
 
+  {#if ui.big}
+    <BigPicture />
+  {/if}
+
   {#if runner.launching && launchGame}
     <LaunchOverlay launching={runner.launching} game={launchGame} />
   {/if}
@@ -169,6 +209,8 @@
     <ConfirmStop game={modalGame} />
   {:else if ui.modal?.kind === 'webGames'}
     <WebGamesOffer />
+  {:else if ui.modal?.kind === 'collections' && modalGame}
+    <Collections game={modalGame} />
   {/if}
 
   <Toast />

@@ -1,6 +1,6 @@
 <script lang="ts">
   // Fiche d'un jeu : bannière, jaquette, Jouer, activité, informations, jeux similaires.
-  import { hideGame, openFolder } from '../actions';
+  import { hideGame, openFolder, uninstallGame } from '../actions';
   import { api } from '../api';
   import { art } from '../art.svelte';
   import ActivityChart from '../components/ActivityChart.svelte';
@@ -137,12 +137,20 @@
       <button class="act" disabled={!game.installDir} onclick={() => openFolder(game.id)}
         ><Icon name="folder" size={17} />Ouvrir le dossier</button
       >
+      <button class="act" onclick={() => { ui.modal = { kind: 'collections', gameId: game.id }; }}
+        ><Icon name="layers" size={17} />Collections</button
+      >
       <button class="act" onclick={() => { ui.modal = { kind: 'rename', gameId: game.id }; }}
         ><Icon name="edit" size={17} />Renommer</button
       >
       <button class="act" onclick={() => { ui.modal = { kind: 'cover', gameId: game.id }; }}
         ><Icon name="image" size={17} />Changer la jaquette</button
       >
+      {#if !game.notInstalled}
+        <button class="act" onclick={() => uninstallGame(game.id)}
+          ><Icon name="package" size={17} />Désinstaller</button
+        >
+      {/if}
       <button class="act red" onclick={() => hideGame(game.id)}
         ><Icon name="eyeOff" size={17} />Masquer de la bibliothèque</button
       >

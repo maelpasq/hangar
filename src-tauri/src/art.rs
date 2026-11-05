@@ -44,6 +44,20 @@ pub fn allowed_url(url: &str) -> bool {
         || ALLOWED_SUFFIXES.iter().any(|s| host == *s || host.ends_with(&format!(".{s}")))
 }
 
+/// Adresse d'une redirection : absolue, ou relative à l'hôte de la requête.
+fn redirect_target(from: &str, loc: &str) -> String {
+    if loc.starts_with("https://") || loc.starts_with("http://") {
+        return sanitize_url(loc);
+    }
+    let rest = from.strip_prefix("https://").unwrap_or(from);
+    let host = rest.split(['/', '?', '#']).next().unwrap_or("");
+    if let Some(path) = loc.strip_prefix('/').filter(|p| !p.starts_with('/')) {
+        return sanitize_url(&format!("https://{host}/{path}"));
+    }
+    // `//hote/...` (même schéma) ou relatif au dossier : on refuse plutôt que de deviner.
+    String::new()
+}
+
 /// Encode les caractères qu'une URL ne peut pas contenir tels quels (espaces des images Epic...).
 pub fn sanitize_url(url: &str) -> String {
     let mut out = String::with_capacity(url.len());
@@ -112,9 +126,40 @@ impl Art {
         Art {
             img_dir,
             icon_dir,
-            agent: ureq::AgentBuilder::new().timeout(Duration::from_secs(8)).user_agent("Hangar/1.0").build(),
+            // Redirections suivies à la main (`get`) : chaque saut doit rester sur un hôte autorisé.
+            agent: ureq::AgentBuilder::new()
+                .timeout(Duration::from_secs(8))
+                .user_agent("Hangar/1.0")
+                .redirects(0)
+                .build(),
             slots: Slots { used: Mutex::new(0), cv: Condvar::new() },
         }
+    }
+
+    /// GET qui suit au plus 3 redirections, toutes vers des hôtes autorisés. Une redirection
+    /// refusée renvoie la réponse 3xx (ni image ni JSON : traitée comme introuvable).
+    /// La clé (`bearer`) ne part qu'avec la première requête.
+    #[allow(clippy::result_large_err)] // même type que ureq::Request::call
+    fn get(&self, url: &str, bearer: Option<&str>) -> Result<ureq::Response, ureq::Error> {
+        let mut url = url.to_string();
+        let mut bearer = bearer;
+        for _ in 0..3 {
+            let mut req = self.agent.get(&url).set("Accept", "application/json, image/*");
+            if let Some(k) = bearer.take() {
+                req = req.set("Authorization", &format!("Bearer {k}"));
+            }
+            let r = req.call()?;
+            let next = match r.header("location") {
+                Some(loc) if (300..400).contains(&r.status()) => redirect_target(&url, loc),
+                _ => return Ok(r),
+            };
+            if !allowed_url(&next) {
+                log::warn!("redirection refusée (hôte non autorisé) depuis {url}");
+                return Ok(r);
+            }
+            url = next;
+        }
+        self.agent.get(&url).call()
     }
 
     /// Chemin local d'une image distante, téléchargée si absente. `None` si introuvable.
@@ -144,7 +189,7 @@ impl Art {
         if file.exists() {
             return Some(file.to_path_buf());
         }
-        match self.agent.get(url).call() {
+        match self.get(url, None) {
             Ok(resp) => {
                 let ctype = resp.content_type().to_lowercase();
                 if !ctype.starts_with("image/") {
@@ -178,11 +223,7 @@ impl Art {
             log::warn!("API refusée (hôte non autorisé) : {url}");
             return Err(0);
         }
-        let mut req = self.agent.get(url).set("Accept", "application/json");
-        if let Some(k) = bearer {
-            req = req.set("Authorization", &format!("Bearer {k}"));
-        }
-        match req.call() {
+        match self.get(url, bearer) {
             Ok(r) => r.into_json().map_err(|_| 0),
             Err(ureq::Error::Status(code, _)) => {
                 log::debug!("API {code} : {url}");
@@ -197,7 +238,7 @@ impl Art {
 
     fn store_search(&self, term: &str) -> Vec<SteamHit> {
         let url = format!("https://store.steampowered.com/api/storesearch/?term={}&l=english&cc=US", urlencode(term));
-        let v: Option<serde_json::Value> = self.agent.get(&url).call().ok().and_then(|r| r.into_json().ok());
+        let v: Option<serde_json::Value> = self.get(&url, None).ok().and_then(|r| r.into_json().ok());
         v.as_ref()
             .and_then(|v| v.get("items"))
             .and_then(|i| i.as_array())
@@ -468,6 +509,11 @@ mod tests {
         assert!(!allowed_url("https://gog.com.evil.io/x.jpg"));
         assert!(!allowed_url("https://evil-gog.com/x.jpg"));
         assert!(!allowed_url("https://example.com/x.jpg"));
+        let from = "https://cdn.cloudflare.steamstatic.com/steam/apps/1/header.jpg";
+        assert_eq!(redirect_target(from, "/steam/apps/2/h.jpg"), "https://cdn.cloudflare.steamstatic.com/steam/apps/2/h.jpg");
+        assert!(!allowed_url(&redirect_target(from, "https://evil.io/x.jpg")));
+        assert!(!allowed_url(&redirect_target(from, "//evil.io/x.jpg")));
+        assert!(!allowed_url(&redirect_target(from, "http://shared.steamstatic.com/x.jpg")));
     }
 
     #[test]

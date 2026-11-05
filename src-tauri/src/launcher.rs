@@ -100,9 +100,58 @@ pub fn open_folder(path: &str) -> Result<(), String> {
     shell_open(path, "", None, "explore")
 }
 
+/// Où se désinstalle un jeu : (cible à ouvrir, message pour l'utilisateur).
+/// Steam a un lien direct ; GOG Galaxy ouvre la page du jeu ; Epic ouvre son launcher ;
+/// les autres jeux Windows sont dans Paramètres > Applications installées.
+pub fn uninstall_target(g: &crate::model::Game) -> Result<(String, String), String> {
+    let name = &g.name;
+    let id = g.id.split_once(':').map(|(_, x)| x).unwrap_or("");
+    let digits = !id.is_empty() && id.chars().all(|c| c.is_ascii_digit());
+    match g.store.as_str() {
+        "steam" if digits => Ok((format!("steam://uninstall/{id}"), format!("Steam s'ouvre pour désinstaller {name}."))),
+        "gog" if digits && g.launcher_name == "GOG Galaxy" => Ok((
+            format!("goggalaxy://openGameView/{id}"),
+            format!("Désinstalle {name} depuis sa page dans GOG Galaxy (menu Gérer)."),
+        )),
+        "epic" => Ok(("com.epicgames.launcher://".into(), format!("Désinstalle {name} depuis la bibliothèque d'Epic Games."))),
+        _ if cfg!(target_os = "macos") => {
+            // Une app macOS se désinstalle en la mettant à la corbeille : on ouvre son dossier.
+            let app = g.install_dir.as_deref().unwrap_or(&g.launch.target);
+            let dir = Path::new(app).parent().filter(|d| d.is_dir()).ok_or("Dossier du jeu introuvable.")?;
+            Ok((dir.to_string_lossy().into_owned(), format!("Mets {name} à la corbeille depuis ce dossier.")))
+        }
+        _ => Ok((
+            "ms-settings:appsfeatures".into(),
+            format!("Désinstalle {name} depuis les Applications installées de Windows."),
+        )),
+    }
+}
+
+pub fn uninstall(g: &crate::model::Game) -> Result<String, String> {
+    let (target, msg) = uninstall_target(g)?;
+    shell_open(&target, "", None, "open")?;
+    Ok(msg)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn desinstallation_par_store() {
+        use crate::model::{uri, Game};
+        let s = Game::new("steam:620".into(), "Portal 2".into(), "steam", uri("steam://rungameid/620"));
+        assert_eq!(uninstall_target(&s).unwrap().0, "steam://uninstall/620");
+        let mut bad = s.clone();
+        bad.id = "steam:620/../x".into();
+        assert_ne!(uninstall_target(&bad).map(|t| t.0).unwrap_or_default(), "steam://uninstall/620/../x");
+        let e = Game::new("epic:fn".into(), "Fortnite".into(), "epic", uri("x"));
+        assert!(uninstall_target(&e).unwrap().0.starts_with("com.epicgames.launcher://"));
+        if cfg!(windows) {
+            let u = Game::new("ubisoft:1".into(), "AC".into(), "ubisoft", uri("uplay://launch/1/0"));
+            assert_eq!(uninstall_target(&u).unwrap().0, "ms-settings:appsfeatures");
+        }
+    }
 
     #[test]
     fn messages_francais() {

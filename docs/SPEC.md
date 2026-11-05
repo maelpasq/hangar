@@ -72,7 +72,10 @@ Premier lancement (aucun historique) : le carrousel montre les jeux avec banniè
 - Puces de filtre : « Tous » puis chaque store présent avec son compteur.
 - Grille de jaquettes 2:3 (min 172 px de large), nom, « Store · N h ».
 - Survol d'une jaquette : elle se soulève, anneau lumineux couleur d'accent, bouton blanc « Lancer » qui glisse en bas, étoile favori en haut à droite.
-- Clic sur la jaquette : page du jeu. Bouton « Lancer » ou double-clic : lance le jeu. Clic droit : menu contextuel (Jouer, Ajouter/Retirer des favoris, Renommer, Changer la jaquette, Ouvrir le dossier, Masquer).
+- Clic sur la jaquette : page du jeu. Bouton « Lancer » ou double-clic : lance le jeu. Clic droit : menu contextuel (Jouer, Ajouter/Retirer des favoris, Collections, Renommer, Changer la jaquette, Ouvrir le dossier, Désinstaller, Masquer).
+- Filtres à droite des puces : genre (genres connus des jeux affichés) et temps de jeu (Jamais joué, Moins de 10 h, 10 h et plus). Non mémorisés.
+- **Collections** : listes faites par l'utilisateur. Clic droit > Collections : cases à cocher et création d'une collection. Elles apparaissent dans la barre latérale (section « Collections ») ; leur page permet de les renommer et de les supprimer (avec « Annuler » dans le toast). Supprimer une collection ne touche pas aux jeux.
+- **Désinstaller** : ouvre la désinstallation dans le launcher du jeu (Steam : sa fenêtre de désinstallation ; GOG Galaxy : la page du jeu ; Epic : le launcher ; autres jeux Windows : Paramètres > Applications installées ; macOS : le dossier de l'app, à mettre à la corbeille). Hangar ne supprime rien lui-même ; au retour sur la fenêtre, un rescan met la bibliothèque à jour.
 - État vide : bibliothèque vide (avec bouton « Ajouter un jeu »), favoris vides (« Clique sur l'étoile d'une jaquette... »), filtre sans résultat.
 
 ### 3.5 Page de jeu
@@ -83,6 +86,12 @@ Premier lancement (aucun historique) : le carrousel montre les jeux avec banniè
 - **Activité** : 4 tuiles (Temps de jeu, Dernière session, Lancements, Taille sur le disque) et un histogramme des 14 derniers jours (heures par jour, barre du jour en couleur d'accent).
 - **Informations** : Emplacement, Lanceur, Ajouté le (date de première détection). Actions : Ouvrir le dossier, Renommer, Changer la jaquette, Masquer de la bibliothèque.
 - **Aussi dans ta bibliothèque** : jeux du même store ou du même genre.
+
+### 3.5 bis Mode manette
+
+- Ouvert par « Mode manette » (barre latérale, Paramètres > Général) ou le bouton Start d'une manette. Plein écran par-dessus l'app.
+- Onglets Récents, Favoris, Tous les jeux, À installer (LB / RB). Grandes jaquettes, la jaquette choisie grossit avec un anneau d'accent ; bannière floutée du jeu en fond ; nom, temps de jeu et dernière session en haut.
+- A : jouer (ou installer), Y : favori, X : fiche du jeu, B ou Start : quitter. Croix ou stick gauche pour se déplacer, avec répétition. Au clavier : flèches, Entrée, Échap, Page préc. / suiv.
 
 ### 3.6 Lancement d'un jeu
 

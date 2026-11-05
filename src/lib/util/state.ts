@@ -1,4 +1,4 @@
-import type { Game, PersistedState, SortKey, StoreId } from '../types';
+import type { Collection, Game, PersistedState, SortKey, StoreId } from '../types';
 import { STORE_ORDER } from '../stores-meta';
 
 export const SESSION_DAYS = 90;
@@ -17,11 +17,22 @@ export function defaultState(): PersistedState {
     sessions: [],
     localFolders: [],
     manualGames: [],
+    collections: [],
     disabledStores: [],
     accent: '#7c6cff',
     theme: 'dark',
     sort: 'recent',
-    prefs: { minimizeOnLaunch: true, startWithWindows: false, autoCovers: true, showUninstalled: true, steamGridDbKey: '', webGames: null }
+    prefs: {
+      minimizeOnLaunch: true,
+      startWithWindows: false,
+      autoCovers: true,
+      showUninstalled: true,
+      steamGridDbKey: '',
+      webGames: null,
+      closeToTray: true,
+      globalShortcut: true,
+      discordPresence: false
+    }
   };
 }
 
@@ -67,7 +78,17 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (typeof p.autoCovers === 'boolean') s.prefs.autoCovers = p.autoCovers;
     if (typeof p.showUninstalled === 'boolean') s.prefs.showUninstalled = p.showUninstalled;
     if (typeof p.webGames === 'boolean') s.prefs.webGames = p.webGames;
+    for (const k of ['closeToTray', 'globalShortcut', 'discordPresence'] as const) {
+      if (typeof p[k] === 'boolean') s.prefs[k] = p[k];
+    }
     if (typeof p.steamGridDbKey === 'string') s.prefs.steamGridDbKey = p.steamGridDbKey.trim();
+  }
+  if (Array.isArray(raw.collections)) {
+    const seen = new Set<string>();
+    s.collections = raw.collections
+      .filter(isObj)
+      .filter((c) => typeof c.id === 'string' && typeof c.name === 'string' && c.name.trim() && !seen.has(c.id) && seen.add(c.id))
+      .map((c): Collection => ({ id: c.id as string, name: (c.name as string).trim().slice(0, 60), games: [...new Set(strArr(c.games))] }));
   }
   if (Array.isArray(raw.manualGames)) {
     s.manualGames = raw.manualGames.filter(isObj).map((g) => manualGame(g as unknown as Game)).filter((g) => g !== null);

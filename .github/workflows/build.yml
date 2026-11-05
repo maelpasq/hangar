@@ -4,6 +4,9 @@ on:
   push:
     branches: ['**']
   workflow_dispatch:
+# Lecture seule : ce workflow ne publie rien.
+permissions:
+  contents: read
 jobs:
   build:
     strategy:
@@ -12,12 +15,13 @@ jobs:
         os: [windows-latest, macos-15-intel] # Intel : les Mac arm64 de GitHub sont souvent saturés
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22 }
-      - uses: dtolnay/rust-toolchain@stable
-        with: { components: clippy }
-      - run: npm install
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with: { toolchain: stable, components: clippy }
+      - run: npm ci
       - run: npm run check
       - run: npm run test
       - run: npm run build
@@ -48,7 +52,7 @@ jobs:
           cargo test --release
           cargo clippy --release --all-targets -- -D warnings
           cargo build --release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: hangar-${{ runner.os }}
           path: |

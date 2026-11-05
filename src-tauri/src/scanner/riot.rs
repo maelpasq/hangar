@@ -81,7 +81,9 @@ pub fn detect() -> Vec<Game> {
     for e in rd.flatten() {
         let folder = e.file_name().to_string_lossy().to_string();
         let Some((product, patchline)) = folder.split_once('.') else { continue };
-        if product == "riot_client" {
+        // Noms de dossier passés en arguments au Riot Client : rien d'autre que [a-z0-9_-].
+        let safe = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+        if product == "riot_client" || !safe(product) || !safe(patchline) {
             continue;
         }
         let settings = e.path().join(format!("{folder}.product_settings.yaml"));

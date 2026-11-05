@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, DesktopInfo, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -10,6 +10,7 @@ export interface WindowApi {
   isMaximized(): Promise<boolean>;
   /** Sort de la réduction et ramène la fenêtre au premier plan. */
   restore(): Promise<void>;
+  setFullscreen(on: boolean): Promise<void>;
   onFocusChange(cb: (focused: boolean) => void): Promise<() => void>;
 }
 
@@ -24,6 +25,16 @@ export interface Api {
   /** Ouvre l'installation d'un jeu non installé dans son launcher. */
   installGame(gameId: string): Promise<void>;
   stopGame(gameId: string): Promise<void>;
+  /** Ouvre la désinstallation d'un jeu dans son launcher ; renvoie le message à afficher. */
+  uninstallGame(gameId: string): Promise<string>;
+  /** Fermeture dans la zone de notification et raccourci global. */
+  setDesktop(closeToTray: boolean, globalShortcut: boolean): Promise<DesktopInfo>;
+  /** Jeux récents du menu de l'icône (id, nom affiché). */
+  setTrayRecents(games: [string, string][]): Promise<void>;
+  /** Discord : jeu en cours (début en ms) ou null pour effacer. */
+  setPresence(gameId: string | null, start: number): Promise<void>;
+  /** Un jeu a été choisi dans le menu de l'icône. */
+  onTrayLaunch(cb: (gameId: string) => void): Promise<() => void>;
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
@@ -98,6 +109,11 @@ async function tauriApi(): Promise<Api> {
     launchGame: (gameId) => invoke('launch_game', { gameId }),
     installGame: (gameId) => invoke('install_game', { gameId }),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
+    uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
+    setDesktop: (closeToTray, globalShortcut) => invoke('set_desktop', { closeToTray, globalShortcut }),
+    setTrayRecents: (games) => invoke('set_tray_recents', { games }),
+    setPresence: (gameId, start) => invoke('set_presence', { gameId, start: Math.max(0, Math.round(start)) }),
+    onTrayLaunch: (cb) => on<string>('tray://launch', cb),
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),
@@ -181,6 +197,7 @@ async function tauriApi(): Promise<Api> {
         await w.show();
         await w.setFocus();
       },
+      setFullscreen: (on) => w.setFullscreen(on),
       onFocusChange: (cb) => w.onFocusChanged((e) => cb(e.payload))
     }
   };

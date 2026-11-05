@@ -122,7 +122,11 @@ interface PersistedState {
 | `disconnect_account(store)` | Efface le jeton et la liste en cache |
 | `open_link(id)` | Ouvre une page d'aide d'une liste fermée (pas d'URL libre) |
 | événement `accounts://synced` | Les comptes ont changé : le frontend rafraîchit l'état et rescanne |
-| `open_folder(path)` | Explorateur Windows |
+| `open_folder(path)` | Explorateur Windows. Comme `exe_icon` et `folder_size`, refusé si le chemin n'appartient à aucun jeu connu |
+| `uninstall_game(gameId) -> string` | Ouvre la désinstallation dans le launcher du jeu (ou les Applications de Windows), renvoie le message à afficher |
+| `set_desktop(closeToTray, globalShortcut) -> DesktopInfo` | Fermeture dans la zone de notification, raccourci global Ctrl+Alt+H ; dit si Discord est disponible et si le raccourci est libre |
+| `set_tray_recents([id, nom][])` | Jeux récents du menu de l'icône (5 au plus, jeux connus seulement) |
+| `set_presence(gameId?, start)` | Discord Rich Presence par l'IPC locale de Discord (aucun réseau) |
 | `pick_exe()` / `pick_folder()` | Via `tauri-plugin-dialog` côté frontend directement |
 | `resolve_steam_id(name) -> number?` | Recherche Steam |
 | `search_steam(name) -> {id,name}[]` | Pour la modale « Changer la jaquette » (5 résultats) |
@@ -141,6 +145,7 @@ interface PersistedState {
 | `launch://ended` | `{ gameId, session }` | Plus aucun processus du jeu depuis 5 s |
 | `launch://failed` | `{ gameId, message }` | Échec |
 | `scan://partial` | `Game[]` | Un détecteur lent (Xbox) a répondu |
+| `tray://launch` | `gameId` | Jeu choisi dans le menu de l'icône (le frontend le lance comme depuis la bibliothèque) |
 
 ## 5. Points techniques importants
 

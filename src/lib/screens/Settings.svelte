@@ -13,6 +13,7 @@
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import { updater } from '../stores/update.svelte';
+  import { runner } from '../stores/runner.svelte';
   import type { AccountStatus, Prefs, StoreId, Theme } from '../types';
   import { plural, relativeDay } from '../util/format';
   import { isMac } from '../util/platform';
@@ -79,7 +80,14 @@
       }
     }
     if (key === 'autoCovers') art.reset();
+    // Discord : la présence en cours s'affiche ou s'efface tout de suite.
+    if (key === 'discordPresence') {
+      const id = runner.current;
+      api.setPresence(on ? id : null, on && id ? runner.running[id] : 0).catch(() => {});
+    }
   }
+
+  const tray = isMac ? 'la barre des menus' : 'la zone de notification';
 
   const themes: { value: Theme; label: string }[] = [
     { value: 'dark', label: 'Sombre' },
@@ -206,6 +214,37 @@
                     library.save();
                   }}
                 />
+              </div>
+            </section>
+
+            <section class="group" aria-label="Bureau">
+              <h3>Bureau</h3>
+              {@render toggleRow(
+                'closeToTray',
+                `Garder Hangar dans ${tray}`,
+                `Fermer la fenêtre la cache ; ses jeux récents restent dans ${tray}. « Quitter Hangar » dans son menu ferme vraiment l'app.`
+              )}
+              {@render toggleRow(
+                'globalShortcut',
+                `Raccourci ${ui.desktop?.shortcut ?? 'Ctrl+Alt+H'}`,
+                ui.desktop && !ui.desktop.shortcutOk && library.state.prefs.globalShortcut
+                  ? 'Un autre programme utilise déjà ce raccourci.'
+                  : "Affiche ou cache Hangar depuis n'importe quelle app."
+              )}
+              {#if ui.desktop?.presenceAvailable}
+                {@render toggleRow(
+                  'discordPresence',
+                  'Afficher mon jeu sur Discord',
+                  "Tes amis Discord voient « Joue à » avec le nom du jeu. Passe par l'app Discord de cet appareil."
+                )}
+              {/if}
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Mode manette</span><span class="hint"
+                    >Plein écran, à la manette ou au clavier. Le bouton Start l'ouvre aussi.</span
+                  ></span
+                >
+                <button class="btn-s" onclick={() => (ui.big = true)}><Icon name="gamepad" size={15} />Ouvrir</button>
               </div>
             </section>
 

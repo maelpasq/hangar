@@ -68,6 +68,28 @@ export interface Prefs {
   steamGridDbKey: string;
   /** Onglet Jeux web. null : pas encore demandé (première ouverture ou mise à jour). */
   webGames: boolean | null;
+  /** Fermer la fenêtre la cache dans la zone de notification au lieu de quitter. */
+  closeToTray: boolean;
+  /** Raccourci global (Ctrl+Alt+H) pour afficher ou cacher Hangar. */
+  globalShortcut: boolean;
+  /** « Joue à ... » sur Discord pendant une partie (désactivé par défaut : visible des amis). */
+  discordPresence: boolean;
+}
+
+/** Liste de jeux faite par l'utilisateur (« Avec les potes », « À finir »...). */
+export interface Collection {
+  id: string;
+  name: string;
+  games: string[];
+}
+
+/** Ce que le backend sait faire sur ce bureau. */
+export interface DesktopInfo {
+  presenceAvailable: boolean;
+  /** Libellé du raccourci global (« Ctrl+Alt+H »). */
+  shortcut: string;
+  /** Faux si un autre programme utilise déjà ce raccourci. */
+  shortcutOk: boolean;
 }
 
 /** « system » suit le réglage clair / sombre de l'appareil. */
@@ -89,6 +111,7 @@ export interface PersistedState {
   sessions: Session[];
   localFolders: string[];
   manualGames: Game[];
+  collections: Collection[];
   disabledStores: StoreId[];
   accent: string;
   theme: Theme;

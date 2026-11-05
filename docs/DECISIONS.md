@@ -118,3 +118,31 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Cookies et progression : les fenêtres de jeu partagent le profil WebView2 de Hangar (pas de navigation privée), donc les sites gardent connexion et sauvegardes entre deux lancements.
 - Récents : `webPlayed` (id -> date du dernier lancement) dans `state.json`. Les jeux joués passent en tête, le reste suit l'ordre du catalogue.
 - Activation : `prefs.webGames` vaut `null` tant que la question n'a pas été posée. Au démarrage, une fenêtre la pose : « Activer les jeux web ? » à la première ouverture (aucun `state.json`), « Les jeux web arrivent dans Hangar » avec un badge Nouveau pour ceux qui avaient déjà l'app. Pas de case dans l'installeur NSIS : la même question dans l'app couvre installation neuve, mise à jour et macOS. Fermer sans répondre reporte la question au lancement suivant. Réglable ensuite dans Paramètres > Général ; désactivé, l'onglet disparaît.
+
+## Zone de notification, raccourci global, Discord
+
+- Icône dans la zone de notification (barre des menus sous macOS), toujours présente : « Ouvrir Hangar », les 5 derniers jeux lancés, « Quitter Hangar ». Le frontend envoie la liste (`set_tray_recents`) ; Rust ne garde que les jeux connus. Un jeu choisi repasse par le frontend (`tray://launch`), donc par le même chemin que depuis la bibliothèque (overlay, suivi, temps de jeu).
+- Fermer la fenêtre la cache (réglage « Garder Hangar dans la zone de notification », activé par défaut) ; « Quitter Hangar » dans le menu de l'icône ferme vraiment l'app. macOS : un clic sur l'icône du Dock rouvre la fenêtre.
+- Raccourci global fixe Ctrl+Alt+H (⌃⌥H sous macOS, Cmd+Alt+H y masque déjà les autres apps) : affiche Hangar, ou le cache s'il est déjà devant. Plugin `tauri-plugin-global-shortcut`, utilisé seulement côté Rust (aucune permission JS). Raccourci pris par un autre programme : le réglage le signale.
+- Discord Rich Presence : protocole IPC local de Discord (tube `\.\pipe\discord-ipc-N`, socket `discord-ipc-N` sous macOS), écrit à la main (une trame = op, taille, JSON) plutôt qu'avec une dépendance. Aucun appel réseau de Hangar : c'est l'app Discord qui publie. Désactivé par défaut (visible des amis). Il faut un identifiant d'application Discord (`presence::CLIENT_ID`), créé par le mainteneur sur le portail développeur Discord ; vide, le réglage est caché.
+
+## Mode manette
+
+- Écran plein écran par-dessus l'app (`ui.big`), pas un écran de navigation : on en sort pour retrouver l'endroit où on était.
+- API Gamepad du navigateur (WebView2 et WKWebView), disposition « standard » : croix ou stick gauche (zone morte 0,5), A, B, X, Y, LB, RB, Start. Répétition à 380 ms puis toutes les 110 ms. Le dernier écouteur abonné reçoit les actions : le mode manette passe devant l'app, qui n'écoute que Start.
+- Lecture seulement quand une manette est branchée (boucle `requestAnimationFrame` arrêtée sinon) et quand la fenêtre a le focus.
+
+## Collections, filtres, désinstallation
+
+- Collections dans `state.json` (`collections: { id, name, games[] }`), nettoyées au chargement (doublons, noms vides, 60 caractères). Les filtres de genre et de temps de jeu ne sont pas mémorisés.
+- Désinstaller ouvre le launcher, jamais un désinstalleur lancé par Hangar : Steam `steam://uninstall/<id>`, GOG Galaxy la page du jeu, Epic le launcher (pas d'URI de désinstallation connue), les autres jeux Windows Paramètres > Applications installées (`ms-settings:appsfeatures`), macOS le dossier de l'app.
+
+## Audit de sécurité (novembre 2026)
+
+- Commandes qui reçoivent un chemin du frontend (`open_folder`, `exe_icon`, `folder_size`) : refusées si le chemin n'appartient à aucun jeu connu. Évite la lecture d'images ailleurs sur le disque et les chemins réseau `\serveur\...` (Windows y enverrait l'identité de l'utilisateur).
+- Images : redirections HTTP suivies à la main, chacune vérifiée contre la liste des hôtes autorisés ; la clé SteamGridDB ne part qu'avec la première requête.
+- Fenêtres des jeux web : pop-ups et téléchargements bloqués. Fenêtres de connexion : téléchargements bloqués (pop-ups laissées, certaines connexions en ont besoin ; elles n'ont aucun accès à Hangar).
+- CSP : `object-src`, `frame-src`, `base-uri` et `form-action` à `'none'`.
+- Riot : les noms de dossier lus dans `Metadata` (passés en arguments au Riot Client) limités à `[a-z0-9_-]`.
+- CI : actions GitHub épinglées par commit (elles voient la clé de signature des mises à jour), `npm ci` (lockfile respecté), `persist-credentials: false`, `build.yml` en lecture seule.
+- Dépendances : `cargo audit` sans vulnérabilité (avertissements « non maintenu » sur des crates Linux seulement) ; `npm audit` : rien dans ce qui est livré, 2 alertes faibles dans les outils de développement.
