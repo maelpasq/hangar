@@ -1,86 +1,65 @@
 <script lang="ts">
-  // Paramètres, rangés par thème : apparence, bibliothèque, lancement et jaquettes, mise à jour.
+  // Paramètres : une navigation par section à gauche, une section à la fois à droite.
+  // Chaque section est une suite de groupes (carte) faits de lignes « libellé + aide | réglage ».
   import { addFolder, removeFolder } from '../actions';
   import { api } from '../api';
-  import Icon from '../components/Icon.svelte';
+  import { art } from '../art.svelte';
+  import Icon, { type IconName } from '../components/Icon.svelte';
   import Segmented from '../components/Segmented.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
+  import { accounts } from '../stores/accounts.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
-  import type { Prefs, Theme } from '../types';
-  import { art } from '../art.svelte';
-  import { plural } from '../util/format';
-  import { isMac } from '../util/platform';
   import { updater } from '../stores/update.svelte';
-  import { accounts } from '../stores/accounts.svelte';
-  import { relativeDay } from '../util/format';
-  import type { AccountStatus, StoreId } from '../types';
+  import type { AccountStatus, Prefs, StoreId, Theme } from '../types';
+  import { plural, relativeDay } from '../util/format';
+  import { isMac } from '../util/platform';
 
+  type SectionId = 'general' | 'appearance' | 'launchers' | 'accounts' | 'library' | 'covers';
+
+  const os = isMac ? 'macOS' : 'Windows';
+
+  let section = $state<SectionId>('general');
   let version = $state('');
   api.appVersion().then(
     (v) => (version = v),
     () => {}
   );
-
   void accounts.refresh();
-  let steamKey = $state('');
 
-  /** Tag d'un store : Connecté, Détecté (launcher ou jeux trouvés), Non trouvé. */
-  function tag(s: StoreId): { label: string; kind: 'conn' | 'ok' | 'off' } | null {
-    if (s === 'local' || s === 'manual') return null;
-    const a = accounts.byStore.get(s);
-    if (a?.connected) return { label: 'Connecté', kind: 'conn' };
-    if (a?.detected || (library.countsAll[s] ?? 0) > 0) return { label: 'Détecté', kind: 'ok' };
-    return { label: 'Non trouvé', kind: 'off' };
-  }
-
-  async function connectSteam(e: Event) {
-    e.preventDefault();
-    if (await accounts.connectSteam(steamKey)) steamKey = '';
-  }
-
-  const loginStores: { store: StoreId; desc: string }[] = [
-    { store: 'gog', desc: 'Tous tes jeux GOG, même sans GOG Galaxy' },
-    { store: 'epic', desc: 'Toute ta bibliothèque Epic, à jour' }
-  ];
-
-  const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
+  const connectedCount = $derived(accounts.list.filter((a) => a.connected).length);
   const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
+  const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
 
-  function folderCount(dir: string): number {
-    // Chemins Windows (\) et macOS (/) comparés sous la même forme.
-    const norm = (p: string) => p.toLowerCase().replace(/\//g, '\\');
-    const d = norm(dir).replace(/\\+$/, '') + '\\';
-    return library.all.filter((g) => g.store === 'local' && norm(g.installDir ?? '').startsWith(d)).length;
+  const sections = $derived<{ id: SectionId; label: string; icon: IconName; badge?: number }[]>([
+    { id: 'general', label: 'Général', icon: 'sliders' },
+    { id: 'appearance', label: 'Apparence', icon: 'sun' },
+    { id: 'launchers', label: 'Launchers', icon: 'grid' },
+    { id: 'accounts', label: 'Comptes', icon: 'check', badge: connectedCount || undefined },
+    { id: 'library', label: 'Bibliothèque', icon: 'folder' },
+    { id: 'covers', label: 'Jaquettes', icon: 'image' }
+  ]);
+  const current = $derived(sections.find((s) => s.id === section)!);
+
+  const intro: Record<SectionId, string> = {
+    general: 'Comportement de Hangar et mises à jour.',
+    appearance: "Thème et couleur de l'interface.",
+    launchers: 'Les launchers où Hangar cherche tes jeux.',
+    accounts: 'Relie tes comptes pour retrouver tous tes jeux, même ceux qui ne sont pas sur cet appareil.',
+    library: 'Dossiers de jeux, ajouts à la main et jeux masqués.',
+    covers: 'Où Hangar trouve les jaquettes et les bannières.'
+  };
+
+  function go(id: SectionId) {
+    section = id;
+    document.querySelector('.settings-page')?.scrollTo({ top: 0 });
   }
+
+  // ─── Réglages simples ───
 
   type BoolPref = Exclude<keyof Prefs, 'steamGridDbKey'>;
-  const prefs: { key: BoolPref; label: string; desc: string }[] = [
-    {
-      key: 'minimizeOnLaunch',
-      label: "Réduire Hangar au lancement d'un jeu",
-      desc: 'La fenêtre revient quand tu quittes le jeu'
-    },
-    { key: 'startWithWindows', label: `Démarrer avec ${isMac ? 'macOS' : 'Windows'}`, desc: "Hangar s'ouvre en arrière-plan à la connexion" },
-    {
-      key: 'showUninstalled',
-      label: 'Afficher les jeux non installés',
-      desc: 'Onglet « À installer » avec les jeux de tes launchers'
-    }
-  ];
-
-  const themes: { value: Theme; label: string }[] = [
-    { value: 'dark', label: 'Sombre' },
-    { value: 'light', label: 'Clair' },
-    { value: 'system', label: 'Appareil' }
-  ];
-
-  function setTheme(t: Theme) {
-    library.state.theme = t;
-    library.save();
-  }
 
   async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
@@ -97,18 +76,15 @@
     if (key === 'autoCovers') art.reset();
   }
 
-  let gridKey = $state(library.state.prefs.steamGridDbKey);
-  let showKey = $state(false);
-  const keyDirty = $derived(gridKey.trim() !== library.state.prefs.steamGridDbKey);
+  const themes: { value: Theme; label: string }[] = [
+    { value: 'dark', label: 'Sombre' },
+    { value: 'light', label: 'Clair' },
+    { value: 'system', label: 'Appareil' }
+  ];
 
-  function saveGridKey(e?: Event) {
-    e?.preventDefault();
-    const k = gridKey.trim();
-    if (k === library.state.prefs.steamGridDbKey) return;
-    library.state.prefs.steamGridDbKey = k;
+  function setTheme(t: Theme) {
+    library.state.theme = t;
     library.save();
-    art.reset();
-    ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
   }
 
   const accent = $derived(library.state.accent.toLowerCase());
@@ -119,274 +95,357 @@
     library.state.accent = c;
     if (save) library.save();
   }
+
+  // ─── Launchers et comptes ───
+
+  /** Tag d'un store : Connecté, Détecté (launcher ou jeux trouvés), Non trouvé. */
+  function tag(s: StoreId): { label: string; kind: 'conn' | 'ok' | 'off' } | null {
+    if (s === 'local' || s === 'manual') return null;
+    const a = accounts.byStore.get(s);
+    if (a?.connected) return { label: 'Connecté', kind: 'conn' };
+    if (a?.detected || (library.countsAll[s] ?? 0) > 0) return { label: 'Détecté', kind: 'ok' };
+    return { label: 'Non trouvé', kind: 'off' };
+  }
+
+  let steamKey = $state('');
+  let showSteamKey = $state(false);
+
+  async function connectSteam(e: Event) {
+    e.preventDefault();
+    if (await accounts.connectSteam(steamKey)) steamKey = '';
+  }
+
+  const loginStores: { store: StoreId; desc: string }[] = [
+    { store: 'gog', desc: 'Tous tes jeux GOG, même sans GOG Galaxy.' },
+    { store: 'epic', desc: 'Toute ta bibliothèque Epic, toujours à jour.' }
+  ];
+
+  // ─── Bibliothèque ───
+
+  function folderCount(dir: string): number {
+    // Chemins Windows (\) et macOS (/) comparés sous la même forme.
+    const norm = (p: string) => p.toLowerCase().replace(/\//g, '\\');
+    const d = norm(dir).replace(/\\+$/, '') + '\\';
+    return library.all.filter((g) => g.store === 'local' && norm(g.installDir ?? '').startsWith(d)).length;
+  }
+
+  // ─── Jaquettes ───
+
+  let gridKey = $state(library.state.prefs.steamGridDbKey);
+  let showGridKey = $state(false);
+  const gridDirty = $derived(gridKey.trim() !== library.state.prefs.steamGridDbKey);
+
+  function saveGridKey(e?: Event) {
+    e?.preventDefault();
+    const k = gridKey.trim();
+    if (k === library.state.prefs.steamGridDbKey) return;
+    library.state.prefs.steamGridDbKey = k;
+    library.save();
+    art.reset();
+    ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
+  }
 </script>
 
-<div class="screen scroll page">
-  <h1>Paramètres</h1>
-  <p class="lead">Apparence, sources de ta bibliothèque et comportement au lancement.</p>
-
-  <h2 class="group">Apparence</h2>
-  <div class="grid">
-    <section class="card-section">
-      <h3>Thème</h3>
-      <p class="desc">« Appareil » suit le réglage clair ou sombre de {isMac ? 'macOS' : 'Windows'}.</p>
-      <Segmented value={library.state.theme} options={themes} label="Thème" onchange={setTheme} />
-    </section>
-
-    <section class="card-section">
-      <h3>Couleur d'accent</h3>
-      <p class="desc">Boutons, sélection et lueurs. Choisis une teinte ou la tienne.</p>
-      <div class="swatches">
-        <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
-          {#each ACCENTS as a (a.color)}
-            {@const on = accent === a.color}
-            <button
-              class="sw"
-              class:on
-              role="radio"
-              aria-checked={on}
-              aria-label="Accent {a.name}"
-              title={a.name}
-              style:background={a.color}
-              onclick={() => setAccent(a.color)}
-            ></button>
-          {/each}
-        </div>
-        <label class="sw custom" class:on={custom} title="Couleur personnalisée" style:background={custom ? accent : undefined}>
-          <span class="sr-only">Couleur personnalisée</span>
-          {#if !custom}<Icon name="plus" size={16} stroke={2.2} />{/if}
-          <input
-            type="color"
-            value={accent}
-            oninput={(e) => setAccent(e.currentTarget.value, false)}
-            onchange={(e) => setAccent(e.currentTarget.value)}
-          />
-        </label>
-        <span class="meta mono hex">{accent}</span>
-      </div>
-    </section>
+{#snippet toggleRow(key: BoolPref, label: string, hint: string)}
+  <div class="srow">
+    <span class="txt"><span class="lbl">{label}</span><span class="hint">{hint}</span></span>
+    <Toggle on={library.state.prefs[key]} {label} onchange={(v) => setPref(key, v)} />
   </div>
+{/snippet}
 
-  <h2 class="group">Bibliothèque</h2>
-  <div class="grid">
-    <div class="col">
-      <section class="card-section">
-        <h3>Stores détectés</h3>
-        <p class="desc">Hangar cherche automatiquement les jeux de ces launchers.</p>
-        {#each stores as s (s)}
-          {@const on = !library.state.disabledStores.includes(s)}
-          <div class="line">
-            <StoreLogo store={s} size={16} />
-            <span class="grow">{STORES[s].label}</span>
-            {#if tag(s)}{@const t = tag(s)!}<span class="tag {t.kind}">{t.label}</span>{/if}
-            <span class="meta">{plural(library.countsAll[s] ?? 0, 'jeu', 'jeux')}</span>
-            <Toggle {on} label="Activer {STORES[s].label}" onchange={(v) => library.setStoreEnabled(s, v)} />
-          </div>
-        {/each}
-      </section>
-    </div>
-
-    <div class="col">
-      <section class="card-section">
-        <h3>Dossiers de jeux locaux</h3>
-        <p class="desc">Chaque sous-dossier devient un jeu. Le launcher du jeu est lancé en priorité.</p>
-        {#each library.state.localFolders as f (f)}
-          <div class="folder">
-            <span class="grow mono path">{f}</span>
-            <span class="swap">
-              <span class="meta cnt">{plural(folderCount(f), 'jeu', 'jeux')}</span>
-              <button class="remove" aria-label="Retirer {f}" onclick={() => removeFolder(f)}>Retirer</button>
-            </span>
-          </div>
-        {/each}
-        <button class="chip-btn add" onclick={addFolder}><Icon name="plus" size={15} stroke={2} />Ajouter un dossier</button>
-      </section>
-
-      <section class="card-section">
-        <h3>Jeux ajoutés à la main</h3>
-        <p class="desc">Les exécutables que tu as ajoutés toi-même.</p>
-        {#each library.state.manualGames as g (g.id)}
-          <div class="line">
-            <span class="grow txt"
-              ><span class="ell">{library.name(g)}</span><span class="meta mono ell">{g.launch.target}</span></span
-            >
-            <button class="chip-btn" onclick={() => library.removeManual(g.id)}
-              ><Icon name="trash" size={15} />Retirer</button
-            >
-          </div>
-        {:else}
-          <p class="none">Aucun jeu ajouté à la main.</p>
-        {/each}
-        <button class="chip-btn add" onclick={() => { ui.modal = { kind: 'add' }; }}
-          ><Icon name="plus" size={15} stroke={2} />Ajouter un jeu</button
-        >
-      </section>
-
-      <section class="card-section">
-        <h3>Jeux masqués</h3>
-        <p class="desc">Ils restent installés, Hangar ne les affiche simplement plus.</p>
-        {#each hidden as g (g.id)}
-          <div class="line">
-            <StoreLogo store={g.store} size={16} />
-            <span class="grow ell">{library.name(g)}</span>
-            <button class="chip-btn" onclick={() => library.unhide(g.id)}><Icon name="eye" size={15} />Afficher</button>
-          </div>
-        {:else}
-          <p class="none">Aucun jeu masqué.</p>
-        {/each}
-      </section>
-    </div>
-  </div>
-
-  {#snippet linked(a: AccountStatus)}
-    <div class="line acc">
-      <StoreLogo store={a.store} size={16} />
-      <span class="grow txt">
-        <span class="ell">{STORES[a.store].label}{a.user ? ` · ${a.user}` : ''}</span>
-        {#if a.error}
-          <span class="meta err">{a.error}</span>
-        {:else}
-          <span class="meta"
-            >{plural(a.games, 'jeu', 'jeux')}{a.syncedAt ? ` · synchronisé ${relativeDay(a.syncedAt).toLowerCase()}` : ''}</span
-          >
-        {/if}
-      </span>
-      <span class="tag conn">Connecté</span>
-      <button class="chip-btn" onclick={() => accounts.disconnect(a.store)}>Déconnecter</button>
-    </div>
-  {/snippet}
-
-  <h2 class="group">Comptes des launchers</h2>
-  <div class="grid">
-    <section class="card-section">
-      <h3>Steam</h3>
-      <p class="desc">Tous tes jeux Steam et ton temps de jeu, même ceux jamais affichés sur cet appareil.</p>
-      {#if accounts.byStore.get('steam')?.connected}
-        {@render linked(accounts.byStore.get('steam')!)}
+{#snippet linked(a: AccountStatus)}
+  <div class="srow">
+    <span class="ico"><StoreLogo store={a.store} size={20} /></span>
+    <span class="txt">
+      <span class="lbl">{STORES[a.store].label}{#if a.user}<span class="user"> · {a.user}</span>{/if}</span>
+      {#if a.error}
+        <span class="hint err">{a.error}</span>
       {:else}
-        <form class="gridkey" onsubmit={connectSteam}>
-          <label class="field" for="steam-key">
-            <span class="txt"
-              ><span class="lbl">Clé d'API Web Steam</span><span class="meta"
-                >Crée ta clé personnelle sur Steam (nom de domaine : « localhost »), puis colle-la ici. Elle est
-                gardée dans le coffre de {isMac ? 'macOS' : 'Windows'}, jamais dans les fichiers de Hangar.</span
-              ></span
-            >
-          </label>
-          <div class="keyrow">
-            <input
-              id="steam-key"
-              type="password"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="64"
-              placeholder="32 caractères"
-              bind:value={steamKey}
-            />
-            <button type="button" class="chip-btn" onclick={() => api.openLink('steam-api-key').catch(() => {})}
-              >Créer ma clé</button
-            >
-            <button type="submit" class="chip-btn primary" disabled={!steamKey.trim() || !!accounts.busy}
-              >{accounts.busy === 'steam' ? 'Vérification...' : 'Connecter'}</button
-            >
-          </div>
-        </form>
-      {/if}
-    </section>
-
-    <section class="card-section">
-      <h3>GOG et Epic Games</h3>
-      <p class="desc">Connexion sur la page officielle du launcher : Hangar ne voit jamais ton mot de passe.</p>
-      {#each loginStores as l (l.store)}
-        {@const a = accounts.byStore.get(l.store)}
-        {#if a?.connected}
-          {@render linked(a)}
-        {:else}
-          <div class="line acc">
-            <StoreLogo store={l.store} size={16} />
-            <span class="grow txt"><span>{STORES[l.store].label}</span><span class="meta">{l.desc}</span></span>
-            <button class="chip-btn primary" disabled={!!accounts.busy} onclick={() => accounts.connect(l.store)}
-              >{accounts.busy === l.store ? 'Connexion...' : 'Se connecter'}</button
-            >
-          </div>
-        {/if}
-      {/each}
-      <p class="note">
-        Ubisoft Connect, EA app, Battle.net et Xbox n'offrent pas de connexion sûre aux apps tierces : Hangar y lit
-        seulement les jeux présents sur l'appareil.
-      </p>
-    </section>
-  </div>
-
-  <h2 class="group">Lancement et jaquettes</h2>
-  <div class="grid">
-    <section class="card-section">
-      <h3 class="mb6">Comportement</h3>
-      {#each prefs as p (p.key)}
-        <div class="line pref">
-          <span class="grow txt"><span>{p.label}</span><span class="meta">{p.desc}</span></span>
-          <Toggle on={library.state.prefs[p.key]} label={p.label} onchange={(v) => setPref(p.key, v)} />
-        </div>
-      {/each}
-    </section>
-
-    <section class="card-section">
-      <h3 class="mb6">Jaquettes</h3>
-      <div class="line pref">
-        <span class="grow txt"
-          ><span>Jaquettes automatiques</span><span class="meta"
-            >Cherche jaquette et bannière de chaque jeu (store, Steam, SteamGridDB)</span
-          ></span
+        <span class="hint"
+          >{plural(a.games, 'jeu trouvé', 'jeux trouvés')}{a.syncedAt
+            ? ` · synchronisé ${relativeDay(a.syncedAt).toLowerCase()}`
+            : ''}</span
         >
-        <Toggle on={library.state.prefs.autoCovers} label="Jaquettes automatiques" onchange={(v) => setPref('autoCovers', v)} />
-      </div>
-      <form class="gridkey" onsubmit={saveGridKey}>
-        <label class="field" for="sgdb-key">
-          <span class="txt"
-            ><span class="lbl">Clé API SteamGridDB <span class="meta">(facultatif)</span></span><span class="meta"
-              >Trouve les jaquettes et bannières des jeux absents de Steam (Hytale, Roblox, VALORANT...). Clé
-              gratuite sur steamgriddb.com, menu Préférences puis API.</span
-            ></span
-          >
-        </label>
-        <div class="keyrow">
-          <input
-            id="sgdb-key"
-            type={showKey ? 'text' : 'password'}
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Colle ta clé ici"
-            bind:value={gridKey}
-            onblur={() => saveGridKey()}
-          />
-          <button type="button" class="chip-btn" onclick={() => (showKey = !showKey)}
-            >{showKey ? 'Masquer' : 'Afficher'}</button
-          >
-          <button type="submit" class="chip-btn" disabled={!keyDirty}>Enregistrer</button>
-        </div>
-      </form>
-    </section>
+      {/if}
+    </span>
+    <span class="tag conn">Connecté</span>
+    <button class="btn-s" onclick={() => accounts.disconnect(a.store)}>Déconnecter</button>
   </div>
+{/snippet}
 
-  <h2 class="group">À propos</h2>
-  <div class="grid">
-    <section class="card-section">
-      <h3>Mise à jour</h3>
-      <p class="desc">Hangar {version}. Les nouvelles versions s'installent sans repasser par l'installeur.</p>
-      <div class="line">
-        <span class="grow" aria-live="polite">{updater.label}</span>
-        {#if updater.phase === 'available'}
-          <button class="chip-btn primary" onclick={() => updater.install()}>Installer et redémarrer</button>
-        {:else}
-          <button
-            class="chip-btn"
-            disabled={updater.phase === 'checking' || updater.phase === 'installing'}
-            onclick={() => updater.check()}
-            ><Icon name="refresh" size={15} class={updater.phase === 'checking' ? 'spin' : ''} />Rechercher</button
-          >
-        {/if}
-      </div>
-    </section>
+<div class="screen scroll page settings-page">
+  <h1>Paramètres</h1>
+
+  <div class="layout">
+    <nav class="subnav" aria-label="Sections des paramètres">
+      {#each sections as s (s.id)}
+        <button class="nav" class:on={section === s.id} aria-current={section === s.id ? 'page' : undefined} onclick={() => go(s.id)}>
+          <Icon name={s.icon} size={17} />
+          <span class="nl">{s.label}</span>
+          {#if s.badge}<span class="badge num" aria-label="{s.badge} connecté{s.badge > 1 ? 's' : ''}">{s.badge}</span>{/if}
+        </button>
+      {/each}
+    </nav>
+
+    <div class="panel">
+      {#key section}
+        <header class="phead">
+          <h2>{current.label}</h2>
+          <p>{intro[section]}</p>
+        </header>
+
+        <div class="groups">
+          {#if section === 'general'}
+            <section class="group" aria-label="Comportement">
+              <h3>Comportement</h3>
+              {@render toggleRow('minimizeOnLaunch', "Réduire Hangar au lancement d'un jeu", 'La fenêtre revient quand tu quittes le jeu.')}
+              {@render toggleRow('startWithWindows', `Démarrer avec ${os}`, "Hangar s'ouvre en arrière-plan à la connexion.")}
+            </section>
+
+            <section class="group" aria-label="Mise à jour">
+              <h3>Mise à jour</h3>
+              <div class="srow">
+                <span class="txt">
+                  <span class="lbl">Hangar {version}</span>
+                  <span class="hint" aria-live="polite">{updater.label}</span>
+                </span>
+                {#if updater.phase === 'available'}
+                  <button class="btn-s primary" onclick={() => updater.install()}>Installer et redémarrer</button>
+                {:else}
+                  <button
+                    class="btn-s"
+                    disabled={updater.phase === 'checking' || updater.phase === 'installing'}
+                    onclick={() => updater.check()}
+                    ><Icon name="refresh" size={15} class={updater.phase === 'checking' ? 'spin' : ''} />Rechercher</button
+                  >
+                {/if}
+              </div>
+            </section>
+          {:else if section === 'appearance'}
+            <section class="group" aria-label="Thème">
+              <h3>Thème</h3>
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Mode</span><span class="hint">« Appareil » suit le réglage clair ou sombre de {os}.</span></span
+                >
+                <Segmented value={library.state.theme} options={themes} label="Thème" onchange={setTheme} />
+              </div>
+            </section>
+
+            <section class="group" aria-label="Couleur d'accent">
+              <h3>Couleur d'accent</h3>
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Teinte</span><span class="hint">Boutons, sélection et lueurs.</span></span
+                >
+                <div class="swatches">
+                  <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
+                    {#each ACCENTS as a (a.color)}
+                      {@const on = accent === a.color}
+                      <button
+                        class="sw"
+                        class:on
+                        role="radio"
+                        aria-checked={on}
+                        aria-label="Accent {a.name}"
+                        title={a.name}
+                        style:background={a.color}
+                        onclick={() => setAccent(a.color)}
+                      ></button>
+                    {/each}
+                  </div>
+                  <label class="sw custom" class:on={custom} title="Couleur personnalisée" style:background={custom ? accent : undefined}>
+                    <span class="sr-only">Couleur personnalisée</span>
+                    {#if !custom}<Icon name="plus" size={15} stroke={2.2} />{/if}
+                    <input
+                      type="color"
+                      value={accent}
+                      oninput={(e) => setAccent(e.currentTarget.value, false)}
+                      onchange={(e) => setAccent(e.currentTarget.value)}
+                    />
+                  </label>
+                </div>
+              </div>
+            </section>
+          {:else if section === 'launchers'}
+            <section class="group" aria-label="Launchers">
+              <h3>Sources de jeux</h3>
+              {#each stores as s (s)}
+                {@const on = !library.state.disabledStores.includes(s)}
+                {@const t = tag(s)}
+                <div class="srow" class:off={!on}>
+                  <span class="ico"><StoreLogo store={s} size={20} /></span>
+                  <span class="txt">
+                    <span class="lbl">{STORES[s].label}</span>
+                    <span class="hint">{plural(library.countsAll[s] ?? 0, 'jeu', 'jeux')}</span>
+                  </span>
+                  {#if t}<span class="tag {t.kind}">{t.label}</span>{/if}
+                  <Toggle {on} label="Activer {STORES[s].label}" onchange={(v) => library.setStoreEnabled(s, v)} />
+                </div>
+              {/each}
+            </section>
+
+            <section class="group" aria-label="Jeux non installés">
+              <h3>Jeux non installés</h3>
+              {@render toggleRow(
+                'showUninstalled',
+                'Afficher les jeux non installés',
+                'Onglet « À installer » avec les jeux de tes launchers qui ne sont pas sur cet appareil.'
+              )}
+            </section>
+          {:else if section === 'accounts'}
+            <section class="group" aria-label="Steam">
+              <h3>Steam</h3>
+              {#if accounts.byStore.get('steam')?.connected}
+                {@render linked(accounts.byStore.get('steam')!)}
+              {:else}
+                <form class="srow stack" onsubmit={connectSteam}>
+                  <span class="ico"><StoreLogo store="steam" size={20} /></span>
+                  <span class="txt">
+                    <label class="lbl" for="steam-key">Clé d'API Web Steam</label>
+                    <span class="hint"
+                      >Tous tes jeux Steam et ton temps de jeu. Crée ta clé personnelle (nom de domaine : « localhost »),
+                      puis colle-la ici.</span
+                    >
+                  </span>
+                  <div class="sfield">
+                    <input
+                      id="steam-key"
+                      type={showSteamKey ? 'text' : 'password'}
+                      autocomplete="off"
+                      spellcheck="false"
+                      maxlength="64"
+                      placeholder="32 caractères"
+                      bind:value={steamKey}
+                    />
+                    <button type="button" class="btn-s" onclick={() => (showSteamKey = !showSteamKey)}
+                      >{showSteamKey ? 'Masquer' : 'Afficher'}</button
+                    >
+                    <button type="button" class="btn-s" onclick={() => api.openLink('steam-api-key').catch(() => {})}
+                      >Créer ma clé</button
+                    >
+                    <button type="submit" class="btn-s primary" disabled={!steamKey.trim() || !!accounts.busy}
+                      >{accounts.busy === 'steam' ? 'Vérification...' : 'Connecter'}</button
+                    >
+                  </div>
+                </form>
+              {/if}
+            </section>
+
+            <section class="group" aria-label="GOG et Epic Games">
+              <h3>GOG et Epic Games</h3>
+              {#each loginStores as l (l.store)}
+                {@const a = accounts.byStore.get(l.store)}
+                {#if a?.connected}
+                  {@render linked(a)}
+                {:else}
+                  <div class="srow">
+                    <span class="ico"><StoreLogo store={l.store} size={20} /></span>
+                    <span class="txt"><span class="lbl">{STORES[l.store].label}</span><span class="hint">{l.desc}</span></span>
+                    <button class="btn-s primary" disabled={!!accounts.busy} onclick={() => accounts.connect(l.store)}
+                      >{accounts.busy === l.store ? 'Connexion...' : 'Se connecter'}</button
+                    >
+                  </div>
+                {/if}
+              {/each}
+            </section>
+
+            <aside class="trust">
+              <Icon name="check" size={16} stroke={2.2} />
+              <p>
+                La connexion se fait sur la page officielle de chaque launcher : Hangar ne voit jamais ton mot de passe.
+                Clés et jetons restent dans le coffre de {os}, jamais dans les fichiers de Hangar. Ubisoft Connect, EA app,
+                Battle.net et Xbox n'offrent pas de connexion sûre aux apps tierces : Hangar y lit seulement les jeux de
+                cet appareil.
+              </p>
+            </aside>
+          {:else if section === 'library'}
+            <section class="group" aria-label="Dossiers de jeux locaux">
+              <h3>Dossiers de jeux locaux</h3>
+              <p class="gdesc">Chaque sous-dossier devient un jeu. Le launcher du jeu est lancé en priorité.</p>
+              {#each library.state.localFolders as f (f)}
+                <div class="srow">
+                  <span class="ico"><Icon name="folder" size={18} /></span>
+                  <span class="txt"><span class="lbl mono ell">{f}</span><span class="hint">{plural(folderCount(f), 'jeu', 'jeux')}</span></span>
+                  <button class="btn-s danger" aria-label="Retirer {f}" onclick={() => removeFolder(f)}>Retirer</button>
+                </div>
+              {/each}
+              <div class="srow actions">
+                <button class="btn-s" onclick={addFolder}><Icon name="plus" size={15} stroke={2} />Ajouter un dossier</button>
+              </div>
+            </section>
+
+            <section class="group" aria-label="Jeux ajoutés à la main">
+              <h3>Jeux ajoutés à la main</h3>
+              {#each library.state.manualGames as g (g.id)}
+                <div class="srow">
+                  <span class="txt"><span class="lbl ell">{library.name(g)}</span><span class="hint mono ell">{g.launch.target}</span></span>
+                  <button class="btn-s danger" onclick={() => library.removeManual(g.id)}><Icon name="trash" size={15} />Retirer</button>
+                </div>
+              {:else}
+                <p class="sempty">Aucun jeu ajouté à la main.</p>
+              {/each}
+              <div class="srow actions">
+                <button class="btn-s" onclick={() => { ui.modal = { kind: 'add' }; }}
+                  ><Icon name="plus" size={15} stroke={2} />Ajouter un jeu</button
+                >
+              </div>
+            </section>
+
+            <section class="group" aria-label="Jeux masqués">
+              <h3>Jeux masqués</h3>
+              <p class="gdesc">Ils restent installés, Hangar ne les affiche simplement plus.</p>
+              {#each hidden as g (g.id)}
+                <div class="srow">
+                  <span class="ico"><StoreLogo store={g.store} size={18} /></span>
+                  <span class="txt"><span class="lbl ell">{library.name(g)}</span></span>
+                  <button class="btn-s" onclick={() => library.unhide(g.id)}><Icon name="eye" size={15} />Afficher</button>
+                </div>
+              {:else}
+                <p class="sempty">Aucun jeu masqué.</p>
+              {/each}
+            </section>
+          {:else}
+            <section class="group" aria-label="Jaquettes">
+              <h3>Recherche automatique</h3>
+              {@render toggleRow(
+                'autoCovers',
+                'Jaquettes automatiques',
+                'Cherche la jaquette et la bannière de chaque jeu (store, Steam, SteamGridDB).'
+              )}
+            </section>
+
+            <section class="group" aria-label="SteamGridDB">
+              <h3>SteamGridDB <span class="opt">facultatif</span></h3>
+              <form class="srow stack" onsubmit={saveGridKey}>
+                <span class="txt">
+                  <label class="lbl" for="sgdb-key">Clé API SteamGridDB</label>
+                  <span class="hint"
+                    >Trouve les images des jeux absents de Steam (Hytale, Roblox, VALORANT...). Clé gratuite sur
+                    steamgriddb.com, menu Préférences puis API.</span
+                  >
+                </span>
+                <div class="sfield">
+                  <input
+                    id="sgdb-key"
+                    type={showGridKey ? 'text' : 'password'}
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Colle ta clé ici"
+                    bind:value={gridKey}
+                    onblur={() => saveGridKey()}
+                  />
+                  <button type="button" class="btn-s" onclick={() => (showGridKey = !showGridKey)}
+                    >{showGridKey ? 'Masquer' : 'Afficher'}</button
+                  >
+                  <button type="submit" class="btn-s primary" disabled={!gridDirty}>Enregistrer</button>
+                </div>
+              </form>
+            </section>
+          {/if}
+        </div>
+      {/key}
+    </div>
   </div>
 </div>
 
@@ -400,74 +459,280 @@
     font-size: 34px;
     font-weight: 800;
     letter-spacing: -0.9px;
+    margin-bottom: 24px;
   }
 
-  .lead {
-    margin: 6px 0 8px;
+  .layout {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+    max-width: 1080px;
+  }
+
+  /* ─── Navigation des sections ─── */
+
+  .subnav {
+    position: sticky;
+    top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 11px;
+    color: var(--text-nav);
+    font-size: 14px;
+    font-weight: 550;
+    text-align: left;
+    transition:
+      background 0.18s,
+      color 0.18s;
+  }
+
+  .nav:hover {
+    background: var(--surface-2);
+    color: var(--strong);
+  }
+
+  .nav.on {
+    background: var(--surface-3);
+    color: var(--strong);
+  }
+
+  .nav.on::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 11px;
+    bottom: 11px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--accent);
+  }
+
+  .nav.on :global(svg) {
+    color: var(--accent);
+  }
+
+  .nl {
+    flex: 1;
+  }
+
+  .badge {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+
+  /* ─── Panneau ─── */
+
+  .panel {
+    min-width: 0;
+  }
+
+  .phead {
+    margin-bottom: 18px;
+    animation: hgFade 0.3s ease both;
+  }
+
+  .phead h2 {
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.4px;
+  }
+
+  .phead p {
+    margin-top: 5px;
     color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  .groups {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    animation: hgFade 0.35s ease both;
   }
 
   .group {
-    margin: 28px 0 12px;
+    padding: 6px 20px;
+    border-radius: var(--r-section);
+    background: var(--surface-1);
+    border: 1px solid rgb(var(--ink) / 0.06);
+    min-width: 0;
+  }
+
+  .group h3 {
+    padding: 14px 0 4px;
     font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 1px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
     text-transform: uppercase;
     color: var(--muted);
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 18px;
-    align-items: start;
+  .opt {
+    margin-left: 6px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--muted-2);
   }
 
-  .col {
+  .gdesc {
+    padding-bottom: 6px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .srow {
     display: flex;
-    flex-direction: column;
-    gap: 18px;
+    align-items: center;
+    gap: 14px;
+    min-height: 60px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-1);
     min-width: 0;
   }
 
-  .gridkey {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px 0 2px;
-    border-top: 1px solid var(--border-1);
+  .group h3 + .srow,
+  .gdesc + .srow {
+    border-top: none;
   }
 
-  .gridkey .lbl {
-    color: var(--text);
-    font-size: 14px;
+  /* Ligne avec un champ : le champ passe sous le texte. */
+  .srow.stack {
+    flex-wrap: wrap;
   }
 
-  .gridkey .txt {
+  .srow.stack .sfield {
+    flex-basis: 100%;
+  }
+
+  .srow.stack .ico + .txt + .sfield {
+    padding-left: 46px;
+  }
+
+  .srow.actions {
+    min-height: 0;
+    padding: 12px 0 14px;
+  }
+
+  .srow.off .lbl,
+  .srow.off .ico {
+    opacity: 0.5;
+  }
+
+  .ico {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgb(var(--ink) / 0.05);
+    color: var(--text-3);
+  }
+
+  .txt {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 3px;
-    min-width: 0;
   }
 
-  /* La description est longue : elle passe à la ligne (les autres .meta restent sur une ligne). */
-  .gridkey .meta {
-    white-space: normal;
+  .lbl {
+    font-size: 14px;
+    font-weight: 550;
+    color: var(--text);
+  }
+
+  .lbl.mono {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .user {
+    font-weight: 450;
+    color: var(--muted);
+  }
+
+  .hint {
+    font-size: 12.5px;
     line-height: 1.45;
+    color: var(--muted);
   }
 
-  .gridkey .lbl .meta {
+  .hint.err {
+    color: var(--danger-text);
+  }
+
+  .ell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sempty {
+    padding: 4px 0 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .tag {
+    flex-shrink: 0;
+    height: 22px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 650;
     white-space: nowrap;
   }
 
-  .keyrow {
+  .tag.conn {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  .tag.ok {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    color: var(--success-text);
+  }
+
+  .tag.off {
+    background: rgb(var(--ink) / 0.05);
+    color: var(--muted);
+  }
+
+  /* ─── Champs et boutons ─── */
+
+  .sfield {
     display: flex;
     gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
   }
 
-  .keyrow input {
-    flex: 1;
+  .sfield input {
+    flex: 1 1 220px;
     min-width: 0;
     height: 36px;
     padding: 0 12px;
@@ -480,186 +745,12 @@
     outline: none;
   }
 
-  .keyrow input:focus {
+  .sfield input:focus {
     border-color: color-mix(in srgb, var(--accent) 60%, transparent);
     box-shadow: 0 0 0 4px var(--accent-soft);
   }
 
-  .tag {
-    flex-shrink: 0;
-    height: 22px;
-    padding: 0 9px;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .tag.conn {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-
-  .tag.ok {
-    background: rgba(46, 204, 113, 0.14);
-    color: #3fcf7f;
-  }
-
-  .tag.off {
-    background: rgb(var(--ink) / 0.05);
-    color: var(--muted);
-  }
-
-  .acc .txt {
-    min-width: 0;
-  }
-
-  .acc .meta {
-    white-space: normal;
-  }
-
-  .meta.err {
-    color: #ff6b6b;
-  }
-
-  .note {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-1);
-    font-size: 12px;
-    line-height: 1.45;
-    color: var(--muted);
-  }
-
-  .chip-btn.primary {
-    background: var(--accent);
-    border-color: transparent;
-    color: #fff;
-    font-weight: 600;
-  }
-
-  .chip-btn.primary:hover {
-    background: color-mix(in srgb, var(--accent) 85%, #fff);
-  }
-
-  .chip-btn:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-
-  .mb6 {
-    margin-bottom: 6px;
-  }
-
-  .line {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-top: 1px solid var(--border-1);
-    min-width: 0;
-  }
-
-  .line.pref {
-    padding: 12px 0;
-  }
-
-  /* Descriptions des réglages : à la ligne si la colonne est étroite. */
-  .line.pref .meta {
-    white-space: normal;
-  }
-
-  .grow {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .txt {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .ell {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .meta {
-    font-size: 12px;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-
-  .none {
-    font-size: 13px;
-    color: var(--muted);
-    padding: 10px 0 2px;
-    border-top: 1px solid var(--border-1);
-  }
-
-  .folder {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: rgb(var(--ink) / 0.04);
-    margin-bottom: 8px;
-    min-width: 0;
-  }
-
-  .path {
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .remove {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--danger-text);
-    padding: 3px 8px;
-    border-radius: 7px;
-    opacity: 0;
-    transition:
-      opacity 0.15s,
-      background 0.15s;
-  }
-
-  .swap {
-    display: grid;
-    justify-items: end;
-    align-items: center;
-  }
-
-  .swap > * {
-    grid-area: 1 / 1;
-  }
-
-  .cnt {
-    transition: opacity 0.15s;
-  }
-
-  .folder:hover .remove,
-  .remove:focus-visible {
-    opacity: 1;
-  }
-
-  .folder:hover .cnt,
-  .folder:focus-within .cnt {
-    opacity: 0;
-  }
-
-  .remove:hover {
-    background: rgba(229, 72, 77, 0.12);
-  }
-
-  .chip-btn {
+  .btn-s {
     height: 34px;
     padding: 0 14px;
     display: inline-flex;
@@ -670,28 +761,73 @@
     background: rgb(var(--ink) / 0.03);
     font-size: 13px;
     color: var(--text-3);
-    transition: all 0.18s;
+    white-space: nowrap;
     flex-shrink: 0;
+    transition:
+      background 0.18s,
+      color 0.18s;
   }
 
-  .chip-btn:hover {
+  .btn-s:hover {
     background: var(--surface-3);
     color: var(--strong);
   }
 
-  .chip-btn.add {
-    margin-top: 4px;
+  .btn-s.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
   }
+
+  .btn-s.primary:hover {
+    background: color-mix(in srgb, var(--accent) 85%, #fff);
+  }
+
+  .btn-s.danger:hover {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger-text);
+  }
+
+  .btn-s:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* ─── Encadré de confiance (Comptes) ─── */
+
+  .trust {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--success) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--success) 18%, transparent);
+    color: var(--success-text);
+  }
+
+  .trust :global(svg) {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .trust p {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-3);
+  }
+
+  /* ─── Couleur d'accent ─── */
 
   .swatches {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
   }
 
   .sw {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     transition:
       transform 0.2s,
@@ -732,7 +868,48 @@
     outline-offset: 2px;
   }
 
-  .hex {
-    text-transform: uppercase;
+  /* ─── Fenêtre étroite : la navigation passe au-dessus, en ligne. ─── */
+
+  @media (max-width: 860px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .subnav {
+      position: static;
+      flex-direction: row;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .subnav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav {
+      flex-shrink: 0;
+    }
+
+    .nav.on::before {
+      left: 12px;
+      right: 12px;
+      top: auto;
+      bottom: 3px;
+      width: auto;
+      height: 2px;
+    }
+
+    .srow.stack .ico + .txt + .sfield {
+      padding-left: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .phead,
+    .groups {
+      animation: none;
+    }
   }
 </style>
