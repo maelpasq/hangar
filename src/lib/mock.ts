@@ -206,6 +206,17 @@ export function mockApi(): Api {
     uninstallGame: async (id) => `Démo : la désinstallation de ${id} s'ouvrirait dans son launcher.`,
     setDesktop: async () => ({ presenceAvailable: true, shortcut: 'Ctrl+Alt+H', shortcutOk: true }),
     setTrayRecents: async () => {},
+    trayState: async () => ({
+      games: [
+        { id: 'steam:526870', name: 'Satisfactory', cover: null },
+        { id: 'steam:1293830', name: 'Forza Horizon 5', cover: null },
+        { id: 'riot:valorant', name: 'VALORANT', cover: null }
+      ],
+      theme: 'dark',
+      accent: '#7c6cff'
+    }),
+    trayAction: async () => {},
+    onMainHidden: async () => () => {},
     setPresence: async () => {},
     onTrayLaunch: async () => () => {},
     resolveSteamId: async () => null,

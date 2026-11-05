@@ -20,9 +20,10 @@ jobs:
           - os: windows-latest
             args: ''
           # Intel : les Mac arm64 de GitHub sont souvent saturés. Universel comme release.yml,
-          # pour que le cache Rust de main serve tel quel à la release.
+          # pour que le cache Rust de main serve tel quel à la release. Pas de .dmg ici
+          # (seule la release en a besoin, et sa création échoue parfois sur ces Mac).
           - os: macos-15-intel
-            args: '--target universal-apple-darwin'
+            args: '--target universal-apple-darwin --bundles app'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -43,6 +44,8 @@ jobs:
             src-tauri -> target
             installer -> target
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          # Dépendances compilées gardées même si une étape suivante échoue.
+          cache-on-failure: true
       - run: npm ci
       - run: npm run check
       - run: npm run test
@@ -53,6 +56,7 @@ jobs:
           set +e
           npm run build -- ${{ matrix.args }} 2>&1 | tee build.log; s=${PIPESTATUS[0]}
           grep -E -A3 "^error" build.log | grep -v "^--" | paste - - - - | sed 's/^/::error::/' || true
+          grep -iE "failed to bundle|^\s*Error " build.log | head -5 | sed 's/^/::error::/' || true
           exit $s
       # Les erreurs sont aussi publiées en annotations (lisibles sans être connecté).
       - name: cargo test
@@ -88,4 +92,4 @@ jobs:
             src-tauri/target/release/hangar.exe
             src-tauri/target/release/bundle/nsis/*.exe
             installer/target/release/hangar-setup.exe
-            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/

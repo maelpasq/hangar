@@ -4,6 +4,7 @@
   import { rescan } from './lib/actions';
   import { updater } from './lib/stores/update.svelte';
   import { api } from './lib/api';
+  import { art } from './lib/art.svelte';
   import ContextMenu from './lib/components/ContextMenu.svelte';
   import LaunchOverlay from './lib/components/LaunchOverlay.svelte';
   import Sidebar from './lib/components/Sidebar.svelte';
@@ -67,18 +68,19 @@
       .catch(() => {});
   });
 
-  // Menu de l'icône : les 5 derniers jeux lancés.
+  // Menu de l'icône : les 5 derniers jeux lancés, avec leur jaquette, et l'apparence de l'app.
   let trayKey = '';
   $effect(() => {
     const recents = library.installed
       .filter((g) => library.totals(g.id).lastPlayed > 0)
       .sort((a, b) => library.totals(b.id).lastPlayed - library.totals(a.id).lastPlayed)
       .slice(0, 5)
-      .map((g): [string, string] => [g.id, library.name(g)]);
-    const key = JSON.stringify(recents);
+      .map((g) => ({ id: g.id, name: library.name(g), cover: art.cover(g)?.src ?? null }));
+    const { theme, accent } = library.state;
+    const key = JSON.stringify([recents, theme, accent]);
     if (!library.ready || key === trayKey) return;
     trayKey = key;
-    api.setTrayRecents(recents).catch(() => {});
+    api.setTrayRecents(recents, theme, accent).catch(() => {});
   });
 
   // Pas d'ambiance propre aux écrans Bibliothèque / Paramètres : on garde la dernière.
@@ -87,7 +89,7 @@
     const offs: (() => void)[] = [];
     let alive = true;
     (async () => {
-      const [a, b, d, c, e] = await Promise.all([
+      const [a, b, d, c, e, f] = await Promise.all([
         api.onLaunch((e) => runner.handle(e)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
@@ -100,9 +102,11 @@
           ui.windowFocused = f;
           if (f) void runner.checkInstalls();
         }),
-        api.onTrayLaunch((id) => void runner.play(id))
+        api.onTrayLaunch((id) => void runner.play(id)),
+        // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.
+        api.onMainHidden(() => (ui.big = false))
       ]);
-      offs.push(a, b, d, c, e);
+      offs.push(a, b, d, c, e, f);
       if (!alive) offs.forEach((o) => o());
       await library.load();
       // Jeux web jamais proposés (installation neuve ou mise à jour) : on demande.

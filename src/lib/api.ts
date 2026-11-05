@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, DesktopInfo, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, DesktopInfo, TrayGame, TrayState, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -29,8 +29,14 @@ export interface Api {
   uninstallGame(gameId: string): Promise<string>;
   /** Fermeture dans la zone de notification et raccourci global. */
   setDesktop(closeToTray: boolean, globalShortcut: boolean): Promise<DesktopInfo>;
-  /** Jeux récents du menu de l'icône (id, nom affiché). */
-  setTrayRecents(games: [string, string][]): Promise<void>;
+  /** Jeux récents du menu de l'icône et apparence de l'app (thème, accent). */
+  setTrayRecents(games: TrayGame[], theme: string, accent: string): Promise<void>;
+  /** Fenêtre du menu de l'icône : son contenu. */
+  trayState(): Promise<TrayState>;
+  /** Fenêtre du menu de l'icône : `show`, `quit`, `hide` ou `game:<id>`. */
+  trayAction(action: string): Promise<void>;
+  /** La fenêtre principale a été cachée (fermeture, raccourci) : le mode manette se ferme. */
+  onMainHidden(cb: () => void): Promise<() => void>;
   /** Discord : jeu en cours (début en ms) ou null pour effacer. */
   setPresence(gameId: string | null, start: number): Promise<void>;
   /** Un jeu a été choisi dans le menu de l'icône. */
@@ -111,7 +117,10 @@ async function tauriApi(): Promise<Api> {
     stopGame: (gameId) => invoke('stop_game', { gameId }),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
     setDesktop: (closeToTray, globalShortcut) => invoke('set_desktop', { closeToTray, globalShortcut }),
-    setTrayRecents: (games) => invoke('set_tray_recents', { games }),
+    setTrayRecents: (games, theme, accent) => invoke('set_tray_recents', { games, theme, accent }),
+    trayState: () => invoke('tray_state'),
+    trayAction: (action) => invoke('tray_action', { action }),
+    onMainHidden: (cb) => on<null>('main://hidden', () => cb()),
     setPresence: (gameId, start) => invoke('set_presence', { gameId, start: Math.max(0, Math.round(start)) }),
     onTrayLaunch: (cb) => on<string>('tray://launch', cb),
     openFolder: (path) => invoke('open_folder', { path }),

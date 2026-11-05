@@ -83,6 +83,20 @@ export interface Collection {
   games: string[];
 }
 
+/** Jeu récent du menu de l'icône (jaquette : image locale en cache). */
+export interface TrayGame {
+  id: string;
+  name: string;
+  cover?: string | null;
+}
+
+/** Contenu du menu de l'icône. */
+export interface TrayState {
+  games: TrayGame[];
+  theme: string;
+  accent: string;
+}
+
 /** Ce que le backend sait faire sur ce bureau. */
 export interface DesktopInfo {
   presenceAvailable: boolean;

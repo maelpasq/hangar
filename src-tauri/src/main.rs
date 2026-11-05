@@ -51,10 +51,13 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
         ))
-        // Le cadre vient de la config (natif sur macOS), jamais de l'état mémorisé d'une ancienne version.
+        // Le cadre vient de la config (natif sur macOS), jamais de l'état mémorisé d'une ancienne
+        // version. Le plein écran (mode manette) n'est jamais rouvert au lancement suivant.
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_state_flags(StateFlags::all() - StateFlags::DECORATIONS)
+                .with_state_flags(StateFlags::all() - StateFlags::DECORATIONS - StateFlags::FULLSCREEN)
+                // Le menu de l'icône est placé à chaque ouverture, jamais rouvert au démarrage.
+                .with_denylist(&["tray"])
                 .build(),
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -63,10 +66,7 @@ fn main() {
         // Fermer la fenêtre principale la cache dans la zone de notification (si activé).
         .on_window_event(|w, e| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = e {
-                if w.label() == "main" && desktop::close_to_tray() {
-                    api.prevent_close();
-                    let _ = w.hide();
-                }
+                desktop::on_close_requested(w, api);
             }
         })
         .setup(|app| {
@@ -97,6 +97,7 @@ fn main() {
                 paths,
             };
             app.manage(ctx);
+            desktop::fix_restored_size(app.handle());
             if let Err(e) = desktop::init_tray(app.handle()) {
                 log::error!("icône de la zone de notification : {e}");
             }
@@ -138,6 +139,8 @@ fn main() {
             commands::uninstall_game,
             commands::set_desktop,
             commands::set_tray_recents,
+            commands::tray_state,
+            commands::tray_action,
             commands::set_presence,
         ])
         .build(tauri::generate_context!())

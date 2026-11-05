@@ -157,6 +157,9 @@
   });
 </script>
 
+<!-- Clavier écouté sur la fenêtre : il marche même si le focus sort de la grille. -->
+<svelte:window {onkeydown} />
+
 <div
   class="big"
   class:nocursor={!pointer}
@@ -164,7 +167,6 @@
   aria-modal="true"
   aria-label="Mode manette"
   tabindex="-1"
-  {onkeydown}
   {onpointermove}
 >
   <div class="bg" aria-hidden="true">

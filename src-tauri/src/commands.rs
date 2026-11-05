@@ -146,11 +146,35 @@ pub fn set_desktop(app: AppHandle, close_to_tray: bool, global_shortcut: bool) -
     }
 }
 
-/// Jeux récents du menu de l'icône : `[id, nom affiché]`, seulement des jeux connus.
+/// Jeux récents du menu de l'icône (seulement des jeux connus) et apparence de l'app.
 #[tauri::command]
-pub fn set_tray_recents(app: AppHandle, ctx: Ctxs<'_>, games: Vec<(String, String)>) {
-    let games = games.into_iter().filter(|(id, _)| ctx.known.get(id).is_some()).collect();
-    crate::desktop::set_recents(&app, games);
+pub fn set_tray_recents(
+    app: AppHandle,
+    ctx: Ctxs<'_>,
+    games: Vec<crate::desktop::TrayGame>,
+    theme: String,
+    accent: String,
+) {
+    let games = games.into_iter().filter(|g| ctx.known.get(&g.id).is_some()).collect();
+    crate::desktop::set_recents(&app, games, theme, accent);
+}
+
+/// Contenu du menu Hangar de l'icône (demandé par sa fenêtre).
+#[tauri::command]
+pub fn tray_state() -> crate::desktop::TrayState {
+    crate::desktop::state()
+}
+
+/// Action du menu Hangar : `show`, `quit`, `hide` ou `game:<id>` d'un jeu connu.
+#[tauri::command]
+pub fn tray_action(app: AppHandle, ctx: Ctxs<'_>, action: String) -> Result<(), String> {
+    let ok = matches!(action.as_str(), "show" | "quit" | "hide")
+        || action.strip_prefix("game:").is_some_and(|id| ctx.known.get(id).is_some());
+    if !ok {
+        return Err("Action inconnue.".into());
+    }
+    crate::desktop::run_action(&app, &action);
+    Ok(())
 }
 
 /// Discord : affiche le jeu connu `game_id` (début `start` en ms), ou efface (`None`).
