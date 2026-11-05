@@ -116,19 +116,24 @@ pub fn gog_galaxy(db: &Path) -> HashMap<String, Stat> {
     }
 }
 
-fn read_galaxy(db: &Path) -> rusqlite::Result<HashMap<String, Stat>> {
+/// Ouvre la base de GOG Galaxy en lecture seule, même si Galaxy la tient ouverte.
+pub fn open_galaxy(db: &Path) -> rusqlite::Result<rusqlite::Connection> {
     use rusqlite::{Connection, OpenFlags};
     let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX | OpenFlags::SQLITE_OPEN_URI;
     // immutable=1 : aucune prise de verrou, la base peut rester ouverte par Galaxy.
     let uri = format!("file:{}?immutable=1", db.to_string_lossy().replace('\\', "/").replace('?', "%3f"));
-    let conn = match Connection::open_with_flags(&uri, flags) {
-        Ok(c) => c,
+    match Connection::open_with_flags(&uri, flags) {
+        Ok(c) => Ok(c),
         Err(_) => {
             let tmp = std::env::temp_dir().join(format!("hangar-galaxy-{}.db", std::process::id()));
             fs::copy(db, &tmp).map_err(|_| rusqlite::Error::InvalidPath(db.to_path_buf()))?;
-            Connection::open_with_flags(&tmp, OpenFlags::SQLITE_OPEN_READ_ONLY)?
+            Connection::open_with_flags(&tmp, OpenFlags::SQLITE_OPEN_READ_ONLY)
         }
-    };
+    }
+}
+
+fn read_galaxy(db: &Path) -> rusqlite::Result<HashMap<String, Stat>> {
+    let conn = open_galaxy(db)?;
     let mut out: HashMap<String, Stat> = HashMap::new();
     if let Ok(mut st) = conn.prepare("SELECT releaseKey, MAX(minutesInGame) FROM GameTimes GROUP BY releaseKey") {
         let rows = st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<i64>>(1)?)))?;
@@ -184,8 +189,8 @@ fn uninstall_index() -> HashMap<String, (Option<u64>, Option<u64>)> {
     HashMap::new()
 }
 
-fn galaxy_db() -> PathBuf {
-    super::program_data().join(r"GOG.com\Galaxy\storage\galaxy-2.0.db")
+pub fn galaxy_db() -> PathBuf {
+    super::program_data().join("GOG.com").join("Galaxy").join("storage").join("galaxy-2.0.db")
 }
 
 /// Sources réunies pour compléter les jeux d'un scan.

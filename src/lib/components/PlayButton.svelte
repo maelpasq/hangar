@@ -1,13 +1,20 @@
 <script lang="ts">
-  // Bouton Jouer couleur d'accent.
+  // Bouton Jouer couleur d'accent (« Installer » pour un jeu non installé).
+  import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import Icon from './Icon.svelte';
 
   let { gameId, large = false, label = 'Jouer' }: { gameId: string; large?: boolean; label?: string } = $props();
+
+  const toInstall = $derived(!!library.get(gameId)?.notInstalled);
 </script>
 
 <button class="play" class:large onclick={() => runner.play(gameId)}>
-  <Icon name="play" size={large ? 17 : 16} />{label}
+  {#if toInstall}
+    <Icon name="download" size={large ? 18 : 17} stroke={2.2} />Installer
+  {:else}
+    <Icon name="play" size={large ? 17 : 16} />{label}
+  {/if}
 </button>
 
 <style>

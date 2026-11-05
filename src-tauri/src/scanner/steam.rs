@@ -1,8 +1,10 @@
 //! Steam : `libraryfolders.vdf` + `appmanifest_*.acf` de chaque bibliothèque.
+//! Jeux possédés non installés : cache de la bibliothèque + `appinfo.vdf`.
 
 use crate::model::{uri, Game};
+use std::collections::HashSet;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Valeurs d'une clé dans un fichier VDF (format texte de Valve), insensible à la casse.
 pub fn vdf_values(text: &str, key: &str) -> Vec<String> {
@@ -44,6 +46,11 @@ const STEAM_IGNORED: &[&str] = &[
     "steamvr", "wallpaper engine", "soundtrack", "dedicated server", "sdk",
 ];
 
+fn ignored(name: &str) -> bool {
+    let lname = name.to_lowercase();
+    STEAM_IGNORED.iter().any(|s| lname.contains(s))
+}
+
 /// Lit un `appmanifest_*.acf`. `lib` est le dossier `steamapps` qui le contient.
 pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     let appid: u32 = vdf_values(text, "appid").first()?.parse().ok()?;
@@ -51,8 +58,7 @@ pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     if name.is_empty() || appid == 228980 {
         return None;
     }
-    let lname = name.to_lowercase();
-    if STEAM_IGNORED.iter().any(|s| lname.contains(s)) {
+    if ignored(&name) {
         return None;
     }
     let dir = vdf_values(text, "installdir").into_iter().next().map(|d| lib.join("common").join(d));
@@ -100,6 +106,51 @@ pub fn detect() -> Vec<Game> {
     out
 }
 
+/// appids présents dans `appcache/librarycache` (un dossier ou des fichiers `<appid>_*.jpg` par app).
+pub fn library_cache_ids(dir: &Path) -> HashSet<u32> {
+    fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| {
+            let n = e.file_name().to_string_lossy().into_owned();
+            let digits: String = n.chars().take_while(|c| c.is_ascii_digit()).collect();
+            digits.parse().ok()
+        })
+        .collect()
+}
+
+/// Jeux de la bibliothèque Steam (le scan retire ensuite ceux qui sont installés).
+/// shortcut: Steam ne garde pas la liste des licences en clair ; on prend les apps dont le client
+/// a mis les images de bibliothèque en cache, plus celles qui ont un temps de jeu. Couvre la
+/// bibliothèque affichée au moins une fois ; l'API Web Steam (clé) serait exhaustive.
+pub fn owned() -> Vec<Game> {
+    let Some(root) = steam_root() else { return vec![] };
+    let mut ids = library_cache_ids(&root.join("appcache").join("librarycache"));
+    ids.extend(super::stats::steam_playtimes(&root).into_keys());
+    if ids.is_empty() {
+        return vec![];
+    }
+    let raw = match fs::read(root.join("appcache").join("appinfo.vdf")) {
+        Ok(b) => b,
+        Err(e) => {
+            log::warn!("Steam : appinfo.vdf illisible ({e})");
+            return vec![];
+        }
+    };
+    super::appinfo::parse(&raw, &ids)
+        .into_iter()
+        // 480 : Spacewar, l'app de test de Valve.
+        .filter(|(id, a)| a.kind == "game" && ![228980, 480].contains(id) && !ignored(&a.name))
+        .map(|(id, a)| {
+            let mut g = Game::new(format!("steam:{id}"), a.name, "steam", uri(format!("steam://install/{id}")));
+            g.steam_app_id = Some(id);
+            g.not_installed = true;
+            g
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,6 +177,15 @@ mod tests {
         assert_eq!(g.launcher_name, "Steam");
         assert!(g.install_dir.unwrap().ends_with("Satisfactory"));
         assert!(g.size_bytes.unwrap_or(0) > 0, "SizeOnDisk du manifeste");
+    }
+
+    #[test]
+    fn cache_de_bibliotheque() {
+        let d = tempfile::tempdir().unwrap();
+        fs::create_dir(d.path().join("620")).unwrap();
+        fs::write(d.path().join("730_library_600x900.jpg"), b"").unwrap();
+        fs::write(d.path().join("assets.json"), b"").unwrap();
+        assert_eq!(library_cache_ids(d.path()), HashSet::from([620, 730]));
     }
 
     #[test]

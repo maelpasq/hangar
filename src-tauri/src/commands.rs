@@ -120,6 +120,18 @@ pub async fn launch_game(app: AppHandle, ctx: Ctxs<'_>, game_id: String) -> Resu
     Ok(())
 }
 
+/// Ouvre l'installation d'un jeu possédé non installé dans son launcher (aucun suivi de processus).
+#[tauri::command]
+pub async fn install_game(ctx: Ctxs<'_>, game_id: String) -> Result<(), String> {
+    let Some(game) = ctx.known.get(&game_id).filter(|g| g.not_installed) else {
+        return Err("Ce jeu n'est plus à installer. Actualise la bibliothèque puis réessaie.".into());
+    };
+    let launch = game.launch.clone();
+    blocking(move || launcher::launch(&launch)).await??;
+    log::info!("installation demandée : {} ({})", game.name, game.id);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn stop_game(ctx: Ctxs<'_>, game_id: String) -> Result<(), String> {
     ctx.tracker.stop(&game_id)

@@ -83,3 +83,12 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Désinstallation : celle de NSIS, inchangée.
 - Thème clair / sombre / appareil : le bouton de la barre du haut (à la place de l'engrenage) fait défiler les trois modes, aussi réglables dans Paramètres > Apparence. Les couleurs passent par des tokens (`--ink`, `--glass`, `--popover`, `--strong`) redéfinis sous `[data-theme='light']`. Les zones posées sur une image (hero, overlay de lancement) portent `.on-dark` et gardent les couleurs sombres. Thème par défaut : sombre (la maquette).
 - Pastille de profil retirée de la barre du haut (aucun compte dans Hangar). Couleur d'accent libre via un `<input type="color">` natif à côté des 5 pastilles.
+
+## Jeux possédés non installés
+
+- Sources locales uniquement (aucun appel réseau nouveau) : Steam `librarycache` + `localconfig.vdf` filtrés par `appinfo.vdf`, Epic `catcache.bin`, GOG Galaxy `galaxy-2.0.db`, Riot (jeux gratuits du client). Détail dans SPEC.md, section 2.
+- Steam ne garde pas la liste des licences en clair (`licensecache` est chiffré). Le cache d'images de la bibliothèque couvre les jeux que le client a affichés au moins une fois. Une liste exhaustive demanderait l'API Web Steam (clé et nouvel hôte réseau) : non retenu pour l'instant.
+- Ubisoft Connect (`cache\*.vdat` chiffrés), EA app, Battle.net et Xbox (compte en ligne) : pas de jeux non installés.
+- Un jeu non installé garde l'id de sa version installée (`steam:<appid>`, `epic:<appName>`, `gog:<id>`, `riot:<produit>`) : le scan retire le doublon et garde la version installée, favoris et renommages suivent.
+- `Game.notInstalled` (défaut `false`, compatible avec l'ancien cache). Commande `install_game` séparée de `launch_game` : pas de suivi de processus ni de lancement compté.
+- Après une installation demandée, Hangar rescanne quand sa fenêtre reprend le focus (au plus toutes les 30 s), jusqu'à voir le jeu installé.

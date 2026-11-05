@@ -22,7 +22,8 @@
     | 'sun'
     | 'moon'
     | 'monitor'
-    | 'upload';
+    | 'upload'
+    | 'download';
 </script>
 
 <script lang="ts">
@@ -107,5 +108,7 @@
     <rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />
   {:else if name === 'upload'}
     <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
+  {:else if name === 'download'}
+    <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
   {/if}
 </svg>

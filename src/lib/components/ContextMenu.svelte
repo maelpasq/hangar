@@ -28,7 +28,9 @@
   const fav = $derived(library.isFav(gameId));
 
   const items = $derived<{ label: string; icon: IconName; run: () => void; danger?: boolean; disabled?: boolean }[]>([
-    { label: runner.isRunning(gameId) ? 'En cours' : 'Jouer', icon: 'play', run: () => runner.play(gameId) },
+    game?.notInstalled
+      ? { label: 'Installer', icon: 'download', run: () => runner.play(gameId) }
+      : { label: runner.isRunning(gameId) ? 'En cours' : 'Jouer', icon: 'play', run: () => runner.play(gameId) },
     {
       label: fav ? 'Retirer des favoris' : 'Ajouter aux favoris',
       icon: 'star',

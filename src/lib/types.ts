@@ -40,6 +40,8 @@ export interface Game {
   sizeBytes?: number | null;
   /** Date d'installation, ms epoch. */
   installedAt?: number | null;
+  /** Possédé mais pas installé : `launch` ouvre son installation dans le launcher. */
+  notInstalled?: boolean;
 }
 
 export interface Session {
@@ -60,6 +62,8 @@ export interface Prefs {
   minimizeOnLaunch: boolean;
   startWithWindows: boolean;
   autoCovers: boolean;
+  /** Jeux possédés dans les launchers mais pas installés, affichés dans la bibliothèque. */
+  showUninstalled: boolean;
   /** Clé API SteamGridDB (facultative) pour les jeux absents de Steam. */
   steamGridDbKey: string;
 }

@@ -19,6 +19,18 @@ Une seule app pour retrouver et lancer tous les jeux installés sur le PC, quel 
 | Dossiers locaux | Dossiers choisis par l'utilisateur : un jeu par sous-dossier, exe choisi par heuristique (voir ARCHITECTURE.md) avec **priorité au launcher du jeu s'il existe** | L'exe trouvé |
 | Ajout manuel | L'utilisateur choisit un `.exe`, `.lnk`, `.url` ou `.bat`, un nom et des arguments | Tel quel |
 
+### Jeux possédés non installés
+
+Les jeux du compte qui ne sont pas installés apparaissent aussi dans la bibliothèque (jaquette atténuée, « Non installé »). Le bouton devient « Installer » : il ouvre l'installation dans le launcher, sans suivi de partie. Au retour sur Hangar (au plus une fois toutes les 30 s), un scan les fait passer en « installé » dès que le launcher a fini. Option Paramètres > Comportement « Afficher les jeux non installés » (activée par défaut). L'accueil ne montre que les jeux installés.
+
+| Source | Liste des jeux du compte (fichiers locaux, aucun réseau) | Installation |
+|---|---|---|
+| Steam | Apps de `appcache\librarycache` (images de bibliothèque mises en cache par le client) et apps avec un temps de jeu dans `localconfig.vdf`, filtrées par `appcache\appinfo.vdf` (type `game`) | `steam://install/<appid>` |
+| Epic Games | `catcache.bin` (catalogue local du launcher) : catégorie `games`, hors DLC (`mainGameItem`), plateforme du système | `com.epicgames.launcher://apps/<ns>%3A<catalogItemId>%3A<appName>?action=install` |
+| GOG | Base de GOG Galaxy `galaxy-2.0.db` : titres des `releaseKey` `gog_<id>` de `LibraryReleases`, hors DLC (`ReleaseProperties.isDlc`) | `goggalaxy://openGameView/<id>` |
+| Riot Games | Si le Riot Client est installé : League of Legends, VALORANT, Legends of Runeterra, 2XKO (gratuits) | `RiotClientServices.exe --launch-product=<p> --launch-patchline=live` |
+| Ubisoft, EA, Battle.net, Xbox | Pas de liste locale lisible (cache chiffré ou compte en ligne) : seuls les jeux installés | - |
+
 Règles communes :
 
 - Un même dossier d'installation détecté par deux sources n'apparaît qu'une fois (priorité : Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox, local, manuel).

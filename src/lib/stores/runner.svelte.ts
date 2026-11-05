@@ -1,5 +1,6 @@
 // Lancement et suivi des jeux, piloté par les événements launch://* du backend.
 
+import { rescan } from '../actions';
 import { api } from '../api';
 import type { LaunchEvent } from '../types';
 import { elapsed } from '../util/format';
@@ -15,6 +16,8 @@ export interface Launching {
 
 /** Fermeture de l'overlay au plus tard après ce délai. */
 const OVERLAY_MAX_MS = 4000;
+/** Écart minimal entre deux scans au retour sur Hangar pendant une installation. */
+const INSTALL_RESCAN_MS = 30_000;
 
 class Runner {
   launching = $state<Launching | null>(null);
@@ -34,6 +37,9 @@ class Runner {
   private clock: ReturnType<typeof setInterval> | undefined;
   private minimizedByUs = false;
   private lastFail = '';
+  /** Installations demandées dont on attend la fin (rescan au retour sur la fenêtre). */
+  private installs = new Set<string>();
+  private lastInstallScan = 0;
 
   isRunning(id: string): boolean {
     return id in this.running;
@@ -47,6 +53,7 @@ class Runner {
   async play(gameId: string): Promise<void> {
     const g = library.get(gameId);
     if (!g) return;
+    if (g.notInstalled) return this.install(gameId);
     if (this.isRunning(gameId)) {
       ui.open(gameId);
       return;
@@ -63,6 +70,28 @@ class Runner {
     } catch (e) {
       this.fail(gameId, String(e));
     }
+  }
+
+  /** Ouvre l'installation dans le launcher du jeu ; le scan le verra installé plus tard. */
+  async install(gameId: string): Promise<void> {
+    const g = library.get(gameId);
+    if (!g) return;
+    ui.menu = null;
+    try {
+      await api.installGame(gameId);
+      this.installs.add(gameId);
+      ui.toast(`Installation de ${library.name(g)} ouverte dans ${g.launcherName}`, { gameId });
+    } catch (e) {
+      this.fail(gameId, String(e));
+    }
+  }
+
+  /** Retour sur Hangar : rescan si une installation est en cours (au plus toutes les 30 s). */
+  async checkInstalls(): Promise<void> {
+    if (!this.installs.size || Date.now() - this.lastInstallScan < INSTALL_RESCAN_MS) return;
+    this.lastInstallScan = Date.now();
+    await rescan();
+    for (const id of this.installs) if (!library.get(id)?.notInstalled) this.installs.delete(id);
   }
 
   cancel(): void {

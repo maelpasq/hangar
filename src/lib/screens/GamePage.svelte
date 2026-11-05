@@ -31,7 +31,8 @@
   const sessions = $derived(library.state.sessions.filter((s) => s.gameId === game.id));
   const added = $derived(library.addedAt(game));
   const genre = $derived(library.genre(game));
-  const location = $derived(game.installDir || game.launch.target);
+  const location = $derived(game.notInstalled ? 'Non installé' : game.installDir || game.launch.target);
+  const via = $derived(game.notInstalled ? "S'installe via" : 'Se lance via');
 
   const similar = $derived(
     library.visible
@@ -99,7 +100,7 @@
           <PlayButton gameId={game.id} large />
         {/if}
         <FavButton gameId={game.id} variant="ghost" size={52} />
-        <span class="via">Se lance via {#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</span>
+        <span class="via">{via} {#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</span>
       </div>
     </div>
   </div>

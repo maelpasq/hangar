@@ -21,6 +21,8 @@ export interface Api {
   loadLibrary(): Promise<Game[]>;
   saveLibrary(games: Game[]): Promise<void>;
   launchGame(gameId: string): Promise<void>;
+  /** Ouvre l'installation d'un jeu non installé dans son launcher. */
+  installGame(gameId: string): Promise<void>;
   stopGame(gameId: string): Promise<void>;
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
@@ -82,6 +84,7 @@ async function tauriApi(): Promise<Api> {
     loadLibrary: () => invoke('load_library'),
     saveLibrary: (games) => invoke('save_library', { games }),
     launchGame: (gameId) => invoke('launch_game', { gameId }),
+    installGame: (gameId) => invoke('install_game', { gameId }),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),

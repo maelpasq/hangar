@@ -34,13 +34,41 @@ fn process_names(product: &str) -> Vec<String> {
     names.iter().map(|s| s.to_string()).collect()
 }
 
-pub fn detect() -> Vec<Game> {
-    let base = super::program_data().join("Riot Games");
-    let client = fs::read_to_string(base.join("RiotClientInstalls.json"))
+/// Chemin du Riot Client (`rc_default`).
+fn client() -> Option<String> {
+    fs::read_to_string(super::program_data().join("Riot Games").join("RiotClientInstalls.json"))
         .ok()
         .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
-        .and_then(|v| v.get("rc_default").and_then(|x| x.as_str()).map(super::native_sep));
-    let Some(client) = client else {
+        .and_then(|v| v.get("rc_default").and_then(|x| x.as_str()).map(super::native_sep))
+}
+
+fn client_launch(client: &str, product: &str, patchline: &str) -> Launch {
+    Launch {
+        kind: "exe".into(),
+        target: client.to_string(),
+        args: format!("--launch-product={product} --launch-patchline={patchline}"),
+        cwd: None,
+    }
+}
+
+/// Jeux Riot (gratuits) proposés par le client : ceux qui manquent s'installent depuis le Riot Client.
+pub fn owned() -> Vec<Game> {
+    let Some(client) = client() else { return vec![] };
+    let products: &[&str] =
+        if cfg!(target_os = "macos") { &["league_of_legends"] } else { &["league_of_legends", "valorant", "bacon", "lion"] };
+    products
+        .iter()
+        .map(|p| {
+            let mut g = Game::new(format!("riot:{p}"), product_name(p), "riot", client_launch(&client, p, "live"));
+            g.not_installed = true;
+            g
+        })
+        .collect()
+}
+
+pub fn detect() -> Vec<Game> {
+    let base = super::program_data().join("Riot Games");
+    let Some(client) = client() else {
         log::info!("Riot : client non installé");
         return vec![];
     };
@@ -61,17 +89,8 @@ pub fn detect() -> Vec<Game> {
         if !Path::new(&install).exists() {
             continue;
         }
-        let mut g = Game::new(
-            format!("riot:{product}"),
-            product_name(product),
-            "riot",
-            Launch {
-                kind: "exe".into(),
-                target: client.clone(),
-                args: format!("--launch-product={product} --launch-patchline={patchline}"),
-                cwd: None,
-            },
-        );
+        let mut g =
+            Game::new(format!("riot:{product}"), product_name(product), "riot", client_launch(&client, product, patchline));
         g.install_dir = Some(install);
         g.process_names = process_names(product);
         out.push(g);

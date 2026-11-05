@@ -83,6 +83,7 @@ interface Game {
   exePath?: string;        // exe principal, pour l'icône et le suivi de processus
   processNames: string[];  // noms de processus qui signifient « le jeu tourne »
   genre?: string;          // Steam : via appdetails (facultatif, en cache), sinon vide
+  notInstalled?: boolean;  // possédé mais pas installé : launch = installation dans le launcher
 }
 
 interface Session { gameId: string; start: number; end: number }   // ms epoch
@@ -113,12 +114,13 @@ interface PersistedState {
 | `scan_games(localFolders) -> Game[]` | Scan complet, en parallèle (un thread par détecteur), Xbox inclus |
 | `load_state() -> PersistedState` / `save_state(state)` | Persistance atomique, migrations par `version` |
 | `launch_game(game) -> ()` | Lance, démarre le suivi du processus, émet les événements ci-dessous |
+| `install_game(gameId)` | Jeu non installé : ouvre son installation dans le launcher (pas de suivi de processus) |
 | `stop_game(gameId)` | Termine proprement les processus du jeu |
 | `open_folder(path)` | Explorateur Windows |
 | `pick_exe()` / `pick_folder()` | Via `tauri-plugin-dialog` côté frontend directement |
 | `resolve_steam_id(name) -> number?` | Recherche Steam |
 | `search_steam(name) -> {id,name}[]` | Pour la modale « Changer la jaquette » (5 résultats) |
-| `find_artwork(gameId, steamGridKey, refresh) -> {cover, hero, source}` | Jaquette et bannière d'un jeu : image native du store (Epic, GOG, Xbox), puis Steam, puis SteamGridDB ; résultat mis en cache (`cachertwork.json`) |
+| `find_artwork(gameId, steamGridKey, refresh) -> {cover, hero, source}` | Jaquette et bannière d'un jeu : image native du store (Epic, GOG, Xbox), puis Steam, puis SteamGridDB ; résultat mis en cache (`cache\artwork.json`) |
 | `image(url) -> string` | Renvoie un chemin local en cache (servi via le protocole `asset:`), télécharge si absent |
 | `exe_icon(path) -> string?` | Icône d'exe extraite en PNG 256 px (IShellItemImageFactory), en cache |
 | `folder_size(path) -> number` | Taille en octets, calculée en tâche de fond et mise en cache 24 h |

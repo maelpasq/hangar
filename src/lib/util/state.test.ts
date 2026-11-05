@@ -52,6 +52,11 @@ describe('état persistant', () => {
     expect(normalizeState({ version: 1 }).prefs.steamGridDbKey).toBe('');
   });
 
+  it('affiche les jeux non installés par défaut', () => {
+    expect(normalizeState({ version: 1, prefs: {} }).prefs.showUninstalled).toBe(true);
+    expect(normalizeState({ version: 1, prefs: { showUninstalled: false } }).prefs.showUninstalled).toBe(false);
+  });
+
   it('nettoie les jeux manuels', () => {
     const s = normalizeState({
       version: 1,

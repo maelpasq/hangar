@@ -61,7 +61,10 @@
         api.onScanPartial((g) => {
           library.mergePartial(g);
         }),
-        api.win.onFocusChange((f) => (ui.windowFocused = f))
+        api.win.onFocusChange((f) => {
+          ui.windowFocused = f;
+          if (f) void runner.checkInstalls();
+        })
       ]);
       offs.push(a, b, c);
       if (!alive) offs.forEach((o) => o());

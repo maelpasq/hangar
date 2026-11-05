@@ -38,7 +38,12 @@
       label: "Réduire Hangar au lancement d'un jeu",
       desc: 'La fenêtre revient quand tu quittes le jeu'
     },
-    { key: 'startWithWindows', label: `Démarrer avec ${isMac ? 'macOS' : 'Windows'}`, desc: "Hangar s'ouvre en arrière-plan à la connexion" }
+    { key: 'startWithWindows', label: `Démarrer avec ${isMac ? 'macOS' : 'Windows'}`, desc: "Hangar s'ouvre en arrière-plan à la connexion" },
+    {
+      key: 'showUninstalled',
+      label: 'Afficher les jeux non installés',
+      desc: 'Les jeux de tes launchers à installer, dans la bibliothèque'
+    }
   ];
 
   const themes: { value: Theme; label: string }[] = [

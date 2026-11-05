@@ -50,6 +50,9 @@ pub struct Game {
     /// Date d'installation (ms epoch).
     #[serde(default)]
     pub installed_at: Option<u64>,
+    /// Jeu possédé mais pas installé : `launch` ouvre alors son installation dans le launcher.
+    #[serde(default)]
+    pub not_installed: bool,
 }
 
 /// Session envoyée au frontend : `{ gameId, start, end }` en millisecondes epoch.

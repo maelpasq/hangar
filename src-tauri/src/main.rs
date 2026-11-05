@@ -95,6 +95,7 @@ fn main() {
             commands::load_library,
             commands::save_library,
             commands::launch_game,
+            commands::install_game,
             commands::stop_game,
             commands::open_folder,
             commands::resolve_steam_id,

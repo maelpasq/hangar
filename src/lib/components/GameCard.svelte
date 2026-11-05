@@ -1,5 +1,6 @@
 <script lang="ts">
   // Carte de jeu (jaquette 2:3) : clic = fiche, bouton « Lancer » ou double-clic = lancer, clic droit = menu.
+  // Jeu non installé : jaquette atténuée, bouton « Installer ».
   import { STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
@@ -32,8 +33,11 @@
   const store = $derived(STORES[game.store]);
   const name = $derived(library.name(game));
   const t = $derived(library.totals(game.id));
+  const toInstall = $derived(!!game.notInstalled);
   const metaText = $derived(
-    meta === 'hours'
+    toInstall && meta !== 'last'
+      ? `${store.label} · Non installé`
+      : meta === 'hours'
       ? `${store.label} · ${hoursLabel(t.playMs)}`
       : meta === 'last'
         ? t.lastPlayed
@@ -82,7 +86,8 @@
   <div class="frame">
     <button
       class="cover"
-      aria-label={name}
+      class:dim={toInstall}
+      aria-label={toInstall ? `${name}, non installé` : name}
       title={name}
       {onclick}
       {ondblclick}
@@ -92,8 +97,10 @@
       <Cover {game} fontSize={gen.f} padding={gen.p} />
       <span class="ov"></span>
     </button>
-    <button class="play" aria-label="Lancer {name}" onclick={() => runner.play(game.id)}
-      >{#if variant !== 'small'}<Icon name="play" size={12} />{/if}Lancer</button
+    <button class="play" aria-label="{toInstall ? 'Installer' : 'Lancer'} {name}" onclick={() => runner.play(game.id)}
+      >{#if variant !== 'small'}<Icon name={toInstall ? 'download' : 'play'} size={toInstall ? 14 : 12} stroke={2.2} />{/if}{toInstall
+        ? 'Installer'
+        : 'Lancer'}</button
     >
   </div>
   {#if fav}<FavButton gameId={game.id} />{/if}
@@ -167,6 +174,17 @@
   .card:hover .cover :global(.full),
   .cover:focus-visible :global(.full) {
     transform: scale(1.06);
+  }
+
+  /* Non installé : jaquette désaturée, couleurs rendues au survol. */
+  .cover.dim > :global(*:not(.ov)) {
+    filter: grayscale(0.8) brightness(0.62);
+    transition: filter 0.3s ease;
+  }
+
+  .card:hover .cover.dim > :global(*:not(.ov)),
+  .cover.dim:focus-visible > :global(*:not(.ov)) {
+    filter: none;
   }
 
   .ov {

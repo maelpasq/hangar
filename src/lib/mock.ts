@@ -124,13 +124,32 @@ function reelLibrary(): Game[] {
   ];
 }
 
+/** Jeux possédés mais pas installés (bouton Installer). */
+const UNINSTALLED: Game[] = [
+  [400, 'Portal'],
+  [1145360, 'Hades'],
+  [632470, 'Disco Elysium'],
+  [105600, 'Terraria']
+].map(([id, name]) => ({
+  id: `steam:${id}`,
+  name: name as string,
+  store: 'steam',
+  installDir: null,
+  launch: { kind: 'uri', target: `steam://install/${id}`, args: '' },
+  launcherName: STORES.steam.launcher,
+  steamAppId: id as number,
+  exePath: null,
+  processNames: [],
+  notInstalled: true
+}));
+
 const REEL = typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === 'reel';
 
 export function mockApi(): Api {
   const now = Date.now();
   let state: unknown = REEL ? defaultState() : demoState(now);
   let library: Game[] = [];
-  const lib = REEL ? reelLibrary() : games.map(toGame);
+  const lib = [...(REEL ? reelLibrary() : games.map(toGame)), ...UNINSTALLED];
   const listeners = new Set<(e: LaunchEvent) => void>();
   const running = new Map<string, { start: number; timers: number[] }>();
   const emit = (e: LaunchEvent) => listeners.forEach((l) => l(e));
@@ -162,6 +181,9 @@ export function mockApi(): Api {
           emit({ type: 'running', gameId, pid: 4242 });
         }, 2100)
       );
+    },
+    installGame: async () => {
+      await wait(300);
     },
     stopGame: async (gameId) => {
       const r = running.get(gameId);

@@ -261,11 +261,7 @@ impl Artworks {
 
     fn epic_catalog(&self) -> &HashMap<String, Vec<Value>> {
         self.epic.get_or_init(|| {
-            let mut paths = vec![crate::scanner::program_data().join(r"Epic\EpicGamesLauncher\Data\Catalog\catcache.bin")];
-            if let Ok(l) = std::env::var("LOCALAPPDATA") {
-                paths.push(Path::new(&l).join(r"EpicGamesLauncher\Saved\Data\Catalog\catcache.bin"));
-            }
-            for p in paths {
+            for p in crate::scanner::epic::catcache_paths() {
                 if let Ok(raw) = fs::read(&p) {
                     let cat = parse_epic_catalog(&raw);
                     log::info!("Epic : catalogue local {} ({} entrées)", p.display(), cat.len());

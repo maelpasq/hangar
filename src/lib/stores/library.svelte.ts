@@ -19,10 +19,17 @@ class Library {
   /** Tous les jeux connus, masqués compris. */
   all = $derived(dedupe([...this.scanned, ...this.state.manualGames]));
   byId = $derived(new Map(this.all.map((g) => [g.id, g])));
-  /** Jeux affichés : ni masqués, ni d'un store désactivé. */
+  /** Jeux affichés : ni masqués, ni d'un store désactivé, ni non installés si l'option est coupée. */
   visible = $derived(
-    this.all.filter((g) => !this.state.hidden.includes(g.id) && !this.state.disabledStores.includes(g.store))
+    this.all.filter(
+      (g) =>
+        !this.state.hidden.includes(g.id) &&
+        !this.state.disabledStores.includes(g.store) &&
+        (!g.notInstalled || this.state.prefs.showUninstalled)
+    )
   );
+  /** Jeux visibles et installés (accueil). */
+  installed = $derived(this.visible.filter((g) => !g.notInstalled));
   /** Nombre de jeux par store (tous, pour les Paramètres). */
   countsAll = $derived(countBy(this.all.filter((g) => !this.state.hidden.includes(g.id))));
   /** Nombre de jeux visibles par store (barre latérale, puces). */

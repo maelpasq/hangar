@@ -4,6 +4,7 @@
 //! Chaque détecteur renvoie une liste vide en cas d'erreur (store absent, clé
 //! de registre manquante, fichier corrompu) et journalise la raison.
 
+pub mod appinfo;
 pub mod battlenet;
 pub mod ea;
 pub mod epic;
@@ -122,6 +123,12 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
         ("battlenet", battlenet::detect),
         ("riot", riot::detect),
         ("installés", installed::detect),
+        // Jeux possédés non installés : après les détecteurs ci-dessus, pour que
+        // dedupe (tri stable) garde la version installée d'un même id.
+        ("steam (non installés)", steam::owned),
+        ("epic (non installés)", epic::owned),
+        ("gog (non installés)", gog::owned),
+        ("riot (non installés)", riot::owned),
     ];
     let mut games: Vec<Game> = std::thread::scope(|s| {
         let handles: Vec<_> = detectors
@@ -179,6 +186,16 @@ mod tests {
     }
 
     #[test]
+    fn dedupe_garde_le_jeu_installe() {
+        let mut owned = g("steam:1", "steam", "");
+        owned.install_dir = None;
+        owned.not_installed = true;
+        let out = dedupe(vec![g("steam:1", "steam", r"C:\Jeux\A"), owned]);
+        assert_eq!(out.len(), 1);
+        assert!(!out[0].not_installed);
+    }
+
+    #[test]
     fn dedupe_sans_dossier_utilise_l_id() {
         let mut a = g("manual:1", "manual", "");
         a.install_dir = None;
@@ -206,7 +223,7 @@ mod reel {
         let games = super::scan_fast(&[]);
         println!("scan rapide : {} jeux en {} ms", games.len(), t.elapsed().as_millis());
         for g in &games {
-            println!("  {:<10} {:<40} {:?}", g.store, g.name, g.process_names);
+            println!("  {:<10} {:<40} {} {:?}", g.store, g.name, if g.not_installed { "[à installer]" } else { "" }, g.process_names);
         }
         let t = std::time::Instant::now();
         let xbox = super::scan_xbox(&games);

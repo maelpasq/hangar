@@ -12,7 +12,7 @@
 
   const MAX_FEATURED = 8;
 
-  const vis = $derived(library.visible);
+  const vis = $derived(library.installed);
   const played = $derived(
     vis
       .filter((g) => library.totals(g.id).lastPlayed > 0)

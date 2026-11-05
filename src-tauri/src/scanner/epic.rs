@@ -1,9 +1,12 @@
 //! Epic Games : `%PROGRAMDATA%\Epic\EpicGamesLauncher\Data\Manifests\*.item` (JSON).
+//! Jeux possédés non installés : catalogue local du launcher (`catcache.bin`).
 
 use crate::model::{uri, Game};
+use base64::Engine;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -84,6 +87,87 @@ pub fn detect() -> Vec<Game> {
     out
 }
 
+/// Emplacements possibles de `catcache.bin` (catalogue des produits du compte, JSON en base64).
+pub fn catcache_paths() -> Vec<PathBuf> {
+    if cfg!(target_os = "macos") {
+        return vec![super::mac_support().join("Epic/EpicGamesLauncher/Data/Catalog/catcache.bin")];
+    }
+    let mut paths = vec![super::program_data().join(r"Epic\EpicGamesLauncher\Data\Catalog\catcache.bin")];
+    if let Ok(l) = std::env::var("LOCALAPPDATA") {
+        paths.push(Path::new(&l).join(r"EpicGamesLauncher\Saved\Data\Catalog\catcache.bin"));
+    }
+    paths
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct CatPath {
+    path: String,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct CatRef {
+    id: String,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+struct CatRelease {
+    app_id: String,
+    platform: Vec<String>,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+struct CatItem {
+    id: String,
+    namespace: String,
+    title: String,
+    categories: Vec<CatPath>,
+    main_game_item: Option<CatRef>,
+    release_info: Vec<CatRelease>,
+}
+
+/// Jeux du catalogue local : catégorie « games », pas un DLC, disponibles sur ce système.
+pub fn parse_catalog_games(raw: &[u8]) -> Vec<Game> {
+    let clean: Vec<u8> = raw.iter().copied().filter(|c| !c.is_ascii_whitespace()).collect();
+    let Ok(json) = base64::engine::general_purpose::STANDARD.decode(&clean) else { return vec![] };
+    let Ok(items) = serde_json::from_slice::<Vec<CatItem>>(&json) else { return vec![] };
+    let platform = if cfg!(target_os = "macos") { "Mac" } else { "Windows" };
+    let mut seen = HashSet::new();
+    items
+        .into_iter()
+        .filter(|it| it.categories.iter().any(|c| c.path == "games"))
+        .filter(|it| it.main_game_item.as_ref().is_none_or(|m| m.id.is_empty()))
+        .filter_map(|it| {
+            let rel = it.release_info.iter().find(|r| r.platform.iter().any(|p| p == platform))?;
+            if it.title.is_empty() || rel.app_id.is_empty() || !seen.insert(rel.app_id.clone()) {
+                return None;
+            }
+            let mut g = Game::new(
+                format!("epic:{}", rel.app_id),
+                it.title.clone(),
+                "epic",
+                uri(format!("com.epicgames.launcher://apps/{}%3A{}%3A{}?action=install", it.namespace, it.id, rel.app_id)),
+            );
+            g.not_installed = true;
+            Some(g)
+        })
+        .collect()
+}
+
+/// Jeux du compte Epic (le scan retire ensuite ceux qui sont installés).
+pub fn owned() -> Vec<Game> {
+    for p in catcache_paths() {
+        if let Ok(raw) = fs::read(&p) {
+            return parse_catalog_games(&raw);
+        }
+    }
+    log::info!("Epic : pas de catalogue local");
+    vec![]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,6 +205,32 @@ mod tests {
         // Cas réel : les manifestes récents laissent MainGameAppName vide.
         let g = parse_manifest(&ITEM.replace("\"MainGameAppName\": \"Fortnite\"", "\"MainGameAppName\": \"\""));
         assert_eq!(g.unwrap().id, "epic:Fortnite");
+    }
+
+    #[test]
+    fn catalogue_des_jeux_possedes() {
+        let items = r#"[
+            { "id": "cid", "namespace": "calluna", "title": "Control",
+              "categories": [{ "path": "games" }, { "path": "applications" }],
+              "mainGameItem": { "namespace": "", "id": "" },
+              "releaseInfo": [{ "appId": "Calluna", "platform": ["Windows", "Mac"] }] },
+            { "id": "dlc", "namespace": "calluna", "title": "Control - DLC",
+              "categories": [{ "path": "games" }], "mainGameItem": { "id": "cid" },
+              "releaseInfo": [{ "appId": "CallunaDlc", "platform": ["Windows", "Mac"] }] },
+            { "id": "tm", "namespace": "poodle", "title": "Twinmotion",
+              "categories": [{ "path": "software" }],
+              "releaseInfo": [{ "appId": "Tw", "platform": ["Windows", "Mac"] }] },
+            { "id": "na", "namespace": "x", "title": "Sans release", "categories": [{ "path": "games" }] }
+        ]"#;
+        let raw = base64::engine::general_purpose::STANDARD.encode(items);
+        let games = parse_catalog_games(raw.as_bytes());
+        assert_eq!(games.len(), 1);
+        let g = &games[0];
+        assert_eq!(g.id, "epic:Calluna");
+        assert!(g.not_installed);
+        assert_eq!(g.launch.target, "com.epicgames.launcher://apps/calluna%3Acid%3ACalluna?action=install");
+        assert_eq!(crate::artwork::epic_ids(&g.launch.target), Some(("cid".into(), "Calluna".into())));
+        assert!(parse_catalog_games(b"pas du base64 !").is_empty());
     }
 
     #[test]
