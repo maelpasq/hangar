@@ -47,6 +47,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.2 - 5 novembre 2026
+**Mode manette corrigé** : Hangar ne se rouvre plus en plein écran après avoir été fermé ou quitté en mode manette, et une fenêtre restée à la taille de l'écran retrouve sa taille normale. Le curseur se cache quand tu joues à la manette et revient dès que la souris bouge. **Nouveau menu de l'icône** : un clic gauche sur l'icône Hangar de la zone de notification ouvre un petit menu avec tes jeux récents et leur jaquette, « Ouvrir Hangar » et « Quitter Hangar » (le clic droit garde le menu simple). Les jaquettes s'affichent dès le tout premier lancement.
+
 ### 1.2.1 - 5 novembre 2026
 **Mode manette** : Hangar en plein écran, à la manette ou au clavier (Start pour l'ouvrir, A pour jouer, LB / RB pour changer d'onglet). **Collections** : range tes jeux dans tes propres listes (clic droit > Collections), affichées dans la barre latérale, et filtre la bibliothèque par genre ou temps de jeu. **Zone de notification** : tes jeux récents à un clic de l'icône Hangar, la fenêtre s'y cache quand tu la fermes, et Ctrl+Alt+H l'affiche ou la cache. **Désinstaller** un jeu ouvre sa désinstallation dans son launcher. Sécurité renforcée : pop-ups et téléchargements bloqués dans les jeux web, chemins de fichiers limités aux jeux de la bibliothèque, images téléchargées seulement depuis les sites autorisés.
 
