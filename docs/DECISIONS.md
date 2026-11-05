@@ -154,3 +154,5 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Profil release : LTO `thin` au lieu de `fat` + `codegen-units = 1`. Mesuré en local sur le code de la 1.2.1 : recompiler Hangar passe de 79 s à 20 s ; l'exe passe de 7,3 à 8,2 Mo. `opt-level = "s"`, `strip` et `panic = "abort"` restent (petit téléchargement).
 - `build.yml` : un nouveau push annule le build en cours sur la même branche.
 - Numéro de version : toujours `patch` (+0.0.1), règle de l'utilisateur, voir `docs/RELEASES.md`.
+- macOS : la création du `.dmg` échoue parfois sur les Mac de GitHub (`hdiutil: couldn't eject - Resource busy`, Spotlight ou XProtect gardent l'image ouverte). `release.yml` coupe Spotlight et XProtect avant l'empaquetage et refait un essai sur macOS si le premier échoue (l'app est déjà compilée, seul l'empaquetage est refait). `build.yml` ne crée pas de `.dmg`.
+- Notes de chaque release GitHub : la section de sa version dans `docs/RELEASES.md`, puis la ligne de téléchargement.

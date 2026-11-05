@@ -47,13 +47,34 @@ jobs:
           notes=$(awk -v h="### $v " 'index($0, h) == 1 { f = 1; next } /^### / { f = 0 } f' docs/RELEASES.md | sed '/^$/d')
           {
             echo 'body<<FIN_DES_NOTES'
-            [ -n "$notes" ] && printf '%s
-
-' "$notes"
+            if [ -n "$notes" ]; then printf '%s\n\n' "$notes"; fi
             echo 'Télécharge **Hangar-Setup.exe** (Windows) ou le **.dmg** (macOS) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.'
             echo 'FIN_DES_NOTES'
           } >> "$GITHUB_OUTPUT"
-      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+      # macOS : la création du .dmg échoue parfois (« hdiutil: couldn't eject - Resource busy ») :
+      # Spotlight et XProtect gardent l'image disque ouverte. On les coupe, et on refait un essai.
+      - name: macOS, préparer hdiutil
+        if: runner.os == 'macOS'
+        run: |
+          sudo mdutil -a -i off || true
+          sudo pkill -9 XProtect || true
+      - id: build
+        continue-on-error: ${{ runner.os == 'macOS' }}
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Hangar ${{ github.ref_name }}
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: false
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+      # Second essai si le .dmg a échoué : l'app est déjà compilée, seul l'empaquetage est refait.
+      - name: macOS, nouvel essai
+        if: steps.build.outcome == 'failure'
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
