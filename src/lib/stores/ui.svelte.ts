@@ -2,7 +2,7 @@
 
 import type { StoreId } from '../types';
 
-export type Screen = 'home' | 'library' | 'game' | 'settings';
+export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
 
 export type Modal =
   | { kind: 'add' }
@@ -94,6 +94,10 @@ class Ui {
 
   settings(): void {
     this.go({ screen: 'settings' });
+  }
+
+  webGames(): void {
+    this.go({ screen: 'web' });
   }
 
   open(gameId: string): void {

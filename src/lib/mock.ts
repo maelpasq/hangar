@@ -270,6 +270,7 @@ export function mockApi(): Api {
       syncedNow();
     },
     openLink: async () => {},
+    openWebGame: async () => {},
     onAccountsSynced: async (cb) => {
       synced.add(cb);
       return () => synced.delete(cb);

@@ -109,3 +109,9 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 ## Launcher désinstallé
 
 - Les données d'un launcher restent sur le disque après sa désinstallation (surtout sous macOS : mettre l'app à la corbeille garde `~/Library/Application Support/Steam`). Hangar exige donc le client lui-même avant de lire ces données : `steam.exe` ou `Steam.app`, `Epic Games Launcher.app` (macOS), GOG Galaxy (registre ou `GOG Galaxy.app`), exécutable du Riot Client. Sinon le launcher est « Non trouvé » et ses jeux n'apparaissent pas.
+
+## Jeux web
+
+- Onglet « Jeux web » : catalogue fixe des jeux navigateur connus (.io et classiques), dans `src/lib/web-games.json`, lu aussi par Rust (`include_str!`). Le frontend n'envoie qu'un identifiant à `open_web_game`, jamais une URL.
+- Chaque jeu s'ouvre dans sa propre fenêtre Tauri (`web-<id>`), sans accès IPC (la capability ne vise que `main`), limitée au HTTPS. Pas d'iframe : la plupart de ces sites l'interdisent (`X-Frame-Options`). Pas de navigation privée, pour garder la progression et les réglages des jeux.
+- Réseau : le jeu n'est contacté que quand l'utilisateur clique dessus. Aucune image distante : les tuiles utilisent la jaquette générée (dégradé + nom).

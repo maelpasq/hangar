@@ -17,6 +17,7 @@
   import Home from './lib/screens/Home.svelte';
   import Library from './lib/screens/Library.svelte';
   import Settings from './lib/screens/Settings.svelte';
+  import WebGames from './lib/screens/WebGames.svelte';
   import { library } from './lib/stores/library.svelte';
   import { runner } from './lib/stores/runner.svelte';
   import { accounts } from './lib/stores/accounts.svelte';
@@ -139,6 +140,8 @@
         <Library />
       {:else if ui.screen === 'game' && game}
         <GamePage {game} />
+      {:else if ui.screen === 'web'}
+        <WebGames />
       {:else if ui.screen === 'settings'}
         <Settings />
       {/if}

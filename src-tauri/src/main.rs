@@ -13,6 +13,7 @@ mod scanner;
 mod size;
 mod state;
 mod tracker;
+mod webgames;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -117,6 +118,7 @@ fn main() {
             commands::connect_account,
             commands::disconnect_account,
             commands::open_link,
+            commands::open_web_game,
         ])
         .run(tauri::generate_context!())
         .expect("erreur au démarrage de Hangar");

@@ -118,6 +118,12 @@ pub async fn open_link(link: String) -> Result<(), String> {
     blocking(move || launcher::shell_open(url, "", None, "open")).await?
 }
 
+/// Asynchrone : créer une fenêtre depuis une commande synchrone peut bloquer sous Windows.
+#[tauri::command]
+pub async fn open_web_game(app: AppHandle, id: String) -> Result<(), String> {
+    crate::webgames::open(&app, &id)
+}
+
 #[tauri::command]
 pub fn load_state(ctx: Ctxs<'_>) -> serde_json::Value {
     let v = state::load_state(&ctx.paths.state_file());

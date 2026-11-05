@@ -54,6 +54,8 @@ export interface Api {
   disconnectAccount(store: StoreId): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key'): Promise<void>;
+  /** Ouvre un jeu du catalogue web-games.json dans sa propre fenêtre Hangar. */
+  openWebGame(id: string): Promise<void>;
   /** Les comptes ont été synchronisés : rescanner. */
   onAccountsSynced(cb: () => void): Promise<() => void>;
   appVersion(): Promise<string>;
@@ -148,6 +150,7 @@ async function tauriApi(): Promise<Api> {
     connectAccount: (store) => invoke('connect_account', { store }),
     disconnectAccount: (store) => invoke('disconnect_account', { store }),
     openLink: (link) => invoke('open_link', { link }),
+    openWebGame: (id) => invoke('open_web_game', { id }),
     onAccountsSynced: (cb) => on<null>('accounts://synced', () => cb()),
     appVersion: () => getVersion(),
     checkUpdate: async () => {
