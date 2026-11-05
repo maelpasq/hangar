@@ -8,3 +8,4 @@ src-tauri/gen/
 captures/
 .playwright-mcp/
 installer/tauri.conf.json
+*.log

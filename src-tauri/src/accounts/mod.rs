@@ -123,8 +123,16 @@ impl Http {
 
 // ─────────────────────────── Coffre du système ───────────────────────────
 
+/// Nom du coffre : « Hangar », ou « Hangar Test » dans l'environnement de test (jamais les
+/// comptes de l'app installée).
+static VAULT: std::sync::OnceLock<&'static str> = std::sync::OnceLock::new();
+
+pub fn set_vault(name: &'static str) {
+    let _ = VAULT.set(name);
+}
+
 fn entry(store: &str) -> Result<keyring::Entry, String> {
-    keyring::Entry::new("Hangar", &format!("compte-{store}"))
+    keyring::Entry::new(VAULT.get().copied().unwrap_or("Hangar"), &format!("compte-{store}"))
         .map_err(|_| "Le coffre d'identifiants du système est indisponible.".into())
 }
 

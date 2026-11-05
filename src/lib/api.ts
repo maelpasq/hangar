@@ -94,7 +94,7 @@ async function tauriApi(): Promise<Api> {
   const dialog = await import('@tauri-apps/plugin-dialog');
   const updater = await import('@tauri-apps/plugin-updater');
   const { relaunch } = await import('@tauri-apps/plugin-process');
-  const { getVersion } = await import('@tauri-apps/api/app');
+  const { getIdentifier, getVersion } = await import('@tauri-apps/api/app');
   let pending: Awaited<ReturnType<typeof updater.check>> = null;
   const w = getCurrentWindow();
 
@@ -179,6 +179,7 @@ async function tauriApi(): Promise<Api> {
     onAccountsSynced: (cb) => on<null>('accounts://synced', () => cb()),
     appVersion: () => getVersion(),
     checkUpdate: async () => {
+      if ((await getIdentifier()).endsWith('.test')) throw new Error("Mises à jour désactivées dans l'environnement de test.");
       pending = await updater.check();
       return pending ? { version: pending.version } : null;
     },

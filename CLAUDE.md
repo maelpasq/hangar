@@ -21,6 +21,8 @@ La source de la maquette est dans `design/reference/maquette-hangar.dc.html`. C'
 - **Aucune fenêtre console** ne doit s'ouvrir : chaque `Command` (PowerShell, etc.) utilise `CREATE_NO_WINDOW` (0x08000000).
 - **Pas de réseau inutile** : seules les sources d'images des jeux sont appelées, depuis le backend uniquement : CDN et recherche Steam (`*.steamstatic.com`, `store.steampowered.com/api/storesearch`), images Epic (`*.epicgames.com`), GOG (`api.gog.com`, `gamesdb.gog.com`, `*.gog-statics.com`), Microsoft Store (`displaycatalog.mp.microsoft.com`, `store-images.s-microsoft.com`) et SteamGridDB (`*.steamgriddb.com`, seulement si l'utilisateur a saisi sa clé). Les comptes que l'utilisateur connecte lui-même (Paramètres > Comptes des launchers) : `api.steampowered.com`, `auth.gog.com`, `embed.gog.com` et trois services Epic (`account-public-service-prod03`, `library-service.live.use1a`, `catalog-public-service-prod06` sur `.ol.epicgames.com` / `.on.epicgames.com`), liste fermée dans `src-tauri/src/accounts/mod.rs`. Les jeux de l'onglet Jeux web (`src/lib/web-games.json`), seulement quand l'utilisateur en lance un, dans leur propre fenêtre. Discord Rich Presence passe par l'IPC locale de l'app Discord (pas de réseau côté Hangar). Plus la mise à jour de Hangar : `latest.json` et les installeurs des releases GitHub (`github.com`, `objects.githubusercontent.com`). Pas de télémétrie. Les polices sont embarquées dans l'app (pas de Google Fonts au runtime).
 - **Robustesse de la détection** : un store absent, une clé de registre manquante ou un fichier corrompu ne doivent jamais faire planter le scan. Chaque détecteur renvoie une liste vide en cas d'erreur et journalise la raison.
+- **Ne jamais toucher à la Hangar installée de l'utilisateur** (`%LOCALAPPDATA%\Hangar`, ses données `studio.pamal.hangar`, ses comptes dans le coffre « Hangar »). C'est l'app qu'il télécharge et utilise. Pour tester dans la vraie app : `npm run dev`, qui tourne dans un environnement séparé (`src-tauri/tauri.test.conf.json` : identité `studio.pamal.hangar.test`, fenêtre « Hangar Test », coffre « Hangar Test », sans mise à jour automatique). Les deux apps tournent en même temps : ne jamais fermer, relancer ni modifier l'app installée pour un test. À la fin des tests : `npm run test-env:clean`.
+- **Le dépôt GitHub est public** : rien de personnel dans ce qui est commité ou poussé (chemins locaux avec le nom d'utilisateur, adresse e-mail, clés, jetons, journaux, captures avec des données privées). Vérifier le diff avant chaque push.
 - **Ne jamais supprimer de fichiers de l'utilisateur.** « Masquer » cache un jeu dans Hangar, rien de plus.
 - **Accessibilité** : vrais `<button>`, `<input>` avec `<label>`, `aria-label` sur les boutons-icônes, focus visible, navigation clavier, respect de `prefers-reduced-motion`.
 
@@ -28,7 +30,8 @@ La source de la maquette est dans `design/reference/maquette-hangar.dc.html`. C'
 
 ```bash
 npm install            # dépendances frontend + CLI Tauri
-npm run dev            # lance l'app en mode développement (Windows)
+npm run dev            # lance l'app dans l'environnement de test séparé (Hangar Test)
+npm run test-env:clean # supprime l'environnement de test (données, comptes, démarrage auto)
 npm run build          # exe + installeur NSIS dans src-tauri/target/release
 npm run check          # svelte-check + tsc
 npm run test           # tests frontend (vitest)

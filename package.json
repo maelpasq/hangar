@@ -5,7 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "tauri dev --config src-tauri/tauri.test.conf.json",
+    "test-env:clean": "node scripts/test-env.mjs",
     "dev:web": "vite",
     "build": "tauri build",
     "build:web": "vite build",

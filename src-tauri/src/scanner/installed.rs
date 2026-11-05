@@ -595,7 +595,7 @@ mod tests {
 
     #[test]
     fn noms_nettoyes() {
-        assert_eq!(clean_name("Roblox Player for Maël"), "Roblox Player");
+        assert_eq!(clean_name("Roblox Player for Alex"), "Roblox Player");
         assert_eq!(clean_name("BeamMP Launcher version 2.8.0"), "BeamMP Launcher");
         assert_eq!(clean_name("Pokeisland Launcher 0.1.31"), "Pokeisland Launcher");
         assert_eq!(clean_name("Uninstall Lunar Client"), "Lunar Client");
@@ -617,7 +617,7 @@ mod tests {
         assert_eq!(stable_dir(&a), root);
         // La clé de désinstallation déclare le dossier de version : même jeu que les raccourcis
         let reg = Candidate {
-            name: "Roblox Player for Maël".into(),
+            name: "Roblox Player for Alex".into(),
             exe: a.clone(),
             install_dir: Some(a.parent().unwrap().to_path_buf()),
             from_registry: true,

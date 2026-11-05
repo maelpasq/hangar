@@ -24,7 +24,12 @@ use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_window_state::StateFlags;
 
 fn main() {
-    tauri::Builder::default()
+    let context = tauri::generate_context!();
+    // Environnement de test (`npm run dev`, tauri.test.conf.json) : identité, dossiers, coffre et
+    // démarrage avec le système à part, sans mise à jour automatique (elle installerait la
+    // vraie version par-dessus l'app de l'utilisateur).
+    let test_env = context.config().identifier.ends_with(".test");
+    let builder = tauri::Builder::default()
         // Doit être enregistré en premier : une 2e instance ramène la fenêtre existante.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
@@ -60,7 +65,6 @@ fn main() {
                 .with_denylist(&["tray"])
                 .build(),
         )
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(desktop::shortcut_plugin())
         // Fermer la fenêtre principale la cache dans la zone de notification (si activé).
@@ -69,7 +73,17 @@ fn main() {
                 desktop::on_close_requested(w, api);
             }
         })
-        .setup(|app| {
+        ;
+    let builder = if test_env { builder } else { builder.plugin(tauri_plugin_updater::Builder::new().build()) };
+    builder
+        .setup(move |app| {
+            accounts::set_vault(if test_env { "Hangar Test" } else { "Hangar" });
+            if test_env {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.set_title("Hangar Test");
+                }
+                log::info!("environnement de test : données à part, mises à jour désactivées");
+            }
             let p = app.path();
             let config = p.app_config_dir()?;
             let paths = state::Paths {
@@ -80,6 +94,14 @@ fn main() {
             for d in [&paths.config, &paths.covers, &paths.cache] {
                 if let Err(e) = std::fs::create_dir_all(d) {
                     log::error!("dossier {} : {e}", d.display());
+                }
+            }
+            // La portée du protocole `asset:` est calculée avant la création de ces dossiers :
+            // au tout premier lancement elle ne les couvre pas (jaquettes vides jusqu'au
+            // redémarrage). On les autorise une fois créés.
+            for d in [&paths.covers, &paths.cache] {
+                if let Err(e) = app.asset_protocol_scope().allow_directory(d, true) {
+                    log::error!("images de {} : {e}", d.display());
                 }
             }
             let art = Arc::new(art::Art::new(&paths.cache));
@@ -143,7 +165,7 @@ fn main() {
             commands::tray_action,
             commands::set_presence,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("erreur au démarrage de Hangar")
         .run(|_app, _event| {
             // macOS : un clic sur l'icône du Dock rouvre la fenêtre cachée.

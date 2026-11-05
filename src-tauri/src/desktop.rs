@@ -183,7 +183,7 @@ pub fn run_action(app: &AppHandle, action: &str) {
 
 pub fn init_tray(app: &AppHandle) -> tauri::Result<()> {
     let mut b = TrayIconBuilder::with_id(TRAY_ID)
-        .tooltip("Hangar")
+        .tooltip(&app.package_info().name)
         .menu(&native_menu(app, &[])?)
         // Clic gauche : menu Hangar. Clic droit : menu natif (le même, en plus simple).
         .show_menu_on_left_click(false)
