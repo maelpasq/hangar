@@ -4,7 +4,7 @@
 
 **Tous tes jeux, un seul launcher.** Pour Windows 10/11 et macOS.
 
-Hangar trouve tout seul les jeux installés sur ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic.
+Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic. Les jeux que tu possèdes sans les avoir installés sont là aussi, prêts à installer.
 
 ### [⬇ Télécharger Hangar](https://github.com/maelpasq/hangar/releases/latest)
 
@@ -17,10 +17,14 @@ Hangar trouve tout seul les jeux installés sur ton ordinateur (Steam, Epic, GOG
 ## Ce que fait Hangar
 
 - **Détection automatique** de tous tes jeux, quel que soit le store, plus tes dossiers de jeux et les jeux que tu ajoutes à la main.
+- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; un clic ouvre leur installation dans le bon launcher. Relie tes comptes Steam, GOG ou Epic pour retrouver toute ta bibliothèque.
 - **Vraies jaquettes et bannières**, trouvées automatiquement (Steam, stores, SteamGridDB) et gardées en cache.
-- **Lancement en un clic**, via le launcher du jeu ou directement son exécutable.
+- **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. **Désinstaller** ouvre la désinstallation dans le launcher du jeu.
+- **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start pour l'ouvrir, A pour jouer).
 - **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
-- **Recherche instantanée** (`Ctrl K` / `⌘ K`), favoris, tri, filtres par store, jeux masqués, couleur d'accent.
+- **Collections et filtres** : range tes jeux dans tes propres listes et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
+- **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar.
+- **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
 - **Mises à jour intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour » apparaît dans Hangar.
 
 ![Bibliothèque](docs/images/bibliotheque.png)
@@ -62,7 +66,7 @@ Sans clé SteamGridDB, beaucoup de jeux (ceux qui ne sont pas sur Steam : Epic, 
 
 1. Crée un compte sur **[steamgriddb.com](https://www.steamgriddb.com)** (connexion avec Steam possible).
 2. Va dans **[Préférences > API](https://www.steamgriddb.com/profile/preferences/api)** et génère ta clé.
-3. Dans Hangar, ouvre **Paramètres**, colle la clé dans **Clé API SteamGridDB** puis clique sur **Enregistrer**.
+3. Dans Hangar, ouvre **Paramètres > Jaquettes**, colle la clé dans **Clé API SteamGridDB** puis clique sur **Enregistrer**.
 
 Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur ton ordinateur et n'est envoyée qu'à SteamGridDB.
 
@@ -82,9 +86,11 @@ Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur
 | Dossiers de jeux locaux | ✓ | ✓ |
 | Ajout manuel | ✓ | ✓ |
 
-Un jeu manque ? Ajoute son dossier dans **Paramètres > Dossiers de jeux locaux**, ou utilise **Ajouter un jeu** en bas de la barre latérale.
+Les jeux possédés mais pas installés viennent de Steam, Epic, GOG Galaxy et du Riot Client présents sur l'ordinateur, et des comptes que tu relies dans **Paramètres > Launchers** (Steam avec ta clé d'API Web, GOG et Epic par leur page de connexion officielle).
 
-Hangar ne supprime jamais rien : « Masquer » cache seulement un jeu dans Hangar. Il ne contacte que les sources d'images des jeux et GitHub pour les mises à jour, sans aucune télémétrie.
+Un jeu manque ? Ajoute son dossier dans **Paramètres > Bibliothèque > Dossiers de jeux locaux**, ou utilise **Ajouter un jeu** en bas de la barre latérale.
+
+Hangar ne supprime jamais rien : « Masquer » cache seulement un jeu dans Hangar, et « Désinstaller » passe la main au launcher du jeu.
 
 Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows et `~/Library/Application Support/studio.pamal.hangar` sous macOS.
 
@@ -93,9 +99,11 @@ Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pama
 Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne transfère d'information vers d'autres systèmes en réseau que pour les fonctions suivantes :
 
 - **Jaquettes et infos des jeux** : le nom ou l'identifiant d'un jeu est envoyé à Steam, Epic Games, GOG, au Microsoft Store et, si tu as saisi ta clé, à SteamGridDB, pour récupérer ses images et son genre.
+- **Comptes reliés** (seulement si tu en relies un) : Hangar demande la liste de tes jeux à Steam, GOG ou Epic Games, directement auprès de leurs serveurs.
+- **Jeux web** : le site d'un jeu n'est contacté que quand tu le lances, dans sa propre fenêtre.
 - **Mises à jour** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour ».
 
-Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur.
+Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS), jamais dans un fichier.
 
 ---
 
@@ -152,11 +160,13 @@ Le CI (`.github/workflows/build.yml`) relance tout ça sur Windows et macOS à c
 
 ### Publier une version (mainteneur)
 
+La procédure complète et l'historique des versions sont dans [`docs/RELEASES.md`](docs/RELEASES.md). En bref :
+
 ```bash
 npm version patch
 git push --follow-tags
 ```
 
-Le workflow `release.yml` construit l'installeur Windows et le `.dmg` macOS universel, les publie dans une release GitHub et génère `latest.json`, que lit le bouton « Mettre à jour ». Il a besoin du secret `TAURI_SIGNING_PRIVATE_KEY` (contenu de la clé privée de signature des mises à jour). Si cette clé est perdue, les versions installées ne peuvent plus se mettre à jour.
+Le workflow `release.yml` construit l'installeur Windows et le `.dmg` macOS universel, les publie dans une release GitHub et génère `latest.json`, que lit le bouton « Mettre à jour ». Il a besoin des secrets `TAURI_SIGNING_PRIVATE_KEY` (contenu de la clé privée de signature des mises à jour) et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Si cette clé est perdue, les versions installées ne peuvent plus se mettre à jour.
 
 La documentation du projet (spécification, design system, architecture, décisions) est dans [`docs/`](docs). Pour développer avec Claude Code, voir [`CLAUDE.md`](CLAUDE.md).
