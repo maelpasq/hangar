@@ -14,10 +14,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    rg -n '\x{2014}' --glob '!node_modules' --glob '!target' .
    ```
    La dernière commande ne doit rien afficher. `git status` doit être propre et la branche doit être `main`.
-2. **Choisir le numéro** (semver) :
-   - `patch` (1.2.0 -> 1.2.1) : corrections, petits ajustements ;
-   - `minor` (1.2.0 -> 1.3.0) : nouvelle fonctionnalité visible ;
-   - `major` (1.2.0 -> 2.0.0) : refonte ou rupture.
+2. **Le numéro** : toujours `patch`, règle fixée par l'utilisateur. Chaque version ajoute 0.0.1 au dernier chiffre (1.2.1 -> 1.2.2 -> 1.2.3...), petite correction comme grosse nouveauté. Jamais `minor` ni `major`, même pour une grosse mise à jour.
 3. **Ajouter l'entrée de la version** en haut de « Historique » ci-dessous (numéro, date, description pour les utilisateurs), puis committer :
    ```bash
    git commit -am "Versions : notes de la 1.2.1"
@@ -26,7 +23,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```bash
    npm version patch -m $'Version %s\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
    ```
-   Remplace `patch` par `minor` ou `major` selon l'étape 2. Sous PowerShell, la syntaxe `$'...'` ne marche pas : lance la commande avec l'outil Bash.
+   Toujours `patch` (étape 2). Sous PowerShell, la syntaxe `$'...'` ne marche pas : lance la commande avec l'outil Bash.
 5. **Pousser** le commit et le tag :
    ```bash
    git push --follow-tags origin main

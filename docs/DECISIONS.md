@@ -146,3 +146,11 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Riot : les noms de dossier lus dans `Metadata` (passés en arguments au Riot Client) limités à `[a-z0-9_-]`.
 - CI : actions GitHub épinglées par commit (elles voient la clé de signature des mises à jour), `npm ci` (lockfile respecté), `persist-credentials: false`, `build.yml` en lecture seule.
 - Dépendances : `cargo audit` sans vulnérabilité (avertissements « non maintenu » sur des crates Linux seulement) ; `npm audit` : rien dans ce qui est livré, 2 alertes faibles dans les outils de développement.
+
+## Durée des builds et des releases
+
+- Mesure (release 1.2.0) : macOS 22 min, presque tout dans la compilation Rust (deux architectures, sans cache, Mac Intel) ; Windows 11 min (app 6,5 min, installeur Hangar 4 min).
+- Cache Rust (`Swatinem/rust-cache`, clé partagée `release`) : `build.yml` l'enregistre sur `main`, `release.yml` le relit (un tag peut lire le cache de la branche par défaut). Pour qu'il serve tel quel, `build.yml` compile macOS en universel comme la release. Seul le code de Hangar est recompilé à une release. Cache npm de `setup-node` en plus.
+- Profil release : LTO `thin` au lieu de `fat` + `codegen-units = 1`. Mesuré en local sur le code de la 1.2.1 : recompiler Hangar passe de 79 s à 20 s ; l'exe passe de 7,3 à 8,2 Mo. `opt-level = "s"`, `strip` et `panic = "abort"` restent (petit téléchargement).
+- `build.yml` : un nouveau push annule le build en cours sur la même branche.
+- Numéro de version : toujours `patch` (+0.0.1), règle de l'utilisateur, voir `docs/RELEASES.md`.
