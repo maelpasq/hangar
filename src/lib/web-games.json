@@ -24,7 +24,6 @@
   {"id": "shellshock", "name": "Shell Shockers", "genre": "Tir", "url": "https://shellshock.io", "desc": "FPS où tout le monde est un œuf."},
   {"id": "venge", "name": "Venge.io", "genre": "Tir", "url": "https://venge.io", "desc": "FPS rapide avec des cartes à capturer."},
   {"id": "narrow", "name": "Narrow One", "genre": "Tir", "url": "https://narrow.one", "desc": "Capture du drapeau à l'arc."},
-  {"id": "1v1lol", "name": "1v1.LOL", "genre": "Tir", "url": "https://1v1.lol", "desc": "Tir et construction en duel."},
   {"id": "survev", "name": "Survev.io", "genre": "Battle royale", "url": "https://survev.io", "desc": "Battle royale en vue de dessus."},
   {"id": "zombs", "name": "ZombsRoyale.io", "genre": "Battle royale", "url": "https://zombsroyale.io", "desc": "Battle royale en 2D à 100 joueurs."},
   {"id": "moomoo", "name": "MooMoo.io", "genre": "Survie", "url": "https://moomoo.io", "desc": "Récolte, construis ta base et défends-la."},

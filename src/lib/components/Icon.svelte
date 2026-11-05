@@ -24,7 +24,16 @@
     | 'monitor'
     | 'upload'
     | 'download'
-    | 'globe';
+    | 'globe'
+    | 'flag'
+    | 'target'
+    | 'crosshair'
+    | 'crown'
+    | 'flame'
+    | 'cube'
+    | 'bolt'
+    | 'users'
+    | 'bulb';
 </script>
 
 <script lang="ts">
@@ -113,5 +122,23 @@
     <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
   {:else if name === 'globe'}
     <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+  {:else if name === 'flag'}
+    <path d="M5 21V4h11l-2 4 2 4H5" />
+  {:else if name === 'target'}
+    <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" />
+  {:else if name === 'crosshair'}
+    <circle cx="12" cy="12" r="8" /><path d="M12 2v5M12 17v5M2 12h5M17 12h5" />
+  {:else if name === 'crown'}
+    <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" />
+  {:else if name === 'flame'}
+    <path d="M12 3s5 5 5 10a5 5 0 0 1-10 0c0-2 1-4 2-5 0 2 1 3 2 3 0-3 1-6 1-8z" />
+  {:else if name === 'cube'}
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9" />
+  {:else if name === 'bolt'}
+    <path d="M13 3 5 14h6l-1 7 8-11h-6z" />
+  {:else if name === 'users'}
+    <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6" />
+  {:else if name === 'bulb'}
+    <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" />
   {/if}
 </svg>

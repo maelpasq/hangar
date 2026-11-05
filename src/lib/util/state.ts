@@ -12,6 +12,7 @@ export function defaultState(): PersistedState {
     customCovers: {},
     steamIdCache: {},
     firstSeen: {},
+    webPlayed: {},
     totals: {},
     sessions: [],
     localFolders: [],
@@ -53,6 +54,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   s.customCovers = strMap(raw.customCovers);
   s.steamIdCache = numMap(raw.steamIdCache);
   s.firstSeen = numMap(raw.firstSeen);
+  s.webPlayed = numMap(raw.webPlayed);
   s.localFolders = strArr(raw.localFolders);
   s.disabledStores = strArr(raw.disabledStores).filter((x): x is StoreId => STORE_ORDER.includes(x as StoreId));
   if (typeof raw.accent === 'string' && /^#[0-9a-f]{6}$/i.test(raw.accent)) s.accent = raw.accent;

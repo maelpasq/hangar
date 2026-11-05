@@ -81,6 +81,8 @@ export interface PersistedState {
   /** gameId -> appid Steam (0 = introuvable) */
   steamIdCache: Record<string, number>;
   firstSeen: Record<string, number>;
+  /** id du jeu web (web-games.json) -> dernier lancement */
+  webPlayed: Record<string, number>;
   totals: Record<string, Totals>;
   sessions: Session[];
   localFolders: string[];
