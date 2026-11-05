@@ -113,7 +113,7 @@ Navigation par section à gauche (Général, Apparence, Launchers, Bibliothèque
 - **Couleur d'accent** : 5 pastilles (Violet `#7c6cff`, Cyan `#22b8f0`, Corail `#f2556b`, Vert `#22c55e`, Ambre `#f59e0b`). Le changement s'applique instantanément partout.
 - **Comportement** : « Réduire Hangar au lancement d'un jeu », « Démarrer avec Windows » (plugin autostart), « Jaquettes automatiques » (recherche Steam pour les jeux hors Steam).
 - **Tags des stores** : dans « Stores détectés », chaque launcher porte « Connecté » (compte relié), « Détecté » (launcher ou jeux trouvés sur l'appareil) ou « Non trouvé ».
-- **Comptes des launchers** : facultatifs, pour récupérer tous les jeux du compte (onglet « À installer ») même ceux que les fichiers locaux ne montrent pas.
+- **Launchers et comptes** (comptes facultatifs) : pour récupérer tous les jeux du compte (onglet « À installer ») même ceux que les fichiers locaux ne montrent pas.
   - Steam : l'utilisateur colle sa clé d'API Web personnelle (bouton « Créer ma clé » vers steamcommunity.com/dev/apikey). Le compte est celui de `loginusers.vdf`. API officielle `GetOwnedGames` : jeux et temps de jeu.
   - GOG et Epic : « Se connecter » ouvre la page de connexion officielle dans une fenêtre à part ; Hangar récupère un jeton, jamais le mot de passe.
   - Chaque compte connecté affiche le pseudo, le nombre de jeux, la date de synchro ou l'erreur, et « Déconnecter » (efface le jeton). Synchro à la connexion puis au plus toutes les 6 h, en arrière-plan.

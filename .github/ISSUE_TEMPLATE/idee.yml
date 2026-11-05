@@ -1,0 +1,16 @@
+name: Idée
+description: Proposer une amélioration ou une nouvelle fonction.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Le besoin
+      description: Ce que tu voudrais pouvoir faire, et pourquoi.
+    validations:
+      required: true
+  - type: textarea
+    id: proposition
+    attributes:
+      label: Ce que tu imagines
+      description: Comment ça pourrait marcher dans Hangar (facultatif).

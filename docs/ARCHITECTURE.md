@@ -147,7 +147,7 @@ interface PersistedState {
 ## 5. Points techniques importants
 
 ### Heuristique d'exécutable principal (`exe.rs`)
-Reprendre `best_exe` de `scanner.rs` : exes jusqu'à 4 niveaux, liste d'exclusions (unins, setup, redist, crash, helper, anticheat...), dossiers ignorés (`_CommonRedist`, `__Installer`, `Engine`...), score = launcher au niveau 0-1 (+60), nom proche du dossier (+45), suffixe `Shipping`/`Win64` (+15), profondeur (-8 par niveau), taille (+1 par 20 Mo, max 30). Ajouter des tests unitaires avec une arborescence temporaire.
+`best_exe` (`scanner/exe.rs`) : exes jusqu'à 4 niveaux, liste d'exclusions (unins, setup, redist, crash, helper, anticheat...), dossiers ignorés (`_CommonRedist`, `__Installer`, `Engine`...), score = launcher au niveau 0-1 (+60), nom proche du dossier (+45), suffixe `Shipping`/`Win64` (+15), profondeur (-8 par niveau), taille (+1 par 20 Mo, max 30). Testé avec une arborescence temporaire.
 
 ### Suivi des processus (`tracker.rs`)
 - Après un lancement, interroger `sysinfo` toutes les 2 s pendant 90 s max pour trouver un processus dont l'exe est dans `installDir` (comparaison de chemins insensible à la casse) ou dont le nom est dans `processNames`. Les processus des launchers (steam.exe, EpicGamesLauncher.exe, Battle.net.exe, RiotClientServices.exe, GalaxyClient.exe, upc.exe, EADesktop.exe) sont ignorés.
@@ -169,7 +169,7 @@ Reprendre `best_exe` de `scanner.rs` : exes jusqu'à 4 niveaux, liste d'exclusio
 - La lumière d'ambiance est une seule image (240 px de large suffit) floutée par CSS.
 
 ### Mode web de démo
-`npm run dev:web` lance Vite seul ; `api.ts` détecte l'absence de `window.__TAURI_INTERNALS__` et utilise `mock.ts` : 36 jeux de démo (ceux de la maquette, avec leurs appid Steam), sessions et favoris fictifs, lancement simulé (événements émis avec des délais). Images : URL du CDN Steam directement.
+`npm run dev:web` lance Vite seul ; `api.ts` détecte l'absence de `window.__TAURI_INTERNALS__` et utilise `mock.ts` : 40 jeux de démo (ceux de la maquette avec leurs appid Steam, dont 4 à installer), sessions et favoris fictifs, lancement simulé (événements émis avec des délais). Images : URL du CDN Steam directement.
 
 ### Sécurité
 - CSP stricte : `default-src 'self'; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost`.

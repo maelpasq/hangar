@@ -12,7 +12,7 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 
 </div>
 
-![Accueil de Hangar](docs/images/accueil.png)
+![Accueil de Hangar](docs/images/accueil.webp)
 
 ## Ce que fait Hangar
 
@@ -27,11 +27,11 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 - **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
 - **Mises à jour intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour » apparaît dans Hangar.
 
-![Bibliothèque](docs/images/bibliotheque.png)
+![Bibliothèque](docs/images/bibliotheque.webp)
 
-![Page d'un jeu](docs/images/jeu.png)
+![Page d'un jeu](docs/images/jeu.webp)
 
-![Jeux web](docs/images/jeux-web.png)
+![Jeux web](docs/images/jeux-web.webp)
 
 ## Installer
 
@@ -107,6 +107,10 @@ Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne
 
 Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS), jamais dans un fichier.
 
+## Contribuer
+
+Un bug ou une idée : ouvre une [issue](https://github.com/maelpasq/hangar/issues/new/choose). Pour participer au code, lis [CONTRIBUTING.md](CONTRIBUTING.md). Une faille de sécurité se signale en privé, voir [SECURITY.md](SECURITY.md).
+
 ---
 
 ## Pour les développeurs
@@ -128,7 +132,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` ouvre l'app avec rechargement à chaud. Pour travailler sur l'interface seule dans un navigateur, avec 36 jeux de démo :
+`npm run dev` ouvre l'app avec rechargement à chaud, dans un environnement de test séparé (« Hangar Test ») : il ne touche ni à une Hangar déjà installée, ni à ses données ou ses comptes. `npm run test-env:clean` le supprime. Pour travailler sur l'interface seule dans un navigateur, avec 40 jeux de démo (dont 4 à installer) :
 
 ```bash
 npm run dev:web

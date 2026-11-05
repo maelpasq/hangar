@@ -19,7 +19,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```bash
    git commit -am "Versions : notes de la 1.2.1"
    ```
-4. **Monter la version et créer le tag** (le numéro vient de `package.json`, `tauri.conf.json` le lit) :
+4. **Monter la version et créer le tag** (le numéro vient de `package.json`, `tauri.conf.json` le lit ; le script `version` le recopie dans les `Cargo.toml` et `Cargo.lock`) :
    ```bash
    npm version patch -m $'Version %s\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
    ```
