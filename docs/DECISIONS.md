@@ -105,3 +105,7 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - GOG et Epic n'ont pas d'API publique pour les apps tierces : Hangar utilise les identifiants publics des clients GOG Galaxy et Epic Games Launcher, comme Heroic, Legendary et lgogdownloader. Ce ne sont pas des secrets de Hangar, mais c'est hors des conditions de ces services et ça peut cesser de marcher. Steam passe par l'API officielle avec la clé de l'utilisateur (Hangar n'embarque pas de clé).
 - La déconnexion efface le jeton local, sans révocation côté service.
 - Non retenus : Ubisoft et EA (API non officielles, mot de passe à faire transiter), Battle.net (aucune API de jeux possédés), Xbox (il faudrait enregistrer une app Hangar chez Microsoft, à faire par le mainteneur ; l'API ne liste que les jeux lancés).
+
+## Launcher désinstallé
+
+- Les données d'un launcher restent sur le disque après sa désinstallation (surtout sous macOS : mettre l'app à la corbeille garde `~/Library/Application Support/Steam`). Hangar exige donc le client lui-même avant de lire ces données : `steam.exe` ou `Steam.app`, `Epic Games Launcher.app` (macOS), GOG Galaxy (registre ou `GOG Galaxy.app`), exécutable du Riot Client. Sinon le launcher est « Non trouvé » et ses jeux n'apparaissent pas.
