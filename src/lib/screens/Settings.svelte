@@ -14,12 +14,37 @@
   import { plural } from '../util/format';
   import { isMac } from '../util/platform';
   import { updater } from '../stores/update.svelte';
+  import { accounts } from '../stores/accounts.svelte';
+  import { relativeDay } from '../util/format';
+  import type { AccountStatus, StoreId } from '../types';
 
   let version = $state('');
   api.appVersion().then(
     (v) => (version = v),
     () => {}
   );
+
+  void accounts.refresh();
+  let steamKey = $state('');
+
+  /** Tag d'un store : Connecté, Détecté (launcher ou jeux trouvés), Non trouvé. */
+  function tag(s: StoreId): { label: string; kind: 'conn' | 'ok' | 'off' } | null {
+    if (s === 'local' || s === 'manual') return null;
+    const a = accounts.byStore.get(s);
+    if (a?.connected) return { label: 'Connecté', kind: 'conn' };
+    if (a?.detected || (library.countsAll[s] ?? 0) > 0) return { label: 'Détecté', kind: 'ok' };
+    return { label: 'Non trouvé', kind: 'off' };
+  }
+
+  async function connectSteam(e: Event) {
+    e.preventDefault();
+    if (await accounts.connectSteam(steamKey)) steamKey = '';
+  }
+
+  const loginStores: { store: StoreId; desc: string }[] = [
+    { store: 'gog', desc: 'Tous tes jeux GOG, même sans GOG Galaxy' },
+    { store: 'epic', desc: 'Toute ta bibliothèque Epic, à jour' }
+  ];
 
   const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
   const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
@@ -153,6 +178,7 @@
           <div class="line">
             <StoreLogo store={s} size={16} />
             <span class="grow">{STORES[s].label}</span>
+            {#if tag(s)}{@const t = tag(s)!}<span class="tag {t.kind}">{t.label}</span>{/if}
             <span class="meta">{plural(library.countsAll[s] ?? 0, 'jeu', 'jeux')}</span>
             <Toggle {on} label="Activer {STORES[s].label}" onchange={(v) => library.setStoreEnabled(s, v)} />
           </div>
@@ -210,6 +236,86 @@
         {/each}
       </section>
     </div>
+  </div>
+
+  {#snippet linked(a: AccountStatus)}
+    <div class="line acc">
+      <StoreLogo store={a.store} size={16} />
+      <span class="grow txt">
+        <span class="ell">{STORES[a.store].label}{a.user ? ` · ${a.user}` : ''}</span>
+        {#if a.error}
+          <span class="meta err">{a.error}</span>
+        {:else}
+          <span class="meta"
+            >{plural(a.games, 'jeu', 'jeux')}{a.syncedAt ? ` · synchronisé ${relativeDay(a.syncedAt).toLowerCase()}` : ''}</span
+          >
+        {/if}
+      </span>
+      <span class="tag conn">Connecté</span>
+      <button class="chip-btn" onclick={() => accounts.disconnect(a.store)}>Déconnecter</button>
+    </div>
+  {/snippet}
+
+  <h2 class="group">Comptes des launchers</h2>
+  <div class="grid">
+    <section class="card-section">
+      <h3>Steam</h3>
+      <p class="desc">Tous tes jeux Steam et ton temps de jeu, même ceux jamais affichés sur cet appareil.</p>
+      {#if accounts.byStore.get('steam')?.connected}
+        {@render linked(accounts.byStore.get('steam')!)}
+      {:else}
+        <form class="gridkey" onsubmit={connectSteam}>
+          <label class="field" for="steam-key">
+            <span class="txt"
+              ><span class="lbl">Clé d'API Web Steam</span><span class="meta"
+                >Crée ta clé personnelle sur Steam (nom de domaine : « localhost »), puis colle-la ici. Elle est
+                gardée dans le coffre de {isMac ? 'macOS' : 'Windows'}, jamais dans les fichiers de Hangar.</span
+              ></span
+            >
+          </label>
+          <div class="keyrow">
+            <input
+              id="steam-key"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="64"
+              placeholder="32 caractères"
+              bind:value={steamKey}
+            />
+            <button type="button" class="chip-btn" onclick={() => api.openLink('steam-api-key').catch(() => {})}
+              >Créer ma clé</button
+            >
+            <button type="submit" class="chip-btn primary" disabled={!steamKey.trim() || !!accounts.busy}
+              >{accounts.busy === 'steam' ? 'Vérification...' : 'Connecter'}</button
+            >
+          </div>
+        </form>
+      {/if}
+    </section>
+
+    <section class="card-section">
+      <h3>GOG et Epic Games</h3>
+      <p class="desc">Connexion sur la page officielle du launcher : Hangar ne voit jamais ton mot de passe.</p>
+      {#each loginStores as l (l.store)}
+        {@const a = accounts.byStore.get(l.store)}
+        {#if a?.connected}
+          {@render linked(a)}
+        {:else}
+          <div class="line acc">
+            <StoreLogo store={l.store} size={16} />
+            <span class="grow txt"><span>{STORES[l.store].label}</span><span class="meta">{l.desc}</span></span>
+            <button class="chip-btn primary" disabled={!!accounts.busy} onclick={() => accounts.connect(l.store)}
+              >{accounts.busy === l.store ? 'Connexion...' : 'Se connecter'}</button
+            >
+          </div>
+        {/if}
+      {/each}
+      <p class="note">
+        Ubisoft Connect, EA app, Battle.net et Xbox n'offrent pas de connexion sûre aux apps tierces : Hangar y lit
+        seulement les jeux présents sur l'appareil.
+      </p>
+    </section>
   </div>
 
   <h2 class="group">Lancement et jaquettes</h2>
@@ -377,6 +483,54 @@
   .keyrow input:focus {
     border-color: color-mix(in srgb, var(--accent) 60%, transparent);
     box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+
+  .tag {
+    flex-shrink: 0;
+    height: 22px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .tag.conn {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .tag.ok {
+    background: rgba(46, 204, 113, 0.14);
+    color: #3fcf7f;
+  }
+
+  .tag.off {
+    background: rgb(var(--ink) / 0.05);
+    color: var(--muted);
+  }
+
+  .acc .txt {
+    min-width: 0;
+  }
+
+  .acc .meta {
+    white-space: normal;
+  }
+
+  .meta.err {
+    color: #ff6b6b;
+  }
+
+  .note {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-1);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
   }
 
   .chip-btn.primary {

@@ -46,7 +46,7 @@ const STEAM_IGNORED: &[&str] = &[
     "steamvr", "wallpaper engine", "soundtrack", "dedicated server", "sdk",
 ];
 
-fn ignored(name: &str) -> bool {
+pub fn ignored(name: &str) -> bool {
     let lname = name.to_lowercase();
     STEAM_IGNORED.iter().any(|s| lname.contains(s))
 }

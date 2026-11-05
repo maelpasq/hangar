@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { Artwork, Game, LaunchEvent, PersistedState, Session, SteamHit } from './types';
+import type { AccountStatus, Artwork, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -46,6 +46,16 @@ export interface Api {
   pickImage(): Promise<string | null>;
   onLaunch(cb: (e: LaunchEvent) => void): Promise<() => void>;
   onScanPartial(cb: (games: Game[]) => void): Promise<() => void>;
+  accountsStatus(): Promise<AccountStatus[]>;
+  /** Clé d'API Web Steam de l'utilisateur ; renvoie le nombre de jeux trouvés. */
+  connectSteam(key: string): Promise<number>;
+  /** Connexion GOG / Epic dans une fenêtre officielle ; renvoie le nombre de jeux trouvés. */
+  connectAccount(store: StoreId): Promise<number>;
+  disconnectAccount(store: StoreId): Promise<void>;
+  /** Page d'aide connue (liste fermée côté backend). */
+  openLink(link: 'steam-api-key'): Promise<void>;
+  /** Les comptes ont été synchronisés : rescanner. */
+  onAccountsSynced(cb: () => void): Promise<() => void>;
   appVersion(): Promise<string>;
   /** Nouvelle version publiée sur GitHub, ou null si Hangar est à jour. */
   checkUpdate(): Promise<{ version: string } | null>;
@@ -133,6 +143,12 @@ async function tauriApi(): Promise<Api> {
       return () => offs.forEach((o) => o());
     },
     onScanPartial: (cb) => on<Game[]>('scan://partial', cb),
+    accountsStatus: () => invoke('accounts_status'),
+    connectSteam: (key) => invoke('connect_steam', { key }),
+    connectAccount: (store) => invoke('connect_account', { store }),
+    disconnectAccount: (store) => invoke('disconnect_account', { store }),
+    openLink: (link) => invoke('open_link', { link }),
+    onAccountsSynced: (cb) => on<null>('accounts://synced', () => cb()),
     appVersion: () => getVersion(),
     checkUpdate: async () => {
       pending = await updater.check();

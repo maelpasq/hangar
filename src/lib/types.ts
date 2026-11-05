@@ -99,6 +99,18 @@ export interface Artwork {
   source: string;
 }
 
+/** État d'un launcher : détecté sur l'appareil, compte connecté (jamais de jeton côté frontend). */
+export interface AccountStatus {
+  store: StoreId;
+  detected: boolean;
+  connectable: boolean;
+  connected: boolean;
+  user?: string | null;
+  games: number;
+  syncedAt?: number | null;
+  error?: string | null;
+}
+
 export interface SteamHit {
   id: number;
   name: string;

@@ -120,7 +120,7 @@ struct CatRelease {
 
 #[derive(Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
-struct CatItem {
+pub struct CatItem {
     id: String,
     namespace: String,
     title: String,
@@ -134,6 +134,11 @@ pub fn parse_catalog_games(raw: &[u8]) -> Vec<Game> {
     let clean: Vec<u8> = raw.iter().copied().filter(|c| !c.is_ascii_whitespace()).collect();
     let Ok(json) = base64::engine::general_purpose::STANDARD.decode(&clean) else { return vec![] };
     let Ok(items) = serde_json::from_slice::<Vec<CatItem>>(&json) else { return vec![] };
+    games_from_items(items)
+}
+
+/// Entrées du catalogue Epic (local ou API) -> jeux à installer.
+pub fn games_from_items(items: Vec<CatItem>) -> Vec<Game> {
     let platform = if cfg!(target_os = "macos") { "Mac" } else { "Windows" };
     let mut seen = HashSet::new();
     items
@@ -142,7 +147,9 @@ pub fn parse_catalog_games(raw: &[u8]) -> Vec<Game> {
         .filter(|it| it.main_game_item.as_ref().is_none_or(|m| m.id.is_empty()))
         .filter_map(|it| {
             let rel = it.release_info.iter().find(|r| r.platform.iter().any(|p| p == platform))?;
-            if it.title.is_empty() || rel.app_id.is_empty() || !seen.insert(rel.app_id.clone()) {
+            // Identifiants placés dans l'URI du launcher : rien d'autre qu'alphanumérique, - et _.
+            let safe = [&it.namespace, &it.id, &rel.app_id].iter().all(|x| crate::accounts::safe_id(x, 128));
+            if it.title.is_empty() || !safe || !seen.insert(rel.app_id.clone()) {
                 return None;
             }
             let mut g = Game::new(

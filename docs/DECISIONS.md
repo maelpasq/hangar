@@ -92,3 +92,16 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Un jeu non installé garde l'id de sa version installée (`steam:<appid>`, `epic:<appName>`, `gog:<id>`, `riot:<produit>`) : le scan retire le doublon et garde la version installée, favoris et renommages suivent.
 - `Game.notInstalled` (défaut `false`, compatible avec l'ancien cache). Commande `install_game` séparée de `launch_game` : pas de suivi de processus ni de lancement compté.
 - Après une installation demandée, Hangar rescanne quand sa fenêtre reprend le focus (au plus toutes les 30 s), jusqu'à voir le jeu installé.
+
+## Comptes des launchers
+
+- Connexion facultative de Steam, GOG et Epic (Paramètres > Comptes des launchers) pour la liste complète des jeux possédés. Les jeux trouvés s'ajoutent au scan (même id = même jeu, l'installé gagne) et vont dans « À installer ».
+- Sécurité, puisque le code est public :
+  - Clés et jetons de rafraîchissement dans le coffre du système (crate `keyring` : Gestionnaire d'identification Windows, Trousseau macOS). Jamais dans `state.json`, `accounts.json`, les logs ni le frontend. `accounts.json` ne garde que la liste des jeux, le pseudo et la date de synchro.
+  - Client HTTP dédié : HTTPS, liste fermée d'hôtes, aucune redirection suivie (un jeton ne part jamais ailleurs), messages d'erreur sans URL. Journaux de débogage de `ureq` et `rustls` coupés (ils contiennent les URL, donc la clé Steam).
+  - Connexion GOG / Epic dans une fenêtre Tauri séparée, sans aucune permission (la capability ne vise que `main`), en navigation privée, limitée au HTTPS. Le code d'autorisation est intercepté à la navigation côté Rust. Pour Epic, la page de retour affiche le code en JSON : un script vérifie l'origine puis navigue vers `https://hangar.invalid/epic?code=...`, adresse réservée que Rust intercepte et annule. La page n'a jamais d'accès IPC.
+  - Les identifiants venus des API (namespace, catalogItemId, appName, codes) sont validés (alphanumérique, `-`, `_`) avant d'entrer dans une URL ou une URI de launcher.
+  - Liens d'aide via `open_link` et une liste fermée, pas d'ouverture d'URL libre depuis le frontend.
+- GOG et Epic n'ont pas d'API publique pour les apps tierces : Hangar utilise les identifiants publics des clients GOG Galaxy et Epic Games Launcher, comme Heroic, Legendary et lgogdownloader. Ce ne sont pas des secrets de Hangar, mais c'est hors des conditions de ces services et ça peut cesser de marcher. Steam passe par l'API officielle avec la clé de l'utilisateur (Hangar n'embarque pas de clé).
+- La déconnexion efface le jeton local, sans révocation côté service.
+- Non retenus : Ubisoft et EA (API non officielles, mot de passe à faire transiter), Battle.net (aucune API de jeux possédés), Xbox (il faudrait enregistrer une app Hangar chez Microsoft, à faire par le mainteneur ; l'API ne liste que les jeux lancés).

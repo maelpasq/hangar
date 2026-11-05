@@ -2,6 +2,7 @@
 // Hors Windows, les parseurs des stores Windows restent compilés (et testés) sans être appelés.
 #![cfg_attr(not(windows), allow(dead_code))]
 
+mod accounts;
 mod art;
 mod artwork;
 mod commands;
@@ -36,6 +37,9 @@ fn main() {
                     Target::new(TargetKind::Stdout),
                 ])
                 .level(log::LevelFilter::Info)
+                // Les journaux de débogage du client HTTP contiennent les URL (clé Steam) : jamais écrits.
+                .level_for("ureq", log::LevelFilter::Warn)
+                .level_for("rustls", log::LevelFilter::Warn)
                 .max_file_size(2_000_000)
                 .build(),
         )
@@ -75,6 +79,7 @@ fn main() {
                 tracker: tracker::Tracker::start(app.handle().clone()),
                 known: state::Known::default(),
                 xbox_busy: Arc::new(AtomicBool::new(false)),
+                accounts: Arc::new(accounts::Accounts::new(&paths.config)),
                 paths,
             };
             app.manage(ctx);
@@ -107,6 +112,11 @@ fn main() {
             commands::folder_size,
             commands::set_autostart,
             commands::import_cover,
+            commands::accounts_status,
+            commands::connect_steam,
+            commands::connect_account,
+            commands::disconnect_account,
+            commands::open_link,
         ])
         .run(tauri::generate_context!())
         .expect("erreur au démarrage de Hangar");

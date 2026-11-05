@@ -52,6 +52,26 @@ pub fn native_sep(s: &str) -> String {
     }
 }
 
+/// Le launcher d'un store est-il présent sur cet appareil ? (tag « Détecté » des Paramètres)
+pub fn launcher_present(store: &str) -> bool {
+    let pd = program_data();
+    let local = PathBuf::from(std::env::var("LOCALAPPDATA").unwrap_or_default());
+    let mac = cfg!(target_os = "macos");
+    match store {
+        "steam" => steam::steam_root().is_some(),
+        "epic" if mac => mac_support().join("Epic").is_dir(),
+        "epic" => pd.join("Epic").join("EpicGamesLauncher").is_dir(),
+        "gog" => pd.join("GOG.com").join("Galaxy").is_dir(),
+        "riot" => pd.join("Riot Games").join("RiotClientInstalls.json").is_file(),
+        _ if mac => false,
+        "ubisoft" => local.join("Ubisoft Game Launcher").is_dir() || pd.join("Ubisoft").is_dir(),
+        "ea" => pd.join("EA Desktop").is_dir() || local.join("Electronic Arts").join("EA Desktop").is_dir(),
+        "battlenet" => pd.join("Battle.net").is_dir(),
+        "xbox" => local.join("Packages").join("Microsoft.GamingApp_8wekyb3d8bbwe").is_dir(),
+        _ => false,
+    }
+}
+
 /// Normalise un nom pour les comparaisons (alphanumérique, minuscules).
 pub fn norm(s: &str) -> String {
     s.chars().filter(|c| c.is_alphanumeric()).collect::<String>().to_lowercase()

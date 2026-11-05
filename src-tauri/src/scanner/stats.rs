@@ -21,7 +21,7 @@ impl Stat {
     }
 }
 
-const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
+pub const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
 
 /// Temps de jeu par appid dans un `localconfig.vdf` (Playtime en minutes, LastPlayed en secondes).
 pub fn parse_localconfig(text: &str) -> HashMap<u32, Stat> {

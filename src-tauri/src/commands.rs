@@ -1,5 +1,6 @@
 //! Commandes Tauri : fines, elles délèguent aux modules.
 
+use crate::accounts::{self, Accounts};
 use crate::art::{self, Art, SteamHit};
 use crate::artwork::{Artwork, Artworks};
 use crate::info::{GameInfo, Infos};
@@ -23,6 +24,7 @@ pub struct Ctx {
     pub info: Arc<Infos>,
     pub sizes: Arc<Sizes>,
     pub xbox_busy: Arc<AtomicBool>,
+    pub accounts: Arc<Accounts>,
 }
 
 type Ctxs<'a> = State<'a, Ctx>;
@@ -34,8 +36,12 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 /// Scan complet en parallèle. Xbox (PowerShell, lent) répond plus tard via `scan://partial`.
 #[tauri::command]
 pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String>) -> Result<Vec<Game>, String> {
-    let games = blocking(move || scanner::scan_fast(&local_folders)).await?;
+    let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
+    accounts::merge(&mut games, ctx.accounts.games());
     ctx.known.replace_scanned(&games);
+    if ctx.accounts.stale() {
+        sync_in_background(&app, ctx.accounts.clone());
+    }
 
     if !ctx.xbox_busy.swap(true, Ordering::SeqCst) {
         let busy = ctx.xbox_busy.clone();
@@ -51,6 +57,65 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
         });
     }
     Ok(games)
+}
+
+/// Resynchronise les comptes puis prévient le frontend (`accounts://synced`), qui rescanne.
+fn sync_in_background(app: &AppHandle, accounts: Arc<Accounts>) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        if accounts.sync_all() {
+            let _ = app.emit("accounts://synced", ());
+        }
+    });
+}
+
+/// État des launchers : détecté sur l'appareil, compte connecté (jamais de jeton).
+#[tauri::command]
+pub fn accounts_status(ctx: Ctxs<'_>) -> Vec<accounts::Status> {
+    ctx.accounts.status()
+}
+
+/// Connecte Steam avec la clé d'API Web de l'utilisateur. Renvoie le nombre de jeux trouvés.
+#[tauri::command]
+pub async fn connect_steam(app: AppHandle, ctx: Ctxs<'_>, key: String) -> Result<usize, String> {
+    let acc = ctx.accounts.clone();
+    let n = blocking(move || acc.connect_steam(&key)).await??;
+    let _ = app.emit("accounts://synced", ());
+    Ok(n)
+}
+
+/// Connexion GOG / Epic dans une fenêtre de connexion officielle. Renvoie le nombre de jeux.
+#[tauri::command]
+pub async fn connect_account(app: AppHandle, ctx: Ctxs<'_>, store: String) -> Result<usize, String> {
+    if store != "gog" && store != "epic" {
+        return Err("Ce launcher ne propose pas de connexion.".into());
+    }
+    let acc = ctx.accounts.clone();
+    let app2 = app.clone();
+    let n = blocking(move || accounts::login(&app2, &store).and_then(|code| acc.finish_login(&store, &code))).await??;
+    let _ = app.emit("accounts://synced", ());
+    Ok(n)
+}
+
+#[tauri::command]
+pub async fn disconnect_account(app: AppHandle, ctx: Ctxs<'_>, store: String) -> Result<(), String> {
+    if !accounts::CONNECTABLE.contains(&store.as_str()) {
+        return Err("Ce launcher ne propose pas de connexion.".into());
+    }
+    let acc = ctx.accounts.clone();
+    blocking(move || acc.disconnect(&store)).await?;
+    let _ = app.emit("accounts://synced", ());
+    Ok(())
+}
+
+/// Ouvre une page d'aide connue dans le navigateur (liste fermée, pas d'URL libre).
+#[tauri::command]
+pub async fn open_link(link: String) -> Result<(), String> {
+    let url = match link.as_str() {
+        "steam-api-key" => "https://steamcommunity.com/dev/apikey",
+        _ => return Err("Lien inconnu.".into()),
+    };
+    blocking(move || launcher::shell_open(url, "", None, "open")).await?
 }
 
 #[tauri::command]

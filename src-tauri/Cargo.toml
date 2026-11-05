@@ -22,6 +22,8 @@ ureq = { version = "2", default-features = false, features = ["tls", "json"] }
 base64 = "0.22"
 sysinfo = { version = "0.37", default-features = false, features = ["system"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
+# Jetons des comptes : coffre du système (Gestionnaire d'identification Windows, Trousseau macOS).
+keyring = { version = "3", features = ["windows-native", "apple-native"] }
 plist = "1"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"

@@ -4,7 +4,7 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { Game, LaunchEvent, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, Game, LaunchEvent, PersistedState, Session, StoreId } from './types';
 import { defaultState } from './util/state';
 
 interface DemoGame {
@@ -155,6 +155,14 @@ export function mockApi(): Api {
   const emit = (e: LaunchEvent) => listeners.forEach((l) => l(e));
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const imgCache = new Map<string, Promise<string | null>>();
+  const connected = new Map<StoreId, AccountStatus>();
+  const synced = new Set<() => void>();
+  const syncedNow = () => synced.forEach((cb) => cb());
+  const link = (store: StoreId, user: string | null, games: number) => {
+    connected.set(store, { store, detected: true, connectable: true, connected: true, user, games, syncedAt: Date.now() });
+    syncedNow();
+    return games;
+  };
 
   return {
     isTauri: false,
@@ -236,6 +244,36 @@ export function mockApi(): Api {
       return () => listeners.delete(cb);
     },
     onScanPartial: async () => () => {},
+    accountsStatus: async () =>
+      (['steam', 'epic', 'gog', 'ubisoft', 'ea', 'battlenet', 'riot', 'xbox'] as StoreId[]).map(
+        (store) =>
+          connected.get(store) ?? {
+            store,
+            detected: store !== 'battlenet',
+            connectable: ['steam', 'gog', 'epic'].includes(store),
+            connected: false,
+            games: 0
+          }
+      ),
+    connectSteam: async (key) => {
+      await wait(800);
+      if (!/^[0-9a-f]{32}$/i.test(key.trim()))
+        throw 'Clé invalide : une clé Steam fait 32 caractères (chiffres et lettres A à F).';
+      return link('steam', null, 214);
+    },
+    connectAccount: async (store) => {
+      await wait(1200);
+      return link(store, 'Joueur', store === 'gog' ? 38 : 112);
+    },
+    disconnectAccount: async (store) => {
+      connected.delete(store);
+      syncedNow();
+    },
+    openLink: async () => {},
+    onAccountsSynced: async (cb) => {
+      synced.add(cb);
+      return () => synced.delete(cb);
+    },
     appVersion: async () => '1.0.0',
     checkUpdate: async () => {
       await new Promise((r) => setTimeout(r, 600));

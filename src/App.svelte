@@ -19,6 +19,7 @@
   import Settings from './lib/screens/Settings.svelte';
   import { library } from './lib/stores/library.svelte';
   import { runner } from './lib/stores/runner.svelte';
+  import { accounts } from './lib/stores/accounts.svelte';
   import { ui } from './lib/stores/ui.svelte';
 
   let search: HTMLInputElement | undefined = $state();
@@ -56,17 +57,21 @@
     const offs: (() => void)[] = [];
     let alive = true;
     (async () => {
-      const [a, b, c] = await Promise.all([
+      const [a, b, d, c] = await Promise.all([
         api.onLaunch((e) => runner.handle(e)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
+        }),
+        api.onAccountsSynced(() => {
+          void accounts.refresh();
+          void rescan();
         }),
         api.win.onFocusChange((f) => {
           ui.windowFocused = f;
           if (f) void runner.checkInstalls();
         })
       ]);
-      offs.push(a, b, c);
+      offs.push(a, b, d, c);
       if (!alive) offs.forEach((o) => o());
       await library.load();
       await rescan();
