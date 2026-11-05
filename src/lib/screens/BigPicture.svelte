@@ -74,7 +74,17 @@
     void focusTile();
   }
 
+  /** Souris active : curseur visible et survol qui sélectionne. La manette ou les
+   *  flèches le cachent ; un vrai mouvement de souris le fait revenir. */
+  let pointer = $state(true);
+
+  function onpointermove(e: PointerEvent) {
+    // Un défilement sous un curseur immobile envoie des mouvements nuls : ignorés.
+    if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) pointer = true;
+  }
+
   function act(a: PadAction) {
+    pointer = false;
     // Pendant l'écran de lancement, seul B (annuler) compte.
     if (runner.launching) {
       if (a === 'b') runner.cancel();
@@ -147,7 +157,16 @@
   });
 </script>
 
-<div class="big" role="dialog" aria-modal="true" aria-label="Mode manette" tabindex="-1" {onkeydown}>
+<div
+  class="big"
+  class:nocursor={!pointer}
+  role="dialog"
+  aria-modal="true"
+  aria-label="Mode manette"
+  tabindex="-1"
+  {onkeydown}
+  {onpointermove}
+>
   <div class="bg" aria-hidden="true">
     {#if hero}
       {#key hero}<img src={hero} alt="" />{/key}
@@ -201,7 +220,9 @@
         class:dim={g.notInstalled}
         aria-label="{library.name(g)}{g.notInstalled ? ', à installer' : ''}"
         onfocus={() => (index = i)}
-        onmouseenter={() => (index = i)}
+        onpointermove={() => {
+          if (pointer && index !== i) index = i;
+        }}
         onclick={() => runner.play(g.id)}
       >
         <Cover game={g} fontSize={20} eager={i < 18} />
@@ -220,6 +241,12 @@
 </div>
 
 <style>
+  /* Manette en main : pas de curseur au milieu de l'écran. */
+  .big.nocursor,
+  .big.nocursor :global(*) {
+    cursor: none;
+  }
+
   .big {
     position: fixed;
     inset: 0;
