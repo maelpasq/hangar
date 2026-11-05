@@ -15,6 +15,10 @@ pub static CLOSE_TO_TRAY: AtomicBool = AtomicBool::new(true);
 /// Dernière fois que le menu s'est caché en perdant le focus (ms) : un clic sur l'icône
 /// juste après sert à le fermer, pas à le rouvrir.
 static MENU_BLUR_MS: AtomicU64 = AtomicU64::new(0);
+/// Ouverture du menu (ms). Windows : la barre des tâches reprend le focus juste après le clic
+/// sur l'icône ; une perte de focus aussitôt après l'ouverture ne ferme donc pas le menu.
+static MENU_SHOWN_MS: AtomicU64 = AtomicU64::new(0);
+const MENU_GRACE_MS: u64 = 600;
 
 const TRAY_ID: &str = "hangar";
 const MENU: &str = "tray";
@@ -198,7 +202,7 @@ pub fn init_tray(app: &AppHandle) -> tauri::Result<()> {
 
 /// Hauteur du menu Hangar (logique) : en-tête, une ligne par jeu (au moins une), deux actions.
 pub fn menu_height(games: usize) -> f64 {
-    172.0 + 52.0 * games.clamp(1, MAX_RECENTS) as f64
+    180.0 + 52.0 * games.clamp(1, MAX_RECENTS) as f64
 }
 
 /// Position du menu (physique) : centré sur le clic, au-dessus de l'icône si elle est en bas
@@ -243,7 +247,12 @@ fn toggle_menu(app: &AppHandle, click: PhysicalPosition<f64>) {
         },
     };
     let games = STATE.lock().unwrap_or_else(|p| p.into_inner()).as_ref().map_or(0, |s| s.games.len());
-    let Ok(Some(m)) = app.monitor_from_point(click.x, click.y) else { return };
+    // Écran du clic, sinon l'écran principal (un clic simulé n'a pas toujours de position).
+    let monitor = app.monitor_from_point(click.x, click.y).ok().flatten().or_else(|| app.primary_monitor().ok().flatten());
+    let Some(m) = monitor else {
+        log::warn!("menu de l'icône : aucun écran trouvé");
+        return;
+    };
     let scale = m.scale_factor();
     let (mw, mh) = (MENU_W * scale, menu_height(games) * scale);
     let wa = m.work_area();
@@ -251,6 +260,7 @@ fn toggle_menu(app: &AppHandle, click: PhysicalPosition<f64>) {
     let (x, y) = menu_position((click.x, click.y), (mw, mh), area);
     let _ = w.set_size(tauri::PhysicalSize::new(mw, mh));
     let _ = w.set_position(PhysicalPosition::new(x, y));
+    MENU_SHOWN_MS.store(crate::tracker::now_ms(), Ordering::Relaxed);
     let _ = w.show();
     let _ = w.set_focus();
 }
@@ -274,7 +284,12 @@ fn build_menu(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     let me = w.clone();
     w.on_window_event(move |e| {
         if let tauri::WindowEvent::Focused(false) = e {
-            MENU_BLUR_MS.store(crate::tracker::now_ms(), Ordering::Relaxed);
+            let now = crate::tracker::now_ms();
+            if now.saturating_sub(MENU_SHOWN_MS.load(Ordering::Relaxed)) < MENU_GRACE_MS {
+                let _ = me.set_focus();
+                return;
+            }
+            MENU_BLUR_MS.store(now, Ordering::Relaxed);
             let _ = me.hide();
         }
     });
