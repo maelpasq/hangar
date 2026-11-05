@@ -23,6 +23,8 @@ export interface Toast {
 interface Place {
   screen: Screen;
   favOnly: boolean;
+  /** Onglet « À installer » : jeux possédés non installés. */
+  toInstall: boolean;
   store: StoreId | 'all';
   gameId: string | null;
 }
@@ -30,6 +32,7 @@ interface Place {
 class Ui {
   screen = $state<Screen>('home');
   favOnly = $state(false);
+  toInstall = $state(false);
   store = $state<StoreId | 'all'>('all');
   gameId = $state<string | null>(null);
   /** Pile de navigation pour le bouton Retour. */
@@ -53,7 +56,7 @@ class Ui {
   private toastSeq = 0;
 
   private place(): Place {
-    return { screen: this.screen, favOnly: this.favOnly, store: this.store, gameId: this.gameId };
+    return { screen: this.screen, favOnly: this.favOnly, toInstall: this.toInstall, store: this.store, gameId: this.gameId };
   }
 
   private go(p: Partial<Place> & { screen: Screen }, push = true): void {
@@ -61,6 +64,7 @@ class Ui {
     else if (push) this.history = [this.place()];
     this.screen = p.screen;
     this.favOnly = p.favOnly ?? false;
+    this.toInstall = p.toInstall ?? false;
     this.store = p.store ?? 'all';
     this.gameId = p.gameId ?? this.gameId;
     this.menu = null;
@@ -80,6 +84,10 @@ class Ui {
     this.go({ screen: 'library', favOnly: true });
   }
 
+  toInstallList(): void {
+    this.go({ screen: 'library', toInstall: true });
+  }
+
   storeFilter(store: StoreId): void {
     this.go({ screen: 'library', store });
   }
@@ -92,7 +100,7 @@ class Ui {
     this.query = '';
     this.searchOpen = false;
     if (this.screen === 'game' && this.gameId === gameId) return;
-    this.go({ screen: 'game', gameId, favOnly: this.favOnly, store: this.store });
+    this.go({ screen: 'game', gameId, favOnly: this.favOnly, toInstall: this.toInstall, store: this.store });
   }
 
   back(): void {

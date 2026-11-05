@@ -28,12 +28,14 @@ class Library {
         (!g.notInstalled || this.state.prefs.showUninstalled)
     )
   );
-  /** Jeux visibles et installés (accueil). */
+  /** Jeux visibles et installés (accueil, bibliothèque, stores). */
   installed = $derived(this.visible.filter((g) => !g.notInstalled));
+  /** Jeux possédés non installés (onglet « À installer »). */
+  toInstall = $derived(this.visible.filter((g) => g.notInstalled));
   /** Nombre de jeux par store (tous, pour les Paramètres). */
   countsAll = $derived(countBy(this.all.filter((g) => !this.state.hidden.includes(g.id))));
-  /** Nombre de jeux visibles par store (barre latérale, puces). */
-  counts = $derived(countBy(this.visible));
+  /** Nombre de jeux installés visibles par store (barre latérale). */
+  counts = $derived(countBy(this.installed));
   favorites = $derived(this.visible.filter((g) => this.state.favorites.includes(g.id)));
   maxPlayMs = $derived(Math.max(1, ...this.visible.map((g) => this.totals(g.id).playMs)));
 

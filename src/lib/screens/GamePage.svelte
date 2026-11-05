@@ -35,7 +35,7 @@
   const via = $derived(game.notInstalled ? "S'installe via" : 'Se lance via');
 
   const similar = $derived(
-    library.visible
+    library.installed
       .filter((x) => x.id !== game.id && (x.store === game.store || (!!genre && library.genre(x) === genre)))
       .slice(0, 9)
   );

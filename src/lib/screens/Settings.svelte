@@ -42,7 +42,7 @@
     {
       key: 'showUninstalled',
       label: 'Afficher les jeux non installés',
-      desc: 'Les jeux de tes launchers à installer, dans la bibliothèque'
+      desc: 'Onglet « À installer » avec les jeux de tes launchers'
     }
   ];
 

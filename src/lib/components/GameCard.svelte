@@ -86,7 +86,7 @@
   <div class="frame">
     <button
       class="cover"
-      class:dim={toInstall}
+      class:dim={toInstall && !ui.toInstall}
       aria-label={toInstall ? `${name}, non installé` : name}
       title={name}
       {onclick}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Bibliothèque / Favoris / filtre store : tri, puces, grille (virtualisée au-delà de 150 jeux).
+  // Bibliothèque / Favoris / À installer / filtre store : tri, puces, grille (virtualisée au-delà de 150 jeux).
   import Chip from '../components/Chip.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import GameCard from '../components/GameCard.svelte';
@@ -18,7 +18,7 @@
   /** Hauteur du nom + méta sous la jaquette. */
   const INFO_H = 48;
 
-  const base = $derived(ui.favOnly ? library.favorites : library.visible);
+  const base = $derived(ui.favOnly ? library.favorites : ui.toInstall ? library.toInstall : library.installed);
   const counts = $derived.by(() => {
     const c: Partial<Record<StoreId, number>> = {};
     for (const g of base) c[g.store] = (c[g.store] ?? 0) + 1;
@@ -39,7 +39,9 @@
     );
   });
 
-  const title = $derived(ui.favOnly ? 'Favoris' : ui.store === 'all' ? 'Bibliothèque' : STORES[ui.store].label);
+  const title = $derived(
+    ui.favOnly ? 'Favoris' : ui.toInstall ? 'À installer' : ui.store === 'all' ? 'Bibliothèque' : STORES[ui.store].label
+  );
   const totalHours = $derived(hours(list.reduce((a, g) => a + library.totals(g.id).playMs, 0)));
 
   function setSort(s: SortKey) {
@@ -87,8 +89,12 @@
 >
   <div class="head">
     <div>
-      <h1>{#if !ui.favOnly && ui.store !== 'all'}<StoreLogo store={ui.store} size={26} glow />{/if} {title}</h1>
-      <p>{plural(list.length, 'jeu', 'jeux')} · {formatNumber(totalHours)} {totalHours > 1 ? 'heures' : 'heure'} de jeu au total</p>
+      <h1>{#if !ui.favOnly && !ui.toInstall && ui.store !== 'all'}<StoreLogo store={ui.store} size={26} glow />{/if} {title}</h1>
+      {#if ui.toInstall}
+        <p>{plural(list.length, 'jeu', 'jeux')} de tes launchers, prêts à installer</p>
+      {:else}
+        <p>{plural(list.length, 'jeu', 'jeux')} · {formatNumber(totalHours)} {totalHours > 1 ? 'heures' : 'heure'} de jeu au total</p>
+      {/if}
     </div>
     <span class="grow"></span>
     <Segmented
@@ -132,7 +138,13 @@
       <strong>Aucun favori pour l'instant</strong>
       <span>Clique sur l'étoile d'une jaquette pour épingler un jeu ici.</span>
     </div>
-  {:else if !library.visible.length}
+  {:else if ui.toInstall}
+    <div class="empty">
+      <Icon name="download" size={28} />
+      <strong>Rien à installer</strong>
+      <span>Tous les jeux trouvés dans tes launchers sont déjà installés.</span>
+    </div>
+  {:else if !library.installed.length}
     <div class="empty">
       <strong>Ta bibliothèque est vide</strong>
       <span>Ajoute un jeu à la main ou un dossier qui contient tes jeux.</span>

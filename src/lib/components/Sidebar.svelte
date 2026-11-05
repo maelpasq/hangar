@@ -16,7 +16,9 @@
     ui.screen === 'library'
       ? ui.favOnly
         ? 'favorites'
-        : ui.store === 'all'
+        : ui.toInstall
+          ? 'toInstall'
+          : ui.store === 'all'
           ? 'library'
           : ''
       : ui.screen === 'game'
@@ -26,8 +28,11 @@
 
   const nav = $derived<{ key: string; label: string; icon: IconName; count?: number; go: () => void }[]>([
     { key: 'home', label: 'Accueil', icon: 'home', go: () => ui.home() },
-    { key: 'library', label: 'Bibliothèque', icon: 'grid', count: library.visible.length, go: () => ui.libraryAll() },
+    { key: 'library', label: 'Bibliothèque', icon: 'grid', count: library.installed.length, go: () => ui.libraryAll() },
     { key: 'favorites', label: 'Favoris', icon: 'star', count: library.favorites.length, go: () => ui.favorites() },
+    ...(library.toInstall.length
+      ? [{ key: 'toInstall', label: 'À installer', icon: 'download' as const, count: library.toInstall.length, go: () => ui.toInstallList() }]
+      : []),
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 
@@ -67,7 +72,7 @@
   {#if !rail}<p class="sec stores">Stores</p>{:else}<div class="sep"></div>{/if}
   <nav class="scroll list" aria-label="Stores">
     {#each stores as s (s)}
-      {@const on = ui.screen === 'library' && !ui.favOnly && ui.store === s}
+      {@const on = ui.screen === 'library' && !ui.favOnly && !ui.toInstall && ui.store === s}
       <button
         class="navb store"
         class:on

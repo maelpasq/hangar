@@ -21,7 +21,7 @@ Une seule app pour retrouver et lancer tous les jeux installés sur le PC, quel 
 
 ### Jeux possédés non installés
 
-Les jeux du compte qui ne sont pas installés apparaissent aussi dans la bibliothèque (jaquette atténuée, « Non installé »). Le bouton devient « Installer » : il ouvre l'installation dans le launcher, sans suivi de partie. Au retour sur Hangar (au plus une fois toutes les 30 s), un scan les fait passer en « installé » dès que le launcher a fini. Option Paramètres > Comportement « Afficher les jeux non installés » (activée par défaut). L'accueil ne montre que les jeux installés.
+Les jeux du compte qui ne sont pas installés ont leur onglet à part, « À installer » dans la barre latérale (avec le nombre de jeux, puces par store, tri). La Bibliothèque, les stores de la barre latérale et l'accueil ne montrent que les jeux installés ; la recherche et les Favoris montrent les deux (jaquette atténuée, « Non installé »). Le bouton devient « Installer » : il ouvre l'installation dans le launcher, sans suivi de partie. Au retour sur Hangar (au plus une fois toutes les 30 s), un scan les fait passer en « installé » dès que le launcher a fini. Option Paramètres > Comportement « Afficher les jeux non installés » (activée par défaut) : coupée, l'onglet disparaît.
 
 | Source | Liste des jeux du compte (fichiers locaux, aucun réseau) | Installation |
 |---|---|---|
