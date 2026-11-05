@@ -24,7 +24,14 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run test
-      - run: npm run build
+      - name: npm run build
+        env: { CARGO_TERM_COLOR: never } # sans codes ANSI, pour les annotations
+        shell: bash
+        run: |
+          set +e
+          npm run build 2>&1 | tee build.log; s=${PIPESTATUS[0]}
+          grep -E -A3 "^error" build.log | grep -v "^--" | paste - - - - | sed 's/^/::error::/' || true
+          exit $s
       # Les erreurs sont aussi publiées en annotations (lisibles sans être connecté).
       - name: cargo test
         env: { CARGO_TERM_COLOR: never } # sans codes ANSI, pour les annotations
