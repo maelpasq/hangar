@@ -50,6 +50,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.1 - 5 novembre 2026
+**Mode manette** : Hangar en plein écran, à la manette ou au clavier (Start pour l'ouvrir, A pour jouer, LB / RB pour changer d'onglet). **Collections** : range tes jeux dans tes propres listes (clic droit > Collections), affichées dans la barre latérale, et filtre la bibliothèque par genre ou temps de jeu. **Zone de notification** : tes jeux récents à un clic de l'icône Hangar, la fenêtre s'y cache quand tu la fermes, et Ctrl+Alt+H l'affiche ou la cache. **Désinstaller** un jeu ouvre sa désinstallation dans son launcher. Sécurité renforcée : pop-ups et téléchargements bloqués dans les jeux web, chemins de fichiers limités aux jeux de la bibliothèque, images téléchargées seulement depuis les sites autorisés.
+
 ### 1.2.0 - 5 novembre 2026
 Nouvel onglet **Jeux web** : une quarantaine de jeux navigateur (.io, classiques, stratégie, bac à sable : agar.io, slither.io, TETR.IO, OpenFront, Territorial.io, Bloxd...) avec leurs jaquettes, des icônes par genre et les jeux récents en tête. Chaque jeu s'ouvre dans sa propre fenêtre, sans accès à Hangar et limitée au HTTPS. L'onglet est proposé au démarrage (badge « Nouveau » pour ceux qui ont déjà l'app) et s'active dans Paramètres > Général.
 
