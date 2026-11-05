@@ -12,6 +12,8 @@ class Library {
   /** Jeux détectés par le dernier scan (hors ajouts manuels). */
   scanned = $state<Game[]>([]);
   state = $state<PersistedState>(defaultState());
+  /** Première ouverture de Hangar (aucun état sur le disque). */
+  fresh = $state(false);
   scanning = $state(false);
   /** Vrai dès que la bibliothèque (cache ou scan) est affichable. */
   ready = $state(false);
@@ -103,7 +105,10 @@ class Library {
 
   async load(): Promise<void> {
     try {
-      this.state = normalizeState(await api.loadState());
+      const raw = await api.loadState();
+      // Pas d'état enregistré : première ouverture après l'installation.
+      this.fresh = !raw || typeof raw !== 'object' || !Object.keys(raw).length;
+      this.state = normalizeState(raw);
     } catch (e) {
       console.error('load_state', e);
     }

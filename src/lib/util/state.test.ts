@@ -7,6 +7,16 @@ describe('état persistant', () => {
     expect(normalizeState('x')).toEqual(defaultState());
   });
 
+  it('jeux web : null tant que non demandé, puis le choix est gardé', () => {
+    expect(normalizeState({ version: 1, prefs: {} }).prefs.webGames).toBeNull();
+    expect(normalizeState({ version: 1, prefs: { webGames: 'oui' } }).prefs.webGames).toBeNull();
+    expect(normalizeState({ version: 1, prefs: { webGames: false } }).prefs.webGames).toBe(false);
+    expect(normalizeState({ version: 1, prefs: { webGames: true }, webPlayed: { agar: 5, x: 'y' } })).toMatchObject({
+      prefs: { webGames: true },
+      webPlayed: { agar: 5 }
+    });
+  });
+
   it('migre la v1 (recents, launches, coverCache)', () => {
     const s = normalizeState({
       favorites: ['steam:1'],

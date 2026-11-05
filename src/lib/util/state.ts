@@ -21,7 +21,7 @@ export function defaultState(): PersistedState {
     accent: '#7c6cff',
     theme: 'dark',
     sort: 'recent',
-    prefs: { minimizeOnLaunch: true, startWithWindows: false, autoCovers: true, showUninstalled: true, steamGridDbKey: '' }
+    prefs: { minimizeOnLaunch: true, startWithWindows: false, autoCovers: true, showUninstalled: true, steamGridDbKey: '', webGames: null }
   };
 }
 
@@ -66,6 +66,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (typeof p.startWithWindows === 'boolean') s.prefs.startWithWindows = p.startWithWindows;
     if (typeof p.autoCovers === 'boolean') s.prefs.autoCovers = p.autoCovers;
     if (typeof p.showUninstalled === 'boolean') s.prefs.showUninstalled = p.showUninstalled;
+    if (typeof p.webGames === 'boolean') s.prefs.webGames = p.webGames;
     if (typeof p.steamGridDbKey === 'string') s.prefs.steamGridDbKey = p.steamGridDbKey.trim();
   }
   if (Array.isArray(raw.manualGames)) {

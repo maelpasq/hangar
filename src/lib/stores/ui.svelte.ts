@@ -8,7 +8,8 @@ export type Modal =
   | { kind: 'add' }
   | { kind: 'rename'; gameId: string }
   | { kind: 'cover'; gameId: string }
-  | { kind: 'stop'; gameId: string };
+  | { kind: 'stop'; gameId: string }
+  | { kind: 'webGames' };
 
 export interface Toast {
   id: number;

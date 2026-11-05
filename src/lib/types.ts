@@ -66,6 +66,8 @@ export interface Prefs {
   showUninstalled: boolean;
   /** Clé API SteamGridDB (facultative) pour les jeux absents de Steam. */
   steamGridDbKey: string;
+  /** Onglet Jeux web. null : pas encore demandé (première ouverture ou mise à jour). */
+  webGames: boolean | null;
 }
 
 /** « system » suit le réglage clair / sombre de l'appareil. */

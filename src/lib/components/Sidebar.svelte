@@ -33,7 +33,7 @@
     ...(library.toInstall.length
       ? [{ key: 'toInstall', label: 'À installer', icon: 'download' as const, count: library.toInstall.length, go: () => ui.toInstallList() }]
       : []),
-    { key: 'web', label: 'Jeux web', icon: 'globe', go: () => ui.webGames() },
+    ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 

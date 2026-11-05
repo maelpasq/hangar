@@ -13,6 +13,7 @@
   import ChangeCover from './lib/modals/ChangeCover.svelte';
   import ConfirmStop from './lib/modals/ConfirmStop.svelte';
   import Rename from './lib/modals/Rename.svelte';
+  import WebGamesOffer from './lib/modals/WebGamesOffer.svelte';
   import GamePage from './lib/screens/GamePage.svelte';
   import Home from './lib/screens/Home.svelte';
   import Library from './lib/screens/Library.svelte';
@@ -75,6 +76,8 @@
       offs.push(a, b, d, c);
       if (!alive) offs.forEach((o) => o());
       await library.load();
+      // Jeux web jamais proposés (installation neuve ou mise à jour) : on demande.
+      if (library.state.prefs.webGames === null && !ui.modal) ui.modal = { kind: 'webGames' };
       await rescan();
       void updater.check(true);
     })();
@@ -164,6 +167,8 @@
     <ChangeCover game={modalGame} />
   {:else if ui.modal?.kind === 'stop' && modalGame}
     <ConfirmStop game={modalGame} />
+  {:else if ui.modal?.kind === 'webGames'}
+    <WebGamesOffer />
   {/if}
 
   <Toast />

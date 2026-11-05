@@ -64,7 +64,7 @@
 
   // ─── Réglages simples ───
 
-  type BoolPref = Exclude<keyof Prefs, 'steamGridDbKey'>;
+  type BoolPref = Exclude<keyof Prefs, 'steamGridDbKey' | 'webGames'>;
 
   async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
@@ -194,6 +194,19 @@
               <h3>Comportement</h3>
               {@render toggleRow('minimizeOnLaunch', "Réduire Hangar au lancement d'un jeu", 'La fenêtre revient quand tu quittes le jeu.')}
               {@render toggleRow('startWithWindows', `Démarrer avec ${os}`, "Hangar s'ouvre en arrière-plan à la connexion.")}
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Jeux web</span><span class="hint">Onglet des jeux navigateur (.io et autres), ouverts dans une fenêtre Hangar.</span></span
+                >
+                <Toggle
+                  on={library.state.prefs.webGames === true}
+                  label="Jeux web"
+                  onchange={(v) => {
+                    library.state.prefs.webGames = v;
+                    library.save();
+                  }}
+                />
+              </div>
             </section>
 
             <section class="group" aria-label="Mise à jour">
