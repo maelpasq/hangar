@@ -44,3 +44,9 @@ Hors de Windows, `npm run dev:web` lance le frontend seul dans un navigateur ave
 - Le dossier `src-tauri/src/scanner.rs` contient déjà une détection fonctionnelle de tous les stores (version 1 de l'app). Réutilise-la et améliore-la, ne repars pas de zéro.
 - Le dossier `src/` actuel (HTML/CSS/JS vanilla) est la version 1 de l'interface. Il est remplacé par l'app Svelte décrite dans ARCHITECTURE.md. Garde-le dans `legacy/` jusqu'à ce que la nouvelle UI soit à parité, puis supprime-le.
 - Si une information manque dans les docs, choisis l'option la plus simple qui respecte la maquette, note ton choix dans `docs/DECISIONS.md` et continue.
+
+## Publier une version
+
+Procédure de mise en prod et historique des versions : `docs/RELEASES.md`, chargé ci-dessous à chaque conversation. **Chaque nouvelle version ajoute son entrée (numéro, date, description) en haut de l'historique, avant `npm version`.**
+
+@docs/RELEASES.md
