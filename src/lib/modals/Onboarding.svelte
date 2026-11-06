@@ -1,7 +1,8 @@
 <script lang="ts">
-  // Première ouverture : quatre étapes courtes (launchers, jeux locaux, couleur, jeux web).
+  // Configuration en quatre étapes courtes (launchers, jeux locaux, couleur, jeux web), montrée une fois
+  // à l'installation comme à qui avait déjà Hangar : les réglages affichés sont les siens.
   // Chaque choix s'applique tout de suite. « Tout passer » ou fermer garde les choix déjà faits
-  // et laisse le reste tel quel (jeux web désactivés sur une installation neuve).
+  // et laisse le reste tel quel (jeux web désactivés s'ils n'avaient jamais été proposés).
   import { addFolder } from '../actions';
   import Segmented from '../components/Segmented.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
@@ -28,6 +29,8 @@
 
   let step = $state(0);
   let web = $state(library.state.prefs.webGames ?? true);
+  // Qui avait Hangar avant les jeux web les découvre ici.
+  const webIsNew = !library.fresh && library.state.prefs.webGames === null;
   void accounts.refresh();
 
   // Launchers trouvés sur l'appareil en premier.
@@ -41,6 +44,7 @@
 
   function finish(webOn: boolean) {
     library.state.prefs.webGames = webOn;
+    library.state.onboarded = true;
     library.save();
     ui.modal = null;
   }
@@ -65,6 +69,7 @@
         onclick={() => (step = i)}
       ></button>
     {/each}
+    {#if step === TITLES.length - 1 && webIsNew}<span class="new">Nouveau</span>{/if}
   </div>
 
   {#key step}
@@ -146,7 +151,20 @@
 <style>
   .dots {
     display: flex;
+    align-items: center;
     gap: 6px;
+  }
+
+  .new {
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
   }
 
   .dot {

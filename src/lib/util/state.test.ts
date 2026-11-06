@@ -17,6 +17,12 @@ describe('état persistant', () => {
     });
   });
 
+  it("assistant : à montrer tant qu'il n'a pas été vu", () => {
+    expect(normalizeState({ version: 1, prefs: { webGames: true } }).onboarded).toBe(false);
+    expect(normalizeState({ version: 1, onboarded: 'oui' }).onboarded).toBe(false);
+    expect(normalizeState({ version: 1, onboarded: true }).onboarded).toBe(true);
+  });
+
   it('migre la v1 (recents, launches, coverCache)', () => {
     const s = normalizeState({
       favorites: ['steam:1'],

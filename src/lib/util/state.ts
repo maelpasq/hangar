@@ -22,6 +22,7 @@ export function defaultState(): PersistedState {
     accent: '#7c6cff',
     theme: 'dark',
     sort: 'recent',
+    onboarded: false,
     prefs: {
       minimizeOnLaunch: true,
       startWithWindows: false,
@@ -71,6 +72,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   if (typeof raw.accent === 'string' && /^#[0-9a-f]{6}$/i.test(raw.accent)) s.accent = raw.accent;
   if (raw.theme === 'dark' || raw.theme === 'light' || raw.theme === 'system') s.theme = raw.theme;
   if (raw.sort === 'recent' || raw.sort === 'az' || raw.sort === 'hours') s.sort = raw.sort as SortKey;
+  s.onboarded = raw.onboarded === true;
   if (isObj(raw.prefs)) {
     const p = raw.prefs;
     if (typeof p.minimizeOnLaunch === 'boolean') s.prefs.minimizeOnLaunch = p.minimizeOnLaunch;
