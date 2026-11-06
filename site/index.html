@@ -314,6 +314,7 @@
   @media (max-width: 900px) {
     .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tall { grid-row: auto; }
+    .md-wide { grid-column: span 2; }
     .privacy { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.75rem; }
     .privacy .ico { flex: none; width: 4rem; height: 4rem; border-radius: 20px; margin: 0; }
     .privacy .ico .icon { width: 2rem; height: 2rem; stroke-width: 1.6; }
@@ -321,7 +322,7 @@
   @media (max-width: 640px) {
     .bento, .install { grid-template-columns: minmax(0, 1fr); }
     .install .btn { align-self: stretch; }
-    .wide, .privacy { grid-column: auto; }
+    .wide, .md-wide, .privacy { grid-column: auto; }
     .privacy { flex-direction: column; align-items: flex-start; gap: 1rem; }
     .tile { min-height: 0; padding: 1.5rem; border-radius: 24px; }
     .covers { padding: 0; }
@@ -475,6 +476,17 @@
           <p>Tes propres listes, des filtres par store, genre ou temps de jeu, et la recherche instantanée <kbd>Ctrl K</kbd>.</p>
         </article>
 
+        <article class="tile md-wide reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></div>
+          <h3>Tes jeux à jour.</h3>
+          <p>Hangar repère les jeux qui attendent une mise à jour, les range dans leur onglet et te prévient. Un clic sur « Mettre à jour » ouvre le bon launcher.</p>
+          <div class="visual stores" aria-label="Mises à jour détectées">
+            <span class="chip" style="--dot:#66c0f4"><i></i>Steam</span>
+            <span class="chip" style="--dot:#d9d9d9"><i></i>Epic Games</span>
+            <span class="chip" style="--dot:#c084fc"><i></i>GOG</span>
+          </div>
+        </article>
+
         <article class="tile reveal">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
           <p class="big grad">40</p>
@@ -486,6 +498,18 @@
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h.01M15 11h.01M9.5 14.5a3.5 3.5 0 0 0 5 0"/></svg></div>
           <h3>Ton jeu sur Discord.</h3>
           <p>Tes amis voient à quoi tu joues, avec sa jaquette et le temps de jeu. À activer si tu veux.</p>
+        </article>
+
+        <article class="tile reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M14 15h4"/></svg></div>
+          <h3>Toujours à portée.</h3>
+          <p>Tes jeux récents dans la zone de notification, et <kbd>Ctrl Alt H</kbd> pour afficher ou cacher Hangar.</p>
+        </article>
+
+        <article class="tile reveal" style="--d:.06s">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></div>
+          <h3>Prêt en quatre étapes.</h3>
+          <p>À la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta couleur et les jeux web.</p>
         </article>
 
         <article class="tile privacy reveal" style="--d:.12s">
