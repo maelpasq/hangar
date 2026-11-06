@@ -7,8 +7,8 @@
 use std::io::{Read, Write};
 use std::sync::Mutex;
 
-/// Application Discord « Hangar » (portail développeur Discord). Vide : présence désactivée.
-pub const CLIENT_ID: &str = "";
+/// Application Discord « Hangar » (portail développeur Discord). Identifiant public, pas un secret.
+pub const CLIENT_ID: &str = "1568201256357466132";
 
 /// Taille maximale d'une réponse lue (Discord renvoie quelques Ko au plus).
 const MAX_FRAME: u32 = 64 * 1024;
