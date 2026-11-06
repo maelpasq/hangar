@@ -1,6 +1,7 @@
 <script lang="ts">
   // Bibliothèque / Favoris / À installer / Mises à jour / collection / filtre store : tri, filtres, grille (virtualisée au-delà de 150 jeux).
   import Chip from '../components/Chip.svelte';
+  import Dropdown from '../components/Dropdown.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import GameCard from '../components/GameCard.svelte';
   import Icon from '../components/Icon.svelte';
@@ -224,21 +225,10 @@
       </div>
       <span class="grow"></span>
       {#if genres.length}
-        <label class="sel">
-          <span class="sr-only">Genre</span>
-          <select bind:value={genre}>
-            <option value="">Tous les genres</option>
-            {#each genres as g (g)}<option value={g}>{g}</option>{/each}
-          </select>
-        </label>
+        <Dropdown label="Genre" bind:value={genre} options={[{ value: '', label: 'Tous les genres' }, ...genres.map((g) => ({ value: g, label: g }))]} />
       {/if}
       {#if !ui.toInstall}
-        <label class="sel">
-          <span class="sr-only">Temps de jeu</span>
-          <select bind:value={play}>
-            {#each PLAY_FILTERS as f (f.value)}<option value={f.value}>{f.label}</option>{/each}
-          </select>
-        </label>
+        <Dropdown label="Temps de jeu" bind:value={play} options={PLAY_FILTERS} />
       {/if}
     </div>
   {/if}
@@ -350,22 +340,6 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-  }
-
-  .sel select {
-    height: 34px;
-    padding: 0 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border-2);
-    background: var(--surface-2);
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-  }
-
-  .sel select:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
   }
 
   .rename {

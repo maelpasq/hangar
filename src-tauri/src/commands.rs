@@ -39,9 +39,19 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String>) -> Result<Vec<Game>, String> {
     let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
     accounts::merge(&mut games, ctx.accounts.games());
+    ctx.accounts.apply_updates(&mut games);
     ctx.known.replace_scanned(&games);
     if ctx.accounts.stale() {
         sync_in_background(&app, ctx.accounts.clone());
+    }
+    if ctx.accounts.gog_stale(&games) {
+        let (app, accounts, list) = (app.clone(), ctx.accounts.clone(), games.clone());
+        std::thread::spawn(move || {
+            // Même événement que la synchro des comptes : le frontend rescanne.
+            if accounts.check_gog(&list) {
+                let _ = app.emit("accounts://synced", ());
+            }
+        });
     }
 
     if !ctx.xbox_busy.swap(true, Ordering::SeqCst) {

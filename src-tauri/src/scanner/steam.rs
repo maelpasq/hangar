@@ -78,6 +78,7 @@ pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     g.install_dir = dir.map(|d| d.to_string_lossy().into_owned());
     g.steam_app_id = Some(appid);
     g.size_bytes = vdf_values(text, "SizeOnDisk").first().and_then(|s| s.parse().ok()).filter(|s: &u64| *s > 0);
+    g.version = vdf_values(text, "buildid").into_iter().next().filter(|v| !v.is_empty() && v != "0");
     let num = |k: &str| vdf_values(text, k).first().and_then(|s| s.parse::<u64>().ok());
     // StateFlags : 2 mise à jour requise, 256 / 512 / 1024 mise à jour en cours, en pause, démarrée.
     g.update_pending = num("StateFlags").is_some_and(|f| f & (2 | 256 | 512 | 1024) != 0);
@@ -196,6 +197,7 @@ mod tests {
         assert!(g.install_dir.unwrap().ends_with("Satisfactory"));
         assert!(g.size_bytes.unwrap_or(0) > 0, "SizeOnDisk du manifeste");
         assert!(!g.update_pending);
+        assert_eq!(g.version.as_deref(), Some("16000000"));
     }
 
     #[test]

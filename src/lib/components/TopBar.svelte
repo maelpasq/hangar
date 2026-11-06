@@ -11,6 +11,7 @@
   import { rank } from '../util/search';
   import Icon, { type IconName } from './Icon.svelte';
   import SearchPanel from './SearchPanel.svelte';
+  import UpdatesMenu from './UpdatesMenu.svelte';
 
   let { onrefresh, input = $bindable() }: { onrefresh: () => void; input?: HTMLInputElement } = $props();
 
@@ -105,9 +106,10 @@
         disabled={updater.phase === 'installing'}
         title="Installer Hangar {updater.version} et redémarrer"
         onclick={() => updater.install()}
-        >{updater.phase === 'installing' ? updater.label : 'Mettre à jour'}</button
+        >{updater.phase === 'installing' ? updater.label : 'Mettre à jour Hangar'}</button
       >
     {/if}
+    <UpdatesMenu />
     <button
       class="ibtn"
       aria-label="Actualiser la bibliothèque"

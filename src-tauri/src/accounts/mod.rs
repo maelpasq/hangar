@@ -12,6 +12,7 @@
 pub mod epic;
 pub mod gog;
 pub mod steam;
+pub mod updates;
 
 use crate::model::Game;
 use serde::{Deserialize, Serialize};
@@ -37,6 +38,9 @@ const API_HOSTS: &[&str] = &[
     "account-public-service-prod03.ol.epicgames.com",
     "library-service.live.use1a.on.epicgames.com",
     "catalog-public-service-prod06.ol.epicgames.com",
+    // Mises à jour des jeux : versions Epic (compte connecté) et GOG (public).
+    "launcher-public-service-prod06.ol.epicgames.com",
+    "content-system.gog.com",
 ];
 
 pub fn allowed(url: &str) -> bool {
@@ -153,10 +157,13 @@ fn delete_secret(store: &str) {
 // ─────────────────────────── Comptes ───────────────────────────
 
 /// Résultat d'une synchronisation. `secret` : nouveau jeton de rafraîchissement à garder.
+#[derive(Default)]
 pub struct Fetched {
     pub user: Option<String>,
     pub games: Vec<Game>,
     pub secret: Option<String>,
+    /// Dernière version de chaque jeu (Epic : AppName -> buildVersion).
+    pub latest: HashMap<String, String>,
 }
 
 /// Ce que Hangar garde sur disque d'un compte connecté (rien de secret).
@@ -167,6 +174,15 @@ struct Synced {
     games: Vec<Game>,
     synced_at: u64,
     error: Option<String>,
+    latest: HashMap<String, String>,
+}
+
+/// Résultat de la dernière vérification GOG (`updates.json`).
+#[derive(Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+struct GogChecked {
+    checked_at: u64,
+    pending: HashMap<String, bool>,
 }
 
 /// État envoyé au frontend.
@@ -189,13 +205,57 @@ pub struct Accounts {
     data: Mutex<HashMap<String, Synced>>,
     http: Http,
     busy: AtomicBool,
+    gog_file: PathBuf,
+    gog: Mutex<GogChecked>,
+    gog_busy: AtomicBool,
 }
 
 impl Accounts {
     pub fn new(config_dir: &Path) -> Self {
         let file = config_dir.join("accounts.json");
         let data = std::fs::read(&file).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
-        Accounts { file, data: Mutex::new(data), http: Http::new(), busy: AtomicBool::new(false) }
+        let gog_file = config_dir.join("updates.json");
+        let gog = std::fs::read(&gog_file).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+        Accounts {
+            file,
+            data: Mutex::new(data),
+            http: Http::new(),
+            busy: AtomicBool::new(false),
+            gog_file,
+            gog: Mutex::new(gog),
+            gog_busy: AtomicBool::new(false),
+        }
+    }
+
+    /// Marque les jeux qui ont une mise à jour (versions Epic du compte, vérification GOG).
+    pub fn apply_updates(&self, games: &mut [Game]) {
+        let epic = lock(&self.data).get("epic").map(|s| s.latest.clone()).unwrap_or_default();
+        updates::apply(games, &epic, &lock(&self.gog).pending);
+    }
+
+    /// Vrai si des jeux GOG installés n'ont pas été vérifiés depuis 6 h.
+    pub fn gog_stale(&self, games: &[Game]) -> bool {
+        games.iter().any(|g| g.store == "gog" && g.version.is_some())
+            && now_ms().saturating_sub(lock(&self.gog).checked_at) > SYNC_EVERY_MS
+    }
+
+    /// Vérifie les versions GOG (une vérification à la fois). Vrai si elle a eu lieu.
+    pub fn check_gog(&self, games: &[Game]) -> bool {
+        if self.gog_busy.swap(true, Ordering::SeqCst) {
+            return false;
+        }
+        let pending = updates::check_gog(&self.http, games);
+        log::info!("GOG : {} jeu(x) vérifié(s), {} à mettre à jour", pending.len(), pending.values().filter(|p| **p).count());
+        let bytes = {
+            let mut g = lock(&self.gog);
+            *g = GogChecked { checked_at: now_ms(), pending };
+            serde_json::to_vec(&*g).unwrap_or_default()
+        };
+        if let Err(e) = crate::state::write_atomic(&self.gog_file, &bytes) {
+            log::warn!("mises à jour GOG : enregistrement impossible ({e})");
+        }
+        self.gog_busy.store(false, Ordering::SeqCst);
+        true
     }
 
     fn save(&self) {
@@ -266,6 +326,7 @@ impl Accounts {
                 log::info!("compte {store} : {} jeu(x)", f.games.len());
                 entry.user = f.user.or(entry.user.take());
                 entry.games = f.games;
+                entry.latest = f.latest;
                 entry.error = None;
             }
             Err(e) => {
@@ -296,7 +357,7 @@ impl Accounts {
         let n = f.games.len();
         lock(&self.data).insert(
             store.to_string(),
-            Synced { user: f.user, games: f.games, synced_at: now_ms(), error: None },
+            Synced { user: f.user, games: f.games, synced_at: now_ms(), error: None, latest: f.latest },
         );
         self.save();
         log::info!("compte {store} connecté : {n} jeu(x)");

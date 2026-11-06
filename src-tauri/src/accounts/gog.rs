@@ -60,7 +60,7 @@ pub fn fetch(http: &Http, refresh: &str) -> Result<Fetched, String> {
             break;
         }
     }
-    Ok(Fetched { user, games, secret: Some(refresh) })
+    Ok(Fetched { user, games, secret: Some(refresh), ..Default::default() })
 }
 
 pub fn parse_products(v: &Value) -> Vec<Game> {

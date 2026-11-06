@@ -25,6 +25,8 @@ struct EpicItem {
     main_game_app_name: Option<String>,
     #[serde(default)]
     install_size: Option<u64>,
+    #[serde(default)]
+    app_version_string: Option<String>,
 }
 
 /// Lit un manifeste `.item`. Ignore les installations incomplètes, les DLC et les non-jeux.
@@ -60,6 +62,7 @@ pub fn parse_manifest(text: &str) -> Option<Game> {
     g.install_dir = it.install_location;
     g.exe_path = exe_path;
     g.size_bytes = it.install_size.filter(|s| *s > 0);
+    g.version = it.app_version_string.filter(|v| !v.is_empty());
     Some(g)
 }
 
@@ -82,6 +85,7 @@ pub fn detect() -> Vec<Game> {
         log::info!("Epic : pas de manifestes ({})", dir.display());
         return vec![];
     };
+    let pending = pending_apps(&dir.join("Pending"));
     let mut out = vec![];
     for e in rd.flatten() {
         if !e.path().extension().map(|x| x.eq_ignore_ascii_case("item")).unwrap_or(false) {
@@ -89,11 +93,25 @@ pub fn detect() -> Vec<Game> {
         }
         let Ok(t) = fs::read_to_string(e.path()) else { continue };
         match parse_manifest(&t) {
-            Some(g) => out.push(g),
+            Some(mut g) => {
+                g.update_pending = g.id.strip_prefix("epic:").is_some_and(|a| pending.contains(a));
+                out.push(g)
+            }
             None => log::debug!("Epic : manifeste ignoré {}", e.path().display()),
         }
     }
     out
+}
+
+/// `Manifests\Pending` : le launcher y pose le manifeste d'un jeu dont la mise à jour est en cours.
+pub fn pending_apps(dir: &Path) -> HashSet<String> {
+    fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| fs::read_to_string(e.path()).ok())
+        .filter_map(|t| serde_json::from_str::<EpicItem>(&t).ok()?.app_name)
+        .collect()
 }
 
 /// Emplacements possibles de `catcache.bin` (catalogue des produits du compte, JSON en base64).
@@ -204,6 +222,15 @@ mod tests {
         "AppCategories": ["public", "games", "applications"],
         "InstallSize": 32212254720
     }"#;
+
+    #[test]
+    fn mise_a_jour_en_cours() {
+        let d = tempfile::tempdir().unwrap();
+        fs::write(d.path().join("A.item"), ITEM).unwrap();
+        fs::write(d.path().join("B.item"), "pas du json").unwrap();
+        assert_eq!(pending_apps(d.path()), HashSet::from(["Fortnite".to_string()]));
+        assert!(pending_apps(&d.path().join("absent")).is_empty());
+    }
 
     #[test]
     fn jeu_complet() {

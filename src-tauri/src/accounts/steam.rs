@@ -23,7 +23,7 @@ pub fn fetch(http: &Http, key: &str) -> Result<Fetched, String> {
         "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={id}&include_appinfo=1&include_played_free_games=1&format=json"
     );
     let v = http.get(&url, None)?;
-    Ok(Fetched { user: None, games: parse_owned(&v), secret: None })
+    Ok(Fetched { user: None, games: parse_owned(&v), secret: None, ..Default::default() })
 }
 
 pub fn parse_owned(v: &Value) -> Vec<Game> {

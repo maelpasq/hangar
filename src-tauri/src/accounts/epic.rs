@@ -94,7 +94,15 @@ pub fn fetch(http: &Http, refresh: &str) -> Result<Fetched, String> {
             }
         }
     }
-    Ok(Fetched { user: t.user, games: games_from_items(items), secret: Some(t.refresh) })
+    // 3. Dernière version de chaque jeu, pour signaler les mises à jour.
+    let latest = match http.get(&super::updates::epic_url(), Some(&t.access)) {
+        Ok(v) => super::updates::epic_assets(&v),
+        Err(e) => {
+            log::debug!("Epic : versions indisponibles ({e})");
+            HashMap::new()
+        }
+    };
+    Ok(Fetched { user: t.user, games: games_from_items(items), secret: Some(t.refresh), latest })
 }
 
 /// Entrées de la bibliothèque : on ignore les contenus Unreal Engine (`ue`) et tout identifiant

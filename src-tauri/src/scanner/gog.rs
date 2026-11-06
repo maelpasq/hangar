@@ -48,6 +48,7 @@ pub fn detect() -> Vec<Game> {
         g.launcher_name = launcher.to_string();
         g.install_dir = Some(path);
         g.exe_path = game_exe.map(|p| p.to_string_lossy().into_owned());
+        g.version = val(&k, "buildId").filter(|b| !b.is_empty());
         out.push(g);
     }
     out

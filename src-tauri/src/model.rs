@@ -59,6 +59,9 @@ pub struct Game {
     /// Reste à télécharger pour cette mise à jour (octets), si le launcher le dit.
     #[serde(default)]
     pub update_bytes: Option<u64>,
+    /// Version installée telle que le store la nomme (build Steam, version Epic, build GOG).
+    #[serde(default)]
+    pub version: Option<String>,
 }
 
 /// Session envoyée au frontend : `{ gameId, start, end }` en millisecondes epoch.
