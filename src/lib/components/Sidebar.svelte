@@ -18,6 +18,8 @@
         ? 'favorites'
         : ui.toInstall
           ? 'toInstall'
+          : ui.updates
+            ? 'updates'
           : ui.collection
             ? `c:${ui.collection}`
           : ui.store === 'all'
@@ -34,6 +36,9 @@
     { key: 'favorites', label: 'Favoris', icon: 'star', count: library.favorites.length, go: () => ui.favorites() },
     ...(library.toInstall.length
       ? [{ key: 'toInstall', label: 'À installer', icon: 'download' as const, count: library.toInstall.length, go: () => ui.toInstallList() }]
+      : []),
+    ...(library.updates.length
+      ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
     { key: 'big', label: 'Mode manette', icon: 'gamepad', go: () => (ui.big = true) },
@@ -100,7 +105,7 @@
     {/if}
     {#if !rail}<p class="sec stores">Stores</p>{:else}<div class="sep"></div>{/if}
     {#each stores as s (s)}
-      {@const on = ui.screen === 'library' && !ui.favOnly && !ui.toInstall && !ui.collection && ui.store === s}
+      {@const on = ui.screen === 'library' && !ui.favOnly && !ui.toInstall && !ui.updates && !ui.collection && ui.store === s}
       <button
         class="navb store"
         class:on

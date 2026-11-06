@@ -34,6 +34,8 @@ class Library {
   installed = $derived(this.visible.filter((g) => !g.notInstalled));
   /** Jeux possédés non installés (onglet « À installer »). */
   toInstall = $derived(this.visible.filter((g) => g.notInstalled));
+  /** Jeux installés avec une mise à jour en attente (onglet « Mises à jour »). */
+  updates = $derived(this.installed.filter((g) => g.updatePending));
   /** Nombre de jeux par store (tous, pour les Paramètres). */
   countsAll = $derived(countBy(this.all.filter((g) => !this.state.hidden.includes(g.id))));
   /** Nombre de jeux installés visibles par store (barre latérale). */

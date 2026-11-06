@@ -1,6 +1,6 @@
 <script lang="ts">
   // Fiche d'un jeu : bannière, jaquette, Jouer, activité, informations, jeux similaires.
-  import { hideGame, openFolder, uninstallGame } from '../actions';
+  import { hideGame, openFolder, uninstallGame, updateGame } from '../actions';
   import { api } from '../api';
   import { art } from '../art.svelte';
   import ActivityChart from '../components/ActivityChart.svelte';
@@ -132,6 +132,10 @@
         <dd>{#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</dd>
         <dt>Ajouté</dt>
         <dd>{added ? dateLabel(added) : '-'}</dd>
+        {#if game.updatePending}
+          <dt>Mise à jour</dt>
+          <dd>En attente{game.updateBytes ? ` · ${sizeLabel(game.updateBytes)}` : ''}</dd>
+        {/if}
       </dl>
       <div class="sep"></div>
       <button class="act" disabled={!game.installDir} onclick={() => openFolder(game.id)}
@@ -147,6 +151,9 @@
         ><Icon name="image" size={17} />Changer la jaquette</button
       >
       {#if !game.notInstalled}
+        <button class="act" onclick={() => updateGame(game.id)}
+          ><Icon name="refresh" size={17} />{game.updatePending ? 'Mettre à jour' : 'Rechercher des mises à jour'}</button
+        >
         <button class="act" onclick={() => uninstallGame(game.id)}
           ><Icon name="package" size={17} />Désinstaller</button
         >

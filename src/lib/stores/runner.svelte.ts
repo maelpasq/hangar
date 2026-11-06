@@ -19,6 +19,11 @@ const OVERLAY_MAX_MS = 4000;
 /** Écart minimal entre deux scans au retour sur Hangar pendant une installation. */
 const INSTALL_RESCAN_MS = 30_000;
 
+const installState = (id: string): string => {
+  const g = library.get(id);
+  return `${!!g?.notInstalled}|${!!g?.updatePending}`;
+};
+
 class Runner {
   launching = $state<Launching | null>(null);
   /** Jeux dont un processus est détecté, avec l'heure de début. */
@@ -39,9 +44,9 @@ class Runner {
   private clock: ReturnType<typeof setInterval> | undefined;
   private minimizedByUs = false;
   private lastFail = '';
-  /** Installations ou désinstallations en attente : id -> état « non installé » au départ.
+  /** Installations, désinstallations ou mises à jour en attente : id -> état du jeu au départ.
    *  Au retour sur la fenêtre, un rescan dit si elles sont faites. */
-  private installs = new Map<string, boolean>();
+  private installs = new Map<string, string>();
   private lastInstallScan = 0;
 
   isRunning(id: string): boolean {
@@ -89,9 +94,9 @@ class Runner {
     }
   }
 
-  /** Suit une installation ou une désinstallation ouverte dans un launcher. */
+  /** Suit une installation, une désinstallation ou une mise à jour ouverte dans un launcher. */
   watchInstall(gameId: string): void {
-    this.installs.set(gameId, !!library.get(gameId)?.notInstalled);
+    this.installs.set(gameId, installState(gameId));
   }
 
   /** Retour sur Hangar : rescan si une installation est en cours (au plus toutes les 30 s). */
@@ -99,7 +104,7 @@ class Runner {
     if (!this.installs.size || Date.now() - this.lastInstallScan < INSTALL_RESCAN_MS) return;
     this.lastInstallScan = Date.now();
     await rescan();
-    for (const [id, was] of this.installs) if (!!library.get(id)?.notInstalled !== was) this.installs.delete(id);
+    for (const [id, was] of this.installs) if (installState(id) !== was) this.installs.delete(id);
   }
 
   /** Discord : le jeu en cours le plus récent, sinon le jeu web ouvert le plus récent, ou rien. */

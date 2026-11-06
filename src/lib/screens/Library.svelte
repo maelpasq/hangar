@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Bibliothèque / Favoris / À installer / collection / filtre store : tri, filtres, grille (virtualisée au-delà de 150 jeux).
+  // Bibliothèque / Favoris / À installer / Mises à jour / collection / filtre store : tri, filtres, grille (virtualisée au-delà de 150 jeux).
   import Chip from '../components/Chip.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import GameCard from '../components/GameCard.svelte';
@@ -9,8 +9,7 @@
   import { library, presentStores } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { Game, SortKey, StoreId } from '../types';
-  import { formatNumber, hours, plural } from '../util/format';
-
+  import { formatNumber, hours, plural, sizeLabel } from '../util/format';
   const VIRTUAL_FROM = 150;
   const MIN_CARD = 172;
   const GAP_X = 20;
@@ -24,6 +23,8 @@
       ? library.favorites
       : ui.toInstall
         ? library.toInstall
+        : ui.updates
+          ? library.updates
         : ui.collection
           ? library.inCollection(ui.collection)
           : library.installed
@@ -57,6 +58,7 @@
     return c;
   });
   const sort = $derived(library.state.sort);
+  const updBytes = $derived(ui.updates ? base.reduce((n, g) => n + (g.updateBytes ?? 0), 0) : 0);
 
   const list = $derived.by(() => {
     const l = base.filter(
@@ -78,6 +80,8 @@
       ? 'Favoris'
       : ui.toInstall
         ? 'À installer'
+        : ui.updates
+          ? 'Mises à jour'
         : coll
           ? coll.name
           : ui.store === 'all'
@@ -175,7 +179,7 @@
         </form>
       {:else}
         <h1>
-          {#if coll}<Icon name="layers" size={26} />{:else if !ui.favOnly && !ui.toInstall && ui.store !== 'all'}<StoreLogo
+          {#if coll}<Icon name="layers" size={26} />{:else if !ui.favOnly && !ui.toInstall && !ui.updates && ui.store !== 'all'}<StoreLogo
               store={ui.store}
               size={26}
               glow
@@ -185,6 +189,8 @@
       {/if}
       {#if ui.toInstall}
         <p>{plural(list.length, 'jeu', 'jeux')} de tes launchers, prêts à installer</p>
+      {:else if ui.updates}
+        <p>{plural(list.length, 'jeu', 'jeux')} à mettre à jour{updBytes ? ` · ${sizeLabel(updBytes)} à télécharger` : ''}</p>
       {:else}
         <p>{plural(list.length, 'jeu', 'jeux')} · {formatNumber(totalHours)} {totalHours > 1 ? 'heures' : 'heure'} de jeu au total</p>
       {/if}
@@ -273,6 +279,12 @@
           ui.store = 'all';
         }}>Retirer les filtres</button
       >
+    </div>
+  {:else if ui.updates}
+    <div class="empty">
+      <Icon name="refresh" size={28} />
+      <strong>Tout est à jour</strong>
+      <span>Aucun jeu n'attend de mise à jour dans tes launchers.</span>
     </div>
   {:else if ui.toInstall}
     <div class="empty">

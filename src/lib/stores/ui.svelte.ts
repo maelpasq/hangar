@@ -27,6 +27,8 @@ interface Place {
   favOnly: boolean;
   /** Onglet « À installer » : jeux possédés non installés. */
   toInstall: boolean;
+  /** Onglet « Mises à jour » : jeux installés avec une mise à jour en attente. */
+  updates: boolean;
   /** Collection affichée (id), ou null. */
   collection: string | null;
   store: StoreId | 'all';
@@ -37,6 +39,7 @@ class Ui {
   screen = $state<Screen>('home');
   favOnly = $state(false);
   toInstall = $state(false);
+  updates = $state(false);
   collection = $state<string | null>(null);
   store = $state<StoreId | 'all'>('all');
   /** Mode manette : interface plein écran par-dessus l'app. */
@@ -69,6 +72,7 @@ class Ui {
       screen: this.screen,
       favOnly: this.favOnly,
       toInstall: this.toInstall,
+      updates: this.updates,
       collection: this.collection,
       store: this.store,
       gameId: this.gameId
@@ -81,6 +85,7 @@ class Ui {
     this.screen = p.screen;
     this.favOnly = p.favOnly ?? false;
     this.toInstall = p.toInstall ?? false;
+    this.updates = p.updates ?? false;
     this.collection = p.collection ?? null;
     this.store = p.store ?? 'all';
     this.gameId = p.gameId ?? this.gameId;
@@ -103,6 +108,10 @@ class Ui {
 
   toInstallList(): void {
     this.go({ screen: 'library', toInstall: true });
+  }
+
+  updatesList(): void {
+    this.go({ screen: 'library', updates: true });
   }
 
   collectionView(id: string): void {
@@ -130,6 +139,7 @@ class Ui {
       gameId,
       favOnly: this.favOnly,
       toInstall: this.toInstall,
+      updates: this.updates,
       collection: this.collection,
       store: this.store
     });

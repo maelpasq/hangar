@@ -53,6 +53,12 @@ pub struct Game {
     /// Jeu possédé mais pas installé : `launch` ouvre alors son installation dans le launcher.
     #[serde(default)]
     pub not_installed: bool,
+    /// Mise à jour en attente ou en cours dans le launcher (Steam seulement).
+    #[serde(default)]
+    pub update_pending: bool,
+    /// Reste à télécharger pour cette mise à jour (octets), si le launcher le dit.
+    #[serde(default)]
+    pub update_bytes: Option<u64>,
 }
 
 /// Session envoyée au frontend : `{ gameId, start, end }` en millisecondes epoch.

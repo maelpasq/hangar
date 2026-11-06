@@ -127,6 +127,46 @@ pub fn uninstall_target(g: &crate::model::Game) -> Result<(String, String), Stri
     }
 }
 
+/// Où se met à jour un jeu : (cible à ouvrir, message). Les launchers sans page de mises à jour
+/// (Ubisoft, EA, Battle.net, Riot) mettent leurs jeux à jour au lancement : on le dit.
+pub fn update_target(g: &crate::model::Game) -> Result<(String, String), String> {
+    let name = &g.name;
+    let id = g.id.split_once(':').map(|(_, x)| x).unwrap_or("");
+    let digits = !id.is_empty() && id.chars().all(|c| c.is_ascii_digit());
+    match g.store.as_str() {
+        "steam" => Ok((
+            "steam://open/downloads".into(),
+            if g.update_pending {
+                format!("Les téléchargements de Steam s'ouvrent pour mettre à jour {name}.")
+            } else {
+                format!("Steam s'ouvre sur ses téléchargements : {name} est à jour.")
+            },
+        )),
+        "gog" if digits && g.launcher_name == "GOG Galaxy" => Ok((
+            format!("goggalaxy://openGameView/{id}"),
+            format!("GOG Galaxy s'ouvre sur {name} : ses mises à jour sont dans le menu Gérer."),
+        )),
+        "epic" => Ok((
+            "com.epicgames.launcher://".into(),
+            format!("Epic Games s'ouvre : il met à jour {name} depuis sa bibliothèque."),
+        )),
+        "xbox" if cfg!(windows) => Ok((
+            "ms-windows-store://downloadsandupdates".into(),
+            format!("Le Microsoft Store s'ouvre sur ses mises à jour pour {name}."),
+        )),
+        "ubisoft" | "ea" | "battlenet" | "riot" => {
+            Err(format!("{} met {name} à jour au lancement : lance le jeu depuis Hangar.", g.launcher_name))
+        }
+        _ => Err(format!("{name} n'a pas de launcher : ses mises à jour se font hors de Hangar.")),
+    }
+}
+
+pub fn update(g: &crate::model::Game) -> Result<String, String> {
+    let (target, msg) = update_target(g)?;
+    shell_open(&target, "", None, "open")?;
+    Ok(msg)
+}
+
 pub fn uninstall(g: &crate::model::Game) -> Result<String, String> {
     let (target, msg) = uninstall_target(g)?;
     shell_open(&target, "", None, "open")?;
@@ -151,6 +191,23 @@ mod tests {
             let u = Game::new("ubisoft:1".into(), "AC".into(), "ubisoft", uri("uplay://launch/1/0"));
             assert_eq!(uninstall_target(&u).unwrap().0, "ms-settings:appsfeatures");
         }
+    }
+
+    #[test]
+    fn mise_a_jour_par_store() {
+        use crate::model::{uri, Game};
+        let mut s = Game::new("steam:620".into(), "Portal 2".into(), "steam", uri("steam://rungameid/620"));
+        s.update_pending = true;
+        assert_eq!(update_target(&s).unwrap().0, "steam://open/downloads");
+        let mut g = Game::new("gog:1207".into(), "Witcher".into(), "gog", uri("x"));
+        g.launcher_name = "GOG Galaxy".into();
+        assert_eq!(update_target(&g).unwrap().0, "goggalaxy://openGameView/1207");
+        g.launcher_name = "l'exécutable du jeu".into();
+        assert!(update_target(&g).is_err(), "GOG sans Galaxy");
+        let u = Game::new("ubisoft:1".into(), "AC".into(), "ubisoft", uri("uplay://launch/1/0"));
+        assert!(update_target(&u).unwrap_err().contains("Ubisoft Connect"));
+        let l = Game::new("local:x".into(), "Jeu".into(), "local", uri("x"));
+        assert!(update_target(&l).unwrap_err().contains("hors de Hangar"));
     }
 
     #[test]

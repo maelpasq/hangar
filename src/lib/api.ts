@@ -27,6 +27,8 @@ export interface Api {
   stopGame(gameId: string): Promise<void>;
   /** Ouvre la désinstallation d'un jeu dans son launcher ; renvoie le message à afficher. */
   uninstallGame(gameId: string): Promise<string>;
+  /** Ouvre les mises à jour d'un jeu dans son launcher ; renvoie le message à afficher. */
+  updateGame(gameId: string): Promise<string>;
   /** Fermeture dans la zone de notification et raccourci global. */
   setDesktop(closeToTray: boolean, globalShortcut: boolean): Promise<DesktopInfo>;
   /** Jeux récents du menu de l'icône et apparence de l'app (thème, accent). */
@@ -118,6 +120,7 @@ async function tauriApi(): Promise<Api> {
     installGame: (gameId) => invoke('install_game', { gameId }),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
+    updateGame: (gameId) => invoke('update_game', { gameId }),
     setDesktop: (closeToTray, globalShortcut) => invoke('set_desktop', { closeToTray, globalShortcut }),
     setTrayRecents: (games, theme, accent) => invoke('set_tray_recents', { games, theme, accent }),
     trayState: () => invoke('tray_state'),

@@ -137,6 +137,7 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 
 - Collections dans `state.json` (`collections: { id, name, games[] }`), nettoyées au chargement (doublons, noms vides, 60 caractères). Les filtres de genre et de temps de jeu ne sont pas mémorisés.
 - Désinstaller ouvre le launcher, jamais un désinstalleur lancé par Hangar : Steam `steam://uninstall/<id>`, GOG Galaxy la page du jeu, Epic le launcher (pas d'URI de désinstallation connue), les autres jeux Windows Paramètres > Applications installées (`ms-settings:appsfeatures`), macOS le dossier de l'app.
+- Mises à jour des jeux : détectées seulement pour Steam, le seul launcher qui l'écrit sur le disque (`StateFlags` du manifeste : 2 requise, 256 / 512 / 1024 en cours, en pause, démarrée ; reste à télécharger = `BytesToDownload - BytesDownloaded`). Epic, GOG Galaxy et le Microsoft Store mettent à jour d'eux-mêmes et ne le disent pas en local ; Ubisoft, EA, Battle.net et Riot le font au lancement. « Mettre à jour » ouvre le bon écran : téléchargements de Steam (`steam://open/downloads`), page du jeu dans GOG Galaxy, Epic, mises à jour du Microsoft Store (`ms-windows-store://downloadsandupdates`) ; pour les autres, un message explique que le launcher met le jeu à jour au lancement. Onglet « Mises à jour » dans la barre latérale quand au moins un jeu attend ; le rescan au retour sur Hangar retire le jeu une fois à jour.
 
 ## Audit de sécurité (novembre 2026)
 

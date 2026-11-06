@@ -308,6 +308,17 @@ pub async fn uninstall_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, St
     Ok(msg)
 }
 
+/// Ouvre les mises à jour d'un jeu installé dans son launcher. Renvoie le message à afficher.
+#[tauri::command]
+pub async fn update_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, String> {
+    let Some(game) = ctx.known.get(&game_id).filter(|g| !g.not_installed) else {
+        return Err("Ce jeu n'est plus dans la bibliothèque. Actualise-la puis réessaie.".into());
+    };
+    let msg = blocking(move || launcher::update(&game)).await??;
+    log::info!("mises à jour ouvertes : {game_id}");
+    Ok(msg)
+}
+
 #[tauri::command]
 pub async fn resolve_steam_id(ctx: Ctxs<'_>, name: String) -> Result<Option<u32>, String> {
     let art = ctx.art.clone();

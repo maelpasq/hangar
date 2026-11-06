@@ -159,6 +159,7 @@ fn main() {
             commands::open_link,
             commands::open_web_game,
             commands::uninstall_game,
+            commands::update_game,
             commands::set_desktop,
             commands::set_tray_recents,
             commands::tray_state,

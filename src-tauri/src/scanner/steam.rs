@@ -78,6 +78,12 @@ pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     g.install_dir = dir.map(|d| d.to_string_lossy().into_owned());
     g.steam_app_id = Some(appid);
     g.size_bytes = vdf_values(text, "SizeOnDisk").first().and_then(|s| s.parse().ok()).filter(|s: &u64| *s > 0);
+    let num = |k: &str| vdf_values(text, k).first().and_then(|s| s.parse::<u64>().ok());
+    // StateFlags : 2 mise à jour requise, 256 / 512 / 1024 mise à jour en cours, en pause, démarrée.
+    g.update_pending = num("StateFlags").is_some_and(|f| f & (2 | 256 | 512 | 1024) != 0);
+    if g.update_pending {
+        g.update_bytes = num("BytesToDownload").map(|t| t.saturating_sub(num("BytesDownloaded").unwrap_or(0))).filter(|b| *b > 0);
+    }
     Some(g)
 }
 
@@ -189,6 +195,20 @@ mod tests {
         assert_eq!(g.launcher_name, "Steam");
         assert!(g.install_dir.unwrap().ends_with("Satisfactory"));
         assert!(g.size_bytes.unwrap_or(0) > 0, "SizeOnDisk du manifeste");
+        assert!(!g.update_pending);
+    }
+
+    #[test]
+    fn mise_a_jour_en_attente() {
+        let lib = Path::new(r"D:\SteamLibrary\steamapps");
+        let flags = |v: &str| MANIFEST.replace("\"StateFlags\"\t\t\"4\"", &format!("\"StateFlags\"\t\t\"{v}\""));
+        let t = flags("6") + "\"BytesToDownload\"\t\t\"3000\"\n\"BytesDownloaded\"\t\t\"1000\"\n";
+        let g = parse_manifest(&t, lib).unwrap();
+        assert!(g.update_pending);
+        assert_eq!(g.update_bytes, Some(2000));
+        let g = parse_manifest(&flags("1028"), lib).unwrap();
+        assert!(g.update_pending, "mise à jour démarrée");
+        assert_eq!(g.update_bytes, None);
     }
 
     #[test]

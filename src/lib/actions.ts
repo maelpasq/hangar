@@ -39,6 +39,18 @@ export async function uninstallGame(id: string): Promise<void> {
   }
 }
 
+/** Ouvre les mises à jour du jeu dans son launcher ; le rescan au retour dira si c'est fait. */
+export async function updateGame(id: string): Promise<void> {
+  const g = library.get(id);
+  if (!g || g.notInstalled) return;
+  try {
+    ui.toast(await api.updateGame(id), { gameId: id });
+    if (g.updatePending) runner.watchInstall(id);
+  } catch (e) {
+    ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true, gameId: id });
+  }
+}
+
 /** Relance le scan ; `announce` affiche le nombre de jeux à la fin. */
 export async function rescan(announce = false): Promise<void> {
   try {

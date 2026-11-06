@@ -149,7 +149,9 @@ export function mockApi(): Api {
   const now = Date.now();
   let state: unknown = REEL ? defaultState() : demoState(now);
   let library: Game[] = [];
-  const lib = [...(REEL ? reelLibrary() : games.map(toGame)), ...UNINSTALLED];
+  const lib = [...(REEL ? reelLibrary() : games.map(toGame)), ...UNINSTALLED].map((g) =>
+    REEL || !['steam:satisfactory', 'steam:cyberpunk'].includes(g.id) ? g : { ...g, updatePending: true, updateBytes: 2_400_000_000 }
+  );
   const listeners = new Set<(e: LaunchEvent) => void>();
   const running = new Map<string, { start: number; timers: number[] }>();
   const emit = (e: LaunchEvent) => listeners.forEach((l) => l(e));
@@ -204,6 +206,7 @@ export function mockApi(): Api {
     },
     openFolder: async () => {},
     uninstallGame: async (id) => `Démo : la désinstallation de ${id} s'ouvrirait dans son launcher.`,
+    updateGame: async (id) => `Démo : les mises à jour de ${id} s'ouvriraient dans son launcher.`,
     setDesktop: async () => ({ presenceAvailable: true, shortcut: 'Ctrl+Alt+H', shortcutOk: true }),
     setTrayRecents: async () => {},
     trayState: async () => ({

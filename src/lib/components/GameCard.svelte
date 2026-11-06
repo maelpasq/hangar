@@ -37,6 +37,8 @@
   const metaText = $derived(
     toInstall && meta !== 'last'
       ? `${store.label} · Non installé`
+      : game.updatePending && meta !== 'last'
+        ? `${store.label} · Mise à jour`
       : meta === 'hours'
       ? `${store.label} · ${hoursLabel(t.playMs)}`
       : meta === 'last'

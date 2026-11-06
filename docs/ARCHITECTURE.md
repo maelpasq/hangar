@@ -81,6 +81,8 @@ interface Game {
   processNames: string[];  // noms de processus qui signifient « le jeu tourne »
   genre?: string;          // Steam : via appdetails (facultatif, en cache), sinon vide
   notInstalled?: boolean;  // possédé mais pas installé : launch = installation dans le launcher
+  updatePending?: boolean; // mise à jour en attente dans le launcher (Steam)
+  updateBytes?: number;    // reste à télécharger (octets)
 }
 
 interface Session { gameId: string; start: number; end: number }   // ms epoch
@@ -121,6 +123,7 @@ interface PersistedState {
 | événement `accounts://synced` | Les comptes ont changé : le frontend rafraîchit l'état et rescanne |
 | `open_folder(path)` | Explorateur Windows. Comme `exe_icon` et `folder_size`, refusé si le chemin n'appartient à aucun jeu connu |
 | `uninstall_game(gameId) -> string` | Ouvre la désinstallation dans le launcher du jeu (ou les Applications de Windows), renvoie le message à afficher |
+| `update_game(gameId) -> string` | Ouvre les mises à jour du jeu dans son launcher (Steam, GOG Galaxy, Epic, Microsoft Store), renvoie le message à afficher ; erreur expliquée pour les autres |
 | `set_desktop(closeToTray, globalShortcut) -> DesktopInfo` | Fermeture dans la zone de notification, raccourci global Ctrl+Alt+H ; dit si Discord est disponible et si le raccourci est libre |
 | `set_tray_recents([id, nom][])` | Jeux récents du menu de l'icône (5 au plus, jeux connus seulement) |
 | `set_presence(gameId?, start)` | Discord Rich Presence par l'IPC locale de Discord (aucun réseau) |
