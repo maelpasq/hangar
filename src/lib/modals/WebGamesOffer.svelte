@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Proposition des jeux web : à la première ouverture, ou une fois après la mise à jour qui les ajoute.
+  // Proposition des jeux web, une fois, à qui avait Hangar avant leur arrivée (l'installation neuve passe par Onboarding).
   // Fermer sans répondre (Échap, clic à côté) reporte la question au prochain lancement.
   import Modal from '../components/Modal.svelte';
   import { library } from '../stores/library.svelte';
@@ -23,11 +23,11 @@
 </script>
 
 <Modal
-  title={library.fresh ? 'Activer les jeux web ?' : 'Les jeux web arrivent dans Hangar'}
+  title="Les jeux web arrivent dans Hangar"
   onclose={() => (ui.modal = null)}
   width={480}
 >
-  {#if !library.fresh}<span class="new">Nouveau</span>{/if}
+  <span class="new">Nouveau</span>
   <div class="strip" aria-hidden="true">
     {#each preview as src (src)}<img {src} alt="" />{/each}
   </div>

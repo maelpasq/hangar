@@ -10,6 +10,7 @@ export type Modal =
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
   | { kind: 'webGames' }
+  | { kind: 'onboarding' }
   | { kind: 'collections'; gameId: string };
 
 export interface Toast {

@@ -246,6 +246,14 @@
                 >
                 <button class="btn-s" onclick={() => (ui.big = true)}><Icon name="gamepad" size={15} />Ouvrir</button>
               </div>
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Configuration de départ</span><span class="hint"
+                    >Launchers, jeux locaux, couleur et jeux web, en quatre étapes.</span
+                  ></span
+                >
+                <button class="btn-s" onclick={() => (ui.modal = { kind: 'onboarding' })}>Revoir</button>
+              </div>
             </section>
 
             <section class="group" aria-label="Mise à jour">
