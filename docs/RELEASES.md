@@ -47,6 +47,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.4 - 6 novembre 2026
+**Discord Rich Presence** : la jaquette de ton jeu s'affiche maintenant quelle que soit sa source (Steam, Epic, GOG, Xbox, SteamGridDB), plus seulement pour les jeux Steam. Les **jeux web** apparaissent aussi sur Discord, avec leur jaquette, et disparaissent quand tu fermes leur fenêtre.
+
 ### 1.2.3 - 6 novembre 2026
 **Discord Rich Presence** : tes amis Discord voient à quoi tu joues, avec le nom du jeu, sa jaquette, l'icône Hangar dans le coin, « Lancé avec Hangar » et le temps de jeu. Désactivé par défaut : à activer dans Paramètres > Général > « Afficher mon jeu sur Discord ». Passe par l'app Discord installée sur l'appareil.
 
