@@ -1,6 +1,6 @@
 [package]
 name = "hangar-setup"
-version = "1.2.3"
+version = "1.2.4"
 description = "Installeur de Hangar"
 edition = "2021"
 license = "MIT"
