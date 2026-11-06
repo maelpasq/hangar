@@ -51,6 +51,31 @@ export async function updateGame(id: string): Promise<void> {
   }
 }
 
+/** Écart minimal entre deux vérifications automatiques des mises à jour. */
+const UPDATE_CHECK_MS = 5 * 60_000;
+let lastUpdateCheck = Date.now();
+
+/** Vérification automatique (minuterie, retour sur la fenêtre) : rescan discret, puis annonce
+ *  des jeux dont la mise à jour vient d'apparaître. Jamais pendant une partie. */
+export async function checkGameUpdates(): Promise<void> {
+  if (library.scanning || runner.current || Date.now() - lastUpdateCheck < UPDATE_CHECK_MS) return;
+  lastUpdateCheck = Date.now();
+  const before = new Set(library.updates.map((g) => g.id));
+  await rescan();
+  const fresh = library.updates.filter((g) => !before.has(g.id));
+  if (fresh.length === 1) {
+    const g = fresh[0];
+    ui.toast(`Mise à jour disponible pour ${library.name(g)}`, {
+      gameId: g.id,
+      action: { label: 'Mettre à jour', run: () => updateGame(g.id) }
+    });
+  } else if (fresh.length > 1) {
+    ui.toast(`${plural(fresh.length, 'jeu a', 'jeux ont')} une mise à jour`, {
+      action: { label: 'Voir', run: () => ui.updatesList() }
+    });
+  }
+}
+
 /** Relance le scan ; `announce` affiche le nombre de jeux à la fin. */
 export async function rescan(announce = false): Promise<void> {
   try {

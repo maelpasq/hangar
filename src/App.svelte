@@ -1,7 +1,7 @@
 <script lang="ts">
   // Coque de l'app : barre latérale, barre du haut, écran courant, overlays.
   import { onMount } from 'svelte';
-  import { rescan } from './lib/actions';
+  import { checkGameUpdates, rescan } from './lib/actions';
   import { updater } from './lib/stores/update.svelte';
   import { api } from './lib/api';
   import { art } from './lib/art.svelte';
@@ -101,7 +101,7 @@
         }),
         api.win.onFocusChange((f) => {
           ui.windowFocused = f;
-          if (f) void runner.checkInstalls();
+          if (f) void runner.checkInstalls().then(checkGameUpdates);
         }),
         api.onTrayLaunch((id) => void runner.play(id)),
         // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.
@@ -118,6 +118,9 @@
       await rescan();
       void updater.check(true);
     })();
+    // Mises à jour des jeux : vérifiées toutes les 10 min, même fenêtre cachée dans la zone de notification.
+    const updates = setInterval(() => void checkGameUpdates(), 10 * 60_000);
+    offs.push(() => clearInterval(updates));
     // Manette : Start ouvre le mode manette (qui prend ensuite les commandes).
     offs.push(gamepad.start());
     offs.push(
