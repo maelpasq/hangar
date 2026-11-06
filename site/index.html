@@ -6,10 +6,16 @@
 <title>Hangar - tous tes jeux, un seul launcher</title>
 <meta name="description" content="Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox), les affiche avec leurs vraies jaquettes et les lance en un clic. Gratuit pour Windows et macOS.">
 <meta name="theme-color" content="#0a0b0f">
+<meta name="color-scheme" content="dark">
 <meta property="og:title" content="Hangar - tous tes jeux, un seul launcher">
 <meta property="og:description" content="Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul. Gratuit pour Windows et macOS.">
 <meta property="og:image" content="images/accueil.webp">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script>
+  // Avant le premier rendu : les animations d'apparition n'existent que si le JS tourne, et la carte du système du visiteur passe en premier.
+  document.documentElement.classList.add('js');
+  if (/Mac/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent)) document.documentElement.classList.add('mac');
+</script>
 <style>
   /* Fichiers copiés au déploiement (voir .github/workflows/site.yml) */
   @font-face {
@@ -19,220 +25,328 @@
     font-display: swap;
   }
   :root {
+    color-scheme: dark;
     --bg: #0a0b0f;
-    --panel: #14161d;
-    --surface-1: rgba(255,255,255,.035);
-    --surface-2: rgba(255,255,255,.045);
-    --surface-3: rgba(255,255,255,.07);
-    --border-1: rgba(255,255,255,.05);
-    --border-2: rgba(255,255,255,.08);
-    --border-3: rgba(255,255,255,.14);
-    --text: #eef0f6;
+    --tile: #111319;
+    --tile-2: #161922;
+    --surface-2: rgba(255,255,255,.05);
+    --surface-3: rgba(255,255,255,.08);
+    --border-1: rgba(255,255,255,.06);
+    --border-2: rgba(255,255,255,.1);
+    --border-3: rgba(255,255,255,.16);
+    --text: #f2f3f8;
+    --text-2: #c9ccd8;
     --text-3: #a7acbd;
     --muted: #8b90a3;
     --accent: #7c6cff;
+    --accent-2: #a99bff;
     --accent-soft: rgba(139,123,255,.14);
-    --success: #6ee7b7;
-    --ease: cubic-bezier(.2,.8,.2,1);
+    --chrome: rgba(10,11,15,.68);
+    /* Ressort critiquement amorti (amortissement 1, réponse 0,4 s sur 0,6 s) : aucun rebond, arrêt en douceur */
+    --spring: cubic-bezier(.2,.8,.2,1);
+    --ease-out: cubic-bezier(.16,1,.3,1);
+  }
+  @supports (transition-timing-function: linear(0, 1)) {
+    :root { --spring: linear(0, .06, .186, .329, .466, .584, .682, .76, .821, .868, .903, .929, .949, .963, .973, .981, .986, .99, .993, .995, .997, .998, .998, .999, 1); }
   }
   * { box-sizing: border-box; margin: 0; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; -webkit-text-size-adjust: 100%; }
   body {
     background: var(--bg);
     color: var(--text);
-    font: 15px/1.6 'Geist', 'Segoe UI Variable Display', system-ui, sans-serif;
+    font: 1.0625rem/1.55 'Geist', 'Segoe UI Variable Text', system-ui, sans-serif;
+    font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   a { color: inherit; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
-  .wrap { width: min(1120px, 100% - 32px); margin: 0 auto; }
+  img { display: block; max-width: 100%; height: auto; }
+  :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 8px; }
+  .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+  .icon { width: 1.125rem; height: 1.125rem; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
-  /* Fond : vagues violettes de la DA + grain (comme l'installeur) */
-  .bg { position: absolute; inset: 0 0 auto; height: 1400px; pointer-events: none; overflow: hidden; z-index: 0; }
-  .wave {
-    position: absolute; width: 760px; height: 760px; border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
-    filter: blur(2px);
-    animation: drift 18s ease-in-out infinite alternate;
+  /* Fond : la lumière violette de la DA, fixe (pas de mouvement en boucle derrière le contenu) + grain */
+  .bg { position: absolute; inset: 0 0 auto; height: 1500px; pointer-events: none; overflow: hidden; z-index: 0; }
+  .bg::before, .bg::after { content: ''; position: absolute; }
+  .bg::before {
+    width: 1400px; height: 900px; top: -420px; left: 50%; translate: -50% 0;
+    background: radial-gradient(closest-side, rgba(110,59,246,.45), rgba(70,40,160,.16) 55%, transparent);
   }
-  .wave.a {
-    top: -460px; left: -300px;
-    background: radial-gradient(circle at 70% 75%, rgba(110,59,246,.42), rgba(70,40,160,.18) 45%, transparent 70%);
-    box-shadow: inset -18px -18px 40px -20px rgba(140,110,255,.6);
+  .bg::after {
+    width: 1000px; height: 900px; top: 640px; right: -520px;
+    background: radial-gradient(closest-side, rgba(110,59,246,.3), rgba(70,40,160,.1) 55%, transparent);
   }
-  .wave.b {
-    top: 380px; right: -420px;
-    background: radial-gradient(circle at 25% 25%, rgba(110,59,246,.5), rgba(70,40,160,.2) 45%, transparent 70%);
-    box-shadow: inset 18px 18px 40px -20px rgba(140,110,255,.55);
-    animation-duration: 22s; animation-direction: alternate-reverse;
-  }
-  @keyframes drift { to { transform: rotate(14deg) scale(1.06); } }
   .grain {
-    position: fixed; inset: 0; opacity: .045; pointer-events: none; z-index: 0;
+    position: fixed; inset: 0; opacity: .04; pointer-events: none; z-index: 0;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  header, main, footer { position: relative; z-index: 1; }
+  main, footer { position: relative; z-index: 1; }
 
-  /* Barre du haut */
-  .top { display: flex; align-items: center; justify-content: space-between; height: 76px; }
-  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-  .mark { width: 38px; height: auto; filter: drop-shadow(0 8px 22px rgba(110,59,246,.45)); }
-  .wordmark { height: 26px; width: auto; }
-  .nav { display: flex; gap: 4px; }
-  .nav a {
-    display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: 11px;
-    font-size: 14px; font-weight: 550; color: var(--text-3); text-decoration: none;
-    transition: background .2s var(--ease), color .2s var(--ease);
+  /* Barre du haut : matériau translucide, le contenu défile dessous */
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--chrome);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
   }
-  .nav a:hover { background: var(--surface-3); color: var(--text); }
-  .nav svg, .icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  /* Bord du défilement : le filet n'apparaît qu'une fois que du contenu passe sous la barre */
+  .top::after { content: ''; position: absolute; inset: auto 0 0; height: 1px; background: var(--border-2); }
+  @supports (animation-timeline: scroll()) {
+    .top::after { opacity: 0; animation: edge linear both; animation-timeline: scroll(); animation-range: 0 64px; }
+    @keyframes edge { to { opacity: 1; } }
+  }
+  .top .wrap { display: flex; align-items: center; gap: 8px; height: 3.5rem; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; text-decoration: none; border-radius: 10px; }
+  .mark { width: 30px; height: auto; }
+  .wordmark { height: 20px; width: auto; }
+  .nav { display: flex; gap: 2px; }
+  .nav a {
+    display: inline-flex; align-items: center; height: 2.25rem; padding: 0 .75rem; border-radius: 10px;
+    font-size: .875rem; font-weight: 500; letter-spacing: .005em; color: var(--text-2); text-decoration: none;
+    transition: color .2s ease, background-color .2s ease;
+  }
+  .nav a:hover { color: var(--text); background: var(--surface-2); }
+  .nav-dl { margin-left: 6px; }
+
+  /* Boutons : retour au moment de l'appui (pas au relâchement), retour en place sur un ressort */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 3.5rem; padding: 0 1.75rem 0 1.5rem; border: 0; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: 1.0625rem; font-weight: 650; letter-spacing: -.01em; text-decoration: none;
+    color: #fff; background: var(--accent);
+    box-shadow: 0 14px 34px -14px rgba(124,108,255,.85), inset 0 1px 0 rgba(255,255,255,.25);
+    transition: transform .6s var(--spring), filter .2s ease, background-color .2s ease;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn:active { transform: scale(.97); transition-duration: .1s; filter: brightness(.95); }
+  .btn .icon { width: 1.25rem; height: 1.25rem; stroke-width: 2; }
+  .btn.small { min-height: 2.125rem; padding: 0 .875rem; font-size: .8125rem; font-weight: 600; letter-spacing: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.22); }
+  .btn.small .icon { width: 1rem; height: 1rem; }
+  .btn.quiet { color: var(--text); background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-2); }
+  .btn.quiet:hover { background: rgba(255,255,255,.11); filter: none; }
+
+  /* Typo : approche et interligne propres à chaque taille */
+  .eyebrow { font-size: .8125rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-2); }
+  h1 { font-size: clamp(2.75rem, 8vw, 5.5rem); font-weight: 750; letter-spacing: -.045em; line-height: 1; text-wrap: balance; }
+  h1 span, .grad { background: linear-gradient(100deg, #e4e0ec 10%, #a99bff 55%, #7440f4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 750; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; }
+  h3 { font-size: 1.25rem; font-weight: 650; letter-spacing: -.015em; line-height: 1.25; }
+  .lead { font-size: clamp(1.125rem, 2vw, 1.3125rem); line-height: 1.45; letter-spacing: -.005em; color: var(--text-3); text-wrap: pretty; }
+  .head { text-align: center; max-width: 760px; margin-inline: auto; }
+  .head h2 { margin-top: .75rem; }
+  .head .lead { margin-top: 1rem; }
 
   /* Héros */
-  .hero { padding: 72px 0 0; text-align: center; }
+  .hero { padding-top: clamp(3.5rem, 9vw, 6.5rem); text-align: center; }
   .pill {
-    display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px;
-    font-size: 12.5px; font-weight: 600; color: var(--text-3);
-    background: var(--surface-2); border: 1px solid var(--border-2);
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 12px; border-radius: 999px;
+    font-size: .8125rem; font-weight: 550; color: var(--text-2);
+    background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-2);
     font-variant-numeric: tabular-nums;
   }
   .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-  h1 { margin-top: 22px; font-size: clamp(40px, 7vw, 72px); font-weight: 800; letter-spacing: -.035em; line-height: 1.02; }
-  h1 span { background: linear-gradient(100deg, #dcd8e3 10%, #a99bff 55%, #7440f4); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .lead { margin: 20px auto 0; max-width: 600px; font-size: 17px; color: var(--text-3); }
+  .hero h1 { margin-top: 1.5rem; }
+  .hero .lead { margin: 1.5rem auto 0; max-width: 34rem; }
+  .cta { margin-top: 2.25rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .alt { font-size: .875rem; color: var(--muted); }
+  .alt a { color: var(--text-2); font-weight: 550; text-underline-offset: 3px; text-decoration-color: var(--border-3); }
+  .alt a:hover { color: var(--text); text-decoration-color: currentColor; }
 
-  .cta { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-    height: 56px; padding: 0 30px 0 24px; border: 0; border-radius: 16px; cursor: pointer;
-    font: inherit; font-size: 16px; font-weight: 700; letter-spacing: -.1px; text-decoration: none;
-    color: #fff; background: var(--accent);
-    box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--accent) 80%, transparent), inset 0 1px 0 rgba(255,255,255,.25);
-    transition: transform .25s var(--ease), box-shadow .25s var(--ease), filter .25s var(--ease);
+  /* Capture dans un cadre de fenêtre : se redresse en suivant le défilement */
+  .stage { margin-top: clamp(3rem, 7vw, 5rem); perspective: 1800px; }
+  .frame {
+    position: relative; max-width: 1040px; margin-inline: auto;
+    padding: 8px; border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.03));
+    box-shadow: 0 50px 140px -40px rgba(110,59,246,.6), 0 30px 70px -24px rgba(0,0,0,.85);
+    transform-origin: 50% 0;
   }
-  .btn:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 20px 44px -12px color-mix(in srgb, var(--accent) 90%, transparent), inset 0 1px 0 rgba(255,255,255,.25); }
-  .btn:active { transform: scale(.97); }
-  .btn .icon { width: 20px; height: 20px; stroke-width: 2; }
-  .btn small { font-weight: 500; opacity: .75; font-size: 13px; }
-  .btn.ghost {
-    height: 46px; padding: 0 18px; font-size: 14px; font-weight: 600; color: var(--text);
-    background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-2);
+  .frame img { width: 100%; border-radius: 15px; background: #151821; }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .stage .frame { animation: unfold linear both; animation-timeline: view(); animation-range: entry 0% cover 42%; }
+      @keyframes unfold { from { transform: rotateX(16deg) scale(.92); } }
+    }
   }
-  .btn.ghost:hover { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-3); filter: none; }
-  .alt { font-size: 13px; color: var(--muted); }
-  .alt a { color: var(--text-3); font-weight: 600; text-underline-offset: 3px; }
-  .alt a:hover { color: var(--text); }
 
-  /* Capture principale dans un cadre de fenêtre */
-  .shot {
-    position: relative; margin: 64px auto 0; max-width: 1040px;
-    border-radius: 20px; padding: 8px;
-    background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02));
-    box-shadow: 0 40px 120px -30px rgba(110,59,246,.55), 0 30px 70px -20px rgba(0,0,0,.8);
-  }
-  .shot::before {
-    content: ''; position: absolute; inset: -60px 10% auto; height: 220px; z-index: -1;
-    background: radial-gradient(closest-side, rgba(124,108,255,.45), transparent); filter: blur(30px);
-  }
-  .shot img { display: block; width: 100%; height: auto; border-radius: 14px; background: #151821; }
+  /* Sections */
+  section { padding-top: clamp(6rem, 13vw, 10rem); }
 
-  /* Stores */
-  .stores { margin-top: 56px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  /* Fonctions : mosaïque, la hiérarchie vient de la taille des tuiles */
+  .bento { margin-top: 3.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .tile {
+    --x: 50%; --y: 0%;
+    position: relative; overflow: hidden; isolation: isolate;
+    display: flex; flex-direction: column; gap: .5rem;
+    min-height: 15rem; padding: 1.75rem; border-radius: 28px;
+    background: var(--tile); box-shadow: inset 0 0 0 1px var(--border-1);
+  }
+  /* Lumière qui suit le pointeur, 1:1, sur les écrans à souris */
+  .tile::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .3s ease;
+    background: radial-gradient(420px circle at var(--x) var(--y), rgba(139,123,255,.12), transparent 60%);
+  }
+  @media (hover: hover) { .tile:hover::before { opacity: 1; } }
+  .tile p { font-size: 1rem; color: var(--text-3); max-width: 30rem; text-wrap: pretty; }
+  .tile .ico {
+    width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 12px; margin-bottom: .75rem;
+    color: #b8adff; background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(139,123,255,.22);
+  }
+  .tile .ico .icon { width: 1.25rem; height: 1.25rem; }
+  .tile .big { font-size: clamp(2.75rem, 5vw, 3.75rem); font-weight: 750; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .wide { grid-column: span 2; }
+  .tall { grid-row: span 2; }
+  .visual { margin-top: auto; padding-top: 1.5rem; }
+
+  .stores { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
-    display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 12px; border-radius: 999px;
-    font-size: 13px; font-weight: 600; color: var(--text-3); border: 1px solid rgba(255,255,255,.09); background: var(--surface-1);
+    display: inline-flex; align-items: center; gap: 8px; height: 2.125rem; padding: 0 .875rem 0 .75rem; border-radius: 999px;
+    font-size: .875rem; font-weight: 550; color: var(--text-2); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-1);
   }
   .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
 
-  /* Sections */
-  section { padding: 110px 0 0; }
-  .kicker { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-  h2 { margin-top: 10px; font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -.9px; line-height: 1.1; }
-  .sub { margin-top: 12px; max-width: 560px; color: var(--text-3); }
+  .covers { padding: 0; min-height: 0; }
+  .covers .txt { padding: 1.75rem 1.75rem 0; display: flex; flex-direction: column; gap: .5rem; }
+  .covers img { flex: 1; min-height: 14rem; width: 100%; margin-top: 1.5rem; object-fit: cover; object-position: 88% 70%; mask-image: linear-gradient(to bottom, transparent, #000 4rem); }
 
-  .grid { margin-top: 38px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-  .card {
-    padding: 22px; border-radius: 20px; background: var(--surface-1); border: 1px solid var(--border-1);
-    transition: background .3s var(--ease), border-color .3s var(--ease), transform .3s var(--ease);
+  .keys { display: flex; flex-wrap: wrap; gap: 10px; }
+  .key {
+    min-width: 3rem; height: 3rem; padding: 0 .875rem; display: grid; place-items: center; border-radius: 999px;
+    font-size: .9375rem; font-weight: 700; letter-spacing: .01em; color: var(--text);
+    background: var(--tile-2); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 0 1px var(--border-2), 0 6px 14px -6px rgba(0,0,0,.8);
   }
-  .card:hover { background: var(--surface-2); border-color: var(--border-2); transform: translateY(-3px); }
-  .card .ico {
-    width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; margin-bottom: 16px;
-    color: #b3a8ff; background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(139,123,255,.22);
-  }
-  .card h3 { font-size: 16px; font-weight: 650; }
-  .card p { margin-top: 6px; font-size: 14px; color: var(--text-3); }
+  .key.a { width: 3rem; padding: 0; color: #fff; background: #3c9a5f; }
+
+  .bars { display: flex; align-items: flex-end; gap: 5px; height: 4.5rem; }
+  .bars i { flex: 1; height: var(--h); min-height: 4px; border-radius: 4px; background: linear-gradient(180deg, var(--accent-2), var(--accent)); opacity: .85; }
+  .bars i.off { background: var(--surface-3); opacity: 1; }
+
   kbd {
-    font: 600 12px ui-monospace, Consolas, monospace; padding: 1px 6px; border-radius: 6px;
-    background: var(--surface-3); border: 1px solid var(--border-2); color: var(--text);
+    font: 600 .8125rem ui-monospace, 'Cascadia Mono', Consolas, monospace; padding: 2px 7px; border-radius: 7px;
+    background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-2); color: var(--text); white-space: nowrap;
   }
+  .privacy div { display: flex; flex-direction: column; gap: .5rem; }
 
-  .gallery { margin-top: 38px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .gallery figure { border-radius: 16px; overflow: hidden; background: #151821; box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 10px 30px -14px rgba(0,0,0,.9); }
-  .gallery img { display: block; width: 100%; height: auto; transition: transform .4s var(--ease); }
-  .gallery figure:hover img { transform: scale(1.04); }
-  .gallery figcaption { padding: 12px 14px; font-size: 13.5px; font-weight: 600; }
+  /* Aperçu : contrôle segmenté, l'indicateur glisse sur un ressort, les captures se fondent */
+  .seg {
+    position: relative; display: grid; grid-template-columns: repeat(3, 1fr);
+    width: min(420px, 100%); margin: 2.5rem auto 0; padding: 4px; border-radius: 999px;
+    background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-1);
+  }
+  .seg::before {
+    content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 999px;
+    background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-2), 0 4px 12px -4px rgba(0,0,0,.6);
+    transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .6s var(--spring);
+  }
+  .seg button {
+    position: relative; height: 2.5rem; border: 0; border-radius: 999px; background: none; cursor: pointer;
+    font: inherit; font-size: .875rem; font-weight: 600; color: var(--text-3); transition: color .2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg button:hover, .seg button[aria-selected="true"] { color: var(--text); }
+  .views { display: grid; margin-top: 2rem; }
+  .views .frame { grid-area: 1 / 1; width: 100%; transition: opacity .4s ease, visibility 0s .4s; }
+  .views .frame[aria-hidden="true"] { opacity: 0; visibility: hidden; }
+  .views .frame:not([aria-hidden="true"]) { transition-delay: 0s; }
+  .caption { margin-top: 1.25rem; text-align: center; font-size: .9375rem; color: var(--muted); min-height: 1.5em; }
 
-  /* Installation */
-  .install { margin-top: 38px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .install .card:hover { transform: none; }
-  .os { display: flex; align-items: center; gap: 10px; }
-  .os h3 { font-size: 18px; }
-  .install ol { margin-top: 14px; padding-left: 20px; color: var(--text-3); font-size: 14px; display: grid; gap: 8px; }
+  /* Installer */
+  .install { margin-top: 3.5rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .mac .install .is-mac { order: -1; }
+  .install .tile { min-height: 0; gap: 0; }
+  .os { display: flex; align-items: center; gap: 12px; }
+  .os .ico { margin: 0; }
+  .os small { display: block; font-size: .875rem; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+  .install ol { margin: 1.5rem 0 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 1rem; font-size: 1rem; color: var(--text-3); }
+  .install li { min-width: 0; position: relative; padding-left: 2.25rem; counter-increment: step; }
+  .install li::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 1.5rem; height: 1.5rem; display: grid; place-items: center; border-radius: 50%;
+    font-size: .75rem; font-weight: 700; color: var(--text); background: var(--surface-3); font-variant-numeric: tabular-nums;
+  }
   .install strong { color: var(--text); font-weight: 600; }
-  .install .btn { margin-top: 20px; }
+  .install ol { margin-bottom: 1.75rem; }
+  .install .btn { margin-top: auto; align-self: flex-start; }
   .code {
-    margin-top: 6px; display: flex; align-items: center; gap: 8px;
-    padding: 6px 6px 6px 14px; border-radius: 13px; background: rgba(0,0,0,.3); border: 1px solid var(--border-2);
+    margin-top: .625rem; display: flex; align-items: center; gap: 8px;
+    padding: 6px 6px 6px 14px; border-radius: 14px; background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px var(--border-2);
   }
-  .code code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 13px ui-monospace, Consolas, monospace; color: var(--text); }
+  .code code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: .8125rem ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--text); }
   .copy {
-    flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 9px;
-    background: var(--surface-3); color: var(--text-3); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    flex: none; display: inline-flex; align-items: center; gap: 6px; height: 2rem; padding: 0 .75rem; border: 0; border-radius: 10px;
+    background: var(--surface-3); color: var(--text-2); font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer;
+    transition: transform .6s var(--spring), background-color .2s ease, color .2s ease;
   }
-  .copy:hover { color: var(--text); background: rgba(255,255,255,.1); }
-  .copy .icon { width: 15px; height: 15px; }
+  .copy:hover { color: var(--text); background: rgba(255,255,255,.12); }
+  .copy:active { transform: scale(.95); transition-duration: .1s; }
+  .copy .icon { width: .9375rem; height: .9375rem; }
+  .copy.done { color: #6ee7b7; }
+  .note { margin-top: 1.5rem; text-align: center; font-size: .9375rem; color: var(--muted); }
 
   /* Appel final */
-  .final {
-    margin-top: 110px; padding: 56px 24px; border-radius: 26px; text-align: center;
-    background: radial-gradient(120% 140% at 50% 0%, rgba(110,59,246,.28), transparent 60%), var(--surface-1);
-    border: 1px solid var(--border-2);
-  }
-  .final .mark { width: 64px; margin-bottom: 18px; }
-  .final .star { transform-origin: 467px 460px; transform-box: view-box; animation: twinkle 3.2s ease-in-out infinite; }
-  @keyframes twinkle { 50% { transform: scale(1.15); filter: brightness(1.35); } }
+  .final { padding-top: clamp(6rem, 13vw, 10rem); text-align: center; }
+  .final .mark { width: 72px; margin: 0 auto 1.75rem; filter: drop-shadow(0 12px 30px rgba(110,59,246,.5)); }
+  .final .lead { margin-top: 1rem; }
 
-  footer { margin-top: 70px; padding: 26px 0 40px; border-top: 1px solid var(--border-1); }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; font-size: 13px; color: var(--muted); }
-  footer nav { display: flex; flex-wrap: wrap; gap: 18px; }
+  footer { margin-top: clamp(5rem, 10vw, 8rem); padding: 1.75rem 0 2.5rem; box-shadow: inset 0 1px 0 var(--border-1); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; font-size: .8125rem; color: var(--muted); }
+  footer nav { display: flex; flex-wrap: wrap; gap: 6px 20px; }
   footer a { text-decoration: none; }
   footer a:hover { color: var(--text); }
 
-  /* Apparition au défilement */
-  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
-  .reveal.in { opacity: 1; transform: none; }
-  .hero > * { animation: rise .6s var(--ease) both; }
-  .hero > :nth-child(2) { animation-delay: .06s; }
-  .hero > :nth-child(3) { animation-delay: .12s; }
-  .hero > :nth-child(4) { animation-delay: .18s; }
-  .hero > :nth-child(5) { animation-delay: .26s; }
-  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  /* Apparition : seulement si le JS tourne, sur un ressort sans rebond */
+  .js .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .9s var(--spring); transition-delay: var(--d, 0s); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  .hero > * { animation: rise .9s var(--spring) both; }
+  .hero > :nth-child(2) { animation-delay: .05s; }
+  .hero > :nth-child(3) { animation-delay: .1s; }
+  .hero > :nth-child(4) { animation-delay: .15s; }
+  .hero > :nth-child(5) { animation-delay: .25s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(20px); } }
 
-  @media (max-width: 860px) {
-    .gallery, .install { grid-template-columns: 1fr; }
-    .nav a span { display: none; }
-    .hero { padding-top: 44px; }
-    section { padding-top: 80px; }
+  @media (max-width: 900px) {
+    .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tall { grid-row: auto; }
+    .privacy { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.75rem; }
+    .privacy .ico { flex: none; width: 4rem; height: 4rem; border-radius: 20px; margin: 0; }
+    .privacy .ico .icon { width: 2rem; height: 2rem; stroke-width: 1.6; }
   }
+  @media (max-width: 640px) {
+    .bento, .install { grid-template-columns: minmax(0, 1fr); }
+    .install .btn { align-self: stretch; }
+    .wide, .privacy { grid-column: auto; }
+    .privacy { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .tile { min-height: 0; padding: 1.5rem; border-radius: 24px; }
+    .covers { padding: 0; }
+    .covers .txt { padding: 1.5rem 1.5rem 0; }
+    .nav { display: none; }
+    .frame { padding: 5px; border-radius: 14px; }
+    .frame img { border-radius: 10px; }
+  }
+
+  /* Mouvement réduit : fondus courts au lieu des glissements, rien ne bouge avec le défilement */
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-    .reveal { opacity: 1; transform: none; }
+    .hero > * { animation: fade .3s ease both; }
+    @keyframes fade { from { opacity: 0; } }
+    .js .reveal { transform: none; transition: opacity .3s ease; }
+    .seg::before { transition: none; }
+    .btn, .copy { transition-property: filter, background-color, color; }
+  }
+  /* Transparence réduite : matériaux pleins */
+  @media (prefers-reduced-transparency: reduce) {
+    .top { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .grain { display: none; }
+  }
+  /* Contraste renforcé : bords nets, texte secondaire plus clair */
+  @media (prefers-contrast: more) {
+    :root { --text-2: #e2e4ec; --text-3: #d0d3de; --muted: #b9bdcc; --border-1: rgba(255,255,255,.28); --border-2: rgba(255,255,255,.36); --chrome: var(--bg); }
+    .top::after { opacity: 1; animation: none; }
   }
 </style>
 </head>
 <body>
-  <div class="bg" aria-hidden="true"><div class="wave a"></div><div class="wave b"></div></div>
+  <div class="bg" aria-hidden="true"></div>
   <div class="grain" aria-hidden="true"></div>
 
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -243,22 +357,26 @@
       <path id="hp" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
       <symbol id="mark" viewBox="0 0 930 720">
         <use href="#hp" fill="url(#ha)"/><use href="#hp" fill="url(#hg)"/>
-        <path class="star" d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hs)"/>
+        <path d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hs)"/>
       </symbol>
       <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
     </defs>
   </svg>
 
-  <header class="wrap top">
-    <a class="brand" href="#" aria-label="Hangar, accueil">
-      <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
-      <img class="wordmark" src="wordmark.png" alt="">
-    </a>
-    <nav class="nav" aria-label="Navigation">
-      <a href="#fonctions" aria-label="Fonctions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg><span>Fonctions</span></a>
-      <a href="#installer" aria-label="Installer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg><span>Installer</span></a>
-      <a href="https://github.com/maelpasq/hangar" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg><span>GitHub</span></a>
-    </nav>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="#" aria-label="Hangar, haut de la page">
+        <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
+        <img class="wordmark" src="wordmark.png" alt="" width="91" height="20">
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#fonctions">Fonctions</a>
+        <a href="#apercu">Aperçu</a>
+        <a href="#installer">Installer</a>
+        <a href="https://github.com/maelpasq/hangar" rel="noopener">GitHub</a>
+      </nav>
+      <a class="btn small nav-dl" href="#installer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger</a>
+    </div>
   </header>
 
   <main>
@@ -273,134 +391,175 @@
         </a>
         <p class="alt"><span class="dl-alt-text">Sur Mac ?</span> <a class="dl-alt" href="https://github.com/maelpasq/hangar/releases/latest">Télécharger pour macOS</a> · <a href="https://github.com/maelpasq/hangar/releases">Toutes les versions</a></p>
       </div>
-      <figure class="shot">
-        <img src="images/accueil.webp" width="1440" height="900" alt="Accueil de Hangar : carrousel des jeux récents et bibliothèque avec les jaquettes">
-      </figure>
-    </div>
-
-    <div class="wrap stores reveal" aria-label="Stores détectés">
-      <span class="chip" style="--dot:#66c0f4"><i></i>Steam</span>
-      <span class="chip" style="--dot:#d9d9d9"><i></i>Epic Games</span>
-      <span class="chip" style="--dot:#c084fc"><i></i>GOG</span>
-      <span class="chip" style="--dot:#60a5fa"><i></i>Ubisoft Connect</span>
-      <span class="chip" style="--dot:#ff6b6b"><i></i>EA app</span>
-      <span class="chip" style="--dot:#38a3ff"><i></i>Battle.net</span>
-      <span class="chip" style="--dot:#ff5c6c"><i></i>Riot Games</span>
-      <span class="chip" style="--dot:#4ade80"><i></i>Xbox</span>
-      <span class="chip" style="--dot:#f5a524"><i></i>Dossiers locaux</span>
+      <div class="stage">
+        <figure class="frame">
+          <img src="images/accueil.webp" width="1440" height="900" alt="Accueil de Hangar : carrousel des jeux récents et bibliothèque avec les jaquettes">
+        </figure>
+      </div>
     </div>
 
     <section class="wrap" id="fonctions" aria-labelledby="t-fonctions">
-      <div class="reveal">
-        <p class="kicker">Fonctions</p>
+      <div class="head reveal">
+        <p class="eyebrow">Fonctions</p>
         <h2 id="t-fonctions">Ta bibliothèque, enfin réunie.</h2>
-        <p class="sub">Plus besoin d'ouvrir cinq launchers pour savoir à quoi jouer ce soir.</p>
+        <p class="lead">Plus besoin d'ouvrir cinq launchers pour savoir à quoi jouer ce soir.</p>
       </div>
-      <div class="grid">
-        <article class="card reveal">
+
+      <div class="bento">
+        <article class="tile wide reveal">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
-          <h3>Détection automatique</h3>
-          <p>Tous tes jeux, quel que soit le store, plus tes dossiers de jeux et ceux que tu ajoutes à la main.</p>
+          <h3>Il les trouve tous, tout seul.</h3>
+          <p>Chaque store installé, tes dossiers de jeux et ceux que tu ajoutes à la main. Un launcher désinstallé disparaît avec ses jeux.</p>
+          <div class="visual stores" aria-label="Sources détectées">
+            <span class="chip" style="--dot:#66c0f4"><i></i>Steam</span>
+            <span class="chip" style="--dot:#d9d9d9"><i></i>Epic Games</span>
+            <span class="chip" style="--dot:#c084fc"><i></i>GOG</span>
+            <span class="chip" style="--dot:#60a5fa"><i></i>Ubisoft Connect</span>
+            <span class="chip" style="--dot:#ff6b6b"><i></i>EA app</span>
+            <span class="chip" style="--dot:#38a3ff"><i></i>Battle.net</span>
+            <span class="chip" style="--dot:#ff5c6c"><i></i>Riot Games</span>
+            <span class="chip" style="--dot:#4ade80"><i></i>Xbox</span>
+            <span class="chip" style="--dot:#f5a524"><i></i>Dossiers locaux</span>
+          </div>
         </article>
-        <article class="card reveal">
-          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M5 15l4-4 4 4 2-2 4 4"/></svg></div>
-          <h3>Vraies jaquettes</h3>
-          <p>Jaquettes et bannières trouvées toutes seules (Steam, stores, SteamGridDB) et gardées en cache.</p>
+
+        <article class="tile tall covers reveal" style="--d:.06s">
+          <div class="txt">
+            <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M5 15l4-4 4 4 2-2 4 4"/></svg></div>
+            <h3>Les vraies jaquettes.</h3>
+            <p>Trouvées toutes seules (Steam, stores, SteamGridDB) et gardées en cache. Les jaquettes sont les stars.</p>
+          </div>
+          <img src="images/bibliotheque.webp" width="1440" height="900" loading="lazy" alt="">
         </article>
-        <article class="card reveal">
+
+        <article class="tile reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v4a3 3 0 0 1-5.4 1.8L14 14h-4l-1.6 1.8A3 3 0 0 1 3 14z"/><path d="M8 9v3M6.5 10.5h3M16 10h.01M18 12h.01"/></svg></div>
+          <h3>Mode manette.</h3>
+          <p>Hangar en plein écran, à jouer depuis le canapé.</p>
+          <div class="visual keys" aria-hidden="true"><span class="key">Start</span><span class="key a">A</span><span class="key">LB</span><span class="key">RB</span></div>
+        </article>
+
+        <article class="tile reveal" style="--d:.06s">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>Ton temps de jeu.</h3>
+          <p>Chaque session chronométrée, la dernière partie et l'activité des 14 derniers jours.</p>
+          <div class="visual bars" aria-hidden="true">
+            <i style="--h:30%"></i><i class="off"></i><i style="--h:55%"></i><i style="--h:40%"></i><i class="off"></i><i style="--h:70%"></i><i style="--h:100%"></i>
+            <i style="--h:65%"></i><i class="off"></i><i class="off"></i><i style="--h:45%"></i><i style="--h:80%"></i><i style="--h:35%"></i><i style="--h:90%"></i>
+          </div>
+        </article>
+
+        <article class="tile reveal">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></div>
-          <h3>Lancement en un clic</h3>
+          <h3>Un clic, et c'est parti.</h3>
           <p>Via le launcher du jeu, ou directement son exécutable quand il n'y en a pas.</p>
         </article>
-        <article class="card reveal">
-          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v4a3 3 0 0 1-5.4 1.8L14 14h-4l-1.6 1.8A3 3 0 0 1 3 14z"/><path d="M8 9v3M6.5 10.5h3M16 10h.01M18 12h.01"/></svg></div>
-          <h3>Mode manette</h3>
-          <p>Hangar en plein écran, à jouer depuis le canapé : Start pour l'ouvrir, A pour jouer.</p>
-        </article>
-        <article class="card reveal">
-          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-          <h3>Temps de jeu</h3>
-          <p>Chaque session chronométrée, la dernière partie, les lancements et l'activité des 14 derniers jours.</p>
-        </article>
-        <article class="card reveal">
+
+        <article class="tile reveal" style="--d:.06s">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></div>
-          <h3>Jeux à installer</h3>
-          <p>Les jeux que tu possèdes sans les avoir installés sont là aussi, à un clic de leur launcher.</p>
+          <h3>Même les jeux pas installés.</h3>
+          <p>Ceux que tu possèdes sur Steam, Epic, GOG ou Riot sont là aussi, à un clic de leur installation.</p>
         </article>
-        <article class="card reveal">
+
+        <article class="tile reveal" style="--d:.12s">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h6"/></svg></div>
-          <h3>Collections et filtres</h3>
-          <p>Tes propres listes, filtres par store, genre ou temps de jeu, recherche instantanée <kbd>Ctrl K</kbd>.</p>
+          <h3>Collections et filtres.</h3>
+          <p>Tes propres listes, des filtres par store, genre ou temps de jeu, et la recherche instantanée <kbd>Ctrl K</kbd>.</p>
         </article>
-        <article class="card reveal">
+
+        <article class="tile reveal">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
-          <h3>Jeux web</h3>
-          <p>Une quarantaine de jeux navigateur (.io et classiques), à lancer sans rien installer.</p>
+          <p class="big grad">40</p>
+          <h3>jeux web, sans rien installer.</h3>
+          <p>agar.io, slither.io, TETR.IO, OpenFront... chacun dans sa propre fenêtre.</p>
         </article>
-        <article class="card reveal">
+
+        <article class="tile reveal" style="--d:.06s">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h.01M15 11h.01M9.5 14.5a3.5 3.5 0 0 0 5 0"/></svg></div>
+          <h3>Ton jeu sur Discord.</h3>
+          <p>Tes amis voient à quoi tu joues, avec sa jaquette et le temps de jeu. À activer si tu veux.</p>
+        </article>
+
+        <article class="tile privacy reveal" style="--d:.12s">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
-          <h3>Zéro télémétrie</h3>
-          <p>Aucune donnée collectée. Ta bibliothèque et ton temps de jeu restent sur ton ordinateur.</p>
+          <div>
+            <h3>Zéro télémétrie.</h3>
+            <p>Aucune donnée collectée. Ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Le code est ouvert, sous licence MIT.</p>
+          </div>
         </article>
       </div>
     </section>
 
-    <section class="wrap" aria-labelledby="t-apercu">
-      <div class="reveal">
-        <p class="kicker">Aperçu</p>
-        <h2 id="t-apercu">Les jaquettes sont les stars.</h2>
-        <p class="sub">Une interface sombre et épurée, qui s'efface devant tes jeux.</p>
+    <section class="wrap" id="apercu" aria-labelledby="t-apercu">
+      <div class="head reveal">
+        <p class="eyebrow">Aperçu</p>
+        <h2 id="t-apercu">Une interface qui s'efface devant tes jeux.</h2>
       </div>
-      <div class="gallery">
-        <figure class="reveal"><img src="images/bibliotheque.webp" width="1440" height="900" loading="lazy" alt="Bibliothèque de Hangar avec les filtres par store"><figcaption>Bibliothèque</figcaption></figure>
-        <figure class="reveal"><img src="images/jeu.webp" width="1440" height="900" loading="lazy" alt="Fiche d'un jeu avec sa bannière, son temps de jeu et son activité"><figcaption>Fiche d'un jeu</figcaption></figure>
-        <figure class="reveal"><img src="images/jeux-web.webp" width="1440" height="900" loading="lazy" alt="Onglet Jeux web de Hangar"><figcaption>Jeux web</figcaption></figure>
+      <div class="reveal">
+        <div class="seg" role="tablist" aria-label="Écrans de Hangar">
+          <button type="button" role="tab" id="tab-0" aria-controls="view-0" aria-selected="true">Bibliothèque</button>
+          <button type="button" role="tab" id="tab-1" aria-controls="view-1" aria-selected="false" tabindex="-1">Fiche d'un jeu</button>
+          <button type="button" role="tab" id="tab-2" aria-controls="view-2" aria-selected="false" tabindex="-1">Jeux web</button>
+        </div>
+        <div class="views">
+          <figure class="frame" id="view-0" role="tabpanel" aria-labelledby="tab-0" data-caption="Tous tes jeux au même endroit, filtrés par store en un clic."><img src="images/bibliotheque.webp" width="1440" height="900" loading="lazy" alt="Bibliothèque de Hangar avec les filtres par store"></figure>
+          <figure class="frame" id="view-1" role="tabpanel" aria-labelledby="tab-1" aria-hidden="true" data-caption="Sa bannière, ton temps de jeu, ta dernière partie et ton activité."><img src="images/jeu.webp" width="1440" height="900" loading="lazy" alt="Fiche d'un jeu avec sa bannière, son temps de jeu et son activité"></figure>
+          <figure class="frame" id="view-2" role="tabpanel" aria-labelledby="tab-2" aria-hidden="true" data-caption="Une quarantaine de jeux navigateur, les récents en tête."><img src="images/jeux-web.webp" width="1440" height="900" loading="lazy" alt="Onglet Jeux web de Hangar"></figure>
+        </div>
+        <p class="caption" aria-live="polite">Tous tes jeux au même endroit, filtrés par store en un clic.</p>
       </div>
     </section>
 
     <section class="wrap" id="installer" aria-labelledby="t-installer">
-      <div class="reveal">
-        <p class="kicker">Installer</p>
+      <div class="head reveal">
+        <p class="eyebrow">Installer</p>
         <h2 id="t-installer">Prêt en une minute.</h2>
-        <p class="sub">Ensuite, Hangar se met à jour tout seul : un bouton « Mettre à jour » apparaît quand une nouvelle version sort.</p>
+        <p class="lead">Ensuite, Hangar se met à jour tout seul.</p>
       </div>
       <div class="install">
-        <article class="card reveal">
-          <div class="os"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><h3>Windows 10 et 11</h3></div>
+        <article class="tile reveal">
+          <div class="os">
+            <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+            <h3>Windows<small>Windows 10 et 11</small></h3>
+          </div>
           <ol>
             <li>Télécharge et lance <strong>Hangar-Setup.exe</strong>, puis clique sur <strong>Installer</strong>. Pas besoin de droits administrateur.</li>
             <li>Si Windows affiche « Windows a protégé votre ordinateur », clique sur <strong>Informations complémentaires</strong> puis <strong>Exécuter quand même</strong>. Ce message apparaît pour toutes les apps sans certificat payant.</li>
           </ol>
           <a class="btn" href="https://github.com/maelpasq/hangar/releases/latest/download/Hangar-Setup.exe">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Hangar-Setup.exe
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger
           </a>
         </article>
-        <article class="card reveal">
-          <div class="os"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20"/></svg><h3>macOS (Intel et Apple Silicon)</h3></div>
+        <article class="tile is-mac reveal" style="--d:.06s">
+          <div class="os">
+            <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20"/></svg></div>
+            <h3>macOS<small>Intel et Apple Silicon</small></h3>
+          </div>
           <ol>
             <li>Ouvre le <strong>.dmg</strong> et glisse <strong>Hangar</strong> dans <strong>Applications</strong>.</li>
             <li>Hangar n'est pas signé par Apple : si macOS dit que l'app est « endommagée », lance une seule fois dans le Terminal :
-              <div class="code"><code id="xattr">xattr -cr /Applications/Hangar.app</code><button class="copy" type="button" data-copy="xattr" aria-label="Copier la commande"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>Copier</span></button></div>
+              <div class="code"><code id="xattr">xattr -cr /Applications/Hangar.app</code><button class="copy" type="button" data-copy="xattr" aria-label="Copier la commande"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span aria-live="polite">Copier</span></button></div>
             </li>
           </ol>
           <a class="btn dl-mac" href="https://github.com/maelpasq/hangar/releases/latest">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Hangar pour macOS
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger
           </a>
         </article>
       </div>
-
-      <div class="final reveal">
-        <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
-        <h2>On joue à quoi ce soir ?</h2>
-        <p class="sub" style="margin-inline:auto">Gratuit, open source, sous licence MIT.</p>
-        <div class="cta">
-          <a class="btn dl-main" href="https://github.com/maelpasq/hangar/releases/latest/download/Hangar-Setup.exe">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>
-            <span class="dl-label">Télécharger pour Windows</span>
-          </a>
-        </div>
-      </div>
+      <p class="note reveal">Un bouton « Mettre à jour » apparaît dans Hangar quand une nouvelle version sort.</p>
     </section>
+
+    <div class="wrap final reveal">
+      <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
+      <h2>On joue à quoi ce soir ?</h2>
+      <p class="lead">Gratuit, open source, sous licence MIT.</p>
+      <div class="cta">
+        <a class="btn dl-main" href="https://github.com/maelpasq/hangar/releases/latest/download/Hangar-Setup.exe">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>
+          <span class="dl-label">Télécharger pour Windows</span>
+        </a>
+      </div>
+    </div>
   </main>
 
   <footer>
@@ -419,7 +578,7 @@
   const REPO = 'maelpasq/hangar';
   const WIN = `https://github.com/${REPO}/releases/latest/download/Hangar-Setup.exe`;
   let mac = `https://github.com/${REPO}/releases/latest`;
-  const isMac = /Mac/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
+  const isMac = document.documentElement.classList.contains('mac');
 
   function setButtons() {
     const [href, label, altText, altHref, altLabel] = isMac
@@ -445,12 +604,52 @@
     .catch(() => {}); // hors ligne ou quota de l'API atteint : les liens vers la page des releases suffisent
 
   document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+    const label = b.querySelector('span');
     try {
       await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent);
-      b.querySelector('span').textContent = 'Copié';
-      setTimeout(() => { b.querySelector('span').textContent = 'Copier'; }, 1600);
+      label.textContent = 'Copié';
+      b.classList.add('done');
+      setTimeout(() => { label.textContent = 'Copier'; b.classList.remove('done'); }, 1600);
     } catch {}
   }));
+
+  // Aperçu : onglets accessibles (flèches, Début, Fin), l'indicateur suit l'onglet choisi.
+  const seg = document.querySelector('.seg');
+  const tabs = [...seg.querySelectorAll('[role="tab"]')];
+  const caption = document.querySelector('.caption');
+  function select(i, focus) {
+    tabs.forEach((t, j) => {
+      const on = j === i;
+      t.setAttribute('aria-selected', on);
+      t.tabIndex = on ? 0 : -1;
+      const view = document.getElementById(t.getAttribute('aria-controls'));
+      if (on) { view.removeAttribute('aria-hidden'); caption.textContent = view.dataset.caption; }
+      else view.setAttribute('aria-hidden', 'true');
+    });
+    seg.style.setProperty('--i', i);
+    if (focus) tabs[i].focus();
+  }
+  // Le choix se fait à l'appui, pas au relâchement.
+  tabs.forEach((t, i) => {
+    t.addEventListener('pointerdown', (e) => { if (e.button === 0) select(i); });
+    t.addEventListener('click', () => select(i));
+  });
+  seg.addEventListener('keydown', (e) => {
+    const cur = tabs.indexOf(document.activeElement);
+    const next = { ArrowRight: cur + 1, ArrowLeft: cur - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    select((next + tabs.length) % tabs.length, true);
+  });
+
+  // Lumière des tuiles : suit le pointeur image par image.
+  document.querySelector('.bento').addEventListener('pointermove', (e) => {
+    const tile = e.target.closest('.tile');
+    if (!tile || e.pointerType !== 'mouse') return;
+    const r = tile.getBoundingClientRect();
+    tile.style.setProperty('--x', `${e.clientX - r.left}px`);
+    tile.style.setProperty('--y', `${e.clientY - r.top}px`);
+  });
 
   const io = new IntersectionObserver((entries) => entries.forEach((e) => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
