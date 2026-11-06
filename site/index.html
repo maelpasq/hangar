@@ -107,6 +107,13 @@
   }
   .nav a:hover { color: var(--text); background: var(--surface-2); }
   .nav-dl { margin-left: 6px; }
+  /* Flèche de lien externe : glisse vers son but au survol */
+  .ext svg {
+    width: .625rem; height: .625rem; margin-left: .3rem; fill: none; stroke: currentColor;
+    stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .7;
+    transition: transform .4s var(--spring), opacity .2s ease;
+  }
+  .ext:hover svg { transform: translate(1px, -1px); opacity: 1; }
 
   /* Boutons : retour au moment de l'appui (pas au relâchement), retour en place sur un ressort */
   .btn {
@@ -332,6 +339,7 @@
     .js .reveal { transform: none; transition: opacity .3s ease; }
     .seg::before { transition: none; }
     .btn, .copy { transition-property: filter, background-color, color; }
+    .ext:hover svg { transform: none; }
   }
   /* Transparence réduite : matériaux pleins */
   @media (prefers-reduced-transparency: reduce) {
@@ -373,7 +381,7 @@
         <a href="#fonctions">Fonctions</a>
         <a href="#apercu">Aperçu</a>
         <a href="#installer">Installer</a>
-        <a href="https://github.com/maelpasq/hangar" rel="noopener">GitHub</a>
+        <a class="ext" href="https://github.com/maelpasq/hangar" rel="noopener" aria-label="GitHub (site externe)">GitHub<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
       </nav>
       <a class="btn small nav-dl" href="#installer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger</a>
     </div>
