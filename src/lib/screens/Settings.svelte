@@ -82,8 +82,8 @@
     if (key === 'autoCovers') art.reset();
     // Discord : la présence en cours s'affiche ou s'efface tout de suite.
     if (key === 'discordPresence') {
-      const id = runner.current;
-      api.setPresence(on ? id : null, on && id ? runner.running[id] : 0).catch(() => {});
+      if (on) runner.syncPresence();
+      else api.setPresence(null, 0).catch(() => {});
     }
   }
 

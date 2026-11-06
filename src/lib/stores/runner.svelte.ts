@@ -23,6 +23,8 @@ class Runner {
   launching = $state<Launching | null>(null);
   /** Jeux dont un processus est détecté, avec l'heure de début. */
   running = $state<Record<string, number>>({});
+  /** Jeux web ouverts dans leur fenêtre, avec l'heure d'ouverture (présence Discord seulement). */
+  web = $state<Record<string, number>>({});
   now = $state(Date.now());
 
   /** Jeu en cours le plus récent (carte de la barre latérale). */
@@ -100,11 +102,25 @@ class Runner {
     for (const [id, was] of this.installs) if (!!library.get(id)?.notInstalled !== was) this.installs.delete(id);
   }
 
-  /** Discord : le jeu en cours le plus récent, ou rien. */
-  private syncPresence(): void {
+  /** Discord : le jeu en cours le plus récent, sinon le jeu web ouvert le plus récent, ou rien. */
+  syncPresence(): void {
     if (!library.state.prefs.discordPresence) return;
     const id = this.current;
-    api.setPresence(id, id ? this.running[id] : 0).catch(() => {});
+    const web = Object.keys(this.web).reduce<string | null>((a, b) => (a && this.web[a] >= this.web[b] ? a : b), null);
+    if (id) api.setPresence(id, this.running[id]).catch(() => {});
+    else api.setPresence(web && `web:${web}`, web ? this.web[web] : 0).catch(() => {});
+  }
+
+  webOpened(id: string): void {
+    if (id in this.web) return; // fenêtre déjà ouverte, ramenée devant : même début
+    this.web = { ...this.web, [id]: Date.now() };
+    this.syncPresence();
+  }
+
+  webClosed(id: string): void {
+    const { [id]: _gone, ...rest } = this.web;
+    this.web = rest;
+    this.syncPresence();
   }
 
   cancel(): void {

@@ -4,6 +4,7 @@
   import Chip from '../components/Chip.svelte';
   import Icon, { type IconName } from '../components/Icon.svelte';
   import { library } from '../stores/library.svelte';
+  import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
   import { generatedBackground } from '../util/color';
   import { plural, relativeDay } from '../util/format';
@@ -39,6 +40,7 @@
     library.save();
     try {
       await api.openWebGame(id);
+      runner.webOpened(id);
     } catch (e) {
       ui.toast(String(e), { error: true });
     }

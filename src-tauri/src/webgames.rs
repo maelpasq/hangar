@@ -3,9 +3,11 @@
 
 use serde::Deserialize;
 use tauri::webview::NewWindowResponse;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 const CATALOG: &str = include_str!("../../src/lib/web-games.json");
+// WEB_COVERS : identifiants des jeux qui ont une jaquette dans src/assets/web-games (build.rs).
+include!(concat!(env!("OUT_DIR"), "/web_covers.rs"));
 
 #[derive(Deserialize)]
 struct WebGame {
@@ -16,6 +18,17 @@ struct WebGame {
 
 fn find(id: &str) -> Option<WebGame> {
     serde_json::from_str::<Vec<WebGame>>(CATALOG).ok()?.into_iter().find(|g| g.id == id)
+}
+
+/// Nom d'un jeu web et adresse publique de sa jaquette (fichier du dépôt GitHub), pour Discord.
+/// Hangar ne la télécharge pas : c'est Discord qui l'affiche.
+// shortcut: l'adresse suit la branche main, à revoir si le dossier des jaquettes déménage.
+pub fn presence(id: &str) -> Option<(String, Option<String>)> {
+    let game = find(id)?;
+    let cover = WEB_COVERS
+        .contains(&id)
+        .then(|| format!("https://raw.githubusercontent.com/maelpasq/hangar/main/src/assets/web-games/{id}.webp"));
+    Some((game.name, cover))
 }
 
 /// Ouvre le jeu dans sa propre fenêtre (une par jeu) : sans accès aux commandes Tauri,
@@ -29,7 +42,7 @@ pub fn open(app: &AppHandle, id: &str) -> Result<(), String> {
         return Ok(());
     }
     let url = game.url.parse().map_err(|_| "Adresse du jeu invalide.".to_string())?;
-    WebviewWindowBuilder::new(app, &label, WebviewUrl::External(url))
+    let w = WebviewWindowBuilder::new(app, &label, WebviewUrl::External(url))
         .title(&game.name)
         .inner_size(1280.0, 800.0)
         .min_inner_size(640.0, 480.0)
@@ -48,6 +61,13 @@ pub fn open(app: &AppHandle, id: &str) -> Result<(), String> {
             log::error!("fenêtre du jeu web {id} : {e}");
             "Impossible d'ouvrir la fenêtre du jeu.".to_string()
         })?;
+    // Fenêtre fermée : le frontend efface la présence Discord du jeu.
+    let (app, id) = (app.clone(), game.id);
+    w.on_window_event(move |e| {
+        if matches!(e, WindowEvent::Destroyed) {
+            let _ = app.emit("web://closed", &id);
+        }
+    });
     Ok(())
 }
 
@@ -67,5 +87,12 @@ mod tests {
         }
         assert!(find("agar").is_some());
         assert!(find("inconnu").is_none());
+        for id in WEB_COVERS {
+            assert!(find(id).is_some(), "jaquette sans jeu : {id}");
+        }
+        let (name, cover) = presence("agar").unwrap();
+        assert_eq!(name, "Agar.io");
+        assert!(cover.unwrap().ends_with("/src/assets/web-games/agar.webp"));
+        assert!(presence("inconnu").is_none());
     }
 }

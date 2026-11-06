@@ -180,20 +180,20 @@ pub fn tray_action(app: AppHandle, ctx: Ctxs<'_>, action: String) -> Result<(), 
 /// Discord : affiche le jeu connu `game_id` (début `start` en ms), ou efface (`None`).
 #[tauri::command]
 pub async fn set_presence(ctx: Ctxs<'_>, game_id: Option<String>, start: u64) -> Result<(), String> {
-    let game = game_id.and_then(|id| ctx.known.get(&id));
-    let (p, artwork) = (ctx.presence.clone(), ctx.artwork.clone());
-    blocking(move || {
-        // La jaquette affichée dans Hangar (toutes sources), sinon le portrait Steam de l'appid natif.
-        let game = game.map(|g| {
-            let cover = artwork.cover_url(&g.id).or_else(|| {
+    // (nom, jaquette) : jeu web `web:<id>` du catalogue, ou jeu connu de la bibliothèque avec la
+    // jaquette affichée dans Hangar (toutes sources), sinon le portrait Steam de l'appid natif.
+    let game = match game_id.as_deref().and_then(|id| id.strip_prefix("web:")) {
+        Some(web) => crate::webgames::presence(web),
+        None => game_id.and_then(|id| ctx.known.get(&id)).map(|g| {
+            let cover = ctx.artwork.cover_url(&g.id).or_else(|| {
                 g.steam_app_id
                     .map(|id| format!("https://shared.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900.jpg"))
             });
-            (cover, g.name)
-        });
-        p.set(game.as_ref().map(|(cover, name)| (name.as_str(), start, cover.as_deref())))
-    })
-    .await
+            (g.name, cover)
+        }),
+    };
+    let p = ctx.presence.clone();
+    blocking(move || p.set(game.as_ref().map(|(name, cover)| (name.as_str(), start, cover.as_deref())))).await
 }
 
 #[tauri::command]

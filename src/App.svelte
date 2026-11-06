@@ -89,7 +89,7 @@
     const offs: (() => void)[] = [];
     let alive = true;
     (async () => {
-      const [a, b, d, c, e, f] = await Promise.all([
+      const [a, b, d, c, e, f, g] = await Promise.all([
         api.onLaunch((e) => runner.handle(e)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
@@ -104,9 +104,10 @@
         }),
         api.onTrayLaunch((id) => void runner.play(id)),
         // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.
-        api.onMainHidden(() => (ui.big = false))
+        api.onMainHidden(() => (ui.big = false)),
+        api.onWebClosed((id) => runner.webClosed(id))
       ]);
-      offs.push(a, b, d, c, e, f);
+      offs.push(a, b, d, c, e, f, g);
       if (!alive) offs.forEach((o) => o());
       await library.load();
       // Jeux web jamais proposés (installation neuve ou mise à jour) : on demande.
