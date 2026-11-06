@@ -20,6 +20,9 @@ const RETRY_MS: u64 = 3 * 24 * 3600 * 1000;
 pub struct ArtImage {
     pub path: String,
     pub landscape: bool,
+    /// Adresse d'origine de l'image (Discord Rich Presence l'affiche, il ne lit pas les fichiers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
@@ -246,7 +249,7 @@ impl Artworks {
         cands.iter().find_map(|c| {
             self.art
                 .image(&c.url)
-                .map(|p| ArtImage { path: p.to_string_lossy().into_owned(), landscape: c.landscape })
+                .map(|p| ArtImage { path: p.to_string_lossy().into_owned(), landscape: c.landscape, url: Some(c.url.clone()) })
         })
     }
 
@@ -271,6 +274,19 @@ impl Artworks {
             log::info!("Epic : pas de catalogue local");
             HashMap::new()
         })
+    }
+
+    /// Adresse web de la jaquette d'un jeu déjà résolue (cache seulement, aucun réseau).
+    pub fn cover_url(&self, game_id: &str) -> Option<String> {
+        let prefix = format!("{game_id}|");
+        let c = self.lock();
+        c.entries
+            .iter()
+            .filter(|(k, _)| k.starts_with(&prefix))
+            .filter_map(|(_, e)| Some((e.at, e.art.cover.as_ref()?.url.clone()?)))
+            .filter(|(_, u)| u.starts_with("https://"))
+            .max()
+            .map(|(_, u)| u)
     }
 
     /// appid Steam retrouvé par le nom (même cache que les jaquettes).
@@ -346,6 +362,10 @@ fn now() -> u64 {
 fn entry_usable(e: &Entry, now: u64) -> bool {
     let exists = |i: &Option<ArtImage>| i.as_ref().map(|i| Path::new(&i.path).is_file()).unwrap_or(true);
     if !exists(&e.art.cover) || !exists(&e.art.hero) {
+        return false;
+    }
+    // Jaquette d'avant la 1.2.4, sans son adresse : on la résout à nouveau (images déjà en cache).
+    if e.art.cover.as_ref().is_some_and(|c| c.url.is_none()) {
         return false;
     }
     let complete = e.art.cover.is_some() && e.art.hero.is_some();
@@ -691,14 +711,16 @@ mod tests {
         let t = tempfile::tempdir().unwrap();
         let file = t.path().join("a.jpg");
         fs::write(&file, b"x").unwrap();
-        let img = Some(ArtImage { path: file.to_string_lossy().into_owned(), landscape: false });
+        let img = Some(ArtImage { path: file.to_string_lossy().into_owned(), landscape: false, url: Some("https://x/a.jpg".into()) });
         let full = Entry { art: Artwork { cover: img.clone(), hero: img.clone(), source: "steam".into() }, at: 0 };
         assert!(entry_usable(&full, u64::MAX / 2));
+        let old = Entry { art: Artwork { cover: Some(ArtImage { url: None, ..img.clone().unwrap() }), hero: img.clone(), source: "steam".into() }, at: 0 };
+        assert!(!entry_usable(&old, 1));
         let empty = Entry { art: Artwork::default(), at: 1000 };
         assert!(entry_usable(&empty, 1000 + RETRY_MS - 1));
         assert!(!entry_usable(&empty, 1000 + RETRY_MS + 1));
         let gone = Entry {
-            art: Artwork { cover: Some(ArtImage { path: "Z:\\absent.jpg".into(), landscape: false }), hero: None, source: String::new() },
+            art: Artwork { cover: Some(ArtImage { path: "Z:\\absent.jpg".into(), landscape: false, url: None }), hero: None, source: String::new() },
             at: 0,
         };
         assert!(!entry_usable(&gone, 1));

@@ -183,9 +183,15 @@ pub async fn set_presence(ctx: Ctxs<'_>, game_id: Option<String>, start: u64) ->
     let game = game_id.and_then(|id| ctx.known.get(&id));
     let (p, artwork) = (ctx.presence.clone(), ctx.artwork.clone());
     blocking(move || {
-        // appid natif, sinon celui retrouvé par le nom pour la jaquette (même cache).
-        let game = game.map(|g| (g.steam_app_id.or_else(|| artwork.steam_id(&g.name)), g.name));
-        p.set(game.as_ref().map(|(id, name)| (name.as_str(), start, *id)))
+        // La jaquette affichée dans Hangar (toutes sources), sinon le portrait Steam de l'appid natif.
+        let game = game.map(|g| {
+            let cover = artwork.cover_url(&g.id).or_else(|| {
+                g.steam_app_id
+                    .map(|id| format!("https://shared.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900.jpg"))
+            });
+            (cover, g.name)
+        });
+        p.set(game.as_ref().map(|(cover, name)| (name.as_str(), start, cover.as_deref())))
     })
     .await
 }

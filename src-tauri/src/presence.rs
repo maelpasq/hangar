@@ -37,18 +37,18 @@ pub fn frame(op: u32, payload: &serde_json::Value) -> Vec<u8> {
 const HANGAR_ASSET: &str = "hangar";
 
 /// Activité « en jeu » : le nom du jeu en titre (à la place de « Hangar »), « Lancé avec Hangar »
-/// dessous, chronomètre depuis `start_ms`, et sa jaquette Steam si l'appid est connu, avec l'icône
-/// Hangar dans le coin. Discord télécharge lui-même l'image.
-pub fn activity(game: Option<(&str, u64, Option<u32>)>, nonce: u64) -> serde_json::Value {
-    let activity = game.map(|(name, start_ms, steam_id)| {
+/// dessous, chronomètre depuis `start_ms`, et l'adresse web de sa jaquette si elle est connue, avec
+/// l'icône Hangar dans le coin. Discord télécharge lui-même l'image.
+pub fn activity(game: Option<(&str, u64, Option<&str>)>, nonce: u64) -> serde_json::Value {
+    let activity = game.map(|(name, start_ms, cover)| {
         // Discord exige 2 à 128 caractères.
         let mut title: String = name.chars().take(128).collect();
         if title.chars().count() < 2 {
             title.push_str("  ");
         }
-        let assets = match steam_id {
-            Some(id) => serde_json::json!({
-                "large_image": format!("https://shared.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900.jpg"),
+        let assets = match cover {
+            Some(url) => serde_json::json!({
+                "large_image": url,
                 "large_text": title,
                 "small_image": HANGAR_ASSET,
                 "small_text": "Hangar",
@@ -110,8 +110,8 @@ fn connect() -> Option<Conn> {
 }
 
 impl Presence {
-    /// Affiche le jeu (nom, début en ms, appid Steam) ou efface la présence (`None`). Discord fermé : rien.
-    pub fn set(&self, game: Option<(&str, u64, Option<u32>)>) {
+    /// Affiche le jeu (nom, début en ms, adresse de la jaquette) ou efface la présence (`None`). Discord fermé : rien.
+    pub fn set(&self, game: Option<(&str, u64, Option<&str>)>) {
         if CLIENT_ID.is_empty() {
             return;
         }
@@ -149,12 +149,12 @@ mod tests {
         let f = frame(1, &serde_json::json!({ "a": 1 }));
         assert_eq!(&f[..4], &1u32.to_le_bytes());
         assert_eq!(u32::from_le_bytes([f[4], f[5], f[6], f[7]]) as usize, f.len() - 8);
-        let a = activity(Some(("Hades", 1_700_000_000_000, Some(1145360))), 7);
+        let a = activity(Some(("Hades", 1_700_000_000_000, Some("https://cdn2.steamgriddb.com/grid/a.png"))), 7);
         assert_eq!(a["args"]["activity"]["name"], "Hades");
         assert_eq!(a["args"]["activity"]["details"], "Lancé avec Hangar");
         assert_eq!(a["args"]["activity"]["timestamps"]["start"], 1_700_000_000);
         let assets = &a["args"]["activity"]["assets"];
-        assert!(assets["large_image"].as_str().unwrap().ends_with("/apps/1145360/library_600x900.jpg"));
+        assert_eq!(assets["large_image"], "https://cdn2.steamgriddb.com/grid/a.png");
         assert_eq!(assets["small_image"], HANGAR_ASSET);
         let sans = activity(Some(("Jeu local", 0, None)), 1);
         assert_eq!(sans["args"]["activity"]["assets"]["large_image"], HANGAR_ASSET);
