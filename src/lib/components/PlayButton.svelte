@@ -1,16 +1,26 @@
 <script lang="ts">
-  // Bouton Jouer couleur d'accent (« Installer » pour un jeu non installé).
+  // Bouton Jouer couleur d'accent (« Installer » pour un jeu non installé, « Mettre à jour le jeu »
+  // avec `update` quand une mise à jour attend).
+  import { updateGame } from '../actions';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import Icon from './Icon.svelte';
 
-  let { gameId, large = false, label = 'Jouer' }: { gameId: string; large?: boolean; label?: string } = $props();
+  let {
+    gameId,
+    large = false,
+    label = 'Jouer',
+    update = false
+  }: { gameId: string; large?: boolean; label?: string; update?: boolean } = $props();
 
   const toInstall = $derived(!!library.get(gameId)?.notInstalled);
+  const toUpdate = $derived(update && !toInstall && !!library.get(gameId)?.updatePending);
 </script>
 
-<button class="play" class:large onclick={() => runner.play(gameId)}>
-  {#if toInstall}
+<button class="play" class:large onclick={() => (toUpdate ? updateGame(gameId) : runner.play(gameId))}>
+  {#if toUpdate}
+    <Icon name="download" size={large ? 18 : 17} stroke={2.2} />Mettre à jour le jeu
+  {:else if toInstall}
     <Icon name="download" size={large ? 18 : 17} stroke={2.2} />Installer
   {:else}
     <Icon name="play" size={large ? 17 : 16} />{label}

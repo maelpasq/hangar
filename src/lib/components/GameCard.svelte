@@ -2,6 +2,7 @@
   // Carte de jeu (jaquette 2:3) : clic = fiche, bouton « Lancer » ou double-clic = lancer, clic droit = menu.
   // Jeu non installé : jaquette atténuée, bouton « Installer ».
   import { STORES } from '../stores-meta';
+  import { updateGame } from '../actions';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -34,6 +35,9 @@
   const name = $derived(library.name(game));
   const t = $derived(library.totals(game.id));
   const toInstall = $derived(!!game.notInstalled);
+  // Onglet « Mises à jour » : l'action principale de la jaquette met le jeu à jour.
+  const toUpdate = $derived(ui.updates && !toInstall && !!game.updatePending);
+  const primary = () => (toUpdate ? updateGame(game.id) : runner.play(game.id));
   const metaText = $derived(
     toInstall && meta !== 'last'
       ? `${store.label} · Non installé`
@@ -61,7 +65,7 @@
 
   function ondblclick() {
     clearTimeout(clickTimer);
-    runner.play(game.id);
+    primary();
   }
 
   function oncontextmenu(e: MouseEvent) {
@@ -99,10 +103,12 @@
       <Cover {game} fontSize={gen.f} padding={gen.p} />
       <span class="ov"></span>
     </button>
-    <button class="play" aria-label="{toInstall ? 'Installer' : 'Lancer'} {name}" onclick={() => runner.play(game.id)}
-      >{#if variant !== 'small'}<Icon name={toInstall ? 'download' : 'play'} size={toInstall ? 14 : 12} stroke={2.2} />{/if}{toInstall
-        ? 'Installer'
-        : 'Lancer'}</button
+    <button class="play" aria-label="{toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer'} {name}" onclick={primary}
+      >{#if variant !== 'small'}<Icon
+          name={toInstall || toUpdate ? 'download' : 'play'}
+          size={toInstall || toUpdate ? 14 : 12}
+          stroke={2.2}
+        />{/if}{toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer'}</button
     >
   </div>
   {#if fav}<FavButton gameId={game.id} />{/if}

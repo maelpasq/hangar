@@ -97,7 +97,10 @@
           <span class="live num"><span class="pulse dotg"></span>En cours · {runner.elapsed(game.id)}</span>
           <button class="ghost stop" onclick={() => { ui.modal = { kind: 'stop', gameId: game.id }; }}>Arrêter</button>
         {:else}
-          <PlayButton gameId={game.id} large />
+          <PlayButton gameId={game.id} large update />
+          {#if game.updatePending && !game.notInstalled}
+            <button class="ghost stop" onclick={() => runner.play(game.id)}><Icon name="play" size={15} />Jouer</button>
+          {/if}
         {/if}
         <FavButton gameId={game.id} variant="ghost" size={52} />
         <span class="via">{via} {#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</span>
