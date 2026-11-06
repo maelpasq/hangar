@@ -40,6 +40,7 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
     let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
     accounts::merge(&mut games, ctx.accounts.games());
     ctx.accounts.apply_updates(&mut games);
+    simulate_updates(&app, &mut games);
     ctx.known.replace_scanned(&games);
     if ctx.accounts.stale() {
         sync_in_background(&app, ctx.accounts.clone());
@@ -68,6 +69,21 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
         });
     }
     Ok(games)
+}
+
+/// Hangar Test seulement, lancé avec `HANGAR_SIMULATE_UPDATES=1` : marque trois jeux installés
+/// comme ayant une mise à jour, pour voir l'interface sans toucher aux fichiers des launchers.
+fn simulate_updates(app: &AppHandle, games: &mut [Game]) {
+    if !app.config().identifier.ends_with(".test") || std::env::var_os("HANGAR_SIMULATE_UPDATES").is_none() {
+        return;
+    }
+    let sizes = [2_400_000_000, 850_000_000, 120_000_000];
+    // Jeux d'un launcher qui a un écran de mises à jour : le bouton « Mettre à jour » y mène.
+    let stores = ["steam", "epic", "gog", "xbox"];
+    for (g, size) in games.iter_mut().filter(|g| !g.not_installed && stores.contains(&g.store.as_str())).zip(sizes) {
+        g.update_pending = true;
+        g.update_bytes = Some(size);
+    }
 }
 
 /// Resynchronise les comptes puis prévient le frontend (`accounts://synced`), qui rescanne.
