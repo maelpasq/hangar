@@ -180,9 +180,14 @@ pub fn tray_action(app: AppHandle, ctx: Ctxs<'_>, action: String) -> Result<(), 
 /// Discord : affiche le jeu connu `game_id` (début `start` en ms), ou efface (`None`).
 #[tauri::command]
 pub async fn set_presence(ctx: Ctxs<'_>, game_id: Option<String>, start: u64) -> Result<(), String> {
-    let game = game_id.and_then(|id| ctx.known.get(&id)).map(|g| g.name);
-    let p = ctx.presence.clone();
-    blocking(move || p.set(game.as_deref().map(|n| (n, start)))).await
+    let game = game_id.and_then(|id| ctx.known.get(&id));
+    let (p, artwork) = (ctx.presence.clone(), ctx.artwork.clone());
+    blocking(move || {
+        // appid natif, sinon celui retrouvé par le nom pour la jaquette (même cache).
+        let game = game.map(|g| (g.steam_app_id.or_else(|| artwork.steam_id(&g.name)), g.name));
+        p.set(game.as_ref().map(|(id, name)| (name.as_str(), start, *id)))
+    })
+    .await
 }
 
 #[tauri::command]
