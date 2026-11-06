@@ -47,6 +47,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.3 - 6 novembre 2026
+**Discord Rich Presence** : tes amis Discord voient à quoi tu joues, avec le nom du jeu, sa jaquette, l'icône Hangar dans le coin, « Lancé avec Hangar » et le temps de jeu. Désactivé par défaut : à activer dans Paramètres > Général > « Afficher mon jeu sur Discord ». Passe par l'app Discord installée sur l'appareil.
+
 ### 1.2.2 - 5 novembre 2026
 **Mode manette corrigé** : Hangar ne se rouvre plus en plein écran après avoir été fermé ou quitté en mode manette, et une fenêtre restée à la taille de l'écran retrouve sa taille normale. Le curseur se cache quand tu joues à la manette et revient dès que la souris bouge. **Nouveau menu de l'icône** : un clic gauche sur l'icône Hangar de la zone de notification ouvre un petit menu avec tes jeux récents et leur jaquette, « Ouvrir Hangar » et « Quitter Hangar » (le clic droit garde le menu simple). Les jaquettes s'affichent dès le tout premier lancement.
 
