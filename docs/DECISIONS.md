@@ -157,3 +157,9 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - macOS : la création du `.dmg` échoue parfois sur les Mac de GitHub (`hdiutil: couldn't eject - Resource busy`, Spotlight ou XProtect gardent l'image ouverte). `release.yml` coupe Spotlight et XProtect avant l'empaquetage et refait un essai sur macOS si le premier échoue (l'app est déjà compilée, seul l'empaquetage est refait). `build.yml` ne crée pas de `.dmg`.
 - Notes de chaque release GitHub : la section de sa version dans `docs/RELEASES.md`, puis la ligne de téléchargement.
 - Éditeur « pamal Studio » partout : `bundle.publisher` et `copyright` (app, installeur Hangar), licence, et « Société » de l'installeur NSIS, que le modèle de Tauri ne remplit pas (ajoutée par `src-tauri/windows/hooks.nsh`). Les commits de ce dépôt sont signés « pamal Studio » avec l'adresse anonyme GitHub (configuration Git locale), aucun nom de personne.
+
+## Site de téléchargement
+
+- `site/index.html` : une seule page statique, sans framework ni build, dans la DA de l'installeur Hangar (vagues violettes, grain, logo, bouton accent). Publiée sur GitHub Pages par `.github/workflows/site.yml`, qui y recopie au déploiement les captures (`docs/images/`), la police et le logo de l'installeur et le favicon : une seule source pour ces fichiers.
+- Bouton principal selon le système du visiteur (Windows par défaut). Windows : lien fixe `releases/latest/download/Hangar-Setup.exe`. macOS : le nom du `.dmg` contient la version, la page le lit dans la dernière release via l'API publique de GitHub ; sans réponse, le lien mène à la page de la dernière release.
+- Pas de logos d'OS ni de stores (règle de la DA) : icônes neutres et points de couleur.

@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hangar - tous tes jeux, un seul launcher</title>
+<meta name="description" content="Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox), les affiche avec leurs vraies jaquettes et les lance en un clic. Gratuit pour Windows et macOS.">
+<meta name="theme-color" content="#0a0b0f">
+<meta property="og:title" content="Hangar - tous tes jeux, un seul launcher">
+<meta property="og:description" content="Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul. Gratuit pour Windows et macOS.">
+<meta property="og:image" content="images/accueil.webp">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  /* Fichiers copiés au déploiement (voir .github/workflows/site.yml) */
+  @font-face {
+    font-family: 'Geist';
+    src: url('fonts/geist-latin-wght-normal.woff2') format('woff2');
+    font-weight: 100 900;
+    font-display: swap;
+  }
+  :root {
+    --bg: #0a0b0f;
+    --panel: #14161d;
+    --surface-1: rgba(255,255,255,.035);
+    --surface-2: rgba(255,255,255,.045);
+    --surface-3: rgba(255,255,255,.07);
+    --border-1: rgba(255,255,255,.05);
+    --border-2: rgba(255,255,255,.08);
+    --border-3: rgba(255,255,255,.14);
+    --text: #eef0f6;
+    --text-3: #a7acbd;
+    --muted: #8b90a3;
+    --accent: #7c6cff;
+    --accent-soft: rgba(139,123,255,.14);
+    --success: #6ee7b7;
+    --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 'Geist', 'Segoe UI Variable Display', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  .wrap { width: min(1120px, 100% - 32px); margin: 0 auto; }
+
+  /* Fond : vagues violettes de la DA + grain (comme l'installeur) */
+  .bg { position: absolute; inset: 0 0 auto; height: 1400px; pointer-events: none; overflow: hidden; z-index: 0; }
+  .wave {
+    position: absolute; width: 760px; height: 760px; border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+    filter: blur(2px);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  .wave.a {
+    top: -460px; left: -300px;
+    background: radial-gradient(circle at 70% 75%, rgba(110,59,246,.42), rgba(70,40,160,.18) 45%, transparent 70%);
+    box-shadow: inset -18px -18px 40px -20px rgba(140,110,255,.6);
+  }
+  .wave.b {
+    top: 380px; right: -420px;
+    background: radial-gradient(circle at 25% 25%, rgba(110,59,246,.5), rgba(70,40,160,.2) 45%, transparent 70%);
+    box-shadow: inset 18px 18px 40px -20px rgba(140,110,255,.55);
+    animation-duration: 22s; animation-direction: alternate-reverse;
+  }
+  @keyframes drift { to { transform: rotate(14deg) scale(1.06); } }
+  .grain {
+    position: fixed; inset: 0; opacity: .045; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  header, main, footer { position: relative; z-index: 1; }
+
+  /* Barre du haut */
+  .top { display: flex; align-items: center; justify-content: space-between; height: 76px; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .mark { width: 38px; height: auto; filter: drop-shadow(0 8px 22px rgba(110,59,246,.45)); }
+  .wordmark { height: 26px; width: auto; }
+  .nav { display: flex; gap: 4px; }
+  .nav a {
+    display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: 11px;
+    font-size: 14px; font-weight: 550; color: var(--text-3); text-decoration: none;
+    transition: background .2s var(--ease), color .2s var(--ease);
+  }
+  .nav a:hover { background: var(--surface-3); color: var(--text); }
+  .nav svg, .icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  /* Héros */
+  .hero { padding: 72px 0 0; text-align: center; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; color: var(--text-3);
+    background: var(--surface-2); border: 1px solid var(--border-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  h1 { margin-top: 22px; font-size: clamp(40px, 7vw, 72px); font-weight: 800; letter-spacing: -.035em; line-height: 1.02; }
+  h1 span { background: linear-gradient(100deg, #dcd8e3 10%, #a99bff 55%, #7440f4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { margin: 20px auto 0; max-width: 600px; font-size: 17px; color: var(--text-3); }
+
+  .cta { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 56px; padding: 0 30px 0 24px; border: 0; border-radius: 16px; cursor: pointer;
+    font: inherit; font-size: 16px; font-weight: 700; letter-spacing: -.1px; text-decoration: none;
+    color: #fff; background: var(--accent);
+    box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--accent) 80%, transparent), inset 0 1px 0 rgba(255,255,255,.25);
+    transition: transform .25s var(--ease), box-shadow .25s var(--ease), filter .25s var(--ease);
+  }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 20px 44px -12px color-mix(in srgb, var(--accent) 90%, transparent), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn:active { transform: scale(.97); }
+  .btn .icon { width: 20px; height: 20px; stroke-width: 2; }
+  .btn small { font-weight: 500; opacity: .75; font-size: 13px; }
+  .btn.ghost {
+    height: 46px; padding: 0 18px; font-size: 14px; font-weight: 600; color: var(--text);
+    background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-2);
+  }
+  .btn.ghost:hover { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-3); filter: none; }
+  .alt { font-size: 13px; color: var(--muted); }
+  .alt a { color: var(--text-3); font-weight: 600; text-underline-offset: 3px; }
+  .alt a:hover { color: var(--text); }
+
+  /* Capture principale dans un cadre de fenêtre */
+  .shot {
+    position: relative; margin: 64px auto 0; max-width: 1040px;
+    border-radius: 20px; padding: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02));
+    box-shadow: 0 40px 120px -30px rgba(110,59,246,.55), 0 30px 70px -20px rgba(0,0,0,.8);
+  }
+  .shot::before {
+    content: ''; position: absolute; inset: -60px 10% auto; height: 220px; z-index: -1;
+    background: radial-gradient(closest-side, rgba(124,108,255,.45), transparent); filter: blur(30px);
+  }
+  .shot img { display: block; width: 100%; height: auto; border-radius: 14px; background: #151821; }
+
+  /* Stores */
+  .stores { margin-top: 56px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; color: var(--text-3); border: 1px solid rgba(255,255,255,.09); background: var(--surface-1);
+  }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
+
+  /* Sections */
+  section { padding: 110px 0 0; }
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  h2 { margin-top: 10px; font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -.9px; line-height: 1.1; }
+  .sub { margin-top: 12px; max-width: 560px; color: var(--text-3); }
+
+  .grid { margin-top: 38px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card {
+    padding: 22px; border-radius: 20px; background: var(--surface-1); border: 1px solid var(--border-1);
+    transition: background .3s var(--ease), border-color .3s var(--ease), transform .3s var(--ease);
+  }
+  .card:hover { background: var(--surface-2); border-color: var(--border-2); transform: translateY(-3px); }
+  .card .ico {
+    width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; margin-bottom: 16px;
+    color: #b3a8ff; background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(139,123,255,.22);
+  }
+  .card h3 { font-size: 16px; font-weight: 650; }
+  .card p { margin-top: 6px; font-size: 14px; color: var(--text-3); }
+  kbd {
+    font: 600 12px ui-monospace, Consolas, monospace; padding: 1px 6px; border-radius: 6px;
+    background: var(--surface-3); border: 1px solid var(--border-2); color: var(--text);
+  }
+
+  .gallery { margin-top: 38px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .gallery figure { border-radius: 16px; overflow: hidden; background: #151821; box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 10px 30px -14px rgba(0,0,0,.9); }
+  .gallery img { display: block; width: 100%; height: auto; transition: transform .4s var(--ease); }
+  .gallery figure:hover img { transform: scale(1.04); }
+  .gallery figcaption { padding: 12px 14px; font-size: 13.5px; font-weight: 600; }
+
+  /* Installation */
+  .install { margin-top: 38px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .install .card:hover { transform: none; }
+  .os { display: flex; align-items: center; gap: 10px; }
+  .os h3 { font-size: 18px; }
+  .install ol { margin-top: 14px; padding-left: 20px; color: var(--text-3); font-size: 14px; display: grid; gap: 8px; }
+  .install strong { color: var(--text); font-weight: 600; }
+  .install .btn { margin-top: 20px; }
+  .code {
+    margin-top: 6px; display: flex; align-items: center; gap: 8px;
+    padding: 6px 6px 6px 14px; border-radius: 13px; background: rgba(0,0,0,.3); border: 1px solid var(--border-2);
+  }
+  .code code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 13px ui-monospace, Consolas, monospace; color: var(--text); }
+  .copy {
+    flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 9px;
+    background: var(--surface-3); color: var(--text-3); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .copy:hover { color: var(--text); background: rgba(255,255,255,.1); }
+  .copy .icon { width: 15px; height: 15px; }
+
+  /* Appel final */
+  .final {
+    margin-top: 110px; padding: 56px 24px; border-radius: 26px; text-align: center;
+    background: radial-gradient(120% 140% at 50% 0%, rgba(110,59,246,.28), transparent 60%), var(--surface-1);
+    border: 1px solid var(--border-2);
+  }
+  .final .mark { width: 64px; margin-bottom: 18px; }
+  .final .star { transform-origin: 467px 460px; transform-box: view-box; animation: twinkle 3.2s ease-in-out infinite; }
+  @keyframes twinkle { 50% { transform: scale(1.15); filter: brightness(1.35); } }
+
+  footer { margin-top: 70px; padding: 26px 0 40px; border-top: 1px solid var(--border-1); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  footer nav { display: flex; flex-wrap: wrap; gap: 18px; }
+  footer a { text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  /* Apparition au défilement */
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+  .reveal.in { opacity: 1; transform: none; }
+  .hero > * { animation: rise .6s var(--ease) both; }
+  .hero > :nth-child(2) { animation-delay: .06s; }
+  .hero > :nth-child(3) { animation-delay: .12s; }
+  .hero > :nth-child(4) { animation-delay: .18s; }
+  .hero > :nth-child(5) { animation-delay: .26s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+  @media (max-width: 860px) {
+    .gallery, .install { grid-template-columns: 1fr; }
+    .nav a span { display: none; }
+    .hero { padding-top: 44px; }
+    section { padding-top: 80px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"><div class="wave a"></div><div class="wave b"></div></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="ha" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#dcd8e3"/><stop offset=".42" stop-color="#d4cfde"/><stop offset="1" stop-color="#6f6683"/></linearGradient>
+      <radialGradient id="hg" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6e3bf6"/><stop offset=".5" stop-color="#7a52f0" stop-opacity=".75"/><stop offset="1" stop-color="#8a6ff0" stop-opacity="0"/></radialGradient>
+      <linearGradient id="hs" x1="0" y1="345" x2="0" y2="575" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8a5cff"/><stop offset="1" stop-color="#652cee"/></linearGradient>
+      <path id="hp" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
+      <symbol id="mark" viewBox="0 0 930 720">
+        <use href="#hp" fill="url(#ha)"/><use href="#hp" fill="url(#hg)"/>
+        <path class="star" d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hs)"/>
+      </symbol>
+      <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="wrap top">
+    <a class="brand" href="#" aria-label="Hangar, accueil">
+      <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
+      <img class="wordmark" src="wordmark.png" alt="">
+    </a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="#fonctions" aria-label="Fonctions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg><span>Fonctions</span></a>
+      <a href="#installer" aria-label="Installer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg><span>Installer</span></a>
+      <a href="https://github.com/maelpasq/hangar" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg><span>GitHub</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <span class="pill"><i></i><span class="ver">Gratuit</span> · Windows et macOS</span>
+      <h1>Tous tes jeux.<br><span>Un seul launcher.</span></h1>
+      <p class="lead">Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul, les affiche avec leurs vraies jaquettes et les lance en un clic.</p>
+      <div class="cta">
+        <a class="btn dl-main" href="https://github.com/maelpasq/hangar/releases/latest/download/Hangar-Setup.exe">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>
+          <span class="dl-label">Télécharger pour Windows</span>
+        </a>
+        <p class="alt"><span class="dl-alt-text">Sur Mac ?</span> <a class="dl-alt" href="https://github.com/maelpasq/hangar/releases/latest">Télécharger pour macOS</a> · <a href="https://github.com/maelpasq/hangar/releases">Toutes les versions</a></p>
+      </div>
+      <figure class="shot">
+        <img src="images/accueil.webp" width="1440" height="900" alt="Accueil de Hangar : carrousel des jeux récents et bibliothèque avec les jaquettes">
+      </figure>
+    </div>
+
+    <div class="wrap stores reveal" aria-label="Stores détectés">
+      <span class="chip" style="--dot:#66c0f4"><i></i>Steam</span>
+      <span class="chip" style="--dot:#d9d9d9"><i></i>Epic Games</span>
+      <span class="chip" style="--dot:#c084fc"><i></i>GOG</span>
+      <span class="chip" style="--dot:#60a5fa"><i></i>Ubisoft Connect</span>
+      <span class="chip" style="--dot:#ff6b6b"><i></i>EA app</span>
+      <span class="chip" style="--dot:#38a3ff"><i></i>Battle.net</span>
+      <span class="chip" style="--dot:#ff5c6c"><i></i>Riot Games</span>
+      <span class="chip" style="--dot:#4ade80"><i></i>Xbox</span>
+      <span class="chip" style="--dot:#f5a524"><i></i>Dossiers locaux</span>
+    </div>
+
+    <section class="wrap" id="fonctions" aria-labelledby="t-fonctions">
+      <div class="reveal">
+        <p class="kicker">Fonctions</p>
+        <h2 id="t-fonctions">Ta bibliothèque, enfin réunie.</h2>
+        <p class="sub">Plus besoin d'ouvrir cinq launchers pour savoir à quoi jouer ce soir.</p>
+      </div>
+      <div class="grid">
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+          <h3>Détection automatique</h3>
+          <p>Tous tes jeux, quel que soit le store, plus tes dossiers de jeux et ceux que tu ajoutes à la main.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M5 15l4-4 4 4 2-2 4 4"/></svg></div>
+          <h3>Vraies jaquettes</h3>
+          <p>Jaquettes et bannières trouvées toutes seules (Steam, stores, SteamGridDB) et gardées en cache.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></div>
+          <h3>Lancement en un clic</h3>
+          <p>Via le launcher du jeu, ou directement son exécutable quand il n'y en a pas.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v4a3 3 0 0 1-5.4 1.8L14 14h-4l-1.6 1.8A3 3 0 0 1 3 14z"/><path d="M8 9v3M6.5 10.5h3M16 10h.01M18 12h.01"/></svg></div>
+          <h3>Mode manette</h3>
+          <p>Hangar en plein écran, à jouer depuis le canapé : Start pour l'ouvrir, A pour jouer.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>Temps de jeu</h3>
+          <p>Chaque session chronométrée, la dernière partie, les lancements et l'activité des 14 derniers jours.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></div>
+          <h3>Jeux à installer</h3>
+          <p>Les jeux que tu possèdes sans les avoir installés sont là aussi, à un clic de leur launcher.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h6"/></svg></div>
+          <h3>Collections et filtres</h3>
+          <p>Tes propres listes, filtres par store, genre ou temps de jeu, recherche instantanée <kbd>Ctrl K</kbd>.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+          <h3>Jeux web</h3>
+          <p>Une quarantaine de jeux navigateur (.io et classiques), à lancer sans rien installer.</p>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h3>Zéro télémétrie</h3>
+          <p>Aucune donnée collectée. Ta bibliothèque et ton temps de jeu restent sur ton ordinateur.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap" aria-labelledby="t-apercu">
+      <div class="reveal">
+        <p class="kicker">Aperçu</p>
+        <h2 id="t-apercu">Les jaquettes sont les stars.</h2>
+        <p class="sub">Une interface sombre et épurée, qui s'efface devant tes jeux.</p>
+      </div>
+      <div class="gallery">
+        <figure class="reveal"><img src="images/bibliotheque.webp" width="1440" height="900" loading="lazy" alt="Bibliothèque de Hangar avec les filtres par store"><figcaption>Bibliothèque</figcaption></figure>
+        <figure class="reveal"><img src="images/jeu.webp" width="1440" height="900" loading="lazy" alt="Fiche d'un jeu avec sa bannière, son temps de jeu et son activité"><figcaption>Fiche d'un jeu</figcaption></figure>
+        <figure class="reveal"><img src="images/jeux-web.webp" width="1440" height="900" loading="lazy" alt="Onglet Jeux web de Hangar"><figcaption>Jeux web</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="wrap" id="installer" aria-labelledby="t-installer">
+      <div class="reveal">
+        <p class="kicker">Installer</p>
+        <h2 id="t-installer">Prêt en une minute.</h2>
+        <p class="sub">Ensuite, Hangar se met à jour tout seul : un bouton « Mettre à jour » apparaît quand une nouvelle version sort.</p>
+      </div>
+      <div class="install">
+        <article class="card reveal">
+          <div class="os"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><h3>Windows 10 et 11</h3></div>
+          <ol>
+            <li>Télécharge et lance <strong>Hangar-Setup.exe</strong>, puis clique sur <strong>Installer</strong>. Pas besoin de droits administrateur.</li>
+            <li>Si Windows affiche « Windows a protégé votre ordinateur », clique sur <strong>Informations complémentaires</strong> puis <strong>Exécuter quand même</strong>. Ce message apparaît pour toutes les apps sans certificat payant.</li>
+          </ol>
+          <a class="btn" href="https://github.com/maelpasq/hangar/releases/latest/download/Hangar-Setup.exe">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Hangar-Setup.exe
+          </a>
+        </article>
+        <article class="card reveal">
+          <div class="os"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20"/></svg><h3>macOS (Intel et Apple Silicon)</h3></div>
+          <ol>
+            <li>Ouvre le <strong>.dmg</strong> et glisse <strong>Hangar</strong> dans <strong>Applications</strong>.</li>
+            <li>Hangar n'est pas signé par Apple : si macOS dit que l'app est « endommagée », lance une seule fois dans le Terminal :
+              <div class="code"><code id="xattr">xattr -cr /Applications/Hangar.app</code><button class="copy" type="button" data-copy="xattr" aria-label="Copier la commande"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>Copier</span></button></div>
+            </li>
+          </ol>
+          <a class="btn dl-mac" href="https://github.com/maelpasq/hangar/releases/latest">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Hangar pour macOS
+          </a>
+        </article>
+      </div>
+
+      <div class="final reveal">
+        <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
+        <h2>On joue à quoi ce soir ?</h2>
+        <p class="sub" style="margin-inline:auto">Gratuit, open source, sous licence MIT.</p>
+        <div class="cta">
+          <a class="btn dl-main" href="https://github.com/maelpasq/hangar/releases/latest/download/Hangar-Setup.exe">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>
+            <span class="dl-label">Télécharger pour Windows</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Hangar, par pamal Studio · <span class="tag"></span>Licence MIT</span>
+      <nav aria-label="Liens">
+        <a href="https://github.com/maelpasq/hangar" rel="noopener">Code source</a>
+        <a href="https://github.com/maelpasq/hangar/releases" rel="noopener">Versions</a>
+        <a href="https://github.com/maelpasq/hangar/issues/new/choose" rel="noopener">Signaler un bug</a>
+        <a href="https://github.com/maelpasq/hangar#confidentialit%C3%A9" rel="noopener">Confidentialité</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>
+  const REPO = 'maelpasq/hangar';
+  const WIN = `https://github.com/${REPO}/releases/latest/download/Hangar-Setup.exe`;
+  let mac = `https://github.com/${REPO}/releases/latest`;
+  const isMac = /Mac/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
+
+  function setButtons() {
+    const [href, label, altText, altHref, altLabel] = isMac
+      ? [mac, 'Télécharger pour macOS', 'Sur PC ?', WIN, 'Télécharger pour Windows']
+      : [WIN, 'Télécharger pour Windows', 'Sur Mac ?', mac, 'Télécharger pour macOS'];
+    document.querySelectorAll('.dl-main').forEach((a) => { a.href = href; a.querySelector('.dl-label').textContent = label; });
+    document.querySelectorAll('.dl-alt').forEach((a) => { a.href = altHref; a.textContent = altLabel; });
+    document.querySelectorAll('.dl-alt-text').forEach((s) => { s.textContent = altText; });
+    document.querySelectorAll('.dl-mac').forEach((a) => { a.href = mac; });
+  }
+  setButtons();
+
+  // Le nom du .dmg contient le numéro de version : on le lit dans la dernière release.
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((rel) => {
+      const dmg = rel.assets.find((a) => a.name.endsWith('.dmg'));
+      if (dmg) mac = dmg.browser_download_url;
+      document.querySelector('.ver').textContent = `Version ${rel.tag_name.replace(/^v/, '')}`;
+      document.querySelector('.tag').textContent = `${rel.tag_name} · `;
+      setButtons();
+    })
+    .catch(() => {}); // hors ligne ou quota de l'API atteint : les liens vers la page des releases suffisent
+
+  document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent);
+      b.querySelector('span').textContent = 'Copié';
+      setTimeout(() => { b.querySelector('span').textContent = 'Copier'; }, 1600);
+    } catch {}
+  }));
+
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }), { rootMargin: '0px 0px -8% 0px' });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+</script>
+</body>
+</html>
