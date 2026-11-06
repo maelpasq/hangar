@@ -36,25 +36,31 @@ pub fn frame(op: u32, payload: &serde_json::Value) -> Vec<u8> {
 /// Image « hangar » envoyée dans Discord (portail développeur > Rich Presence > Art Assets).
 const HANGAR_ASSET: &str = "hangar";
 
-/// Activité « en jeu » : nom du jeu, chronomètre depuis `start_ms`, et sa jaquette Steam si
-/// l'appid est connu, avec l'icône Hangar dans le coin. Discord télécharge lui-même l'image.
+/// Activité « en jeu » : le nom du jeu en titre (à la place de « Hangar »), « Lancé avec Hangar »
+/// dessous, chronomètre depuis `start_ms`, et sa jaquette Steam si l'appid est connu, avec l'icône
+/// Hangar dans le coin. Discord télécharge lui-même l'image.
 pub fn activity(game: Option<(&str, u64, Option<u32>)>, nonce: u64) -> serde_json::Value {
     let activity = game.map(|(name, start_ms, steam_id)| {
         // Discord exige 2 à 128 caractères.
-        let mut details: String = name.chars().take(128).collect();
-        if details.chars().count() < 2 {
-            details.push_str("  ");
+        let mut title: String = name.chars().take(128).collect();
+        if title.chars().count() < 2 {
+            title.push_str("  ");
         }
         let assets = match steam_id {
             Some(id) => serde_json::json!({
                 "large_image": format!("https://shared.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900.jpg"),
-                "large_text": details,
+                "large_text": title,
                 "small_image": HANGAR_ASSET,
                 "small_text": "Hangar",
             }),
             None => serde_json::json!({ "large_image": HANGAR_ASSET, "large_text": "Hangar" }),
         };
-        serde_json::json!({ "details": details, "timestamps": { "start": start_ms / 1000 }, "assets": assets })
+        serde_json::json!({
+            "name": title,
+            "details": "Lancé avec Hangar",
+            "timestamps": { "start": start_ms / 1000 },
+            "assets": assets,
+        })
     });
     serde_json::json!({
         "cmd": "SET_ACTIVITY",
@@ -144,7 +150,8 @@ mod tests {
         assert_eq!(&f[..4], &1u32.to_le_bytes());
         assert_eq!(u32::from_le_bytes([f[4], f[5], f[6], f[7]]) as usize, f.len() - 8);
         let a = activity(Some(("Hades", 1_700_000_000_000, Some(1145360))), 7);
-        assert_eq!(a["args"]["activity"]["details"], "Hades");
+        assert_eq!(a["args"]["activity"]["name"], "Hades");
+        assert_eq!(a["args"]["activity"]["details"], "Lancé avec Hangar");
         assert_eq!(a["args"]["activity"]["timestamps"]["start"], 1_700_000_000);
         let assets = &a["args"]["activity"]["assets"];
         assert!(assets["large_image"].as_str().unwrap().ends_with("/apps/1145360/library_600x900.jpg"));
@@ -153,6 +160,6 @@ mod tests {
         assert_eq!(sans["args"]["activity"]["assets"]["large_image"], HANGAR_ASSET);
         assert!(sans["args"]["activity"]["assets"]["small_image"].is_null());
         assert!(activity(None, 1)["args"]["activity"].is_null());
-        assert_eq!(activity(Some(("X", 0, None)), 1)["args"]["activity"]["details"].as_str().unwrap().chars().count(), 3);
+        assert_eq!(activity(Some(("X", 0, None)), 1)["args"]["activity"]["name"].as_str().unwrap().chars().count(), 3);
     }
 }
