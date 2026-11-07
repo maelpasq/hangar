@@ -18,7 +18,9 @@
 </script>
 
 <button class="play" class:large onclick={() => (toUpdate ? updateGame(gameId) : runner.play(gameId))}>
-  {#if toUpdate}
+  {#if runner.busyLabel(gameId)}
+    <Icon name="download" size={large ? 18 : 17} stroke={2.2} />{runner.busyLabel(gameId)}
+  {:else if toUpdate}
     <Icon name="download" size={large ? 18 : 17} stroke={2.2} />Mettre à jour le jeu
   {:else if toInstall}
     <Icon name="download" size={large ? 18 : 17} stroke={2.2} />Installer

@@ -37,6 +37,7 @@
   const toInstall = $derived(!!game.notInstalled);
   // Onglet « Mises à jour » : l'action principale de la jaquette met le jeu à jour.
   const toUpdate = $derived(ui.updates && !toInstall && !!game.updatePending);
+  const busy = $derived(runner.busyLabel(game.id));
   const primary = () => (toUpdate ? updateGame(game.id) : runner.play(game.id));
   const metaText = $derived(
     toInstall && meta !== 'last'
@@ -103,12 +104,12 @@
       <Cover {game} fontSize={gen.f} padding={gen.p} />
       <span class="ov"></span>
     </button>
-    <button class="play" aria-label="{toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer'} {name}" onclick={primary}
+    <button class="play" aria-label="{busy ?? (toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer')} {name}" onclick={primary}
       >{#if variant !== 'small'}<Icon
-          name={toInstall || toUpdate ? 'download' : 'play'}
-          size={toInstall || toUpdate ? 14 : 12}
+          name={busy || toInstall || toUpdate ? 'download' : 'play'}
+          size={busy || toInstall || toUpdate ? 14 : 12}
           stroke={2.2}
-        />{/if}{toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer'}</button
+        />{/if}{busy ?? (toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer')}</button
     >
   </div>
   {#if fav}<FavButton gameId={game.id} />{/if}

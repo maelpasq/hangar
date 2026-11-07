@@ -80,6 +80,9 @@ pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     g.size_bytes = vdf_values(text, "SizeOnDisk").first().and_then(|s| s.parse().ok()).filter(|s: &u64| *s > 0);
     g.version = vdf_values(text, "buildid").into_iter().next().filter(|v| !v.is_empty() && v != "0");
     let num = |k: &str| vdf_values(text, k).first().and_then(|s| s.parse::<u64>().ok());
+    if num("StateFlags").is_some_and(|f| f & 4 == 0) {
+        return None; // premier téléchargement en cours : le jeu reste « à installer »
+    }
     // StateFlags : 2 mise à jour requise, 256 / 512 / 1024 mise à jour en cours, en pause, démarrée.
     g.update_pending = num("StateFlags").is_some_and(|f| f & (2 | 256 | 512 | 1024) != 0);
     if g.update_pending {
@@ -88,11 +91,8 @@ pub fn parse_manifest(text: &str, lib: &std::path::Path) -> Option<Game> {
     Some(g)
 }
 
-pub fn detect() -> Vec<Game> {
-    let Some(root) = steam_root() else {
-        log::info!("Steam : non installé");
-        return vec![];
-    };
+/// Dossiers `steamapps` de toutes les bibliothèques Steam (`libraryfolders.vdf`).
+pub fn libraries(root: &Path) -> Vec<PathBuf> {
     let mut libs = vec![root.join("steamapps")];
     match fs::read_to_string(root.join("steamapps").join("libraryfolders.vdf")) {
         Ok(t) => {
@@ -105,8 +105,16 @@ pub fn detect() -> Vec<Game> {
         }
         Err(e) => log::warn!("Steam : libraryfolders.vdf illisible ({e})"),
     }
+    libs
+}
+
+pub fn detect() -> Vec<Game> {
+    let Some(root) = steam_root() else {
+        log::info!("Steam : non installé");
+        return vec![];
+    };
     let mut out = vec![];
-    for lib in libs {
+    for lib in libraries(&root) {
         let Ok(rd) = fs::read_dir(&lib) else {
             log::warn!("Steam : bibliothèque inaccessible {}", lib.display());
             continue;

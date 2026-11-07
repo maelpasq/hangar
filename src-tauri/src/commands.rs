@@ -290,16 +290,31 @@ pub async fn launch_game(app: AppHandle, ctx: Ctxs<'_>, game_id: String) -> Resu
     Ok(())
 }
 
-/// Ouvre l'installation d'un jeu possédé non installé dans son launcher (aucun suivi de processus).
+/// Installe un jeu possédé : Steam en arrière-plan par Hangar (Windows), les autres dans leur
+/// launcher. Renvoie le message à afficher.
 #[tauri::command]
-pub async fn install_game(ctx: Ctxs<'_>, game_id: String) -> Result<(), String> {
+pub async fn install_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, String> {
     let Some(game) = ctx.known.get(&game_id).filter(|g| g.not_installed) else {
         return Err("Ce jeu n'est plus à installer. Actualise la bibliothèque puis réessaie.".into());
     };
+    log::info!("installation demandée : {} ({})", game.name, game.id);
+    if cfg!(windows) && game.store == "steam" {
+        return blocking(move || crate::manage::steam_install(&game)).await?;
+    }
+    let msg = format!("Installation de {} ouverte dans {}", game.name, game.launcher_name);
     let launch = game.launch.clone();
     blocking(move || launcher::launch(&launch)).await??;
-    log::info!("installation demandée : {} ({})", game.name, game.id);
-    Ok(())
+    Ok(msg)
+}
+
+/// Progression (0 à 1) de l'installation ou de la mise à jour d'un jeu Steam ; `None` une fois finie.
+#[tauri::command]
+pub async fn install_progress(ctx: Ctxs<'_>, game_id: String) -> Result<Option<f64>, String> {
+    let id = ctx.known.get(&game_id).and_then(|g| g.steam_app_id);
+    Ok(match id {
+        Some(id) => blocking(move || crate::manage::steam_progress(id)).await?,
+        None => None,
+    })
 }
 
 /// Réaffiche les fenêtres de launcher cachées pendant un lancement ou une mise à jour.
@@ -336,6 +351,9 @@ pub async fn uninstall_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, St
     let Some(game) = ctx.known.get(&game_id).filter(|g| !g.not_installed) else {
         return Err("Ce jeu n'est plus dans la bibliothèque. Actualise-la puis réessaie.".into());
     };
+    if ctx.tracker.is_tracked(&game_id) {
+        return Err("Ferme le jeu avant de le désinstaller.".into());
+    }
     let msg = blocking(move || launcher::uninstall(&game)).await??;
     log::info!("désinstallation ouverte : {game_id}");
     Ok(msg)

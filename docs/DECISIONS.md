@@ -185,4 +185,9 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Jeu jamais détecté (le launcher attend une connexion, un contrat...) : les fenêtres cachées sont réaffichées. Le toast « lancé » et celui des mises à jour ont un bouton « Afficher le launcher » pour les ramener plus tôt.
 - Liens `steam://` ouverts par `steam.exe -silent -- "lien"` : Steam démarre dans la zone de notification sans sa fenêtre principale.
 - Mises à jour : le lien de mise à jour réveille le launcher, caché par le voile, qui télécharge en arrière-plan.
-- Pas de voile pour l'installation ni la désinstallation par un launcher : leurs fenêtres demandent une confirmation (dossier, suppression). Désinstallation : confirmation dans Hangar, puis désinstalleur officiel sans fenêtre quand le jeu en a un (GOG).
+- Pas de voile pour l'installation ni la désinstallation par un launcher : leurs fenêtres demandent une confirmation (dossier, suppression). Hangar les fait donc lui-même quand c'est possible (`src-tauri/src/manage.rs`, Windows) :
+  - Installation Steam : manifeste `appmanifest_<id>.acf` (`StateFlags` 1026, dossier tiré de `appinfo.vdf`) écrit dans la bibliothèque qui a le plus de place, puis Steam redémarré avec `-silent` (il ne relit les manifestes qu'au démarrage) ; refusé pendant une partie Steam (`RunningAppID`). Progression lue dans le manifeste (`BytesDownloaded` / `BytesToDownload`) toutes les 2 s. Un manifeste sans le bit 4 (installé) n'est pas un jeu installé pour le scanner.
+  - Désinstallation Steam : Steam fermé (`-shutdown`), suppression de `steamapps/common/<installdir>` et du manifeste, Steam relancé en silencieux s'il tournait.
+  - Désinstallation Epic : launcher fermé, suppression du dossier `InstallLocation` du `.item` (refusée pour une racine, un dossier système ou le dossier personnel), du `.item` et de l'entrée de `LauncherInstalled.dat`.
+  - GOG : désinstalleur officiel `unins000.exe /VERYSILENT`.
+- Restent dans leur launcher : l'installation Epic, GOG, Riot et Xbox (il faudrait réécrire leur téléchargeur) et la désinstallation des jeux Ubisoft, EA, Battle.net et Riot. macOS garde l'ancien comportement.

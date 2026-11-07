@@ -1,4 +1,4 @@
-//! Steam `appcache/appinfo.vdf` (binaire, formats v28 et v29) : nom et type des apps.
+//! Steam `appcache/appinfo.vdf` (binaire, formats v28 et v29) : nom, type et dossier des apps.
 //!
 //! Entête : magic u32, univers u32, puis (v29) offset i64 de la table des chaînes.
 //! Chaque app : appid u32, taille u32, 60 octets d'entête, puis un KeyValues binaire.
@@ -13,6 +13,8 @@ pub struct App {
     pub name: String,
     /// `common.type` en minuscules : game, dlc, tool, application, demo...
     pub kind: String,
+    /// `config.installdir` : dossier du jeu dans `steamapps/common`.
+    pub installdir: String,
 }
 
 struct R<'a> {
@@ -74,7 +76,7 @@ pub fn parse(b: &[u8], wanted: &HashSet<u32>) -> HashMap<u32, App> {
         if wanted.contains(&id) {
             let mut e = R { b: &b[..end], o: r.o + 60 };
             let mut app = App::default();
-            if walk(&mut e, strings.as_deref(), 0, false, &mut app).is_some() && !app.name.is_empty() {
+            if walk(&mut e, strings.as_deref(), 0, NONE, &mut app).is_some() && !app.name.is_empty() {
                 out.insert(id, app);
             }
         }
@@ -89,8 +91,12 @@ fn string_table(b: &[u8], offset: usize) -> Option<Vec<&[u8]>> {
     (0..n).map(|_| r.cstr()).collect()
 }
 
-/// Parcourt un bloc KeyValues binaire et relève `common.name` / `common.type`.
-fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, in_common: bool, app: &mut App) -> Option<()> {
+const NONE: u8 = 0;
+const COMMON: u8 = 1;
+const CONFIG: u8 = 2;
+
+/// Parcourt un bloc KeyValues binaire et relève `common.name`, `common.type`, `config.installdir`.
+fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, section: u8, app: &mut App) -> Option<()> {
     loop {
         let t = r.u8()?;
         if t == 8 || t == 11 {
@@ -101,13 +107,23 @@ fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, in_common: bool, app: &
             None => r.cstr()?,
         };
         match t {
-            0 => walk(r, strs, depth + 1, depth <= 1 && key.eq_ignore_ascii_case(b"common"), app)?,
+            0 => {
+                let s = match key {
+                    _ if depth > 1 => NONE,
+                    k if k.eq_ignore_ascii_case(b"common") => COMMON,
+                    k if k.eq_ignore_ascii_case(b"config") => CONFIG,
+                    _ => NONE,
+                };
+                walk(r, strs, depth + 1, s, app)?
+            }
             1 => {
                 let v = String::from_utf8_lossy(r.cstr()?).into_owned();
-                if in_common && key.eq_ignore_ascii_case(b"name") {
+                if section == COMMON && key.eq_ignore_ascii_case(b"name") {
                     app.name = v;
-                } else if in_common && key.eq_ignore_ascii_case(b"type") {
+                } else if section == COMMON && key.eq_ignore_ascii_case(b"type") {
                     app.kind = v.to_lowercase();
+                } else if section == CONFIG && key.eq_ignore_ascii_case(b"installdir") {
+                    app.installdir = v;
                 }
             }
             2..=4 | 6 => {
@@ -125,9 +141,9 @@ fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, in_common: bool, app: &
 mod tests {
     use super::*;
 
-    /// Construit un appinfo.vdf v29 minimal : `appinfo { appid, common { name, type } }`.
+    /// Construit un appinfo.vdf v29 minimal : `appinfo { appid, common { name, type }, config { installdir } }`.
     fn v29(apps: &[(u32, &str, &str)]) -> Vec<u8> {
-        let strs = ["appinfo", "appid", "common", "name", "type"];
+        let strs = ["appinfo", "appid", "common", "name", "type", "config", "installdir"];
         let mut body = vec![];
         for (id, name, kind) in apps {
             let mut kv = vec![0u8];
@@ -143,6 +159,13 @@ mod tests {
                 kv.extend(v.as_bytes());
                 kv.push(0);
             }
+            kv.push(8);
+            kv.push(0);
+            kv.extend(5u32.to_le_bytes()); // config
+            kv.push(1);
+            kv.extend(6u32.to_le_bytes());
+            kv.extend(format!("{name} dir").as_bytes());
+            kv.push(0);
             kv.extend([8, 8, 8]);
             body.extend(id.to_le_bytes());
             body.extend((60 + kv.len() as u32).to_le_bytes());
@@ -166,7 +189,7 @@ mod tests {
     fn lit_nom_et_type() {
         let b = v29(&[(620, "Portal 2", "Game"), (228980, "Steamworks Common Redistributables", "Tool")]);
         let all = parse(&b, &HashSet::from([620, 228980]));
-        assert_eq!(all[&620], App { name: "Portal 2".into(), kind: "game".into() });
+        assert_eq!(all[&620], App { name: "Portal 2".into(), kind: "game".into(), installdir: "Portal 2 dir".into() });
         assert_eq!(all[&228980].kind, "tool");
         let some = parse(&b, &HashSet::from([228980]));
         assert_eq!(some.len(), 1, "les apps non demandées sont sautées");

@@ -48,8 +48,10 @@ export function uninstallGame(id: string): void {
 export async function confirmUninstall(id: string): Promise<void> {
   const g = library.get(id);
   if (!g || g.notInstalled) return;
+  ui.toast(`Désinstallation de ${library.name(g)}…`, { gameId: id });
   try {
     ui.toast(await api.uninstallGame(id), { gameId: id });
+    await rescan();
     runner.watchInstall(id);
   } catch (e) {
     ui.toast(String(e), { error: true, gameId: id });
@@ -62,7 +64,8 @@ export async function updateGame(id: string): Promise<void> {
   if (!g || g.notInstalled) return;
   try {
     ui.toast(await api.updateGame(id), { gameId: id, action: showLauncher });
-    if (g.updatePending) runner.watchInstall(id);
+    if (g.updatePending && g.store === 'steam') runner.follow(id, 'update');
+    else if (g.updatePending) runner.watchInstall(id);
   } catch (e) {
     ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true, gameId: id });
   }

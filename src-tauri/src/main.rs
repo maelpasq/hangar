@@ -9,6 +9,7 @@ mod commands;
 mod desktop;
 mod info;
 mod launcher;
+mod manage;
 mod model;
 mod presence;
 mod scanner;
@@ -144,6 +145,7 @@ fn main() {
             commands::install_game,
             commands::stop_game,
             commands::show_launchers,
+            commands::install_progress,
             commands::open_folder,
             commands::resolve_steam_id,
             commands::search_steam,

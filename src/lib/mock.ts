@@ -192,9 +192,11 @@ export function mockApi(): Api {
         }, 2100)
       );
     },
-    installGame: async () => {
+    installGame: async (id) => {
       await wait(300);
+      return `Démo : ${id} s'installe en arrière-plan.`;
     },
+    installProgress: async () => null,
     stopGame: async (gameId) => {
       const r = running.get(gameId);
       if (!r) return;

@@ -258,6 +258,11 @@ impl Tracker {
         let _ = self.wake.lock().unwrap_or_else(|p| p.into_inner()).send(());
     }
 
+    /// Vrai si le jeu est lancé ou en cours de démarrage.
+    pub fn is_tracked(&self, game_id: &str) -> bool {
+        self.entries.lock().unwrap_or_else(|p| p.into_inner()).iter().any(|e| e.game_id == game_id)
+    }
+
     /// Termine proprement le jeu : demande de fermeture, puis arrêt forcé après 4 s.
     pub fn stop(&self, game_id: &str) -> Result<(), String> {
         let (pids, spec) = {

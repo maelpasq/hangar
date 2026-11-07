@@ -188,6 +188,13 @@ fn silent_uninstaller(g: &crate::model::Game) -> Option<String> {
 }
 
 pub fn uninstall(g: &crate::model::Game) -> Result<String, String> {
+    if cfg!(windows) {
+        match g.store.as_str() {
+            "steam" => return crate::manage::steam_uninstall(g),
+            "epic" => return crate::manage::epic_uninstall(g),
+            _ => {}
+        }
+    }
     if let Some(exe) = silent_uninstaller(g) {
         shell_open(&exe, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART", None, "open")?;
         return Ok(format!("Désinstallation de {} en cours…", g.name));

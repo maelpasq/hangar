@@ -16,6 +16,8 @@ export interface Launching {
 
 /** Fermeture de l'overlay au plus tard après ce délai. */
 const OVERLAY_MAX_MS = 4000;
+/** Relevé de la progression des téléchargements Steam. */
+const PROGRESS_MS = 2000;
 /** Écart minimal entre deux scans au retour sur Hangar pendant une installation. */
 const INSTALL_RESCAN_MS = 30_000;
 
@@ -47,6 +49,9 @@ class Runner {
   /** Installations, désinstallations ou mises à jour en attente : id -> état du jeu au départ.
    *  Au retour sur la fenêtre, un rescan dit si elles sont faites. */
   private installs = new Map<string, string>();
+  /** Téléchargements Steam suivis : progression de 0 à 1. */
+  progress = $state<Record<string, { value: number; kind: 'install' | 'update' }>>({});
+  private poll: ReturnType<typeof setInterval> | undefined;
   private lastInstallScan = 0;
 
   isRunning(id: string): boolean {
@@ -80,17 +85,51 @@ class Runner {
     }
   }
 
-  /** Ouvre l'installation dans le launcher du jeu ; le scan le verra installé plus tard. */
+  /** Installe le jeu : Steam en arrière-plan avec sa progression, les autres dans leur launcher. */
   async install(gameId: string): Promise<void> {
     const g = library.get(gameId);
     if (!g) return;
     ui.menu = null;
     try {
-      await api.installGame(gameId);
-      this.watchInstall(gameId);
-      ui.toast(`Installation de ${library.name(g)} ouverte dans ${g.launcherName}`, { gameId });
+      ui.toast(await api.installGame(gameId), { gameId });
+      if (g.store === 'steam') this.follow(gameId, 'install');
+      else this.watchInstall(gameId);
     } catch (e) {
       this.fail(gameId, String(e));
+    }
+  }
+
+  /** Suit un téléchargement Steam (installation ou mise à jour) jusqu'à la fin. */
+  follow(gameId: string, kind: 'install' | 'update'): void {
+    if (gameId in this.progress) return;
+    this.progress = { ...this.progress, [gameId]: { value: 0, kind } };
+    this.poll ??= setInterval(() => this.pollProgress(), PROGRESS_MS);
+  }
+
+  /** « Installation 42 % » ou « Mise à jour 42 % » pendant un téléchargement suivi. */
+  busyLabel(gameId: string): string | null {
+    const p = this.progress[gameId];
+    return p ? `${p.kind === 'install' ? 'Installation' : 'Mise à jour'} ${Math.round(p.value * 100)} %` : null;
+  }
+
+  private async pollProgress(): Promise<void> {
+    for (const [id, p] of Object.entries(this.progress)) {
+      const v = await api.installProgress(id).catch(() => null);
+      if (v !== null) {
+        this.progress = { ...this.progress, [id]: { ...p, value: v } };
+        continue;
+      }
+      const { [id]: _done, ...rest } = this.progress;
+      this.progress = rest;
+      await rescan();
+      const g = library.get(id);
+      if (!g) continue;
+      if (g.notInstalled) ui.toast(`L'installation de ${library.name(g)} n'a pas abouti`, { error: true, gameId: id });
+      else ui.toast(`${library.name(g)} est prêt`, { gameId: id, action: { label: 'Jouer', run: () => this.play(id) } });
+    }
+    if (!Object.keys(this.progress).length) {
+      clearInterval(this.poll);
+      this.poll = undefined;
     }
   }
 

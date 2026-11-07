@@ -23,7 +23,10 @@ export interface Api {
   saveLibrary(games: Game[]): Promise<void>;
   launchGame(gameId: string): Promise<void>;
   /** Ouvre l'installation d'un jeu non installé dans son launcher. */
-  installGame(gameId: string): Promise<void>;
+  /** Installe le jeu (Steam : en arrière-plan) ; renvoie le message à afficher. */
+  installGame(gameId: string): Promise<string>;
+  /** Progression (0 à 1) d'un téléchargement Steam en cours, null une fois fini. */
+  installProgress(gameId: string): Promise<number | null>;
   stopGame(gameId: string): Promise<void>;
   /** Réaffiche les fenêtres de launcher cachées par Hangar ; faux s'il n'y en avait aucune. */
   showLaunchers(): Promise<boolean>;
@@ -120,6 +123,7 @@ async function tauriApi(): Promise<Api> {
     saveLibrary: (games) => invoke('save_library', { games }),
     launchGame: (gameId) => invoke('launch_game', { gameId }),
     installGame: (gameId) => invoke('install_game', { gameId }),
+    installProgress: (gameId) => invoke('install_progress', { gameId }),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
     showLaunchers: () => invoke('show_launchers'),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
