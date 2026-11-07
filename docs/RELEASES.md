@@ -47,6 +47,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.5 - 7 novembre 2026
+**Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un nouvel onglet « Mises à jour » et te prévient par une notification. Le bouton « Mettre à jour » ouvre la mise à jour dans le bon launcher (Steam, Epic, GOG Galaxy, Microsoft Store), et un menu « Mises à jour » apparaît en haut à droite quand un jeu attend. La vérification se refait toute seule, jamais pendant une partie. **Assistant de configuration** : à la première ouverture (et une fois pour ceux qui ont déjà Hangar), quatre étapes pour régler tes launchers, tes dossiers de jeux, ta couleur et les jeux web, à relancer depuis Paramètres > Général. Les filtres de la bibliothèque ont de nouvelles listes déroulantes aux couleurs de Hangar, et le bouton de mise à jour de l'app devient « Mettre à jour Hangar ».
+
 ### 1.2.4 - 6 novembre 2026
 **Discord Rich Presence** : la jaquette de ton jeu s'affiche maintenant quelle que soit sa source (Steam, Epic, GOG, Xbox, SteamGridDB), plus seulement pour les jeux Steam. Les **jeux web** apparaissent aussi sur Discord, avec leur jaquette, et disparaissent quand tu fermes leur fenêtre.
 
