@@ -1,6 +1,6 @@
 // Lancement et suivi des jeux, piloté par les événements launch://* du backend.
 
-import { rescan } from '../actions';
+import { rescan, showLauncher } from '../actions';
 import { api } from '../api';
 import type { LaunchEvent } from '../types';
 import { elapsed } from '../util/format';
@@ -194,7 +194,9 @@ class Runner {
     this.launching = null;
     if (!ok) return;
     const g = library.get(l.gameId);
-    if (g) ui.toast(`${library.name(g)} lancé`, { gameId: g.id });
+    // Jeu pas encore détecté : son launcher (caché) attend peut-être l'utilisateur.
+    const waiting = g && !this.isRunning(g.id) && g.store !== 'local' && g.store !== 'manual';
+    if (g) ui.toast(`${library.name(g)} lancé`, { gameId: g.id, action: waiting ? showLauncher : undefined });
     if (library.state.prefs.minimizeOnLaunch) {
       this.minimizedByUs = true;
       api.win.minimize().catch(() => {});

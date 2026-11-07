@@ -25,6 +25,8 @@ export interface Api {
   /** Ouvre l'installation d'un jeu non installé dans son launcher. */
   installGame(gameId: string): Promise<void>;
   stopGame(gameId: string): Promise<void>;
+  /** Réaffiche les fenêtres de launcher cachées par Hangar ; faux s'il n'y en avait aucune. */
+  showLaunchers(): Promise<boolean>;
   /** Ouvre la désinstallation d'un jeu dans son launcher ; renvoie le message à afficher. */
   uninstallGame(gameId: string): Promise<string>;
   /** Ouvre les mises à jour d'un jeu dans son launcher ; renvoie le message à afficher. */
@@ -119,6 +121,7 @@ async function tauriApi(): Promise<Api> {
     launchGame: (gameId) => invoke('launch_game', { gameId }),
     installGame: (gameId) => invoke('install_game', { gameId }),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
+    showLaunchers: () => invoke('show_launchers'),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
     updateGame: (gameId) => invoke('update_game', { gameId }),
     setDesktop: (closeToTray, globalShortcut) => invoke('set_desktop', { closeToTray, globalShortcut }),

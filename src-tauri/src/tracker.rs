@@ -221,6 +221,13 @@ impl Tracker {
                             }
                         });
                     }
+                    if !running.is_empty() {
+                        crate::veil::settle();
+                    }
+                    if ended.iter().any(|e| e.session.is_none()) {
+                        // Jeu jamais détecté : son launcher attend peut-être l'utilisateur.
+                        crate::veil::lift();
+                    }
                     for r in running {
                         log::info!("suivi : {} en cours (pid {})", r.game_id, r.pid);
                         let _ = app.emit("launch://running", r);

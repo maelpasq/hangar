@@ -15,6 +15,7 @@ mod scanner;
 mod size;
 mod state;
 mod tracker;
+mod veil;
 mod webgames;
 
 use std::sync::atomic::AtomicBool;
@@ -142,6 +143,7 @@ fn main() {
             commands::launch_game,
             commands::install_game,
             commands::stop_game,
+            commands::show_launchers,
             commands::open_folder,
             commands::resolve_steam_id,
             commands::search_steam,

@@ -282,6 +282,7 @@ pub async fn launch_game(app: AppHandle, ctx: Ctxs<'_>, game_id: String) -> Resu
         Ok(()) => {
             log::info!("lancé : {} ({})", game.name, game.id);
             let _ = app.emit("launch://started", GameEvent { game_id: game.id.clone() });
+            crate::veil::cover();
             ctx.tracker.track(&game);
         }
         Err(m) => fail(m),
@@ -299,6 +300,12 @@ pub async fn install_game(ctx: Ctxs<'_>, game_id: String) -> Result<(), String> 
     blocking(move || launcher::launch(&launch)).await??;
     log::info!("installation demandée : {} ({})", game.name, game.id);
     Ok(())
+}
+
+/// Réaffiche les fenêtres de launcher cachées pendant un lancement ou une mise à jour.
+#[tauri::command]
+pub fn show_launchers() -> bool {
+    crate::veil::lift()
 }
 
 #[tauri::command]
@@ -341,6 +348,7 @@ pub async fn update_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, Strin
         return Err("Ce jeu n'est plus dans la bibliothèque. Actualise-la puis réessaie.".into());
     };
     let msg = blocking(move || launcher::update(&game)).await??;
+    crate::veil::cover();
     log::info!("mises à jour ouvertes : {game_id}");
     Ok(msg)
 }

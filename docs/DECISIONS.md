@@ -178,3 +178,11 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 
 - Installation neuve (aucun état enregistré) : assistant en quatre étapes fixes (launchers, jeux locaux, couleur et thème, jeux web), points de progression cliquables, « Suivant », « Tout passer » et « Tout activer ». Chaque choix s'applique tout de suite. « Tout passer » ou fermer garde les choix déjà faits et laisse les jeux web désactivés. « Tout activer » active tous les launchers, les jeux locaux et les jeux web, sans toucher à la couleur.
 - Montré une fois à tout le monde, installation neuve comme mise à jour (champ `onboarded` de l'état, absent chez les anciennes versions). Qui avait déjà Hangar y retrouve ses propres réglages : « Tout passer » ne change rien chez lui. Qui n'avait jamais eu la question des jeux web voit « Nouveau » à leur étape, ce qui remplace l'ancienne pop-up des jeux web (supprimée). Relançable : Paramètres > Général > « Configuration de départ ».
+
+## Launchers invisibles
+
+- Les launchers restent nécessaires (DRM de Steam, Epic, Ubisoft, EA, Battle.net, Riot) : Hangar les garde invisibles au lieu de s'en passer. Pendant un lancement ou une mise à jour, `src-tauri/src/veil.rs` cache (`SW_HIDE`) chaque fenêtre visible d'un processus de launcher (liste du tracker) ; ils restent dans la zone de notification. Le voile s'arrête 10 s après la détection du jeu, ou au bout de 95 s.
+- Jeu jamais détecté (le launcher attend une connexion, un contrat...) : les fenêtres cachées sont réaffichées. Le toast « lancé » et celui des mises à jour ont un bouton « Afficher le launcher » pour les ramener plus tôt.
+- Liens `steam://` ouverts par `steam.exe -silent -- "lien"` : Steam démarre dans la zone de notification sans sa fenêtre principale.
+- Mises à jour : le lien de mise à jour réveille le launcher, caché par le voile, qui télécharge en arrière-plan.
+- Pas de voile pour l'installation ni la désinstallation par un launcher : leurs fenêtres demandent une confirmation (dossier, suppression). Désinstallation : confirmation dans Hangar, puis désinstalleur officiel sans fenêtre quand le jeu en a un (GOG).

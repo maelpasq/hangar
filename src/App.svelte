@@ -16,6 +16,7 @@
   import { gamepad } from './lib/stores/gamepad.svelte';
   import ChangeCover from './lib/modals/ChangeCover.svelte';
   import ConfirmStop from './lib/modals/ConfirmStop.svelte';
+  import ConfirmUninstall from './lib/modals/ConfirmUninstall.svelte';
   import Rename from './lib/modals/Rename.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import GamePage from './lib/screens/GamePage.svelte';
@@ -215,6 +216,8 @@
     <ChangeCover game={modalGame} />
   {:else if ui.modal?.kind === 'stop' && modalGame}
     <ConfirmStop game={modalGame} />
+  {:else if ui.modal?.kind === 'uninstall' && modalGame}
+    <ConfirmUninstall game={modalGame} />
   {:else if ui.modal?.kind === 'onboarding'}
     <Onboarding />
   {:else if ui.modal?.kind === 'collections' && modalGame}

@@ -9,6 +9,7 @@ export type Modal =
   | { kind: 'rename'; gameId: string }
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
+  | { kind: 'uninstall'; gameId: string }
   | { kind: 'onboarding' }
   | { kind: 'collections'; gameId: string };
 

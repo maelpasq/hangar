@@ -82,6 +82,18 @@ fn unix_open(target: &str, args: &str, cwd: Option<&str>) -> Result<(), String> 
     }
 }
 
+/// Ouvre une cible. Un lien `steam://` passe par `steam.exe -silent` (comme le protocole de
+/// Windows, `-- "lien"`) : Steam démarre dans la zone de notification sans ouvrir sa fenêtre.
+fn open(target: &str, args: &str, cwd: Option<&str>) -> Result<(), String> {
+    #[cfg(windows)]
+    if target.starts_with("steam://") && args.is_empty() {
+        if let Some(steam) = crate::scanner::steam::steam_root().map(|r| r.join("steam.exe")) {
+            return shell_open(&steam.to_string_lossy(), &format!("-silent -- \"{target}\""), None, "open");
+        }
+    }
+    shell_open(target, args, cwd, "open")
+}
+
 /// Lance un jeu selon sa description de lancement.
 pub fn launch(l: &Launch) -> Result<(), String> {
     if l.target.trim().is_empty() {
@@ -90,7 +102,7 @@ pub fn launch(l: &Launch) -> Result<(), String> {
     if l.kind == "exe" && !Path::new(&l.target).exists() {
         return Err(format!("Exécutable introuvable : {}", l.target));
     }
-    shell_open(&l.target, &l.args, l.cwd.as_deref(), "open")
+    open(&l.target, &l.args, l.cwd.as_deref())
 }
 
 pub fn open_folder(path: &str) -> Result<(), String> {
@@ -108,7 +120,7 @@ pub fn uninstall_target(g: &crate::model::Game) -> Result<(String, String), Stri
     let id = g.id.split_once(':').map(|(_, x)| x).unwrap_or("");
     let digits = !id.is_empty() && id.chars().all(|c| c.is_ascii_digit());
     match g.store.as_str() {
-        "steam" if digits => Ok((format!("steam://uninstall/{id}"), format!("Steam s'ouvre pour désinstaller {name}."))),
+        "steam" if digits => Ok((format!("steam://uninstall/{id}"), format!("Confirme la désinstallation de {name} dans la fenêtre de Steam."))),
         "gog" if digits && g.launcher_name == "GOG Galaxy" => Ok((
             format!("goggalaxy://openGameView/{id}"),
             format!("Désinstalle {name} depuis sa page dans GOG Galaxy (menu Gérer)."),
@@ -127,8 +139,10 @@ pub fn uninstall_target(g: &crate::model::Game) -> Result<(String, String), Stri
     }
 }
 
-/// Où se met à jour un jeu : (cible à ouvrir, message). Les launchers sans page de mises à jour
-/// (Ubisoft, EA, Battle.net, Riot) mettent leurs jeux à jour au lancement : on le dit.
+/// Où se met à jour un jeu : (cible à ouvrir, message). La cible réveille le launcher, que le
+/// voile (`veil`) garde invisible : il télécharge la mise à jour en arrière-plan.
+/// Les launchers sans page de mises à jour (Ubisoft, EA, Battle.net, Riot) mettent leurs jeux
+/// à jour au lancement : on le dit.
 pub fn update_target(g: &crate::model::Game) -> Result<(String, String), String> {
     let name = &g.name;
     let id = g.id.split_once(':').map(|(_, x)| x).unwrap_or("");
@@ -137,22 +151,22 @@ pub fn update_target(g: &crate::model::Game) -> Result<(String, String), String>
         "steam" => Ok((
             "steam://open/downloads".into(),
             if g.update_pending {
-                format!("Les téléchargements de Steam s'ouvrent pour mettre à jour {name}.")
+                format!("Steam met {name} à jour en arrière-plan.")
             } else {
-                format!("Steam s'ouvre sur ses téléchargements : {name} est à jour.")
+                format!("{name} est à jour.")
             },
         )),
         "gog" if digits && g.launcher_name == "GOG Galaxy" => Ok((
             format!("goggalaxy://openGameView/{id}"),
-            format!("GOG Galaxy s'ouvre sur {name} : ses mises à jour sont dans le menu Gérer."),
+            format!("GOG Galaxy met {name} à jour en arrière-plan."),
         )),
         "epic" => Ok((
             "com.epicgames.launcher://".into(),
-            format!("Epic Games s'ouvre : il met à jour {name} depuis sa bibliothèque."),
+            format!("Epic Games met {name} à jour en arrière-plan."),
         )),
         "xbox" if cfg!(windows) => Ok((
             "ms-windows-store://downloadsandupdates".into(),
-            format!("Le Microsoft Store s'ouvre sur ses mises à jour pour {name}."),
+            format!("Le Microsoft Store met {name} à jour en arrière-plan."),
         )),
         "ubisoft" | "ea" | "battlenet" | "riot" => {
             Err(format!("{} met {name} à jour au lancement : lance le jeu depuis Hangar.", g.launcher_name))
@@ -163,13 +177,23 @@ pub fn update_target(g: &crate::model::Game) -> Result<(String, String), String>
 
 pub fn update(g: &crate::model::Game) -> Result<String, String> {
     let (target, msg) = update_target(g)?;
-    shell_open(&target, "", None, "open")?;
+    open(&target, "", None)?;
     Ok(msg)
 }
 
+/// Désinstalleur officiel d'un jeu GOG (Inno Setup), qui sait travailler sans fenêtre.
+fn silent_uninstaller(g: &crate::model::Game) -> Option<String> {
+    let exe = Path::new(g.install_dir.as_deref()?).join("unins000.exe");
+    (g.store == "gog" && exe.is_file()).then(|| exe.to_string_lossy().into_owned())
+}
+
 pub fn uninstall(g: &crate::model::Game) -> Result<String, String> {
+    if let Some(exe) = silent_uninstaller(g) {
+        shell_open(&exe, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART", None, "open")?;
+        return Ok(format!("Désinstallation de {} en cours…", g.name));
+    }
     let (target, msg) = uninstall_target(g)?;
-    shell_open(&target, "", None, "open")?;
+    open(&target, "", None)?;
     Ok(msg)
 }
 
@@ -191,6 +215,19 @@ mod tests {
             let u = Game::new("ubisoft:1".into(), "AC".into(), "ubisoft", uri("uplay://launch/1/0"));
             assert_eq!(uninstall_target(&u).unwrap().0, "ms-settings:appsfeatures");
         }
+    }
+
+    #[test]
+    fn desinstalleur_gog_silencieux() {
+        use crate::model::{uri, Game};
+        let dir = tempfile::tempdir().unwrap();
+        let mut g = Game::new("gog:1".into(), "Jeu".into(), "gog", uri("x"));
+        g.install_dir = Some(dir.path().to_string_lossy().into_owned());
+        assert!(silent_uninstaller(&g).is_none(), "pas de désinstalleur");
+        std::fs::write(dir.path().join("unins000.exe"), b"").unwrap();
+        assert!(silent_uninstaller(&g).unwrap().ends_with("unins000.exe"));
+        g.store = "local".into();
+        assert!(silent_uninstaller(&g).is_none(), "seulement GOG");
     }
 
     #[test]

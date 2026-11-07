@@ -204,9 +204,10 @@ export function mockApi(): Api {
       const session: Session | null = r.start ? { gameId, start: r.start, end: Date.now() } : null;
       emit({ type: 'ended', gameId, session });
     },
+    showLaunchers: async () => false,
     openFolder: async () => {},
-    uninstallGame: async (id) => `Démo : la désinstallation de ${id} s'ouvrirait dans son launcher.`,
-    updateGame: async (id) => `Démo : les mises à jour de ${id} s'ouvriraient dans son launcher.`,
+    uninstallGame: async (id) => `Démo : désinstallation de ${id} en cours…`,
+    updateGame: async (id) => `Démo : ${id} se met à jour en arrière-plan.`,
     setDesktop: async () => ({ presenceAvailable: true, shortcut: 'Ctrl+Alt+H', shortcutOk: true }),
     setTrayRecents: async () => {},
     trayState: async () => ({

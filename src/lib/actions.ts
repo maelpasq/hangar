@@ -27,8 +27,25 @@ export async function openFolder(id: string): Promise<void> {
   }
 }
 
-/** Ouvre la désinstallation dans le launcher du jeu (Hangar ne supprime rien lui-même). */
-export async function uninstallGame(id: string): Promise<void> {
+/** Bouton « Afficher le launcher » des toasts : ses fenêtres sont cachées pendant les actions. */
+export const showLauncher = {
+  label: 'Afficher le launcher',
+  run: () => {
+    api
+      .showLaunchers()
+      .then((shown) => shown || ui.toast('Aucune fenêtre de launcher à afficher'))
+      .catch(() => {});
+  }
+};
+
+/** Demande confirmation dans Hangar avant de désinstaller. */
+export function uninstallGame(id: string): void {
+  const g = library.get(id);
+  if (g && !g.notInstalled) ui.modal = { kind: 'uninstall', gameId: id };
+}
+
+/** Désinstalle par le désinstalleur du jeu, sinon par son launcher (Hangar ne supprime rien lui-même). */
+export async function confirmUninstall(id: string): Promise<void> {
   const g = library.get(id);
   if (!g || g.notInstalled) return;
   try {
@@ -39,12 +56,12 @@ export async function uninstallGame(id: string): Promise<void> {
   }
 }
 
-/** Ouvre les mises à jour du jeu dans son launcher ; le rescan au retour dira si c'est fait. */
+/** Réveille le launcher du jeu, invisible, qui télécharge la mise à jour ; le rescan au retour dira si c'est fait. */
 export async function updateGame(id: string): Promise<void> {
   const g = library.get(id);
   if (!g || g.notInstalled) return;
   try {
-    ui.toast(await api.updateGame(id), { gameId: id });
+    ui.toast(await api.updateGame(id), { gameId: id, action: showLauncher });
     if (g.updatePending) runner.watchInstall(id);
   } catch (e) {
     ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true, gameId: id });
