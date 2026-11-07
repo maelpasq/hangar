@@ -2,18 +2,25 @@
 
 Hangar est un launcher de jeux pour Windows 10/11 et macOS : il détecte automatiquement tous les jeux installés (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox / Microsoft Store, dossiers locaux, ajouts manuels), les affiche avec leurs vraies jaquettes et les lance via leur launcher, ou directement via l'exécutable quand il n'y a pas de launcher.
 
-## Documents à lire avant de coder
+## Documents (à consulter, pas à lire en entier)
 
-Lis-les dans cet ordre, au début de chaque session :
+Ne lis pas ces docs d'office. Quand la tâche en a besoin, cherche le titre de la section utile (`rg -n '^#' docs/X.md`) et lis seulement cette section :
 
-1. `docs/SPEC.md` : ce que fait l'app, écran par écran, avec les critères d'acceptation.
-2. `docs/DESIGN.md` : le design system (couleurs, typo, rayons, animations) et chaque composant. **La maquette validée par l'utilisateur fait foi.**
-3. `docs/ARCHITECTURE.md` : stack, découpage frontend/backend, modèle de données, commandes Tauri.
-4. `docs/RELEASES.md` : procédure de publication et historique des versions (chargé plus bas).
+- `docs/SPEC.md` : ce que fait l'app, écran par écran, critères d'acceptation.
+- `docs/DESIGN.md` : design system et composants. **La maquette validée par l'utilisateur fait foi.**
+- `docs/ARCHITECTURE.md` : stack, modèle de données, commandes Tauri.
+- `docs/RELEASES.md` : procédure de publication (début du fichier) et historique des versions. À lire seulement pour publier.
+- `docs/DECISIONS.md` : choix passés, à chercher par mot-clé, ajouter en fin de fichier sans le relire.
+- `docs/PLAN.md` : historique de la construction initiale, à ignorer.
 
-`docs/PLAN.md` est le plan de la construction initiale de l'app (terminée) : à consulter comme historique, pas à suivre.
+Maquette : `design/reference/maquette-hangar.dc.html` (70 Ko, ne jamais la lire en entier, chercher la valeur voulue avec `rg`). C'est un template de l'outil de design de Claude (`<x-dc>`, `<sc-for>`, `<sc-if>`, `{{ ... }}`), pas du code à copier : référence exacte des couleurs, tailles, espacements, keyframes, textes. Les URL `/_blob/...` ne marchent pas hors de l'outil (images : DESIGN.md, section Jaquettes).
 
-La source de la maquette est dans `design/reference/maquette-hangar.dc.html`. C'est un composant de l'outil de design de Claude, pas du code à copier tel quel : le balisage `<x-dc>`, `<sc-for>`, `<sc-if>` et `{{ ... }}` est un langage de template. Sers-t'en comme référence exacte des valeurs (couleurs, tailles, espacements, keyframes, textes). Les URL `/_blob/...` ne fonctionnent pas hors de l'outil : dans l'app, les images viennent du CDN Steam (voir DESIGN.md, section Jaquettes).
+## Économie de tokens
+
+- Chercher avant de lire (`rg`, Grep), puis lire seulement les lignes utiles (offset/limit). Ne jamais lire les lockfiles, `site/index.html` en entier, les images de `design/` ou `docs/images/`.
+- Vérifier avec `npm run verify` (sortie courte) plutôt que les commandes une par une.
+- Captures d'écran seulement pour un changement visuel, et à échelle réduite.
+- Pas d'agents ni de relecture de fichiers déjà lus ou juste modifiés. Réponses courtes.
 
 ## Règles non négociables
 
@@ -35,6 +42,7 @@ npm install            # dépendances frontend + CLI Tauri
 npm run dev            # lance l'app dans l'environnement de test séparé (Hangar Test)
 npm run test-env:clean # supprime l'environnement de test (données, comptes, démarrage auto)
 npm run build          # exe + installeur NSIS dans src-tauri/target/release
+npm run verify         # check + tests + cargo test + clippy + tirets cadratins, sortie courte
 npm run check          # svelte-check + tsc
 npm run test           # tests frontend (vitest)
 cd src-tauri && cargo test && cargo clippy -- -D warnings
@@ -44,13 +52,11 @@ Hors de Windows, `npm run dev:web` lance le frontend seul dans un navigateur ave
 
 ## Façon de travailler
 
-- À la fin de chaque changement : `npm run check`, `npm run test`, `cargo test`, `cargo clippy`, puis un commit avec un message clair en français.
-- Compare régulièrement ton UI à la maquette (`npm run dev:web` + capture d'écran avec Playwright si disponible). Les écarts visibles sont des bugs.
+- À la fin de chaque changement : `npm run verify`, puis un commit avec un message clair en français.
+- Après un changement visuel, compare l'UI à la maquette (`npm run dev:web` + capture). Les écarts visibles sont des bugs.
 - La détection des stores est dans `src-tauri/src/scanner/` (un fichier par store) : améliore-la, ne repars pas de zéro.
 - Si une information manque dans les docs, choisis l'option la plus simple qui respecte la maquette, note ton choix dans `docs/DECISIONS.md` et continue.
 
 ## Publier une version
 
-Procédure de mise en prod et historique des versions : `docs/RELEASES.md`, chargé ci-dessous à chaque conversation. **Chaque nouvelle version ajoute son entrée (numéro, date, description) en haut de l'historique, avant `npm version`.**
-
-@docs/RELEASES.md
+Seulement sur demande (ou mot-clé « PUSH RELEASE ») : lis la procédure en tête de `docs/RELEASES.md` (jusqu'à « ## Historique », plus la dernière entrée pour le ton). Version toujours `patch`. **Chaque version ajoute son entrée en haut de l'historique, avant `npm version`.**

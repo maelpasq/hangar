@@ -1,6 +1,6 @@
 # Versions de Hangar
 
-Ce fichier est chargé à chaque nouvelle conversation (importé par `CLAUDE.md`). Il explique comment publier une version et garde l'historique de toutes les versions.
+Ce fichier explique comment publier une version et garde l'historique de toutes les versions.
 
 ## Publier une nouvelle version en prod
 
@@ -8,12 +8,9 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
 
 1. **Vérifier** que tout passe, depuis la racine du projet :
    ```bash
-   npm run check
-   npm run test
-   cd src-tauri && cargo test && cargo clippy -- -D warnings
-   rg -n '\x{2014}' --glob '!node_modules' --glob '!target' .
+   npm run verify
    ```
-   La dernière commande ne doit rien afficher. `git status` doit être propre et la branche doit être `main`.
+   Chaque étape doit afficher `ok`. `git status` doit être propre et la branche doit être `main`.
 2. **Le numéro** : toujours `patch`, règle fixée par l'utilisateur. Chaque version ajoute 0.0.1 au dernier chiffre (1.2.1 -> 1.2.2 -> 1.2.3...), petite correction comme grosse nouveauté. Jamais `minor` ni `major`, même pour une grosse mise à jour.
 3. **Ajouter l'entrée de la version** en haut de « Historique » ci-dessous (numéro, date, description pour les utilisateurs), puis committer :
    ```bash
