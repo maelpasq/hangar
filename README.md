@@ -17,10 +17,11 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 ## Ce que fait Hangar
 
 - **Détection automatique** de tous tes jeux, quel que soit le store, plus tes dossiers de jeux et les jeux que tu ajoutes à la main.
-- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; un clic ouvre leur installation dans le bon launcher. Relie tes comptes Steam, GOG ou Epic pour retrouver toute ta bibliothèque.
+- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; Hangar te demande dans quel dossier de leur launcher les installer, avec la place libre de chaque disque. Les jeux Steam se téléchargent en arrière-plan, avec la progression dans Hangar. Relie tes comptes Steam, GOG ou Epic pour retrouver toute ta bibliothèque.
 - **Vraies jaquettes et bannières**, trouvées automatiquement (Steam, stores, SteamGridDB) et gardées en cache.
-- **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. **Désinstaller** ouvre la désinstallation dans le launcher du jeu.
-- **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » ouvre la mise à jour dans le bon launcher.
+- **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. Sous Windows, les launchers restent cachés en arrière-plan : tu ne vois que ton jeu.
+- **Désinstaller** depuis Hangar, après confirmation : les jeux Steam, Epic et GOG sont supprimés sans ouvrir leur launcher.
+- **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » la lance en arrière-plan dans le bon launcher, sans afficher sa fenêtre.
 - **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start pour l'ouvrir, A pour jouer).
 - **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
 - **Collections et filtres** : range tes jeux dans tes propres listes et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
@@ -95,7 +96,7 @@ Les jeux possédés mais pas installés viennent de Steam, Epic, GOG Galaxy et d
 
 Un jeu manque ? Ajoute son dossier dans **Paramètres > Bibliothèque > Dossiers de jeux locaux**, ou utilise **Ajouter un jeu** en bas de la barre latérale.
 
-Hangar ne supprime jamais rien : « Masquer » cache seulement un jeu dans Hangar, et « Désinstaller » passe la main au launcher du jeu.
+« Masquer » cache seulement un jeu dans Hangar, sans rien supprimer. Seul « Désinstaller », après ta confirmation, supprime les fichiers du jeu (le dossier connu de son launcher, jamais un dossier système ni ton dossier personnel) ; pour Ubisoft, EA, Battle.net et Riot, il passe la main au launcher du jeu.
 
 Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows et `~/Library/Application Support/studio.pamal.hangar` sous macOS.
 
