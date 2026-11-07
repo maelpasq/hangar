@@ -1,6 +1,6 @@
 // État de l'interface : écran courant, recherche, modales, menu contextuel, toasts.
 
-import type { DesktopInfo, StoreId } from '../types';
+import type { DesktopInfo, InstallTarget, StoreId } from '../types';
 
 export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
 
@@ -10,6 +10,7 @@ export type Modal =
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
   | { kind: 'uninstall'; gameId: string }
+  | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
   | { kind: 'collections'; gameId: string };
 

@@ -197,6 +197,13 @@ export function mockApi(): Api {
       return `Démo : ${id} s'installe en arrière-plan.`;
     },
     installProgress: async () => null,
+    installTargets: async (id) =>
+      id.startsWith('steam:') || id.startsWith('epic:')
+        ? [
+            { path: 'D:/Jeux', label: 'D:/Jeux', free: 955_000_000_000 },
+            { path: 'C:/Jeux', label: 'C:/Jeux', free: 12_000_000_000 }
+          ]
+        : [],
     stopGame: async (gameId) => {
       const r = running.get(gameId);
       if (!r) return;

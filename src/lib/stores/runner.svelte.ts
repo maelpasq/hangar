@@ -18,6 +18,8 @@ export interface Launching {
 const OVERLAY_MAX_MS = 4000;
 /** Relevé de la progression des téléchargements Steam. */
 const PROGRESS_MS = 2000;
+/** Téléchargement Steam resté à 0 % aussi longtemps : signalé. */
+const STUCK_MS = 5 * 60_000;
 /** Écart minimal entre deux scans au retour sur Hangar pendant une installation. */
 const INSTALL_RESCAN_MS = 30_000;
 
@@ -51,6 +53,8 @@ class Runner {
   private installs = new Map<string, string>();
   /** Téléchargements Steam suivis : progression de 0 à 1. */
   progress = $state<Record<string, { value: number; kind: 'install' | 'update' }>>({});
+  /** Début de chaque téléchargement suivi, et s'il a déjà été signalé comme bloqué. */
+  private started = new Map<string, { at: number; warned: boolean }>();
   private poll: ReturnType<typeof setInterval> | undefined;
   private lastInstallScan = 0;
 
@@ -85,13 +89,26 @@ class Runner {
     }
   }
 
-  /** Installe le jeu : Steam en arrière-plan avec sa progression, les autres dans leur launcher. */
+  /** Installe le jeu : demande d'abord le dossier quand le launcher en a plusieurs à proposer. */
   async install(gameId: string): Promise<void> {
+    ui.menu = null;
+    // Téléchargement déjà lancé (Hangar rouvert entre-temps) : on reprend juste sa progression.
+    if (library.get(gameId)?.store === 'steam' && (await api.installProgress(gameId).catch(() => null)) !== null) {
+      this.follow(gameId, 'install');
+      return;
+    }
+    const targets = await api.installTargets(gameId).catch(() => []);
+    // Mode manette : pas de fenêtre à la souris, le dossier par défaut du launcher.
+    if (targets.length && !ui.big) ui.modal = { kind: 'installDir', gameId, targets };
+    else await this.installTo(gameId, targets[0]?.path ?? null);
+  }
+
+  /** Steam : en arrière-plan avec sa progression ; les autres dans leur launcher. */
+  async installTo(gameId: string, dir: string | null): Promise<void> {
     const g = library.get(gameId);
     if (!g) return;
-    ui.menu = null;
     try {
-      ui.toast(await api.installGame(gameId), { gameId });
+      ui.toast(await api.installGame(gameId, dir), { gameId });
       if (g.store === 'steam') this.follow(gameId, 'install');
       else this.watchInstall(gameId);
     } catch (e) {
@@ -103,6 +120,7 @@ class Runner {
   follow(gameId: string, kind: 'install' | 'update'): void {
     if (gameId in this.progress) return;
     this.progress = { ...this.progress, [gameId]: { value: 0, kind } };
+    this.started.set(gameId, { at: Date.now(), warned: false });
     this.poll ??= setInterval(() => this.pollProgress(), PROGRESS_MS);
   }
 
@@ -117,10 +135,12 @@ class Runner {
       const v = await api.installProgress(id).catch(() => null);
       if (v !== null) {
         this.progress = { ...this.progress, [id]: { ...p, value: v } };
+        this.warnIfStuck(id, v);
         continue;
       }
       const { [id]: _done, ...rest } = this.progress;
       this.progress = rest;
+      this.started.delete(id);
       await rescan();
       const g = library.get(id);
       if (!g) continue;
@@ -131,6 +151,18 @@ class Runner {
       clearInterval(this.poll);
       this.poll = undefined;
     }
+  }
+
+  /** Steam n'a toujours rien téléchargé après STUCK_MS (hors ligne, déconnecté, file d'attente) : on le dit une fois. */
+  private warnIfStuck(id: string, value: number): void {
+    const s = this.started.get(id);
+    if (!s || s.warned || value > 0 || Date.now() - s.at < STUCK_MS) return;
+    s.warned = true;
+    const g = library.get(id);
+    ui.toast(
+      `Steam n'a pas encore commencé à télécharger ${g ? library.name(g) : 'le jeu'}. Vérifie qu'il est connecté et qu'aucun autre téléchargement ne passe avant.`,
+      { error: true, gameId: id }
+    );
   }
 
   /** Suit une installation, une désinstallation ou une mise à jour ouverte dans un launcher. */

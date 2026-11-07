@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, DesktopInfo, TrayGame, TrayState, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -22,9 +22,10 @@ export interface Api {
   loadLibrary(): Promise<Game[]>;
   saveLibrary(games: Game[]): Promise<void>;
   launchGame(gameId: string): Promise<void>;
-  /** Ouvre l'installation d'un jeu non installé dans son launcher. */
-  /** Installe le jeu (Steam : en arrière-plan) ; renvoie le message à afficher. */
-  installGame(gameId: string): Promise<string>;
+  /** Dossiers du launcher où installer le jeu, celui par défaut en tête ; vide si le launcher choisit. */
+  installTargets(gameId: string): Promise<InstallTarget[]>;
+  /** Installe le jeu dans `dir` (l'un de `installTargets`) ; renvoie le message à afficher. */
+  installGame(gameId: string, dir?: string | null): Promise<string>;
   /** Progression (0 à 1) d'un téléchargement Steam en cours, null une fois fini. */
   installProgress(gameId: string): Promise<number | null>;
   stopGame(gameId: string): Promise<void>;
@@ -122,7 +123,8 @@ async function tauriApi(): Promise<Api> {
     loadLibrary: () => invoke('load_library'),
     saveLibrary: (games) => invoke('save_library', { games }),
     launchGame: (gameId) => invoke('launch_game', { gameId }),
-    installGame: (gameId) => invoke('install_game', { gameId }),
+    installTargets: (gameId) => invoke('install_targets', { gameId }),
+    installGame: (gameId, dir) => invoke('install_game', { gameId, dir: dir ?? null }),
     installProgress: (gameId) => invoke('install_progress', { gameId }),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
     showLaunchers: () => invoke('show_launchers'),

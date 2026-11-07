@@ -101,6 +101,16 @@ export interface TrayState {
   accent: string;
 }
 
+/** Dossier proposé pour installer un jeu (bibliothèque du launcher). */
+export interface InstallTarget {
+  /** Identifiant renvoyé tel quel au backend. */
+  path: string;
+  /** Dossier affiché. */
+  label: string;
+  /** Place libre sur le disque en octets, 0 si inconnue. */
+  free: number;
+}
+
 /** Ce que le backend sait faire sur ce bureau. */
 export interface DesktopInfo {
   presenceAvailable: boolean;

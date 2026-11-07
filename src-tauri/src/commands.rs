@@ -293,18 +293,34 @@ pub async fn launch_game(app: AppHandle, ctx: Ctxs<'_>, game_id: String) -> Resu
 /// Installe un jeu possédé : Steam en arrière-plan par Hangar (Windows), les autres dans leur
 /// launcher. Renvoie le message à afficher.
 #[tauri::command]
-pub async fn install_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, String> {
+pub async fn install_game(ctx: Ctxs<'_>, game_id: String, dir: Option<String>) -> Result<String, String> {
     let Some(game) = ctx.known.get(&game_id).filter(|g| g.not_installed) else {
         return Err("Ce jeu n'est plus à installer. Actualise la bibliothèque puis réessaie.".into());
     };
     log::info!("installation demandée : {} ({})", game.name, game.id);
-    if cfg!(windows) && game.store == "steam" {
-        return blocking(move || crate::manage::steam_install(&game)).await?;
+    if cfg!(windows) && (game.store == "steam" || game.store == "epic") {
+        return blocking(move || {
+            // Dossier venu du frontend : seulement l'un de ceux que Hangar a proposés.
+            let dir = dir.map(|d| crate::manage::checked_target(&game, &d)).transpose()?;
+            if game.store == "steam" {
+                crate::manage::steam_install(&game, dir)
+            } else {
+                crate::manage::epic_install(&game, dir)
+            }
+        })
+        .await?;
     }
     let msg = format!("Installation de {} ouverte dans {}", game.name, game.launcher_name);
     let launch = game.launch.clone();
     blocking(move || launcher::launch(&launch)).await??;
     Ok(msg)
+}
+
+/// Dossiers du launcher où installer le jeu (vide : le launcher choisit lui-même).
+#[tauri::command]
+pub async fn install_targets(ctx: Ctxs<'_>, game_id: String) -> Result<Vec<crate::manage::InstallTarget>, String> {
+    let Some(game) = ctx.known.get(&game_id).filter(|g| g.not_installed) else { return Ok(vec![]) };
+    blocking(move || crate::manage::install_targets(&game)).await
 }
 
 /// Progression (0 à 1) de l'installation ou de la mise à jour d'un jeu Steam ; `None` une fois finie.
