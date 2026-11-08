@@ -4,10 +4,11 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { AccountStatus, Game, LaunchEvent, McAccount, McProgress, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, Game, LaunchEvent, McAccount, McPack, McProgress, PersistedState, Session, StoreId } from './types';
 import { defaultState } from './util/state';
 
 const mcInstalled = new Set<string>(['1.20.1']);
+let mcPack: McPack = 'absent';
 const mcAccount: McAccount = { available: true, accounts: [], active: null };
 const mcProgress = new Set<(p: McProgress) => void>();
 
@@ -312,6 +313,14 @@ export function mockApi(): Api {
         ['1.18.2', '2022-02-28'], ['1.17.1', '2021-07-06'], ['1.16.5', '2021-01-15'], ['1.14.4', '2019-07-19'], ['1.12.2', '2017-09-18'],
         ['1.8.9', '2015-12-09'], ['1.7.10', '2014-06-26']
       ].map(([id, releaseTime]) => ({ id, releaseTime, installed: mcInstalled.has(id), image: null })),
+    mcPack: async () => mcPack,
+    mcPackInstall: async () => {
+      for (let done = 0; done <= 10; done++) {
+        mcProgress.forEach((cb) => cb({ version: 'hangarmc', step: 'Hangar MC', done, total: 10 }));
+        await wait(150);
+      }
+      mcPack = 'ok';
+    },
     mcInstall: async (id) => {
       const steps: [string, number][] = [['Java', 120], ['Jeu', 60], ['Ressources', 400], ['Fabric', 12]];
       for (const [step, total] of steps) {

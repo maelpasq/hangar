@@ -474,6 +474,31 @@ pub async fn mc_versions(ctx: Ctxs<'_>) -> Result<Vec<crate::minecraft::McVersio
     blocking(move || mc.versions()).await?
 }
 
+/// Fichiers de Hangar MC (le mod) : "absent", "ok" ou "outdated".
+#[tauri::command]
+pub async fn mc_pack(ctx: Ctxs<'_>) -> Result<&'static str, String> {
+    let mc = minecraft(&ctx);
+    blocking(move || match mc.pack() {
+        None => "absent",
+        Some(true) => "ok",
+        Some(false) => "outdated",
+    })
+    .await
+}
+
+/// Télécharge les fichiers de Hangar MC ; l'avancement arrive par `mc://progress` (version `hangarmc`).
+#[tauri::command]
+pub async fn mc_pack_install(app: AppHandle, ctx: Ctxs<'_>) -> Result<(), String> {
+    let mc = minecraft(&ctx);
+    blocking(move || {
+        mc.install_pack(&|done, total| {
+            let p = crate::minecraft::Progress { version: "hangarmc".into(), step: "Hangar MC", done, total };
+            let _ = app.emit("mc://progress", p);
+        })
+    })
+    .await?
+}
+
 /// Installe une version ; l'avancement arrive par `mc://progress`.
 #[tauri::command]
 pub async fn mc_install(app: AppHandle, ctx: Ctxs<'_>, id: String) -> Result<(), String> {

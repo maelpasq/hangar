@@ -173,6 +173,8 @@ fn main() {
             commands::set_presence,
             commands::mc_versions,
             commands::mc_install,
+            commands::mc_pack,
+            commands::mc_pack_install,
             commands::mc_launch,
             commands::mc_account,
             commands::mc_login_start,

@@ -8,9 +8,10 @@
     title,
     onclose,
     width = 460,
+    class: cls = '',
     children,
     footer
-  }: { title: string; onclose: () => void; width?: number; children: Snippet; footer?: Snippet } = $props();
+  }: { title: string; onclose: () => void; width?: number; class?: string; children: Snippet; footer?: Snippet } = $props();
 
   let box: HTMLDivElement;
   const id = `m${Math.random().toString(36).slice(2, 8)}`;
@@ -52,7 +53,7 @@
   {onkeydown}
 >
   <div
-    class="box"
+    class="box {cls}"
     bind:this={box}
     role="dialog"
     aria-modal="true"

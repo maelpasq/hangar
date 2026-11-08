@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, McAccount, McProgress, McVersion, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, McAccount, McPack, McProgress, McVersion, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -85,6 +85,10 @@ export interface Api {
   onWebClosed(cb: (id: string) => void): Promise<() => void>;
   /** Hangar MC : versions officielles de Minecraft (Fabric ou Legacy Fabric), la plus récente d'abord. */
   mcVersions(): Promise<McVersion[]>;
+  /** Fichiers de Hangar MC (le mod), pas inclus dans l'installeur. */
+  mcPack(): Promise<McPack>;
+  /** Les télécharge ; l'avancement arrive par onMcProgress (version `hangarmc`). */
+  mcPackInstall(): Promise<void>;
   /** Télécharge Minecraft, Java, Fabric et les mods de Hangar MC pour cette version. */
   mcInstall(id: string): Promise<void>;
   mcLaunch(id: string): Promise<void>;
@@ -209,6 +213,8 @@ async function tauriApi(): Promise<Api> {
     openWebGame: (id) => invoke('open_web_game', { id }),
     onWebClosed: (cb) => on<string>('web://closed', cb),
     mcVersions: () => invoke('mc_versions'),
+    mcPack: () => invoke('mc_pack'),
+    mcPackInstall: () => invoke('mc_pack_install'),
     mcInstall: (id) => invoke('mc_install', { id }),
     mcLaunch: (id) => invoke('mc_launch', { id }),
     onMcProgress: (cb) => on<McProgress>('mc://progress', cb),

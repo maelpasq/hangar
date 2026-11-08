@@ -95,3 +95,5 @@ jobs:
           npm run build:setup
           cp installer/target/release/hangar-setup.exe Hangar-Setup.exe
           gh release upload "${{ github.ref_name }}" Hangar-Setup.exe --clobber
+          # Fichiers de Hangar MC : plus dans l'exe, l'app les télécharge depuis la release de sa version.
+          gh release upload "${{ github.ref_name }}" src-tauri/resources/mods/hangarmc-*.jar --clobber

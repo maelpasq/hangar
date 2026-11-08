@@ -197,6 +197,9 @@ export interface McAccount {
   active: string | null;
 }
 
+/** Fichiers de Hangar MC (téléchargés à part du launcher) : jamais, à jour, ou à mettre à jour. */
+export type McPack = 'absent' | 'ok' | 'outdated';
+
 /** Avancement d'une installation de Minecraft (fichiers téléchargés de l'étape en cours). */
 export interface McProgress {
   version: string;

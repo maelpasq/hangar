@@ -13,5 +13,20 @@ fn main() {
     ids.sort();
     let out = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).join("web_covers.rs");
     std::fs::write(out, format!("const WEB_COVERS: &[&str] = &{ids:?};")).unwrap();
+    // Mod Hangar MC : pas embarqué dans l'exe, téléchargé à la demande ; seules ses empreintes le sont.
+    println!("cargo:rerun-if-changed=resources/mods");
+    let mut mods: Vec<(String, String)> = std::fs::read_dir("resources/mods")
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| {
+            let name = e.file_name().to_str()?.to_string();
+            let mc = name.strip_prefix("hangarmc-")?.strip_suffix(".jar")?.to_string();
+            Some((mc, sha1_smol::Sha1::from(std::fs::read(e.path()).ok()?).digest().to_string()))
+        })
+        .collect();
+    mods.sort();
+    let out = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).join("mods.rs");
+    std::fs::write(out, format!("const MODS: &[(&str, &str)] = &{mods:?};")).unwrap();
     tauri_build::build()
 }
