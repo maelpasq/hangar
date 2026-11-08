@@ -272,3 +272,12 @@ Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) 
 - Remplacement par un mixin sur `TitleScreen.init` (annulé, puis ouverture de l'accueil) : couvre toutes les façons dont le jeu ouvre son écran titre (démarrage, déconnexion, fermeture d'un menu sans monde).
 - Fenêtre du jeu nommée « Hangar MC <mod> - Minecraft <jeu> » : mixin sur `Minecraft.createTitle` (1.16 et plus), `Display.setTitle` au premier tick avant la 1.14 (le jeu ne change plus son titre ensuite).
 - Le logo pixel remplace aussi le bloc d'herbe dans l'écran Hangar MC de l'app (`McLogo.svelte`).
+
+## Linux (CachyOS)
+
+- Paquet : **AppImage** seul (`tauri.linux.conf.json`), construit sur Ubuntu 22.04 (glibc ancienne) pour tourner sur les distributions récentes dont CachyOS / Arch. Le bouton « Mettre à jour » marche avec l'AppImage (`latest.json` reçoit `linux-x86_64` par `tauri-action`). Pas de .deb / .rpm / PKGBUILD.
+- Ouverture des liens, dossiers et launchers par `xdg-open` (au lieu de `open` sous macOS) ; un exécutable est lancé directement.
+- Steam : `~/.local/share/Steam`, `~/.steam/steam` puis Flatpak (`~/.var/app/com.valvesoftware.Steam/...`), client reconnu par `steam.sh`. Les jeux Proton sont des jeux Steam comme les autres (lancés par `steam://`).
+- Pas de détection Epic, GOG Galaxy, Ubisoft, EA, Battle.net, Riot ni Xbox sous Linux (pas de launcher officiel). Heroic, Lutris et Bottles ne sont pas encore lus.
+- Comptes : coffre Secret Service (KWallet ou GNOME Keyring) via `keyring` (`sync-secret-service`).
+- Installation et désinstallation pilotées par Hangar (Steam, Epic) restent réservées à Windows ; sous Linux, « Désinstaller » ouvre Steam ou le dossier du jeu.

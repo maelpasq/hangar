@@ -69,7 +69,7 @@ pub fn launcher_present(store: &str) -> bool {
         "epic" => pd.join("Epic").join("EpicGamesLauncher").is_dir(),
         "gog" => gog::galaxy_installed(),
         "riot" => riot::client().is_some(),
-        _ if mac => false,
+        _ if !cfg!(windows) => false,
         "ubisoft" => local.join("Ubisoft Game Launcher").is_dir() || pd.join("Ubisoft").is_dir(),
         "ea" => pd.join("EA Desktop").is_dir() || local.join("Electronic Arts").join("EA Desktop").is_dir(),
         "battlenet" => pd.join("Battle.net").is_dir(),

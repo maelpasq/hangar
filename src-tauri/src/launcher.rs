@@ -55,7 +55,8 @@ pub fn shell_open(target: &str, args: &str, cwd: Option<&str>, _verb: &str) -> R
     unix_open(target, args, cwd)
 }
 
-/// macOS : un binaire est lancé directement, le reste (URI, `.app`, dossier) passe par `open`.
+/// macOS et Linux : un binaire est lancé directement, le reste (URI, `.app`, dossier) passe par
+/// `open` (macOS) ou `xdg-open` (Linux).
 /// Compilé partout pour être vérifié par `cargo clippy` sous Windows.
 #[cfg_attr(windows, allow(dead_code))]
 fn unix_open(target: &str, args: &str, cwd: Option<&str>) -> Result<(), String> {
@@ -70,9 +71,11 @@ fn unix_open(target: &str, args: &str, cwd: Option<&str>) -> Result<(), String> 
         }
         return c.spawn().map(|_| ()).map_err(|e| format!("Impossible de lancer le jeu : {e}"));
     }
-    let mut c = Command::new("open");
+    let mac = cfg!(target_os = "macos");
+    let mut c = Command::new(if mac { "open" } else { "xdg-open" });
     c.arg(target);
-    if !args.is_empty() {
+    // xdg-open n'accepte qu'une cible : les arguments ne passent que sous macOS.
+    if mac && !args.is_empty() {
         c.arg("--args").args(&args);
     }
     match c.status() {
@@ -126,8 +129,8 @@ pub fn uninstall_target(g: &crate::model::Game) -> Result<(String, String), Stri
             format!("Désinstalle {name} depuis sa page dans GOG Galaxy (menu Gérer)."),
         )),
         "epic" => Ok(("com.epicgames.launcher://".into(), format!("Désinstalle {name} depuis la bibliothèque d'Epic Games."))),
-        _ if cfg!(target_os = "macos") => {
-            // Une app macOS se désinstalle en la mettant à la corbeille : on ouvre son dossier.
+        _ if !cfg!(windows) => {
+            // macOS et Linux : le jeu se désinstalle en le mettant à la corbeille : on ouvre son dossier.
             let app = g.install_dir.as_deref().unwrap_or(&g.launch.target);
             let dir = Path::new(app).parent().filter(|d| d.is_dir()).ok_or("Dossier du jeu introuvable.")?;
             Ok((dir.to_string_lossy().into_owned(), format!("Mets {name} à la corbeille depuis ce dossier.")))

@@ -67,8 +67,9 @@ pub fn parse_manifest(text: &str) -> Option<Game> {
 }
 
 /// macOS : les données d'Epic restent après la suppression de l'app, on exige l'app elle-même.
+/// Pas de launcher Epic sous Linux.
 pub fn launcher_installed() -> bool {
-    !cfg!(target_os = "macos") || super::mac_app("Epic Games Launcher")
+    cfg!(windows) || (cfg!(target_os = "macos") && super::mac_app("Epic Games Launcher"))
 }
 
 pub fn detect() -> Vec<Game> {

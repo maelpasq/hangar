@@ -16,11 +16,11 @@
   import { runner } from '../stores/runner.svelte';
   import type { AccountStatus, Prefs, StoreId, Theme } from '../types';
   import { plural, relativeDay } from '../util/format';
-  import { isMac } from '../util/platform';
+  import { isLinux, isMac } from '../util/platform';
 
   type SectionId = 'general' | 'appearance' | 'launchers' | 'library' | 'covers';
 
-  const os = isMac ? 'macOS' : 'Windows';
+  const os = isMac ? 'macOS' : isLinux ? 'Linux' : 'Windows';
 
   let section = $state<SectionId>('general');
   let version = $state('');

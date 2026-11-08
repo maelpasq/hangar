@@ -29,7 +29,13 @@ pub fn vdf_values(text: &str, key: &str) -> Vec<String> {
 /// comptes) restent sur le disque après une désinstallation, surtout sous macOS.
 pub fn steam_root() -> Option<PathBuf> {
     let root = steam_data_dir()?;
-    let client = if cfg!(target_os = "macos") { super::mac_app("Steam") } else { root.join("steam.exe").is_file() };
+    let client = if cfg!(target_os = "macos") {
+        super::mac_app("Steam")
+    } else if cfg!(windows) {
+        root.join("steam.exe").is_file()
+    } else {
+        root.join("steam.sh").is_file()
+    };
     if !client {
         log::info!("Steam : données présentes mais client absent ({})", root.display());
         return None;
@@ -45,12 +51,20 @@ fn steam_data_dir() -> Option<PathBuf> {
             return Some(p);
         }
     }
-    let p = if cfg!(target_os = "macos") {
-        super::mac_support().join("Steam")
-    } else {
-        PathBuf::from(r"C:\Program Files (x86)\Steam")
-    };
-    p.exists().then_some(p)
+    if cfg!(windows) {
+        let p = PathBuf::from(r"C:\Program Files (x86)\Steam");
+        return p.exists().then_some(p);
+    }
+    if cfg!(target_os = "macos") {
+        let p = super::mac_support().join("Steam");
+        return p.exists().then_some(p);
+    }
+    // Linux : paquet de la distribution (~/.local/share/Steam, lien ~/.steam/steam), puis Flatpak.
+    let home = PathBuf::from(std::env::var("HOME").ok()?);
+    [".local/share/Steam", ".steam/steam", ".var/app/com.valvesoftware.Steam/.local/share/Steam"]
+        .iter()
+        .map(|d| home.join(d))
+        .find(|p| p.join("steamapps").is_dir())
 }
 
 const STEAM_IGNORED: &[&str] = &[
