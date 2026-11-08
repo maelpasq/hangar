@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.10 - 8 novembre 2026
+**Linux plus fluide** : Hangar retire sous Linux les effets de flou que le moteur d'affichage de Linux calcule sans la carte graphique, et corrige la lenteur connue avec les cartes NVIDIA. L'app répond nettement mieux, surtout en faisant défiler la bibliothèque. Sur Windows et macOS, rien ne change.
+
 ### 1.2.9 - 8 novembre 2026
 **Hangar arrive sur Linux** : une AppImage pour CachyOS, Arch et les autres distributions, à télécharger depuis le site ou la page des releases, avec les mises à jour depuis Hangar comme sur Windows et macOS. Hangar y détecte tes jeux Steam (Proton compris, Steam installé par la distribution ou en Flatpak), tes dossiers de jeux locaux et tes ajouts manuels, et range tes comptes reliés dans KWallet ou GNOME Keyring. Les autres launchers (Epic, GOG, Ubisoft...) n'existent pas sous Linux et ne sont pas encore lus via Heroic ou Lutris.
 
