@@ -101,6 +101,11 @@
     filter: blur(18px) saturate(1.3) brightness(0.7);
   }
 
+  /* Linux : pas de flou (trop lent sous WebKitGTK), image assombrie à la place. */
+  :global(.linux) .blur {
+    filter: saturate(1.3) brightness(0.35);
+  }
+
   .land {
     position: absolute;
     left: 0;

@@ -27,6 +27,14 @@ use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_window_state::StateFlags;
 
 fn main() {
+    // Linux avec le pilote NVIDIA : le rendu DMA-BUF de WebKitGTK rend l'app très lente (ou
+    // blanche). Désactivé avant la création de la fenêtre, sauf si l'utilisateur l'a réglé.
+    if cfg!(target_os = "linux")
+        && std::path::Path::new("/proc/driver/nvidia/version").exists()
+        && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
+    {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
     let context = tauri::generate_context!();
     // Environnement de test (`npm run dev`, tauri.test.conf.json) : identité, dossiers, coffre et
     // démarrage avec le système à part, sans mise à jour automatique (elle installerait la

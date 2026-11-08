@@ -316,3 +316,11 @@ dd {
 .link:hover {
   color: var(--strong);
 }
+
+/* Linux : WebKitGTK recalcule chaque flou d'arrière-plan à chaque image, l'app devient lente.
+   Les fonds de ces éléments restent presque opaques sans le flou. */
+.linux *,
+.linux *::before,
+.linux *::after {
+  backdrop-filter: none !important;
+}

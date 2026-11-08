@@ -270,6 +270,11 @@
     animation: ambIn 1s ease both;
   }
 
+  /* Linux : lueur décorative retirée, son flou géant est trop lent sous WebKitGTK. */
+  :global(.linux) .ambient {
+    display: none;
+  }
+
   @keyframes ambIn {
     from {
       opacity: 0;
