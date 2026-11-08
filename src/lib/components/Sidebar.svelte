@@ -8,6 +8,7 @@
   import { library, presentStores } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import Icon, { type IconName } from './Icon.svelte';
+  import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
 
   let { rail = false }: { rail?: boolean } = $props();
@@ -74,7 +75,7 @@
         title={rail ? n.label : undefined}
         onclick={n.go}
       >
-        <span class="ic"><Icon name={n.icon} /></span>
+        <span class="ic">{#if n.key === 'minecraft'}<McLogo size={19} />{:else}<Icon name={n.icon} />{/if}</span>
         {#if !rail}
           <span>{n.label}</span>
           <span class="count num">{n.count ?? ''}</span>
