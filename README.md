@@ -78,7 +78,7 @@ Rends l'`.AppImage` exécutable (clic droit > Propriétés, ou `chmod +x Hangar_
 sudo pacman -S fuse2
 ```
 
-Les mises à jour se font depuis Hangar. Sous Linux, Hangar détecte les jeux Steam (Proton compris), les dossiers de jeux locaux et les ajouts manuels. Les comptes reliés vont dans KWallet ou GNOME Keyring.
+Les mises à jour se font depuis Hangar. Sous Linux, Hangar détecte les jeux Steam (Proton compris), les raccourcis de jeux du menu des applications, les dossiers de jeux locaux (jeux Linux, AppImage, scripts et `.exe` lancés par Wine) et les ajouts manuels. Les comptes reliés vont dans KWallet ou GNOME Keyring.
 
 ## ⚠ Indispensable : ta clé SteamGridDB
 
@@ -102,7 +102,7 @@ Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur
 | Battle.net | ✓ | | |
 | Riot Games | ✓ | ✓ | |
 | Xbox / Microsoft Store | ✓ | | |
-| Jeux installés hors store | ✓ (raccourcis et programmes installés) | ✓ (apps de la catégorie Jeux) | |
+| Jeux installés hors store | ✓ (raccourcis et programmes installés) | ✓ (apps de la catégorie Jeux) | ✓ (raccourcis de la catégorie Jeux) |
 | Dossiers de jeux locaux | ✓ | ✓ | ✓ |
 | Ajout manuel | ✓ | ✓ | ✓ |
 

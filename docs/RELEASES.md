@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.11 - 8 novembre 2026
+**Plus fluide partout** : les images floutées (jaquettes, lumière d'ambiance, écran de lancement, mode manette) sont préparées une fois pour toutes au lieu d'être recalculées à chaque image, et les animations ne sollicitent plus que la carte graphique. Le flou revient sous Linux, sans ralentir l'app, et Windows et macOS gagnent en fluidité. **Jeux locaux sous Linux** : Hangar trouve les jeux Linux, AppImage, scripts et `.exe` (lancés par Wine) de tes dossiers de jeux, ainsi que les raccourcis de jeux de ton menu d'applications. **Hangar MC** : l'onglet reste grisé jusqu'à la validation de Mojang.
+
 ### 1.2.10 - 8 novembre 2026
 **Linux plus fluide** : Hangar retire sous Linux les effets de flou que le moteur d'affichage de Linux calcule sans la carte graphique, et corrige la lenteur connue avec les cartes NVIDIA. L'app répond nettement mieux, surtout en faisant défiler la bibliothèque. Sur Windows et macOS, rien ne change.
 
