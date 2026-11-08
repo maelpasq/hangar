@@ -44,6 +44,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.7 - 8 novembre 2026
+**Hangar MC arrive** : un nouvel onglet pour le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules (zoom, coordonnées, armure, raccourcis), lancées en un clic sans le launcher officiel. Pour l'instant l'écran reste grisé : Mojang doit d'abord valider l'application, une mise à jour le débloquera. Hangar reste léger : les fichiers de Hangar MC ne sont pas dans l'installeur, ils se téléchargent seulement si tu ouvres l'onglet et l'acceptes.
+
 ### 1.2.6 - 7 novembre 2026
 **Launchers invisibles** (Windows) : quand tu lances ou mets à jour un jeu, la fenêtre de son launcher (Steam, Epic, Ubisoft Connect, EA app, Battle.net...) reste cachée, il travaille en arrière-plan et tu ne vois que ton jeu. S'il attend quelque chose de toi (connexion, contrat), le bouton « Afficher le launcher » le ramène. **Installer** : Hangar te demande dans quel dossier du launcher installer le jeu, avec la place libre de chaque disque. Les jeux Steam se téléchargent en arrière-plan avec la progression sur le bouton (« Installation 42 % »), puis « prêt » avec un bouton « Jouer ». **Désinstaller** : après confirmation dans Hangar, les jeux Steam, Epic et GOG sont supprimés sans ouvrir leur launcher. Garde-fous : rien pendant une partie, Epic jamais fermé pendant un téléchargement, alerte si un téléchargement Steam ne démarre pas.
 
