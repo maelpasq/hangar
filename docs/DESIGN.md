@@ -185,8 +185,8 @@ L'écran Minecraft et sa popup des versions gardent les couleurs, l'accent, le f
 - Pixel de base `--px` : 3 px (4 px dans la bannière, 2 px pour les petites étiquettes).
 - Pas d'arrondis : coins crantés d'un pixel (`.px`, `clip-path`). Pas d'ombres floues : relief en biseau (`.px-bevel`, lumière en haut à gauche, ombre en bas à droite) et creux façon case d'inventaire (`.px-slot`).
 - Boutons `.btn.px` : biseau, ombre basse de 2 pixels, enfoncés d'un pixel au clic. Le focus passe à l'intérieur (cadre texte + accent), le crantage coupant le contour extérieur.
-- Bannière : dégradé `generatedBackground` de la famille de version, trame de 8 px, étoiles carrées qui clignotent par paliers, collines en blocs (`shape-rendering: crispEdges`) dont l'herbe prend la couleur d'accent, bloc d'herbe de 96 px qui flotte par paliers.
+- Bannière : dégradé `generatedBackground` de la famille de version, trame de 8 px, étoiles carrées qui clignotent par paliers, collines en blocs (`shape-rendering: crispEdges`) dont l'herbe prend la couleur d'accent, logo pixel de 96 px qui flotte par paliers.
 - Progression : barre d'expérience en cases (dégradé répété), remplissage par paliers.
 - Animations en `steps()`, coupées avec `prefers-reduced-motion`.
-- Tuiles des versions (façon Lunar) : affiche officielle de Mojang quand elle existe, sinon jaquette pixel `McCover` (dégradé de la famille, trame, collines, « MINECRAFT » et le nom de la mise à jour, bloc d'herbe), cadre d'accent quand elle est choisie.
-- Logo de la barre latérale : le bloc d'herbe de Minecraft redessiné en monochrome (`src/lib/components/McLogo.svelte`, couleur du texte), seulement pour identifier le jeu.
+- Tuiles des versions (façon Lunar) : affiche officielle de Mojang quand elle existe, sinon jaquette pixel `McCover` (dégradé de la famille, trame, collines, « MINECRAFT » et le nom de la mise à jour, logo pixel), cadre d'accent quand elle est choisie.
+- Logo de Hangar MC (barre latérale, bannière, tuiles, fenêtres) : le logo de Hangar (arche et étoile) en pixels 17 x 13, monochrome (`src/lib/components/McLogo.svelte`, couleur du texte). Même dessin que l'accueil du mod (`Home.MARK`).

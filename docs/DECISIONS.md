@@ -265,3 +265,10 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 ## Hangar MC : fichiers téléchargés à part
 
 Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) : seules leurs empreintes SHA-1 le sont (`build.rs`). À la première ouverture de l'écran Hangar MC, l'écran est grisé et une fenêtre propose de les télécharger depuis la release GitHub de la version de Hangar (`releases/download/v<version>/hangarmc-<mc>.jar`, déposés par `release.yml`), vers `.hangarmc/hangarmc/`. Si la version de Hangar change le mod, la mise à jour se fait sans redemander. En debug (Hangar Test), les jars sont copiés depuis `src-tauri/resources/mods` : la release de la version en cours ne les a pas encore. Minecraft, Java et Fabric étaient déjà téléchargés à la demande, version par version.
+
+## Hangar MC : accueil du mod et titre de la fenêtre
+
+- L'écran titre du jeu est remplacé par l'accueil de Hangar MC (`mod/common/.../core/Home.java`, dessiné par le cœur, le même sur toutes les versions) : fond sombre de Hangar (`#0a0b0f`, pas de dégradé coloré, refusé par l'utilisateur), logo de Hangar en pixels monochrome, « HANGAR MC » en lettres pixel, version du jeu et nom de la mise à jour, boutons Solo, Multijoueur, Options, Hangar MC (menu des modules), Quitter, collines sombres dont l'herbe prend l'accent. Pas de Realms, de langue ni d'accessibilité sur l'accueil (accessibles par Options).
+- Remplacement par un mixin sur `TitleScreen.init` (annulé, puis ouverture de l'accueil) : couvre toutes les façons dont le jeu ouvre son écran titre (démarrage, déconnexion, fermeture d'un menu sans monde).
+- Fenêtre du jeu nommée « Hangar MC <mod> - Minecraft <jeu> » : mixin sur `Minecraft.createTitle` (1.16 et plus), `Display.setTitle` au premier tick avant la 1.14 (le jeu ne change plus son titre ensuite).
+- Le logo pixel remplace aussi le bloc d'herbe dans l'écran Hangar MC de l'app (`McLogo.svelte`).
