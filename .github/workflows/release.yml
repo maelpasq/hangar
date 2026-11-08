@@ -104,12 +104,12 @@ jobs:
           cp installer/target/release/hangar-setup.exe Hangar-Setup.exe
           gh release upload "${{ github.ref_name }}" Hangar-Setup.exe --clobber
       # Jars de Hangar MC : sur le dépôt maelpasq/hangar-mc (release du même tag), pour ne pas
-      # encombrer la page des releases de Hangar. MODS_TOKEN : jeton limité à ce dépôt (Contents en écriture).
+      # encombrer la page des releases de Hangar. MC_TOKEN : jeton limité à ce dépôt (Contents en écriture).
       - name: jars Hangar MC
         if: matrix.os == 'windows-latest'
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.MODS_TOKEN }}
+          GH_TOKEN: ${{ secrets.MC_TOKEN }}
         run: |
           r=maelpasq/hangar-mc; t="${{ github.ref_name }}"; jars=(src-tauri/resources/mods/hangarmc-*.jar)
           gh release create "$t" "${jars[@]}" --repo $r --title "Hangar MC $t" --notes "Mod Hangar MC de Hangar $t, téléchargé par l'app." \

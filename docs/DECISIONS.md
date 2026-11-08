@@ -284,5 +284,5 @@ Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) 
 
 ## Jars de Hangar MC hors de la page des releases (2026-11-08)
 
-GitHub ne permet pas de masquer un fichier d'une release. Depuis la 1.2.9, les jars `hangarmc-*.jar` sont publiés par `release.yml` dans la release du même tag sur le dépôt public `maelpasq/hangar-mc` (secret `MODS_TOKEN`), et `PACK_URL` pointe là. Les releases jusqu'à la 1.2.8 gardent leurs jars : les versions installées les téléchargent encore.
+GitHub ne permet pas de masquer un fichier d'une release. Depuis la 1.2.9, les jars `hangarmc-*.jar` sont publiés par `release.yml` dans la release du même tag sur le dépôt public `maelpasq/hangar-mc` (secret `MC_TOKEN`), et `PACK_URL` pointe là. Les releases jusqu'à la 1.2.8 gardent leurs jars : les versions installées les téléchargent encore.
 

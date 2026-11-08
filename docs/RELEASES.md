@@ -29,7 +29,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```powershell
    (Invoke-RestMethod "https://api.github.com/repos/maelpasq/hangar/actions/runs?per_page=3").workflow_runs | % { "$($_.name) #$($_.run_number) $($_.status)/$($_.conclusion)" }
    ```
-7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`. Les jars de Hangar MC (`hangarmc-*.jar`) sont dans la release du même tag sur https://github.com/maelpasq/hangar-mc/releases (secret `MODS_TOKEN` : jeton limité à ce dépôt, Contents en écriture). Sans eux, l'écran Hangar MC de cette version ne peut pas installer le mod.
+7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`. Les jars de Hangar MC (`hangarmc-*.jar`) sont dans la release du même tag sur https://github.com/maelpasq/hangar-mc/releases (secret `MC_TOKEN` : jeton limité à ce dépôt, Contents en écriture). Sans eux, l'écran Hangar MC de cette version ne peut pas installer le mod.
 
 Fichiers de la release :
 - `Hangar-Setup.exe` : installeur aux couleurs de Hangar (`installer/`), celui à donner aux gens. Il embarque l'installeur NSIS.
