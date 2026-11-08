@@ -2,7 +2,7 @@
 
 # Hangar
 
-**Tous tes jeux, un seul launcher.** Pour Windows 10/11 et macOS.
+**Tous tes jeux, un seul launcher.** Pour Windows 10/11, macOS et Linux.
 
 Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic. Les jeux que tu possèdes sans les avoir installés sont là aussi, prêts à installer.
 
@@ -48,6 +48,7 @@ Va sur la **[page des releases](https://github.com/maelpasq/hangar/releases/late
 |---|---|
 | Windows 10/11 | `Hangar-Setup.exe` |
 | macOS (Intel et Apple Silicon) | `Hangar_x.y.z_universal.dmg` |
+| Linux (CachyOS, Arch, Ubuntu...) | `Hangar_x.y.z_amd64.AppImage` |
 
 Les autres fichiers de la release servent aux mises à jour automatiques, tu n'en as pas besoin.
 
@@ -69,6 +70,16 @@ xattr -cr /Applications/Hangar.app
 
 Tu peux aussi passer par **Réglages Système > Confidentialité et sécurité > Ouvrir quand même**. Les mises à jour suivantes se font depuis Hangar, sans rien refaire.
 
+### Linux
+
+Rends l'`.AppImage` exécutable (clic droit > Propriétés, ou `chmod +x Hangar_*.AppImage`) puis lance-la. Si rien ne s'ouvre sur Arch ou CachyOS, installe FUSE 2 une seule fois :
+
+```bash
+sudo pacman -S fuse2
+```
+
+Les mises à jour se font depuis Hangar. Sous Linux, Hangar détecte les jeux Steam (Proton compris), les dossiers de jeux locaux et les ajouts manuels. Les comptes reliés vont dans KWallet ou GNOME Keyring.
+
 ## ⚠ Indispensable : ta clé SteamGridDB
 
 Sans clé SteamGridDB, beaucoup de jeux (ceux qui ne sont pas sur Steam : Epic, Riot, jeux locaux...) restent sans jaquette. La clé est gratuite et prend deux minutes :
@@ -81,19 +92,19 @@ Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur
 
 ## Jeux détectés
 
-| Store | Windows | macOS |
-|---|---|---|
-| Steam | ✓ | ✓ |
-| Epic Games | ✓ | ✓ |
-| GOG | ✓ | ✓ (jeux installés dans Applications) |
-| Ubisoft Connect | ✓ | |
-| EA app | ✓ | |
-| Battle.net | ✓ | |
-| Riot Games | ✓ | ✓ |
-| Xbox / Microsoft Store | ✓ | |
-| Jeux installés hors store | ✓ (raccourcis et programmes installés) | ✓ (apps de la catégorie Jeux) |
-| Dossiers de jeux locaux | ✓ | ✓ |
-| Ajout manuel | ✓ | ✓ |
+| Store | Windows | macOS | Linux |
+|---|---|---|---|
+| Steam | ✓ | ✓ | ✓ (Proton compris) |
+| Epic Games | ✓ | ✓ | |
+| GOG | ✓ | ✓ (jeux installés dans Applications) | |
+| Ubisoft Connect | ✓ | | |
+| EA app | ✓ | | |
+| Battle.net | ✓ | | |
+| Riot Games | ✓ | ✓ | |
+| Xbox / Microsoft Store | ✓ | | |
+| Jeux installés hors store | ✓ (raccourcis et programmes installés) | ✓ (apps de la catégorie Jeux) | |
+| Dossiers de jeux locaux | ✓ | ✓ | ✓ |
+| Ajout manuel | ✓ | ✓ | ✓ |
 
 Les jeux possédés mais pas installés viennent de Steam, Epic, GOG Galaxy et du Riot Client présents sur l'ordinateur, et des comptes que tu relies dans **Paramètres > Launchers et comptes** (Steam avec ta clé d'API Web, GOG et Epic par leur page de connexion officielle).
 
@@ -101,7 +112,7 @@ Un jeu manque ? Ajoute son dossier dans **Paramètres > Bibliothèque > Dossiers
 
 « Masquer » cache seulement un jeu dans Hangar, sans rien supprimer. Seul « Désinstaller », après ta confirmation, supprime les fichiers du jeu (le dossier connu de son launcher, jamais un dossier système ni ton dossier personnel) ; pour Ubisoft, EA, Battle.net et Riot, il passe la main au launcher du jeu.
 
-Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows et `~/Library/Application Support/studio.pamal.hangar` sous macOS.
+Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows, `~/Library/Application Support/studio.pamal.hangar` sous macOS et `~/.config/studio.pamal.hangar` sous Linux.
 
 ## Confidentialité
 
@@ -115,7 +126,7 @@ Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne
 - **Jeux web** : le site d'un jeu n'est contacté que quand tu le lances, dans sa propre fenêtre.
 - **Mises à jour de Hangar** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour Hangar ».
 
-Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS), jamais dans un fichier.
+Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS, KWallet ou GNOME Keyring sous Linux), jamais dans un fichier.
 
 ## Contribuer
 
@@ -132,6 +143,7 @@ Hangar est fait avec [Tauri 2](https://tauri.app) (Rust) et une interface [Svelt
 - [Node.js](https://nodejs.org) 22 ou plus et [Rust](https://rustup.rs) (stable).
 - **Windows** : les « Build Tools for Visual Studio » (charge de travail « Développement Desktop en C++ »). WebView2 est déjà présent sur Windows 10/11.
 - **macOS** : les outils en ligne de commande Xcode (`xcode-select --install`).
+- **Linux** : WebKitGTK 4.1, libayatana-appindicator, librsvg et D-Bus (voir l'étape « Linux, dépendances » de `.github/workflows/build.yml`).
 
 ### Récupérer et lancer le projet
 
@@ -154,7 +166,7 @@ npm run dev:web
 npm run build
 ```
 
-L'installeur est créé dans `src-tauri/target/release/bundle/` : `nsis/` (`.exe`) sous Windows, `dmg/` sous macOS.
+L'installeur est créé dans `src-tauri/target/release/bundle/` : `nsis/` (`.exe`) sous Windows, `dmg/` sous macOS, `appimage/` sous Linux.
 
 Sous Windows, l'installeur aux couleurs de Hangar (`installer/`) embarque ce NSIS et se compile ensuite :
 
@@ -172,7 +184,7 @@ npm run test
 cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
 ```
 
-Le CI (`.github/workflows/build.yml`) relance tout ça sur Windows et macOS à chaque push.
+Le CI (`.github/workflows/build.yml`) relance tout ça sur Windows, macOS et Linux à chaque push.
 
 ### Publier une version (mainteneur)
 
@@ -183,6 +195,6 @@ npm version patch
 git push --follow-tags
 ```
 
-Le workflow `release.yml` construit l'installeur Windows et le `.dmg` macOS universel, les publie dans une release GitHub et génère `latest.json`, que lit le bouton « Mettre à jour ». Il a besoin des secrets `TAURI_SIGNING_PRIVATE_KEY` (contenu de la clé privée de signature des mises à jour) et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Si cette clé est perdue, les versions installées ne peuvent plus se mettre à jour.
+Le workflow `release.yml` construit l'installeur Windows, le `.dmg` macOS universel et l'AppImage Linux, les publie dans une release GitHub et génère `latest.json`, que lit le bouton « Mettre à jour ». Il a besoin des secrets `TAURI_SIGNING_PRIVATE_KEY` (contenu de la clé privée de signature des mises à jour) et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Si cette clé est perdue, les versions installées ne peuvent plus se mettre à jour.
 
 La documentation du projet (spécification, design system, architecture, décisions) est dans [`docs/`](docs). Pour développer avec Claude Code, voir [`CLAUDE.md`](CLAUDE.md).
