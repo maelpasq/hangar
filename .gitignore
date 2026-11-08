@@ -10,3 +10,4 @@ captures/
 installer/tauri.conf.json
 *.log
 PROMPT.md
+src-tauri/resources/mods/

@@ -287,6 +287,13 @@ Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) 
 GitHub ne permet pas de masquer un fichier d'une release. Depuis la 1.2.9, les jars `hangarmc-*.jar` sont publiés par `release.yml` dans la release du même tag sur le dépôt public `maelpasq/hangar-mc` (secret `MC_TOKEN`), et `PACK_URL` pointe là. Les releases jusqu'à la 1.2.8 gardent leurs jars : les versions installées les téléchargent encore.
 
 
+## Pas de jar Hangar MC avant la validation de Mojang (2026-11-08)
+
+Tant que `APPROVED` (`accounts/microsoft.rs`) vaut `false` : Hangar supprime au démarrage (`scan_games`) les jars chez l'utilisateur (dossier `hangarmc` et copies `mods/<version>/hangarmc.jar`), `mc_pack_install` refuse, et `release.yml` ne publie pas les jars sur `maelpasq/hangar-mc`. Le jour où `APPROVED` passe à `true`, la version publiée met les jars sur `hangar-mc` (à rendre public) et l'app les propose au téléchargement.
+
+
+Les jars restent sur le poste de développement (`src-tauri/resources/mods/`, ignorés par Git) : retirés du dépôt et de toutes les releases. À la validation : `APPROVED = true`, recommitter les jars (le CI les lit dans le dépôt), rendre `hangar-mc` public, puis publier.
+
 ## Flou et animations rapides sur tous les systèmes
 
 - Images floutées (jaquettes en paysage, lumière d'ambiance, bannière sans visuel, écran de lancement, mode manette) : plus de `filter: blur()`. `BlurImage.svelte` réduit l'image par moitiés dans une toile de quelques pixels, une fois par image (cache partagé), et le navigateur l'agrandit en lissant. La toile n'est jamais relue : pas de souci d'origine.

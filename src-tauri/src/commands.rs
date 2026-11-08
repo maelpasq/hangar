@@ -38,6 +38,11 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 #[tauri::command]
 pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String>) -> Result<Vec<Game>, String> {
     let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
+    // Tant que Mojang n'a pas validé Hangar MC, personne ne garde le mod (dès le démarrage).
+    if !accounts::microsoft::available() {
+        let mc = minecraft(&ctx);
+        std::thread::spawn(move || mc.remove_pack());
+    }
     accounts::merge(&mut games, ctx.accounts.games());
     ctx.accounts.apply_updates(&mut games);
     simulate_updates(&app, &mut games);
@@ -489,6 +494,9 @@ pub async fn mc_pack(ctx: Ctxs<'_>) -> Result<&'static str, String> {
 /// Télécharge les fichiers de Hangar MC ; l'avancement arrive par `mc://progress` (version `hangarmc`).
 #[tauri::command]
 pub async fn mc_pack_install(app: AppHandle, ctx: Ctxs<'_>) -> Result<(), String> {
+    if !crate::accounts::microsoft::available() {
+        return Err("Hangar MC arrive bientôt : Mojang doit d'abord valider l'application.".into());
+    }
     let mc = minecraft(&ctx);
     blocking(move || {
         mc.install_pack(&|done, total| {
