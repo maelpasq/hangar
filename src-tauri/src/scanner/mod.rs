@@ -6,6 +6,7 @@
 
 pub mod appinfo;
 pub mod battlenet;
+pub mod desktop;
 pub mod ea;
 pub mod epic;
 pub mod exe;

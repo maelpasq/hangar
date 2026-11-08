@@ -286,3 +286,12 @@ Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) 
 
 GitHub ne permet pas de masquer un fichier d'une release. Depuis la 1.2.9, les jars `hangarmc-*.jar` sont publiés par `release.yml` dans la release du même tag sur le dépôt public `maelpasq/hangar-mc` (secret `MC_TOKEN`), et `PACK_URL` pointe là. Les releases jusqu'à la 1.2.8 gardent leurs jars : les versions installées les téléchargent encore.
 
+
+## Flou et animations rapides sur tous les systèmes
+
+- Images floutées (jaquettes en paysage, lumière d'ambiance, bannière sans visuel, écran de lancement, mode manette) : plus de `filter: blur()`. `BlurImage.svelte` réduit l'image par moitiés dans une toile de quelques pixels, une fois par image (cache partagé), et le navigateur l'agrandit en lissant. La toile n'est jamais relue : pas de souci d'origine.
+- Halo de l'écran de lancement : dégradé radial au lieu d'un fond flouté.
+- Flou d'arrière-plan du bouton favori seulement quand il se voit ; retiré du badge de la jaquette générée (posé sur un dégradé, il ne changeait rien).
+- Animations limitées à `transform` et `opacity` : barres de progression en `scaleX`, pastille « en jeu » en disque qui grandit, reflet de chargement qui glisse, ombre colorée du survol des jaquettes préparée d'avance (fondu d'opacité).
+- Plus de règles propres à Linux pour le flou : le même rendu partout.
+- Linux, jeux locaux : binaires ELF, scripts `.sh`, AppImage et `.exe` (lancés par Wine) dans les dossiers de jeux ; raccourcis `.desktop` de la catégorie Game (lancés par `gio launch`), sans les jeux Steam ni les launchers.

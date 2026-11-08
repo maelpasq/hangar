@@ -20,6 +20,26 @@ pub fn is_app(p: &Path) -> bool {
     cfg!(target_os = "macos") && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("app"))
 }
 
+/// Fichier qui lance un jeu : un `.exe` (Windows, ou Wine sous Linux) ; sous Linux aussi un
+/// binaire ELF (sans extension ou `.x86_64`, `.x86`, `.bin`), un script `.sh` ou une AppImage.
+/// Le bit exécutable ne suffit pas : sur un disque NTFS ou exFAT, tous les fichiers l'ont.
+fn runnable(p: &Path, linux: bool) -> bool {
+    let ext = p.extension().map(|x| x.to_string_lossy().to_lowercase()).unwrap_or_default();
+    match ext.as_str() {
+        "exe" => true,
+        _ if !linux => false,
+        "sh" | "appimage" => true,
+        "" | "x86_64" | "x86" | "x64" | "bin" => is_elf(p),
+        _ => false,
+    }
+}
+
+fn is_elf(p: &Path) -> bool {
+    use std::io::Read;
+    let mut magic = [0u8; 4];
+    fs::File::open(p).and_then(|mut f| f.read_exact(&mut magic)).is_ok() && magic == *b"\x7fELF"
+}
+
 fn collect_exes(dir: &Path, depth: u32, max: u32, out: &mut Vec<(PathBuf, u32, u64)>) {
     if depth > max || out.len() > 400 {
         return;
@@ -36,7 +56,7 @@ fn collect_exes(dir: &Path, depth: u32, max: u32, out: &mut Vec<(PathBuf, u32, u
                 continue;
             }
             collect_exes(&p, depth + 1, max, out);
-        } else if p.extension().map(|x| x.eq_ignore_ascii_case("exe")).unwrap_or(false) {
+        } else if ft.is_file() && runnable(&p, cfg!(target_os = "linux")) {
             let size = e.metadata().map(|m| m.len()).unwrap_or(0);
             out.push((p, depth, size));
         }
@@ -67,6 +87,10 @@ pub fn best_exe(dir: &Path, game_name: &str) -> Option<PathBuf> {
             }
             if stem.ends_with("shipping") || stem.ends_with("win64") {
                 score += 15;
+            }
+            // Linux : la version native passe avant un `.exe` qu'il faudrait lancer avec Wine.
+            if cfg!(target_os = "linux") && !p.extension().is_some_and(|x| x.eq_ignore_ascii_case("exe")) {
+                score += 10;
             }
             score -= depth as i64 * 8;
             score += ((size / 1_000_000) as i64 / 20).min(30);
@@ -105,6 +129,23 @@ mod tests {
         file(t.path(), "unins000.exe", 3);
         let b = best_exe(t.path(), "My Game").unwrap();
         assert_eq!(b.file_name().unwrap(), "MyGame-Win64-Shipping.exe");
+    }
+
+    #[test]
+    fn executables_linux() {
+        let t = tempfile::tempdir().unwrap();
+        let elf = t.path().join("Jeu.x86_64");
+        fs::write(&elf, b"\x7fELF").unwrap();
+        let data = t.path().join("Jeu_Data");
+        fs::write(&data, b"pas un binaire").unwrap();
+        let sh = t.path().join("start.sh");
+        fs::write(&sh, b"#!/bin/sh").unwrap();
+        let so = t.path().join("libjeu.so");
+        fs::write(&so, b"\x7fELF").unwrap();
+        assert!(runnable(&elf, true) && runnable(&sh, true));
+        assert!(!runnable(&data, true) && !runnable(&so, true));
+        assert!(!runnable(&elf, false), "seulement les .exe hors Linux");
+        assert!(runnable(Path::new("Jeu.exe"), true));
     }
 
     #[test]

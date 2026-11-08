@@ -14,6 +14,7 @@
   import { ui } from '../stores/ui.svelte';
   import type { Game } from '../types';
   import { hoursLabel, relativeDay } from '../util/format';
+  import BlurImage from '../components/BlurImage.svelte';
 
   type Tab = 'recent' | 'favorites' | 'all' | 'toInstall';
 
@@ -171,7 +172,7 @@
 >
   <div class="bg" aria-hidden="true">
     {#if hero}
-      {#key hero}<img src={hero} alt="" />{/key}
+      {#key hero}<BlurImage src={hero} size={32} />{/key}
     {/if}
   </div>
 
@@ -269,13 +270,10 @@
     z-index: -1;
   }
 
-  .bg img {
+  .bg :global(canvas) {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    filter: blur(28px) saturate(1.2);
     opacity: 0.35;
-    transform: scale(1.08);
     animation: bgIn 0.5s ease both;
   }
 
@@ -479,7 +477,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .tile,
-    .bg img {
+    .bg :global(canvas) {
       transition: none;
       animation: none;
     }

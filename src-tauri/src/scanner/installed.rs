@@ -499,7 +499,9 @@ pub fn detect() -> Vec<Game> {
     #[cfg(not(windows))]
     {
         let _ = best_exe;
-        super::macapps::detect()
+        let mut out = super::macapps::detect();
+        out.extend(super::desktop::detect());
+        out
     }
 }
 

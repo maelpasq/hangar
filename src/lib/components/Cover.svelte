@@ -2,6 +2,7 @@
   // Image d'une jaquette 2:3 : chargement à l'approche de l'écran, fondu, repli généré.
   import { art, visible } from '../art.svelte';
   import type { Game } from '../types';
+  import BlurImage from './BlurImage.svelte';
   import GeneratedCover from './GeneratedCover.svelte';
 
   let {
@@ -40,7 +41,7 @@
     <GeneratedCover {game} {fontSize} {padding} {showName} />
   {:else if res}
     {#if res.landscape}
-      <img class="blur" src={res.src} alt="" decoding="async" />
+      <BlurImage class="blur" src={res.src} brightness={0.7} />
       <img
         class="land"
         class:on={loaded}
@@ -64,7 +65,7 @@
     {/if}
   {/if}
   {#if res === undefined || (res && !loaded)}
-    <span class="shimmer" aria-hidden="true"></span>
+    <span class="shimmer shimmer-fx" aria-hidden="true"></span>
   {/if}
 </span>
 
@@ -92,18 +93,11 @@
       transform 0.6s var(--ease);
   }
 
-  .blur {
+  .img :global(.blur) {
     position: absolute;
-    inset: -20px;
-    width: calc(100% + 40px);
-    height: calc(100% + 40px);
-    object-fit: cover;
-    filter: blur(18px) saturate(1.3) brightness(0.7);
-  }
-
-  /* Linux : pas de flou (trop lent sous WebKitGTK), image assombrie à la place. */
-  :global(.linux) .blur {
-    filter: saturate(1.3) brightness(0.35);
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 
   .land {
@@ -125,8 +119,6 @@
   .shimmer {
     position: absolute;
     inset: 0;
-    background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / 0.04) 50%, transparent 70%) var(--cover-bg);
-    background-size: 200% 100%;
-    animation: hgShimmer 1.6s linear infinite;
+    background: var(--cover-bg);
   }
 </style>

@@ -64,12 +64,32 @@ fn unix_open(target: &str, args: &str, cwd: Option<&str>) -> Result<(), String> 
     // shortcut: arguments découpés aux espaces (pas de guillemets), suffisant pour Riot et les jeux locaux.
     let args: Vec<&str> = args.split_whitespace().collect();
     if Path::new(target).is_file() {
-        let mut c = Command::new(target);
+        let ext = Path::new(target).extension().map(|x| x.to_string_lossy().to_lowercase()).unwrap_or_default();
+        // Linux : un jeu Windows passe par Wine, un raccourci par `gio launch`, un script par sh
+        // (le bit exécutable manque souvent après une copie).
+        let mut c = match ext.as_str() {
+            "exe" if cfg!(target_os = "linux") => Command::new("wine"),
+            "desktop" if cfg!(target_os = "linux") => {
+                let mut c = Command::new("gio");
+                c.arg("launch");
+                c
+            }
+            "sh" if cfg!(target_os = "linux") => Command::new("sh"),
+            _ => Command::new(target),
+        };
+        if c.get_program() != target {
+            c.arg(target);
+        }
         c.args(&args);
         if let Some(d) = cwd.filter(|d| Path::new(d).is_dir()) {
             c.current_dir(d);
         }
-        return c.spawn().map(|_| ()).map_err(|e| format!("Impossible de lancer le jeu : {e}"));
+        return c.spawn().map(|_| ()).map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound if c.get_program() == "wine" => {
+                "Ce jeu Windows a besoin de Wine : installe-le (sudo pacman -S wine) puis relance-le.".into()
+            }
+            _ => format!("Impossible de lancer le jeu : {e}"),
+        });
     }
     let mac = cfg!(target_os = "macos");
     let mut c = Command::new(if mac { "open" } else { "xdg-open" });

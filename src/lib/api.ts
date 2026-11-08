@@ -2,6 +2,7 @@
 // l'implémentation de démo de mock.ts est utilisée.
 
 import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, McAccount, McPack, McProgress, McVersion, PersistedState, Session, SteamHit, StoreId } from './types';
+import { isLinux } from './util/platform';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -190,7 +191,8 @@ async function tauriApi(): Promise<Api> {
     pickExe: () =>
       pick({
         title: 'Choisir le jeu',
-        filters: [{ name: 'Jeux et raccourcis', extensions: ['exe', 'lnk', 'url', 'bat', 'app'] }]
+        // Linux : les binaires des jeux n'ont souvent pas d'extension, pas de filtre.
+        filters: isLinux ? [] : [{ name: 'Jeux et raccourcis', extensions: ['exe', 'lnk', 'url', 'bat', 'app'] }]
       }),
     pickFolder: () => pick({ title: 'Choisir un dossier de jeux', directory: true }),
     pickImage: () =>

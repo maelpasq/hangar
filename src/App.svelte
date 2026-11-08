@@ -31,6 +31,7 @@
   import { runner } from './lib/stores/runner.svelte';
   import { accounts } from './lib/stores/accounts.svelte';
   import { ui } from './lib/stores/ui.svelte';
+  import BlurImage from './lib/components/BlurImage.svelte';
 
   let search: HTMLInputElement | undefined = $state();
   let width = $state(1440);
@@ -175,7 +176,7 @@
   <div class="ambient" aria-hidden="true">
     {#if ui.ambient}
       {#key ui.ambient}
-        <img src={ui.ambient} alt="" />
+        <BlurImage src={ui.ambient} size={16} />
       {/key}
     {/if}
   </div>
@@ -261,18 +262,11 @@
     z-index: 0;
   }
 
-  .ambient img {
+  .ambient :global(canvas) {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    filter: blur(120px) saturate(1.5);
     opacity: 0.2;
     animation: ambIn 1s ease both;
-  }
-
-  /* Linux : lueur décorative retirée, son flou géant est trop lent sous WebKitGTK. */
-  :global(.linux) .ambient {
-    display: none;
   }
 
   @keyframes ambIn {

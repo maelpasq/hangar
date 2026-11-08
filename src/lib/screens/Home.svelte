@@ -77,7 +77,7 @@
     {#if featured.length}
       <HeroCarousel games={featured} />
     {:else if hero.pending}
-      <div class="hero-ph" aria-hidden="true"></div>
+      <div class="hero-ph shimmer-fx" aria-hidden="true"></div>
     {/if}
 
     {#if recent.length}
@@ -147,9 +147,10 @@
   .hero-ph {
     height: 440px;
     border-radius: var(--r-hero);
-    background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / 0.025) 50%, transparent 70%) var(--cover-bg);
-    background-size: 200% 100%;
-    animation: hgShimmer 1.8s linear infinite;
+    position: relative;
+    background: var(--cover-bg);
+    --shim: 0.025;
+    --shim-dur: 0.9s;
   }
 
   .first {

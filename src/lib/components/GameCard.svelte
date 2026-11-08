@@ -140,6 +140,28 @@
     transition: transform 0.4s var(--ease);
   }
 
+  /* Ombre colorée du survol, prête d'avance : seule son opacité change (pas d'ombre repeinte). */
+  .frame::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--r-cover);
+    box-shadow:
+      0 0 0 2px var(--accent-ring),
+      0 26px 50px -16px var(--accent-glow);
+    opacity: 0;
+    transition: opacity 0.4s var(--ease);
+    pointer-events: none;
+  }
+
+  .card:hover .frame::before,
+  .frame:has(.cover:focus-visible)::before {
+    opacity: 1;
+  }
+
   .cover {
     position: relative;
     display: block;
@@ -149,7 +171,6 @@
     overflow: hidden;
     background: var(--cover-bg);
     box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.9);
-    transition: box-shadow 0.4s var(--ease);
   }
 
   .cover::after {
@@ -166,11 +187,7 @@
     transform: translateY(-6px) scale(1.025);
   }
 
-  .card:hover .cover,
   .cover:focus-visible {
-    box-shadow:
-      0 0 0 2px var(--accent-ring),
-      0 26px 50px -16px var(--accent-glow);
     outline: none;
   }
 

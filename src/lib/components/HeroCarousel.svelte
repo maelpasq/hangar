@@ -276,8 +276,10 @@
     left: 0;
     bottom: 0;
     height: 3px;
-    width: 0;
+    width: 100%;
     background: #fff;
+    transform: scaleX(0);
+    transform-origin: left;
   }
 
   .thumb.on .bar {

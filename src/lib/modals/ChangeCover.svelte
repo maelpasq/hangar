@@ -9,6 +9,7 @@
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { Game, SteamHit } from '../types';
+  import BlurImage from '../components/BlurImage.svelte';
 
   let { game }: { game: Game } = $props();
   // L'identifiant reste valable même après la fermeture de la modale.
@@ -99,14 +100,14 @@
         <span class="cv">
           {#if p}
             {#if p.landscape}
-              <img class="blur" src={p.src} alt="" /><img class="land" src={p.src} alt="" />
+              <BlurImage class="blur" src={p.src} brightness={0.7} /><img class="land" src={p.src} alt="" />
             {:else}
               <img class="full" src={p.src} alt="" />
             {/if}
           {:else if p === null}
             <span class="miss">Pas d'image</span>
           {:else}
-            <span class="shim"></span>
+            <span class="shim shimmer-fx"></span>
           {/if}
         </span>
         <span class="nm">{h.name}</span>
@@ -188,17 +189,12 @@
   }
 
   .full,
-  .blur {
+  .cv :global(.blur) {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-
-  .blur {
-    filter: blur(14px) brightness(0.7);
-    transform: scale(1.2);
   }
 
   .land {
@@ -220,9 +216,8 @@
   .shim {
     position: absolute;
     inset: 0;
-    background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / 0.05) 50%, transparent 70%);
-    background-size: 200% 100%;
-    animation: hgShimmer 1.4s linear infinite;
+    --shim: 0.05;
+    --shim-dur: 0.7s;
   }
 
   .nm {

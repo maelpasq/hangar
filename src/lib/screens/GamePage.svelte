@@ -18,6 +18,7 @@
   import type { Game } from '../types';
   import { generatedBackground } from '../util/color';
   import { dateLabel, formatNumber, hoursLabel, relativeDay, sizeLabel } from '../util/format';
+  import BlurImage from '../components/BlurImage.svelte';
 
   let { game }: { game: Game } = $props();
 
@@ -72,7 +73,7 @@
   <section class="banner">
     {#if banner}
       {#key banner}
-        <img src={banner} alt="" class:blurred={!hero} />
+        {#if hero}<img src={banner} alt="" />{:else}<BlurImage src={banner} size={48} brightness={0.8} />{/if}
       {/key}
     {:else}
       <!-- Ni bannière ni jaquette : le dégradé de la jaquette générée, flouté. -->
@@ -194,7 +195,8 @@
     mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
   }
 
-  .banner img {
+  .banner img,
+  .banner :global(canvas) {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -205,14 +207,10 @@
       hgKen 14s ease-out forwards;
   }
 
-  .banner img.blurred {
-    filter: blur(30px) saturate(1.4) brightness(0.8);
-  }
-
   .fallback {
     position: absolute;
-    inset: -60px;
-    filter: blur(50px) saturate(1.2) brightness(0.55);
+    inset: 0;
+    filter: saturate(1.2) brightness(0.55);
     animation: hgFade 0.6s ease both;
   }
 

@@ -54,7 +54,6 @@
     display: grid;
     place-items: center;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
     opacity: 0;
     transition:
       opacity 0.2s,
@@ -67,6 +66,8 @@
   :global(.card:focus-within) .fav,
   .fav.on {
     opacity: 1;
+    /* Flou seulement quand le bouton se voit : pas un calque flouté par jaquette. */
+    backdrop-filter: blur(10px);
   }
 
   .fav:hover {

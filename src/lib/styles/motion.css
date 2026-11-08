@@ -30,9 +30,13 @@
   }
 }
 
+/* Barres de progression : échelle horizontale (pas de largeur animée, qui recalcule la page). */
 @keyframes hgBar {
+  from {
+    transform: scaleX(0);
+  }
   to {
-    width: 100%;
+    transform: scaleX(1);
   }
 }
 
@@ -75,24 +79,16 @@
   }
 }
 
-@keyframes hgProg {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
-}
-
+/* Pastille « en jeu » : un disque qui grandit et s'efface (pas d'ombre animée, repeinte à chaque image). */
 @keyframes hgPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+    transform: scale(1);
+    opacity: 0.7;
   }
-  70% {
-    box-shadow: 0 0 0 8px rgba(52, 211, 153, 0);
-  }
+  70%,
   100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+    transform: scale(3.2);
+    opacity: 0;
   }
 }
 
@@ -118,12 +114,13 @@
   }
 }
 
+/* Reflet de chargement : la bande se déplace (transform), le fond n'est jamais repeint. */
 @keyframes hgShimmer {
   from {
-    background-position: 200% 0;
+    transform: translateX(-100%);
   }
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 
@@ -140,7 +137,29 @@
 }
 
 .pulse {
+  position: relative;
+}
+
+.pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgb(52, 211, 153);
   animation: hgPulse 1.6s ease-in-out infinite;
+}
+
+/* Reflet de chargement : intensité `--shim`, durée d'un passage `--shim-dur`. */
+.shimmer-fx {
+  overflow: hidden;
+}
+
+.shimmer-fx::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgb(var(--ink) / var(--shim, 0.04)) 50%, transparent 70%);
+  animation: hgShimmer var(--shim-dur, 0.8s) linear infinite;
 }
 
 .lcover {
@@ -161,7 +180,7 @@
   }
 
   .lcover,
-  .pulse,
+  .pulse::after,
   .spin {
     animation: hgFade 0.2s both !important;
   }

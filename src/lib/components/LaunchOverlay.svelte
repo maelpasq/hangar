@@ -7,6 +7,7 @@
   import Cover from './Cover.svelte';
   import StoreLogo from './StoreLogo.svelte';
   import { STORE_LOGOS } from '../store-logos';
+  import BlurImage from './BlurImage.svelte';
 
   let { launching, game }: { launching: Launching; game: Game } = $props();
 
@@ -25,7 +26,7 @@
 </script>
 
 <div class="launch on-dark" role="dialog" aria-modal="true" aria-label="Lancement de {name}">
-  {#if bg}<img class="bg" src={bg} alt="" />{/if}
+  {#if bg}<BlurImage class="bg" src={bg} size={32} brightness={0.45} />{/if}
   <div class="shade" aria-hidden="true"></div>
   <div class="center">
     <div class="wrap">
@@ -68,14 +69,11 @@
     animation: hgFade 0.4s ease both;
   }
 
-  .bg {
+  .launch :global(.bg) {
     position: absolute;
-    inset: -40px;
-    width: calc(100% + 80px);
-    height: calc(100% + 80px);
-    object-fit: cover;
-    filter: blur(40px) saturate(1.4) brightness(0.45);
-    transform: scale(1.1);
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 
   .shade {
@@ -99,9 +97,9 @@
   .glow {
     position: absolute;
     inset: -30px;
-    border-radius: 40px;
-    background: var(--accent);
-    filter: blur(50px);
+    /* Halo en dégradé radial : même rendu qu'un flou, sans filtre recalculé à chaque image. */
+    inset: -80px;
+    background: radial-gradient(closest-side, var(--accent) 35%, transparent);
     opacity: 0.7;
     animation: hgGlow 2.2s ease-in-out infinite;
   }
@@ -145,7 +143,8 @@
     height: 100%;
     border-radius: 4px;
     background: var(--accent);
-    animation: hgProg 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    transform-origin: left;
+    animation: hgBar 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
   .steps {
