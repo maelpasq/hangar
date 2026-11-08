@@ -13,8 +13,12 @@ if (!ID.endsWith('.test')) throw new Error('identité de test invalide');
 const home = homedir();
 const dirs =
   process.platform === 'win32'
-    ? [process.env.APPDATA, process.env.LOCALAPPDATA].filter(Boolean).map((d) => join(d, ID))
+    ? [
+        ...[process.env.APPDATA, process.env.LOCALAPPDATA].filter(Boolean).map((d) => join(d, ID)),
+        ...(process.env.APPDATA ? [join(process.env.APPDATA, '.hangarmc-test')] : [])
+      ]
     : [
+        join(home, 'Library', 'Application Support', 'hangarmc-test'),
         join(home, 'Library', 'Application Support', ID),
         join(home, 'Library', 'Caches', ID),
         join(home, 'Library', 'Logs', ID),
@@ -23,7 +27,8 @@ const dirs =
       ];
 
 for (const d of dirs) {
-  if (!d.includes(ID) && !d.includes(NAME)) continue; // garde-fou : jamais un autre chemin
+  // garde-fou : jamais un autre chemin (Hangar MC de l'app installée : `.hangarmc`, sans -test)
+  if (!d.includes(ID) && !d.includes(NAME) && !d.endsWith('hangarmc-test')) continue;
   if (existsSync(d)) {
     rmSync(d, { recursive: true, force: true });
     console.log(`supprimé : ${d}`);
@@ -41,7 +46,7 @@ const quiet = (cmd, args) => {
 };
 
 // `cmdkey /delete` réussit aussi quand l'entrée n'existe pas : on n'annonce rien de précis.
-for (const store of ['steam', 'gog', 'epic']) {
+for (const store of ['steam', 'gog', 'epic', 'minecraft']) {
   if (process.platform === 'win32') quiet('cmdkey', [`/delete:compte-${store}.${NAME}`]);
   else quiet('security', ['delete-generic-password', '-s', NAME, '-a', `compte-${store}`]);
 }

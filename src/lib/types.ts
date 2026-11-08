@@ -178,3 +178,25 @@ export type LaunchEvent =
   | { type: 'running'; gameId: string; pid: number }
   | { type: 'ended'; gameId: string; session: Session | null }
   | { type: 'failed'; gameId: string; message: string };
+
+/** Hangar MC : version officielle de Minecraft. */
+export interface McVersion {
+  id: string;
+  releaseTime: string;
+  /** Minecraft, Fabric et les mods installés : prête à jouer. */
+  installed: boolean;
+}
+
+/** Compte Microsoft de Hangar MC. `available` : connexion possible dans cette version. */
+export interface McAccount {
+  available: boolean;
+  name: string | null;
+}
+
+/** Avancement d'une installation de Minecraft (fichiers téléchargés de l'étape en cours). */
+export interface McProgress {
+  version: string;
+  step: string;
+  done: number;
+  total: number;
+}

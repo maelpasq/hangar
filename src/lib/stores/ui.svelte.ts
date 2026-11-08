@@ -1,8 +1,9 @@
+import type { McVersion } from '../types';
 // État de l'interface : écran courant, recherche, modales, menu contextuel, toasts.
 
 import type { DesktopInfo, InstallTarget, StoreId } from '../types';
 
-export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
+export type Screen = 'home' | 'library' | 'game' | 'web' | 'minecraft' | 'settings';
 
 export type Modal =
   | { kind: 'add' }
@@ -12,7 +13,8 @@ export type Modal =
   | { kind: 'uninstall'; gameId: string }
   | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
-  | { kind: 'collections'; gameId: string };
+  | { kind: 'collections'; gameId: string }
+  | { kind: 'mcVersions'; versions: McVersion[]; current: string; onpick: (id: string) => void };
 
 export interface Toast {
   id: number;
@@ -130,6 +132,10 @@ class Ui {
 
   webGames(): void {
     this.go({ screen: 'web' });
+  }
+
+  minecraft(): void {
+    this.go({ screen: 'minecraft' });
   }
 
   open(gameId: string): void {

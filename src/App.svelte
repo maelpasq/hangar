@@ -20,11 +20,13 @@
   import InstallDir from './lib/modals/InstallDir.svelte';
   import Rename from './lib/modals/Rename.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
+  import McVersions from './lib/modals/McVersions.svelte';
   import GamePage from './lib/screens/GamePage.svelte';
   import Home from './lib/screens/Home.svelte';
   import Library from './lib/screens/Library.svelte';
   import Settings from './lib/screens/Settings.svelte';
   import WebGames from './lib/screens/WebGames.svelte';
+  import Minecraft from './lib/screens/Minecraft.svelte';
   import { library } from './lib/stores/library.svelte';
   import { runner } from './lib/stores/runner.svelte';
   import { accounts } from './lib/stores/accounts.svelte';
@@ -191,6 +193,8 @@
         <GamePage {game} />
       {:else if ui.screen === 'web'}
         <WebGames />
+      {:else if ui.screen === 'minecraft'}
+        <Minecraft />
       {:else if ui.screen === 'settings'}
         <Settings />
       {/if}
@@ -209,7 +213,18 @@
     <ContextMenu gameId={ui.menu.gameId} x={ui.menu.x} y={ui.menu.y} />
   {/if}
 
-  {#if ui.modal?.kind === 'add'}
+  {#if ui.modal?.kind === 'mcVersions'}
+    {@const m = ui.modal}
+    <McVersions
+      versions={m.versions}
+      current={m.current}
+      onpick={(v) => {
+        m.onpick(v);
+        ui.modal = null;
+      }}
+      onclose={() => (ui.modal = null)}
+    />
+  {:else if ui.modal?.kind === 'add'}
     <AddGame />
   {:else if ui.modal?.kind === 'rename' && modalGame}
     <Rename game={modalGame} />

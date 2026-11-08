@@ -140,6 +140,7 @@ pub async fn disconnect_account(app: AppHandle, ctx: Ctxs<'_>, store: String) ->
 pub async fn open_link(link: String) -> Result<(), String> {
     let url = match link.as_str() {
         "steam-api-key" => "https://steamcommunity.com/dev/apikey",
+        "microsoft-link" => "https://www.microsoft.com/link",
         _ => return Err("Lien inconnu.".into()),
     };
     blocking(move || launcher::shell_open(url, "", None, "open")).await?
@@ -456,4 +457,73 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 pub async fn import_cover(ctx: Ctxs<'_>, game_id: String, path: String) -> Result<String, String> {
     let covers = ctx.paths.covers.clone();
     blocking(move || art::import_cover(&covers, &game_id, &path).map(|p| p.to_string_lossy().into_owned())).await?
+}
+
+/// Hangar MC : `%APPDATA%\.hangarmc` à côté du `.minecraft` officiel (Mac : `hangarmc` à côté
+/// de `minecraft` dans Application Support). Hangar Test a son propre dossier `-test`.
+fn minecraft(ctx: &Ctx) -> crate::minecraft::Mc {
+    let test = ctx.paths.config.extension().is_some_and(|e| e == "test");
+    let name = format!("{}hangarmc{}", if cfg!(target_os = "macos") { "" } else { "." }, if test { "-test" } else { "" });
+    // config = <APPDATA ou Application Support>/studio.pamal.hangar : son parent est ce dossier.
+    crate::minecraft::Mc::new(ctx.paths.config.parent().unwrap_or(&ctx.paths.config).join(name))
+}
+
+#[tauri::command]
+pub async fn mc_versions(ctx: Ctxs<'_>) -> Result<Vec<crate::minecraft::McVersion>, String> {
+    let mc = minecraft(&ctx);
+    blocking(move || mc.versions()).await?
+}
+
+/// Installe une version ; l'avancement arrive par `mc://progress`.
+#[tauri::command]
+pub async fn mc_install(app: AppHandle, ctx: Ctxs<'_>, id: String) -> Result<(), String> {
+    let mc = minecraft(&ctx);
+    blocking(move || {
+        mc.install(&id, &|p| {
+            let _ = app.emit("mc://progress", p);
+        })
+    })
+    .await?
+}
+
+/// Rafraîchit la session Microsoft puis lance la version installée `id`.
+#[tauri::command]
+pub async fn mc_launch(ctx: Ctxs<'_>, id: String) -> Result<(), String> {
+    let mc = minecraft(&ctx);
+    blocking(move || {
+        let s = crate::accounts::microsoft::session()?;
+        let profile = crate::minecraft::Profile { name: s.name, uuid: s.uuid, token: s.token, xuid: s.xuid };
+        mc.launch(&id, &profile).map(|_| ())
+    })
+    .await?
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct McAccount {
+    /// Connexion possible dans cette version (application Azure approuvée par Mojang).
+    available: bool,
+    name: Option<String>,
+}
+
+#[tauri::command]
+pub async fn mc_account() -> Result<McAccount, String> {
+    let name = blocking(crate::accounts::microsoft::connected).await?;
+    Ok(McAccount { available: crate::accounts::microsoft::available(), name })
+}
+
+/// Code à saisir sur microsoft.com/link ; `mc_login_finish` attend ensuite la saisie.
+#[tauri::command]
+pub async fn mc_login_start() -> Result<crate::accounts::microsoft::DeviceCode, String> {
+    blocking(crate::accounts::microsoft::start).await?
+}
+
+#[tauri::command]
+pub async fn mc_login_finish() -> Result<String, String> {
+    blocking(crate::accounts::microsoft::finish).await?
+}
+
+#[tauri::command]
+pub async fn mc_logout() -> Result<(), String> {
+    blocking(crate::accounts::microsoft::logout).await
 }

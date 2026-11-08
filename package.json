@@ -14,6 +14,7 @@
     "build:setup": "cargo build --release --manifest-path installer/Cargo.toml",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && tsc -p tsconfig.node.json",
     "test": "vitest run",
+    "mod": "node scripts/mod.mjs",
     "verify": "node scripts/verify.mjs",
     "tauri": "tauri",
     "brand": "node scripts/brand.mjs"
