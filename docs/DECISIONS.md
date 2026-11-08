@@ -281,3 +281,8 @@ Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) 
 - Pas de détection Epic, GOG Galaxy, Ubisoft, EA, Battle.net, Riot ni Xbox sous Linux (pas de launcher officiel). Heroic, Lutris et Bottles ne sont pas encore lus.
 - Comptes : coffre Secret Service (KWallet ou GNOME Keyring) via `keyring` (`sync-secret-service`).
 - Installation et désinstallation pilotées par Hangar (Steam, Epic) restent réservées à Windows ; sous Linux, « Désinstaller » ouvre Steam ou le dossier du jeu.
+
+## Jars de Hangar MC hors de la page des releases (2026-11-08)
+
+GitHub ne permet pas de masquer un fichier d'une release. Depuis la 1.2.9, les jars `hangarmc-*.jar` sont publiés par `release.yml` dans la release du même tag sur le dépôt public `maelpasq/hangar-mods` (secret `MODS_TOKEN`), et `PACK_URL` pointe là. Les releases jusqu'à la 1.2.8 gardent leurs jars : les versions installées les téléchargent encore.
+
