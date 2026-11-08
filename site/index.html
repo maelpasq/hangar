@@ -237,12 +237,12 @@
 
   /* Aperçu : contrôle segmenté, l'indicateur glisse sur un ressort, les captures se fondent */
   .seg {
-    position: relative; display: grid; grid-template-columns: repeat(3, 1fr);
-    width: min(420px, 100%); margin: 2.5rem auto 0; padding: 4px; border-radius: 999px;
+    position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: min(540px, 100%); margin: 2.5rem auto 0; padding: 4px; border-radius: 999px;
     background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-1);
   }
   .seg::before {
-    content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 999px;
+    content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4); border-radius: 999px;
     background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-2), 0 4px 12px -4px rgba(0,0,0,.6);
     transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .6s var(--spring);
   }
@@ -325,6 +325,7 @@
     .privacy .ico .icon { width: 2rem; height: 2rem; stroke-width: 1.6; }
   }
   @media (max-width: 640px) {
+    .seg button { font-size: .8125rem; white-space: nowrap; }
     .bento, .install { grid-template-columns: minmax(0, 1fr); }
     .install .btn { align-self: stretch; }
     .wide, .md-wide, .privacy { grid-column: auto; }
@@ -543,11 +544,13 @@
           <button type="button" role="tab" id="tab-0" aria-controls="view-0" aria-selected="true">Bibliothèque</button>
           <button type="button" role="tab" id="tab-1" aria-controls="view-1" aria-selected="false" tabindex="-1">Fiche d'un jeu</button>
           <button type="button" role="tab" id="tab-2" aria-controls="view-2" aria-selected="false" tabindex="-1">Jeux web</button>
+          <button type="button" role="tab" id="tab-3" aria-controls="view-3" aria-selected="false" tabindex="-1">Hangar MC</button>
         </div>
         <div class="views">
           <figure class="frame" id="view-0" role="tabpanel" aria-labelledby="tab-0" data-caption="Tous tes jeux au même endroit, filtrés par store en un clic."><img src="images/bibliotheque.webp" width="1440" height="900" loading="lazy" alt="Bibliothèque de Hangar avec les filtres par store"></figure>
           <figure class="frame" id="view-1" role="tabpanel" aria-labelledby="tab-1" aria-hidden="true" data-caption="Sa bannière, ton temps de jeu, ta dernière partie et ton activité."><img src="images/jeu.webp" width="1440" height="900" loading="lazy" alt="Fiche d'un jeu avec sa bannière, son temps de jeu et son activité"></figure>
           <figure class="frame" id="view-2" role="tabpanel" aria-labelledby="tab-2" aria-hidden="true" data-caption="Une quarantaine de jeux navigateur, les récents en tête."><img src="images/jeux-web.webp" width="1440" height="900" loading="lazy" alt="Onglet Jeux web de Hangar"></figure>
+          <figure class="frame" id="view-3" role="tabpanel" aria-labelledby="tab-3" aria-hidden="true" data-caption="Hangar MC, bientôt : Minecraft, toutes versions, avec Fabric et nos modules."><img src="images/hangar-mc.webp" width="1440" height="900" loading="lazy" alt="Écran Hangar MC : versions de Minecraft avec leurs affiches"></figure>
         </div>
         <p class="caption" aria-live="polite">Tous tes jeux au même endroit, filtrés par store en un clic.</p>
       </div>
