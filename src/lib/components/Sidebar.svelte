@@ -42,8 +42,7 @@
       ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
-    { key: 'minecraft', label: 'Minecraft', icon: 'cube', go: () => ui.minecraft() },
-    { key: 'big', label: 'Mode manette', icon: 'gamepad', go: () => (ui.big = true) },
+    { key: 'minecraft', label: 'Hangar MC', icon: 'cube', go: () => ui.minecraft() },
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 

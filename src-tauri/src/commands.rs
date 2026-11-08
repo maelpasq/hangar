@@ -503,13 +503,27 @@ pub async fn mc_launch(ctx: Ctxs<'_>, id: String) -> Result<(), String> {
 pub struct McAccount {
     /// Connexion possible dans cette version (application Azure approuvée par Mojang).
     available: bool,
-    name: Option<String>,
+    accounts: Vec<crate::accounts::microsoft::Account>,
+    /// UUID du compte qui joue.
+    active: Option<String>,
 }
 
 #[tauri::command]
 pub async fn mc_account() -> Result<McAccount, String> {
-    let name = blocking(crate::accounts::microsoft::connected).await?;
-    Ok(McAccount { available: crate::accounts::microsoft::available(), name })
+    let (accounts, active) = blocking(crate::accounts::microsoft::accounts).await?;
+    Ok(McAccount { available: crate::accounts::microsoft::available(), accounts, active })
+}
+
+/// Choisit le compte qui jouera.
+#[tauri::command]
+pub async fn mc_select(uuid: String) -> Result<(), String> {
+    blocking(move || crate::accounts::microsoft::select(&uuid)).await?
+}
+
+/// Abandonne la connexion en cours.
+#[tauri::command]
+pub fn mc_login_cancel() {
+    crate::accounts::microsoft::cancel();
 }
 
 /// Code à saisir sur microsoft.com/link ; `mc_login_finish` attend ensuite la saisie.
@@ -524,6 +538,6 @@ pub async fn mc_login_finish() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn mc_logout() -> Result<(), String> {
-    blocking(crate::accounts::microsoft::logout).await
+pub async fn mc_logout(uuid: String) -> Result<(), String> {
+    blocking(move || crate::accounts::microsoft::logout(&uuid)).await?
 }

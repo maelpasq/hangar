@@ -185,12 +185,16 @@ export interface McVersion {
   releaseTime: string;
   /** Minecraft, Fabric et les mods installés : prête à jouer. */
   installed: boolean;
+  /** Affiche officielle de la version (notes de version de Mojang), si elle existe. */
+  image: string | null;
 }
 
 /** Compte Microsoft de Hangar MC. `available` : connexion possible dans cette version. */
 export interface McAccount {
   available: boolean;
-  name: string | null;
+  accounts: { name: string; uuid: string }[];
+  /** UUID du compte qui joue. */
+  active: string | null;
 }
 
 /** Avancement d'une installation de Minecraft (fichiers téléchargés de l'étape en cours). */

@@ -89,7 +89,7 @@ Premier lancement (aucun historique) : le carrousel montre les jeux avec banniè
 
 ### 3.5 bis Mode manette
 
-- Ouvert par « Mode manette » (barre latérale, Paramètres > Général) ou le bouton Start d'une manette. Plein écran par-dessus l'app.
+- Ouvert par le bouton manette de la barre du haut (à côté d'Actualiser), Paramètres > Général ou le bouton Start d'une manette. Plein écran par-dessus l'app.
 - Onglets Récents, Favoris, Tous les jeux, À installer (LB / RB). Grandes jaquettes, la jaquette choisie grossit avec un anneau d'accent ; bannière floutée du jeu en fond ; nom, temps de jeu et dernière session en haut.
 - A : jouer (ou installer), Y : favori, X : fiche du jeu, B ou Start : quitter. Croix ou stick gauche pour se déplacer, avec répétition. Au clavier : flèches, Entrée, Échap, Page préc. / suiv.
 

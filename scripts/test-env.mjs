@@ -45,10 +45,19 @@ const quiet = (cmd, args) => {
   }
 };
 
-// `cmdkey /delete` réussit aussi quand l'entrée n'existe pas : on n'annonce rien de précis.
-for (const store of ['steam', 'gog', 'epic', 'minecraft']) {
-  if (process.platform === 'win32') quiet('cmdkey', [`/delete:compte-${store}.${NAME}`]);
-  else quiet('security', ['delete-generic-password', '-s', NAME, '-a', `compte-${store}`]);
+// Toutes les entrées du coffre de test (compte-steam, compte-minecraft-<uuid>...), et rien d'autre.
+if (process.platform === 'win32') {
+  let list = '';
+  try {
+    list = execFileSync('cmdkey', ['/list'], { encoding: 'utf8', windowsHide: true });
+  } catch {
+    // coffre illisible : rien à retirer
+  }
+  const targets = new Set(list.match(new RegExp(String.raw`compte-[\w-]+\.` + NAME, 'g')) ?? []);
+  for (const t of targets) quiet('cmdkey', [`/delete:${t}`]);
+} else {
+  // Chaque appel retire une entrée du service « Hangar Test » ; on s'arrête quand il n'y en a plus.
+  for (let i = 0; i < 100 && quiet('security', ['delete-generic-password', '-s', NAME]); i++);
 }
 console.log(`coffre : comptes de test « ${NAME} » retirés`);
 

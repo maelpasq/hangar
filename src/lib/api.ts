@@ -83,7 +83,7 @@ export interface Api {
   openWebGame(id: string): Promise<void>;
   /** Fenêtre d'un jeu web fermée (identifiant du catalogue). */
   onWebClosed(cb: (id: string) => void): Promise<() => void>;
-  /** Hangar MC : versions officielles de Minecraft (1.13 et plus), la plus récente d'abord. */
+  /** Hangar MC : versions officielles de Minecraft (Fabric ou Legacy Fabric), la plus récente d'abord. */
   mcVersions(): Promise<McVersion[]>;
   /** Télécharge Minecraft, Java, Fabric et les mods de Hangar MC pour cette version. */
   mcInstall(id: string): Promise<void>;
@@ -94,8 +94,12 @@ export interface Api {
   mcLoginStart(): Promise<{ userCode: string; url: string }>;
   /** Attend la saisie du code ; renvoie le pseudo Minecraft. */
   mcLoginFinish(): Promise<string>;
-  /** Déconnecte le compte (annule aussi une connexion en cours). */
-  mcLogout(): Promise<void>;
+  /** Retire un compte. */
+  mcLogout(uuid: string): Promise<void>;
+  /** Choisit le compte qui joue. */
+  mcSelect(uuid: string): Promise<void>;
+  /** Abandonne la connexion en cours. */
+  mcLoginCancel(): Promise<void>;
   /** Les comptes ont été synchronisés : rescanner. */
   onAccountsSynced(cb: () => void): Promise<() => void>;
   appVersion(): Promise<string>;
@@ -211,7 +215,9 @@ async function tauriApi(): Promise<Api> {
     mcAccount: () => invoke('mc_account'),
     mcLoginStart: () => invoke('mc_login_start'),
     mcLoginFinish: () => invoke('mc_login_finish'),
-    mcLogout: () => invoke('mc_logout'),
+    mcLogout: (uuid) => invoke('mc_logout', { uuid }),
+    mcSelect: (uuid) => invoke('mc_select', { uuid }),
+    mcLoginCancel: () => invoke('mc_login_cancel'),
     onAccountsSynced: (cb) => on<null>('accounts://synced', () => cb()),
     appVersion: () => getVersion(),
     checkUpdate: async () => {

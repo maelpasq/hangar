@@ -178,6 +178,8 @@ fn main() {
             commands::mc_login_start,
             commands::mc_login_finish,
             commands::mc_logout,
+            commands::mc_select,
+            commands::mc_login_cancel,
         ])
         .build(context)
         .expect("erreur au démarrage de Hangar")
