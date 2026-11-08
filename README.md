@@ -27,6 +27,7 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 - **Collections et filtres** : range tes jeux dans tes propres listes et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
 - **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar.
 - **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
+- **Hangar MC (bientôt)** : le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules, lancées en un clic. Il ne pèse rien tant que tu ne l'ouvres pas : ses fichiers se téléchargent seulement si tu le veux. L'écran reste grisé en attendant que Mojang valide l'application.
 - **Discord** : tes amis voient à quoi tu joues, avec la jaquette du jeu et ton temps de jeu (à activer dans **Paramètres > Général**).
 - **Prêt en quatre étapes** : à la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta couleur et les jeux web. Tu peux le relancer depuis **Paramètres > Général**.
 - **Mises à jour de Hangar intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour Hangar » apparaît dans l'app.
@@ -108,6 +109,7 @@ Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne
 - **Comptes reliés** (seulement si tu en relies un) : Hangar demande la liste de tes jeux à Steam, GOG ou Epic Games, directement auprès de leurs serveurs.
 - **Mises à jour des jeux** : Hangar compare la version de tes jeux GOG installés à la liste publique de GOG et, si ton compte Epic est relié, celle de tes jeux Epic à leur dernière version (au plus toutes les 6 heures). Les mises à jour Steam, et celles déjà lancées dans Epic, sont lues sur ton ordinateur.
 - **Discord** (seulement si tu l'actives) : le nom et la jaquette de ton jeu passent par l'app Discord installée sur ton ordinateur.
+- **Hangar MC** : les serveurs de Mojang et de Fabric, seulement quand tu ouvres l'écran ou installes une version, et les fichiers du mod sur GitHub quand tu acceptes de les télécharger.
 - **Jeux web** : le site d'un jeu n'est contacté que quand tu le lances, dans sa propre fenêtre.
 - **Mises à jour de Hangar** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour Hangar ».
 
