@@ -56,7 +56,7 @@ jobs:
           {
             echo 'body<<FIN_DES_NOTES'
             if [ -n "$notes" ]; then printf '%s\n\n' "$notes"; fi
-            echo 'Télécharge **Hangar-Setup.exe** (Windows), le **.dmg** (macOS) ou l'**.AppImage** (Linux) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.'
+            echo 'Télécharge **Hangar-Setup.exe** (Windows), le **.dmg** (macOS) ou le fichier **.AppImage** (Linux) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.'
             echo 'FIN_DES_NOTES'
           } >> "$GITHUB_OUTPUT"
       # macOS : la création du .dmg échoue parfois (« hdiutil: couldn't eject - Resource busy ») :
@@ -103,5 +103,14 @@ jobs:
           npm run build:setup
           cp installer/target/release/hangar-setup.exe Hangar-Setup.exe
           gh release upload "${{ github.ref_name }}" Hangar-Setup.exe --clobber
-          # Fichiers de Hangar MC : plus dans l'exe, l'app les télécharge depuis la release de sa version.
-          gh release upload "${{ github.ref_name }}" src-tauri/resources/mods/hangarmc-*.jar --clobber
+      # Jars de Hangar MC : sur le dépôt maelpasq/hangar-mods (release du même tag), pour ne pas
+      # encombrer la page des releases de Hangar. MODS_TOKEN : jeton limité à ce dépôt (Contents en écriture).
+      - name: jars Hangar MC
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.MODS_TOKEN }}
+        run: |
+          r=maelpasq/hangar-mods; t="${{ github.ref_name }}"; jars=(src-tauri/resources/mods/hangarmc-*.jar)
+          gh release create "$t" "${jars[@]}" --repo $r --title "Hangar MC $t" --notes "Mod Hangar MC de Hangar $t, téléchargé par l'app." \
+            || gh release upload "$t" "${jars[@]}" --repo $r --clobber

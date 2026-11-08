@@ -45,8 +45,11 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
-### 1.2.8 - 8 novembre 2026
+### 1.2.9 - 8 novembre 2026
 **Hangar arrive sur Linux** : une AppImage pour CachyOS, Arch et les autres distributions, à télécharger depuis le site ou la page des releases, avec les mises à jour depuis Hangar comme sur Windows et macOS. Hangar y détecte tes jeux Steam (Proton compris, Steam installé par la distribution ou en Flatpak), tes dossiers de jeux locaux et tes ajouts manuels, et range tes comptes reliés dans KWallet ou GNOME Keyring. Les autres launchers (Epic, GOG, Ubisoft...) n'existent pas sous Linux et ne sont pas encore lus via Heroic ou Lutris.
+
+### 1.2.8 - 8 novembre 2026
+Non publiée : la construction de la release a échoué (notes de version), son contenu arrive avec la 1.2.9.
 
 ### 1.2.7 - 8 novembre 2026
 **Hangar MC arrive** : un nouvel onglet pour le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules (zoom, coordonnées, armure, raccourcis), lancées en un clic sans le launcher officiel. Pour l'instant l'écran reste grisé : Mojang doit d'abord valider l'application, une mise à jour le débloquera. Hangar reste léger : les fichiers de Hangar MC ne sont pas dans l'installeur, ils se téléchargent seulement si tu ouvres l'onglet et l'acceptes.
