@@ -25,6 +25,7 @@
     "@tauri-apps/cli": "^2.12.4",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^26.6.6",
+    "deepmerge": "file:./patches/deepmerge",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
     "typescript": "^6.0.3",
@@ -38,5 +39,8 @@
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1"
+  },
+  "overrides": {
+    "deepmerge": "$deepmerge"
   }
 }

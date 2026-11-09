@@ -21,3 +21,7 @@ opt-level = "s"
 lto = "thin"
 strip = true
 panic = "abort"
+
+# glib 0.18 (imposé par Tauri) avec le correctif de RUSTSEC-2024-0429, voir patches/README.md.
+[patch.crates-io]
+glib = { path = "../patches/glib" }

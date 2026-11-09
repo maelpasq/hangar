@@ -317,3 +317,7 @@ Bouton insecte dans la barre du haut : petite fenêtre (titre, description et ca
 ## Progression des téléchargements Steam (2026-11-09)
 
 Steam n'écrit son manifeste (`appmanifest_<id>.acf`) qu'au départ, en pause et à la fin, et préalloue les fichiers à leur taille finale : ni `BytesDownloaded` ni la taille des dossiers n'avancent pendant un téléchargement. Hangar compte donc les octets écrits sur le disque par le processus Steam depuis le début du suivi, ajoutés à `BytesStaged`, sur `BytesToStage` (99 % au plus avant la fin). La pause garde les mêmes `StateFlags` et la valeur `Updating` du registre n'est pas fiable : elle se lit dans `logs/content_log.txt` (dernière ligne « state changed » du jeu, « Suspended »). Steam ne laisse pas une autre app mettre en pause, reprendre ou annuler : le bouton « Afficher dans Steam » ouvre sa page des téléchargements. Les téléchargements en cours sont repris au démarrage de Hangar et au retour sur sa fenêtre.
+
+## Correctifs de dépendances sans version corrigée (9 nov. 2026)
+
+glib 0.18 (imposé par Tauri 2) et deepmerge 4.3.1 n'ont pas de version corrigée publiée pour RUSTSEC-2024-0429 et GHSA-gcqx-w48m-w2h4. Plutôt que d'ignorer les alertes, une copie corrigée est dans `patches/` (`[patch.crates-io]` et `overrides` npm), voir `patches/README.md`. À retirer dès qu'une version corrigée existe en amont.
