@@ -124,13 +124,14 @@ Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne
 - **Discord** (seulement si tu l'actives) : le nom et la jaquette de ton jeu passent par l'app Discord installée sur ton ordinateur.
 - **Hangar MC** : les serveurs de Mojang et de Fabric, seulement quand tu ouvres l'écran ou installes une version, et les fichiers du mod sur GitHub quand tu acceptes de les télécharger.
 - **Jeux web** : le site d'un jeu n'est contacté que quand tu le lances, dans sa propre fenêtre.
+- **Signaler un bug** (bouton insecte, seulement quand tu envoies) : ton titre, ta description, ta capture si tu en joins une, la version de Hangar et ton système partent vers le salon Discord privé du développeur.
 - **Mises à jour de Hangar** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour Hangar ».
 
 Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS, KWallet ou GNOME Keyring sous Linux), jamais dans un fichier.
 
 ## Contribuer
 
-Un bug ou une idée : ouvre une [issue](https://github.com/maelpasq/hangar/issues/new/choose). Pour participer au code, lis [CONTRIBUTING.md](CONTRIBUTING.md). Une faille de sécurité se signale en privé, voir [SECURITY.md](SECURITY.md).
+Un bug : clique sur l'insecte en haut de Hangar. Une idée, ou un bug à suivre en public : ouvre une [issue](https://github.com/maelpasq/hangar/issues/new/choose). Pour participer au code, lis [CONTRIBUTING.md](CONTRIBUTING.md). Une faille de sécurité se signale en privé, voir [SECURITY.md](SECURITY.md).
 
 ---
 

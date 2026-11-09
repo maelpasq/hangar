@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.14 - 9 novembre 2026
+**Signaler un bug** : un bouton insecte en haut de Hangar ouvre une petite fenêtre (titre, description, capture si tu veux) qui m'envoie le bug directement, sans compte GitHub. **Linux** : l'installation d'un jeu Steam n'affiche plus « n'a pas abouti » avant même que tu l'aies confirmée dans Steam, et les flous d'arrière-plan, qui ralentissaient l'app, sont de nouveau retirés.
+
 ### 1.2.13 - 9 novembre 2026
 **Linux** : les coins arrondis de la fenêtre s'affichent enfin. Dans la 1.2.12, le fond de l'app recouvrait encore les coins, qui restaient carrés.
 
