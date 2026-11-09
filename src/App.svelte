@@ -193,7 +193,8 @@
 
 <div class="app">
   <div class="ambient" aria-hidden="true">
-    {#if ui.ambient}
+    <!-- Fond sobre hors des pages de jeux (accueil, fiche, Hangar MC). -->
+    {#if ui.ambient && (ui.screen === 'home' || ui.screen === 'game' || ui.screen === 'minecraft')}
       {#key ui.ambient}
         <BlurImage src={ui.ambient} size={16} />
       {/key}
