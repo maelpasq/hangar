@@ -1,6 +1,6 @@
 [package]
 name = "hangar"
-version = "1.2.13"
+version = "1.2.14"
 description = "Hangar - bibliothèque de jeux unifiée"
 edition = "2021"
 license = "MIT"
