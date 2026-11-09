@@ -4,6 +4,7 @@ import { rescan, showLauncher } from '../actions';
 import { api } from '../api';
 import type { LaunchEvent } from '../types';
 import { elapsed } from '../util/format';
+import { isLinux, isMac } from '../util/platform';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
 
@@ -103,13 +104,14 @@ class Runner {
     else await this.installTo(gameId, targets[0]?.path ?? null);
   }
 
-  /** Steam : en arrière-plan avec sa progression ; les autres dans leur launcher. */
+  /** Steam sous Windows : en arrière-plan avec sa progression ; ailleurs dans leur launcher. */
   async installTo(gameId: string, dir: string | null): Promise<void> {
     const g = library.get(gameId);
     if (!g) return;
     try {
       ui.toast(await api.installGame(gameId, dir), { gameId });
-      if (g.store === 'steam') this.follow(gameId, 'install');
+      // Hors Windows, Steam attend la confirmation de sa fenêtre : pas encore de manifeste à suivre.
+      if (g.store === 'steam' && !isLinux && !isMac) this.follow(gameId, 'install');
       else this.watchInstall(gameId);
     } catch (e) {
       this.fail(gameId, String(e));
