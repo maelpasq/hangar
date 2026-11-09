@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.13 - 9 novembre 2026
+**Linux** : les coins arrondis de la fenêtre s'affichent enfin. Dans la 1.2.12, le fond de l'app recouvrait encore les coins, qui restaient carrés.
+
 ### 1.2.12 - 9 novembre 2026
 **Linux** : l'onglet « À installer » gagne un filtre « Compatibles Linux », qui ne garde que les jeux qui tournent sous Linux (version Linux sur Steam ou GOG, ou jeu Vérifié / Jouable sur Steam Deck). La fenêtre de Hangar a désormais des coins arrondis, comme sur Windows 11 et macOS.
 
