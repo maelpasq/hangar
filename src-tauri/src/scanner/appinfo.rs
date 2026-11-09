@@ -15,6 +15,8 @@ pub struct App {
     pub kind: String,
     /// `config.installdir` : dossier du jeu dans `steamapps/common`.
     pub installdir: String,
+    /// `common.oslist` contient linux, ou `common.steam_deck_compatibility.category` vaut 2 (Jouable) ou 3 (Vérifié).
+    pub linux: bool,
 }
 
 struct R<'a> {
@@ -94,8 +96,10 @@ fn string_table(b: &[u8], offset: usize) -> Option<Vec<&[u8]>> {
 const NONE: u8 = 0;
 const COMMON: u8 = 1;
 const CONFIG: u8 = 2;
+const DECK: u8 = 3;
 
-/// Parcourt un bloc KeyValues binaire et relève `common.name`, `common.type`, `config.installdir`.
+/// Parcourt un bloc KeyValues binaire et relève `common.name`, `common.type`, `config.installdir`
+/// et la compatibilité Linux.
 fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, section: u8, app: &mut App) -> Option<()> {
     loop {
         let t = r.u8()?;
@@ -109,6 +113,7 @@ fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, section: u8, app: &mut 
         match t {
             0 => {
                 let s = match key {
+                    k if section == COMMON && k.eq_ignore_ascii_case(b"steam_deck_compatibility") => DECK,
                     _ if depth > 1 => NONE,
                     k if k.eq_ignore_ascii_case(b"common") => COMMON,
                     k if k.eq_ignore_ascii_case(b"config") => CONFIG,
@@ -124,10 +129,15 @@ fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, section: u8, app: &mut 
                     app.kind = v.to_lowercase();
                 } else if section == CONFIG && key.eq_ignore_ascii_case(b"installdir") {
                     app.installdir = v;
+                } else if section == COMMON && key.eq_ignore_ascii_case(b"oslist") {
+                    app.linux |= v.to_ascii_lowercase().contains("linux");
+                } else if section == DECK && key.eq_ignore_ascii_case(b"category") {
+                    app.linux |= matches!(v.as_str(), "2" | "3");
                 }
             }
             2..=4 | 6 => {
-                r.take(4)?;
+                let v = r.u32()?;
+                app.linux |= t == 2 && section == DECK && key.eq_ignore_ascii_case(b"category") && matches!(v, 2 | 3);
             }
             7 | 10 => {
                 r.take(8)?;
@@ -141,11 +151,13 @@ fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, section: u8, app: &mut 
 mod tests {
     use super::*;
 
-    /// Construit un appinfo.vdf v29 minimal : `appinfo { appid, common { name, type }, config { installdir } }`.
-    fn v29(apps: &[(u32, &str, &str)]) -> Vec<u8> {
-        let strs = ["appinfo", "appid", "common", "name", "type", "config", "installdir"];
+    /// Construit un appinfo.vdf v29 minimal :
+    /// `appinfo { appid, common { name, type, oslist, steam_deck_compatibility { category } }, config { installdir } }`.
+    fn v29(apps: &[(u32, &str, &str, &str, u32)]) -> Vec<u8> {
+        let strs =
+            ["appinfo", "appid", "common", "name", "type", "config", "installdir", "oslist", "steam_deck_compatibility", "category"];
         let mut body = vec![];
-        for (id, name, kind) in apps {
+        for (id, name, kind, oslist, deck) in apps {
             let mut kv = vec![0u8];
             kv.extend(0u32.to_le_bytes()); // appinfo
             kv.push(2);
@@ -153,12 +165,18 @@ mod tests {
             kv.extend(id.to_le_bytes());
             kv.push(0);
             kv.extend(2u32.to_le_bytes()); // common
-            for (k, v) in [(3u32, name), (4, kind)] {
+            for (k, v) in [(3u32, name), (4, kind), (7, oslist)] {
                 kv.push(1);
                 kv.extend(k.to_le_bytes());
                 kv.extend(v.as_bytes());
                 kv.push(0);
             }
+            kv.push(0);
+            kv.extend(8u32.to_le_bytes()); // steam_deck_compatibility
+            kv.push(2);
+            kv.extend(9u32.to_le_bytes());
+            kv.extend(deck.to_le_bytes());
+            kv.push(8);
             kv.push(8);
             kv.push(0);
             kv.extend(5u32.to_le_bytes()); // config
@@ -187,19 +205,35 @@ mod tests {
 
     #[test]
     fn lit_nom_et_type() {
-        let b = v29(&[(620, "Portal 2", "Game"), (228980, "Steamworks Common Redistributables", "Tool")]);
+        let b = v29(&[(620, "Portal 2", "Game", "windows,macos", 0), (228980, "Steamworks Common Redistributables", "Tool", "", 0)]);
         let all = parse(&b, &HashSet::from([620, 228980]));
-        assert_eq!(all[&620], App { name: "Portal 2".into(), kind: "game".into(), installdir: "Portal 2 dir".into() });
+        assert_eq!(
+            all[&620],
+            App { name: "Portal 2".into(), kind: "game".into(), installdir: "Portal 2 dir".into(), linux: false }
+        );
         assert_eq!(all[&228980].kind, "tool");
         let some = parse(&b, &HashSet::from([228980]));
         assert_eq!(some.len(), 1, "les apps non demandées sont sautées");
     }
 
     #[test]
+    fn compatible_linux() {
+        let b = v29(&[
+            (1, "Natif", "Game", "windows,linux", 0),
+            (2, "Vérifié Deck", "Game", "windows", 3),
+            (3, "Jouable Deck", "Game", "windows", 2),
+            (4, "Non pris en charge", "Game", "windows", 1),
+        ]);
+        let all = parse(&b, &HashSet::from([1, 2, 3, 4]));
+        assert_eq!([1, 2, 3, 4].map(|i| all[&i].linux), [true, true, true, false]);
+        assert_eq!(all[&2].installdir, "Vérifié Deck dir", "la section Deck ne casse pas la suite");
+    }
+
+    #[test]
     fn fichier_invalide() {
         assert!(parse(b"", &HashSet::from([1])).is_empty());
         assert!(parse(&[1, 2, 3, 4, 5, 6, 7, 8], &HashSet::from([1])).is_empty());
-        let mut b = v29(&[(620, "Portal 2", "Game")]);
+        let mut b = v29(&[(620, "Portal 2", "Game", "windows", 0)]);
         b.truncate(40);
         assert!(parse(&b, &HashSet::from([620])).is_empty());
     }

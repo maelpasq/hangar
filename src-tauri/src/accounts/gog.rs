@@ -75,6 +75,7 @@ pub fn parse_products(v: &Value) -> Vec<Game> {
             }
             let mut g = Game::new(format!("gog:{id}"), title, "gog", uri(format!("goggalaxy://openGameView/{id}")));
             g.not_installed = true;
+            g.linux = p.pointer("/worksOn/Linux").and_then(|l| l.as_bool()) == Some(true);
             Some(g)
         })
         .collect()
@@ -104,15 +105,17 @@ mod tests {
     fn produits() {
         let v: Value = serde_json::from_str(
             r#"{ "totalPages": 1, "products": [
-                { "id": 1207658924, "title": "The Witcher 3", "isGame": true },
+                { "id": 1207658924, "title": "The Witcher 3", "isGame": true, "worksOn": { "Windows": true, "Linux": false } },
+                { "id": 1, "title": "Stardew Valley", "worksOn": { "Windows": true, "Linux": true } },
                 { "id": 5, "title": "Un film", "isGame": false },
                 { "id": 6, "title": "" }
             ] }"#,
         )
         .unwrap();
         let g = parse_products(&v);
-        assert_eq!(g.len(), 1);
+        assert_eq!(g.len(), 2);
         assert_eq!(g[0].id, "gog:1207658924");
         assert_eq!(g[0].launch.target, "goggalaxy://openGameView/1207658924");
+        assert_eq!((g[0].linux, g[1].linux), (false, true));
     }
 }

@@ -145,7 +145,8 @@ const UNINSTALLED: Game[] = [
   steamAppId: id as number,
   exePath: null,
   processNames: [],
-  notInstalled: true
+  notInstalled: true,
+  linux: id !== 632470
 }));
 
 const REEL = typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === 'reel';

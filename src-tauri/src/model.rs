@@ -62,6 +62,9 @@ pub struct Game {
     /// Version installée telle que le store la nomme (build Steam, version Epic, build GOG).
     #[serde(default)]
     pub version: Option<String>,
+    /// Non installé et jouable sous Linux : version native (Steam, GOG) ou Vérifié / Jouable sur Steam Deck.
+    #[serde(default)]
+    pub linux: bool,
 }
 
 /// Session envoyée au frontend : `{ gameId, start, end }` en millisecondes epoch.

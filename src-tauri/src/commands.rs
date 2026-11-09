@@ -44,6 +44,13 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
         std::thread::spawn(move || mc.remove_pack());
     }
     accounts::merge(&mut games, ctx.accounts.games());
+    if cfg!(target_os = "linux") {
+        games = blocking(move || {
+            scanner::steam::mark_linux(&mut games);
+            games
+        })
+        .await?;
+    }
     ctx.accounts.apply_updates(&mut games);
     simulate_updates(&app, &mut games);
     ctx.known.replace_scanned(&games);

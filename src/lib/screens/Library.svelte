@@ -11,6 +11,7 @@
   import { ui } from '../stores/ui.svelte';
   import type { Game, SortKey, StoreId } from '../types';
   import { formatNumber, hours, plural, sizeLabel } from '../util/format';
+  import { isLinux } from '../util/platform';
   const VIRTUAL_FROM = 150;
   const MIN_CARD = 172;
   const GAP_X = 20;
@@ -52,7 +53,10 @@
     if (play === 'gt10') return h >= 10;
     return true;
   }
-  const filtering = $derived(!!genre || play !== 'all');
+  // Sous Linux, « À installer » peut ne montrer que les jeux qui y tournent.
+  let linuxOnly = $state(false);
+  const linuxFilter = $derived(isLinux && ui.toInstall && linuxOnly);
+  const filtering = $derived(!!genre || play !== 'all' || linuxFilter);
   const counts = $derived.by(() => {
     const c: Partial<Record<StoreId, number>> = {};
     for (const g of base) c[g.store] = (c[g.store] ?? 0) + 1;
@@ -63,7 +67,11 @@
 
   const list = $derived.by(() => {
     const l = base.filter(
-      (g) => (ui.store === 'all' || g.store === ui.store) && (!genre || library.genre(g) === genre) && playOk(g)
+      (g) =>
+        (ui.store === 'all' || g.store === ui.store) &&
+        (!genre || library.genre(g) === genre) &&
+        playOk(g) &&
+        (!linuxFilter || !!g.linux)
     );
     const name = (g: Game) => library.name(g);
     const t = (g: Game) => library.totals(g.id);
@@ -224,6 +232,11 @@
         {/each}
       </div>
       <span class="grow"></span>
+      {#if isLinux && ui.toInstall}
+        <Chip on={linuxOnly} color="var(--success)" count={base.filter((g) => g.linux).length} onclick={() => (linuxOnly = !linuxOnly)}
+          >Compatibles Linux</Chip
+        >
+      {/if}
       {#if genres.length}
         <Dropdown label="Genre" bind:value={genre} options={[{ value: '', label: 'Tous les genres' }, ...genres.map((g) => ({ value: g, label: g }))]} />
       {/if}
@@ -266,6 +279,7 @@
         onclick={() => {
           genre = '';
           play = 'all';
+          linuxOnly = false;
           ui.store = 'all';
         }}>Retirer les filtres</button
       >

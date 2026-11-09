@@ -42,6 +42,8 @@ export interface Game {
   installedAt?: number | null;
   /** Possédé mais pas installé : `launch` ouvre son installation dans le launcher. */
   notInstalled?: boolean;
+  /** Non installé et jouable sous Linux (version native, ou Vérifié / Jouable sur Steam Deck). */
+  linux?: boolean;
   /** Mise à jour en attente ou en cours dans le launcher (Steam). */
   updatePending?: boolean;
   /** Reste à télécharger pour cette mise à jour, en octets. */

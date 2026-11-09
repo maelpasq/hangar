@@ -192,6 +192,26 @@ pub fn owned() -> Vec<Game> {
         .collect()
 }
 
+/// Linux : marque les jeux Steam non installés qui y tournent (`appinfo.vdf`), y compris ceux du compte connecté.
+pub fn mark_linux(games: &mut [Game]) {
+    let steam = |g: &Game| if g.store == "steam" && g.not_installed { g.steam_app_id } else { None };
+    let ids: HashSet<u32> = games.iter().filter_map(steam).collect();
+    let Some(root) = steam_root().filter(|_| !ids.is_empty()) else { return };
+    let raw = match fs::read(root.join("appcache").join("appinfo.vdf")) {
+        Ok(b) => b,
+        Err(e) => {
+            log::warn!("Steam : appinfo.vdf illisible ({e})");
+            return;
+        }
+    };
+    let apps = super::appinfo::parse(&raw, &ids);
+    for g in games.iter_mut() {
+        if let Some(a) = steam(&*g).and_then(|id| apps.get(&id)) {
+            g.linux = a.linux;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

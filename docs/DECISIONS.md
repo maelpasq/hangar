@@ -302,3 +302,4 @@ Les jars restent sur le poste de développement (`src-tauri/resources/mods/`, ig
 - Animations limitées à `transform` et `opacity` : barres de progression en `scaleX`, pastille « en jeu » en disque qui grandit, reflet de chargement qui glisse, ombre colorée du survol des jaquettes préparée d'avance (fondu d'opacité).
 - Plus de règles propres à Linux pour le flou : le même rendu partout.
 - Linux, jeux locaux : binaires ELF, scripts `.sh`, AppImage et `.exe` (lancés par Wine) dans les dossiers de jeux ; raccourcis `.desktop` de la catégorie Game (lancés par `gio launch`), sans les jeux Steam ni les launchers.
+- Linux, « À installer » : puce « Compatibles Linux ». Un jeu compte s'il a une version Linux native (Steam `common.oslist`, GOG `worksOn.Linux`) ou s'il est Vérifié / Jouable sur Steam Deck (`steam_deck_compatibility.category` 3 ou 2 dans `appinfo.vdf`, donc via Proton). Epic, Riot et les autres : jamais compatibles. Pas de ProtonDB (réseau non autorisé).
