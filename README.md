@@ -17,7 +17,7 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 ## Ce que fait Hangar
 
 - **Détection automatique** de tous tes jeux, quel que soit le store, plus tes dossiers de jeux et les jeux que tu ajoutes à la main.
-- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; Hangar te demande dans quel dossier de leur launcher les installer, avec la place libre de chaque disque. Les jeux Steam se téléchargent en arrière-plan, avec la progression dans Hangar. Relie tes comptes Steam, GOG ou Epic pour retrouver toute ta bibliothèque.
+- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; Hangar te demande dans quel dossier de leur launcher les installer, avec la place libre de chaque disque. Les jeux Steam se téléchargent en arrière-plan, avec la progression dans Hangar. Relie tes comptes Steam, GOG ou Epic pour retrouver toute ta bibliothèque. Sous Linux, le filtre « Compatibles Linux » ne garde que les jeux qui y tournent (version Linux, ou Vérifié / Jouable sur Steam Deck).
 - **Vraies jaquettes et bannières**, trouvées automatiquement (Steam, stores, SteamGridDB) et gardées en cache.
 - **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. Sous Windows, les launchers restent cachés en arrière-plan : tu ne vois que ton jeu.
 - **Désinstaller** depuis Hangar, après confirmation : les jeux Steam, Epic et GOG sont supprimés sans ouvrir leur launcher.
@@ -78,7 +78,7 @@ Rends l'`.AppImage` exécutable (clic droit > Propriétés, ou `chmod +x Hangar_
 sudo pacman -S fuse2
 ```
 
-Les mises à jour se font depuis Hangar. Sous Linux, Hangar détecte les jeux Steam (Proton compris), les raccourcis de jeux du menu des applications, les dossiers de jeux locaux (jeux Linux, AppImage, scripts et `.exe` lancés par Wine) et les ajouts manuels. Les comptes reliés vont dans KWallet ou GNOME Keyring.
+Les mises à jour se font depuis Hangar. Sous Linux, Hangar détecte les jeux Steam (Proton compris), les raccourcis de jeux du menu des applications, les dossiers de jeux locaux (jeux Linux, AppImage, scripts et `.exe` lancés par Wine) et les ajouts manuels. Les comptes reliés vont dans KWallet ou GNOME Keyring. La fenêtre a des coins arrondis, comme sur Windows 11 et macOS (il faut un bureau avec effets graphiques, comme KDE ou GNOME).
 
 ## ⚠ Indispensable : ta clé SteamGridDB
 
