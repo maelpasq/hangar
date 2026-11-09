@@ -305,3 +305,7 @@ Les jars restent sur le poste de développement (`src-tauri/resources/mods/`, ig
 - Linux, « À installer » : puce « Compatibles Linux ». Un jeu compte s'il a une version Linux native (Steam `common.oslist`, GOG `worksOn.Linux`) ou s'il est Vérifié / Jouable sur Steam Deck (`steam_deck_compatibility.category` 3 ou 2 dans `appinfo.vdf`, donc via Proton). Epic, Riot et les autres : jamais compatibles. Pas de ProtonDB (réseau non autorisé).
 - Coins arrondis de la fenêtre : macOS (fenêtre native) et Windows 11 (fenêtre sans bordure avec ombre) les arrondissent eux-mêmes. Linux : fenêtre transparente (`tauri.linux.conf.json`) et `clip-path: inset(0 round 10px)` sur `body` (classe `rounded`), retiré quand la fenêtre est agrandie ou en mode manette. Windows 10 reste à angles droits (le système n'arrondit pas).
 - Linux, coins arrondis : `body` aussi sans fond (`.app` porte le fond). Sinon WebKit reporte le fond de `body` sur toute la fenêtre, hors de la découpe `clip-path`, et les coins restent opaques (vérifié avec le moteur WebKit de Playwright ; Chromium, lui, ne le fait pas).
+
+## Linux : pas de flou d'arrière-plan (2026-11-09)
+
+Le retrait des `backdrop-filter` sous Linux (classe `linux`, `base.css`) avait été annulé par « Flou et animations rapides sur tous les systèmes » avant toute release : aucune version Linux publiée ne l'avait. Rétabli. Les images floutées restent en toile (`BlurImage`), le même rendu partout ; seuls les flous d'arrière-plan, recalculés à chaque image par WebKitGTK, sont retirés sous Linux.

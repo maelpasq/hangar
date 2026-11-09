@@ -33,6 +33,14 @@ html.rounded:not(.square) body {
   clip-path: inset(0 round 10px);
 }
 
+/* Linux : les flous d'arrière-plan (barre latérale, barre du haut, menus) sont recalculés à
+   chaque image sous WebKitGTK, l'app rame. Leurs fonds restent presque opaques sans le flou. */
+.linux *,
+.linux *::before,
+.linux *::after {
+  backdrop-filter: none !important;
+}
+
 .on-dark {
   color: var(--text);
 }

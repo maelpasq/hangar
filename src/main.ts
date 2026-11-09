@@ -6,6 +6,10 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import TrayMenu from './TrayMenu.svelte';
 import { initApi } from './lib/api';
+import { isLinux } from './lib/util/platform';
+
+// Linux : WebKitGTK refait chaque flou d'arrière-plan à chaque image, base.css les retire (classe `linux`).
+if (isLinux) document.documentElement.classList.add('linux');
 
 await initApi();
 
