@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.15 - 9 novembre 2026
+**Téléchargements Steam en direct** : le menu Mises à jour affiche les installations et mises à jour Steam en cours avec leur vraie progression, qui avance pendant le téléchargement au lieu de rester figée. Les téléchargements en cours sont retrouvés quand tu relances Hangar, et un bouton « Afficher dans Steam », dans le menu et sur la page du jeu, permet de les mettre en pause, de les reprendre ou de les annuler.
+
 ### 1.2.14 - 9 novembre 2026
 **Signaler un bug** : un bouton insecte en haut de Hangar ouvre une petite fenêtre (titre, description, capture si tu veux) qui m'envoie le bug directement, sans compte GitHub. **Linux** : l'installation d'un jeu Steam n'affiche plus « n'a pas abouti » avant même que tu l'aies confirmée dans Steam, et les flous d'arrière-plan, qui ralentissaient l'app, sont de nouveau retirés.
 

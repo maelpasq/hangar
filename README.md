@@ -21,7 +21,7 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 - **Vraies jaquettes et bannières**, trouvées automatiquement (Steam, stores, SteamGridDB) et gardées en cache.
 - **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. Sous Windows, les launchers restent cachés en arrière-plan : tu ne vois que ton jeu.
 - **Désinstaller** depuis Hangar, après confirmation : les jeux Steam, Epic et GOG sont supprimés sans ouvrir leur launcher.
-- **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » la lance en arrière-plan dans le bon launcher, sans afficher sa fenêtre.
+- **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » la lance en arrière-plan dans le bon launcher, sans afficher sa fenêtre. Le menu Mises à jour (icône en haut) montre les installations et mises à jour Steam en cours avec leur vraie progression, même après un redémarrage de Hangar, et « Afficher dans Steam » permet de les mettre en pause ou de les annuler.
 - **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start pour l'ouvrir, A pour jouer).
 - **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
 - **Collections et filtres** : range tes jeux dans tes propres listes et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
