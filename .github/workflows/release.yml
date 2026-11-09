@@ -56,7 +56,7 @@ jobs:
           {
             echo 'body<<FIN_DES_NOTES'
             if [ -n "$notes" ]; then printf '%s\n\n' "$notes"; fi
-            echo 'Télécharge **Hangar-Setup.exe** (Windows), le **.dmg** (macOS) ou le fichier **.AppImage** (Linux) ci-dessous. Les versions déjà installées se mettent à jour depuis Hangar.'
+            echo 'Télécharge **Hangar-Setup.exe** (Windows), ou le **.dmg** (macOS) ci-dessous. La version Linux est en pause (en cours de refonte). Les versions déjà installées se mettent à jour depuis Hangar.'
             echo 'FIN_DES_NOTES'
           } >> "$GITHUB_OUTPUT"
       # macOS : la création du .dmg échoue parfois (« hdiutil: couldn't eject - Resource busy ») :

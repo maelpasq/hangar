@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hangar - tous tes jeux, un seul launcher</title>
-<meta name="description" content="Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox), les affiche avec leurs vraies jaquettes et les lance en un clic. Gratuit pour Windows, macOS et Linux.">
+<meta name="description" content="Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox), les affiche avec leurs vraies jaquettes et les lance en un clic. Gratuit pour Windows et macOS.">
 <meta name="theme-color" content="#0a0b0f">
 <meta name="color-scheme" content="dark">
 <meta property="og:title" content="Hangar - tous tes jeux, un seul launcher">
-<meta property="og:description" content="Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul. Gratuit pour Windows, macOS et Linux.">
+<meta property="og:description" content="Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul. Gratuit pour Windows et macOS.">
 <meta property="og:image" content="images/accueil.webp">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script>
@@ -397,7 +397,7 @@
 
   <main>
     <div class="wrap hero">
-      <span class="pill"><i></i><span class="ver">Gratuit</span> · Windows, macOS et Linux</span>
+      <span class="pill"><i></i><span class="ver">Gratuit</span> · Windows et macOS</span>
       <h1>Tous tes jeux.<br><span>Un seul launcher.</span></h1>
       <p class="lead">Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox : Hangar les retrouve tout seul, les affiche avec leurs vraies jaquettes et les lance en un clic.</p>
       <div class="cta">
@@ -474,7 +474,7 @@
         <article class="tile reveal" style="--d:.06s">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></div>
           <h3>Même les jeux pas installés.</h3>
-          <p>Ceux que tu possèdes sur Steam, Epic, GOG ou Riot sont là aussi. Choisis le disque, Hangar s'occupe du reste. Sous Linux, un filtre ne garde que ceux qui y tournent.</p>
+          <p>Ceux que tu possèdes sur Steam, Epic, GOG ou Riot sont là aussi. Choisis le disque, Hangar s'occupe du reste.</p>
         </article>
 
         <article class="tile reveal" style="--d:.12s">
@@ -595,17 +595,9 @@
         <article class="tile is-linux reveal" style="--d:.12s">
           <div class="os">
             <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg></div>
-            <h3>Linux<small>AppImage, CachyOS et autres</small></h3>
+            <h3>Linux<small>En pause</small></h3>
           </div>
-          <ol>
-            <li>Télécharge le fichier <strong>.AppImage</strong>, rends-le exécutable (clic droit &gt; Propriétés, ou <strong>chmod +x</strong>) et lance-le.</li>
-            <li>Si rien ne s'ouvre, installe une seule fois FUSE 2 (Arch, CachyOS) :
-              <div class="code"><code id="fuse">sudo pacman -S fuse2</code><button class="copy" type="button" data-copy="fuse" aria-label="Copier la commande"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span aria-live="polite">Copier</span></button></div>
-            </li>
-          </ol>
-          <a class="btn dl-linux" href="https://github.com/maelpasq/hangar/releases/latest">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger
-          </a>
+          <p>La version Linux est en cours de refonte et n'est plus téléchargeable pour l'instant. Ceux qui l'ont déjà la recevront automatiquement quand elle sera prête.</p>
         </article>
       </div>
       <p class="note reveal">Un bouton « Mettre à jour » apparaît dans Hangar quand une nouvelle version sort.</p>
@@ -640,32 +632,25 @@
   const REPO = 'maelpasq/hangar';
   const WIN = `https://github.com/${REPO}/releases/latest/download/Hangar-Setup.exe`;
   let mac = `https://github.com/${REPO}/releases/latest`;
-  let linux = mac;
   const isMac = document.documentElement.classList.contains('mac');
-  const isLinux = document.documentElement.classList.contains('linux');
 
   function setButtons() {
     const [href, label, altText, altHref, altLabel] = isMac
       ? [mac, 'Télécharger pour macOS', 'Sur PC ?', WIN, 'Télécharger pour Windows']
-      : isLinux
-      ? [linux, 'Télécharger pour Linux', 'Sur Windows ?', WIN, 'Télécharger pour Windows']
       : [WIN, 'Télécharger pour Windows', 'Sur Mac ?', mac, 'Télécharger pour macOS'];
     document.querySelectorAll('.dl-main').forEach((a) => { a.href = href; a.querySelector('.dl-label').textContent = label; });
     document.querySelectorAll('.dl-alt').forEach((a) => { a.href = altHref; a.textContent = altLabel; });
     document.querySelectorAll('.dl-alt-text').forEach((s) => { s.textContent = altText; });
     document.querySelectorAll('.dl-mac').forEach((a) => { a.href = mac; });
-    document.querySelectorAll('.dl-linux').forEach((a) => { a.href = linux; });
   }
   setButtons();
 
-  // Les noms du .dmg et de l'.AppImage contiennent le numéro de version : on les lit dans la dernière release.
+  // Le nom du .dmg contient le numéro de version : on les lit dans la dernière release.
   fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then((rel) => {
       const dmg = rel.assets.find((a) => a.name.endsWith('.dmg'));
       if (dmg) mac = dmg.browser_download_url;
-      const appimage = rel.assets.find((a) => a.name.endsWith('.AppImage'));
-      if (appimage) linux = appimage.browser_download_url;
       document.querySelector('.ver').textContent = `Version ${rel.tag_name.replace(/^v/, '')}`;
       document.querySelector('.tag').textContent = `${rel.tag_name} · `;
       setButtons();

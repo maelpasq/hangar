@@ -2,7 +2,7 @@
 
 # Hangar
 
-**Tous tes jeux, un seul launcher.** Pour Windows 10/11, macOS et Linux.
+**Tous tes jeux, un seul launcher.** Pour Windows 10/11 et macOS. La version Linux est en pause (en cours de refonte).
 
 Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic. Les jeux que tu possèdes sans les avoir installés sont là aussi, prêts à installer.
 
@@ -48,7 +48,6 @@ Va sur la **[page des releases](https://github.com/maelpasq/hangar/releases/late
 |---|---|
 | Windows 10/11 | `Hangar-Setup.exe` |
 | macOS (Intel et Apple Silicon) | `Hangar_x.y.z_universal.dmg` |
-| Linux (CachyOS, Arch, Ubuntu...) | `Hangar_x.y.z_amd64.AppImage` |
 
 Les autres fichiers de la release servent aux mises à jour automatiques, tu n'en as pas besoin.
 
@@ -72,13 +71,7 @@ Tu peux aussi passer par **Réglages Système > Confidentialité et sécurité >
 
 ### Linux
 
-Rends l'`.AppImage` exécutable (clic droit > Propriétés, ou `chmod +x Hangar_*.AppImage`) puis lance-la. Si rien ne s'ouvre sur Arch ou CachyOS, installe FUSE 2 une seule fois :
-
-```bash
-sudo pacman -S fuse2
-```
-
-Les mises à jour se font depuis Hangar. Sous Linux, Hangar détecte les jeux Steam (Proton compris), les raccourcis de jeux du menu des applications, les dossiers de jeux locaux (jeux Linux, AppImage, scripts et `.exe` lancés par Wine) et les ajouts manuels. Les comptes reliés vont dans KWallet ou GNOME Keyring. La fenêtre a des coins arrondis, comme sur Windows 11 et macOS (il faut un bureau avec effets graphiques, comme KDE ou GNOME).
+La version Linux est en pause : elle avait trop de bugs et sera refaite. Elle n'est plus proposée au téléchargement. Une AppImage déjà installée n'affiche plus qu'un écran d'attente et recevra la nouvelle version Linux par mise à jour quand elle sera prête.
 
 ## ⚠ Indispensable : ta clé SteamGridDB
 

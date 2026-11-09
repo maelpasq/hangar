@@ -321,3 +321,7 @@ Steam n'écrit son manifeste (`appmanifest_<id>.acf`) qu'au départ, en pause et
 ## Correctifs de dépendances sans version corrigée (9 nov. 2026)
 
 glib 0.18 (imposé par Tauri 2) et deepmerge 4.3.1 n'ont pas de version corrigée publiée pour RUSTSEC-2024-0429 et GHSA-gcqx-w48m-w2h4. Plutôt que d'ignorer les alertes, une copie corrigée est dans `patches/` (`[patch.crates-io]` et `overrides` npm), voir `patches/README.md`. À retirer dès qu'une version corrigée existe en amont.
+
+## Version Linux en pause (9 nov. 2026)
+
+La version Linux avait trop de bugs : elle est désactivée en attendant d'être refaite. La release suivante publie encore l'AppImage, pour que les installations existantes la reçoivent par mise à jour : sous Linux, Hangar n'affiche plus que `src/lib/screens/LinuxBlocked.svelte` (`?linux` pour le voir avec `npm run dev:web`), et le backend s'arrête là (`main.rs`, `cfg!(target_os = "linux")`) : pas de scan, pas d'icône, fermer quitte, démarrage avec le système retiré. L'écran garde la recherche de mise à jour : `release.yml` continue de construire l'AppImage pour que `latest.json` ait toujours une entrée Linux, et la future version Linux arrivera chez eux d'elle-même. Le site et le README ne proposent plus Linux. Le CI compile et teste toujours Linux. Pour réactiver : retirer ces deux blocages et rétablir la carte Linux du site et la section du README.

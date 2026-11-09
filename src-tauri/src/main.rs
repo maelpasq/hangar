@@ -96,6 +96,23 @@ fn main() {
                 }
                 log::info!("environnement de test : données à part, mises à jour désactivées");
             }
+            // Version Linux désactivée (trop de bugs, à refaire) : l'interface n'affiche qu'un
+            // écran de blocage (LinuxBlocked.svelte), qui garde la recherche de mise à jour pour
+            // recevoir la future version. Rien d'autre ne démarre : pas de scan, pas d'icône,
+            // fermer la fenêtre quitte et Hangar ne se lance plus avec le système.
+            if cfg!(target_os = "linux") {
+                use tauri_plugin_autostart::ManagerExt;
+                if let Err(e) = app.autolaunch().disable() {
+                    log::warn!("démarrage automatique : {e}");
+                }
+                desktop::set_close_to_tray(false);
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.unminimize();
+                    let _ = w.show();
+                }
+                log::info!("Hangar {} : version Linux désactivée", app.package_info().version);
+                return Ok(());
+            }
             let p = app.path();
             let config = p.app_config_dir()?;
             let paths = state::Paths {
