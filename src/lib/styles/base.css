@@ -21,6 +21,16 @@ body {
   height: 100%;
 }
 
+/* Linux : fenêtre transparente, coins arrondis découpés ici (Windows 11 et macOS les arrondissent eux-mêmes).
+   clip-path découpe aussi les overlays en position fixe. Pas d'arrondi agrandie ou en plein écran. */
+html.rounded {
+  background: transparent;
+}
+
+html.rounded:not(.square) body {
+  clip-path: inset(0 round 10px);
+}
+
 .on-dark {
   color: var(--text);
 }

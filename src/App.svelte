@@ -4,6 +4,7 @@
   import { checkGameUpdates, rescan } from './lib/actions';
   import { updater } from './lib/stores/update.svelte';
   import { api } from './lib/api';
+  import { isLinux } from './lib/util/platform';
   import { art } from './lib/art.svelte';
   import ContextMenu from './lib/components/ContextMenu.svelte';
   import LaunchOverlay from './lib/components/LaunchOverlay.svelte';
@@ -55,6 +56,22 @@
     if (t !== 'system') return;
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
+  });
+
+  // Linux : coins arrondis (base.css), sauf fenêtre agrandie ou mode manette en plein écran.
+  let maximized = $state(false);
+  $effect(() => {
+    if (!isLinux) return;
+    const root = document.documentElement;
+    root.classList.add('rounded');
+    root.classList.toggle('square', maximized || ui.big);
+  });
+  $effect(() => {
+    if (!isLinux) return;
+    const sync = () => void api.win.isMaximized().then((m) => (maximized = m), () => {});
+    sync();
+    addEventListener('resize', sync);
+    return () => removeEventListener('resize', sync);
   });
 
   // Fiche d'un jeu qui a disparu (masqué, store désactivé) : retour.

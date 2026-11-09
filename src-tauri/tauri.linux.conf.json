@@ -4,5 +4,21 @@
     "targets": [
       "appimage"
     ]
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Hangar",
+        "width": 1320,
+        "height": 840,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": false,
+        "transparent": true,
+        "center": true,
+        "backgroundColor": "#00000000"
+      }
+    ]
   }
 }
