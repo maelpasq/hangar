@@ -12,12 +12,29 @@ fn webhook() -> Option<&'static str> {
     WEBHOOK.filter(|u| u.starts_with("https://discord.com/api/webhooks/"))
 }
 
-/// Message Discord (2000 caractères au plus) : titre, description, version et système.
-fn message(title: &str, description: &str) -> String {
-    let title: String = title.trim().chars().take(100).collect();
-    let desc: String = description.trim().chars().take(1700).collect();
-    let foot = format!("-# Hangar {} - {}", env!("CARGO_PKG_VERSION"), std::env::consts::OS);
-    if desc.is_empty() { format!("**{title}**\n{foot}") } else { format!("**{title}**\n{desc}\n{foot}") }
+/// Embed Discord : titre, description, version et système, capture en grand si elle est jointe.
+fn embed(title: &str, description: &str, image: Option<&str>) -> serde_json::Value {
+    let title: String = title.trim().chars().take(200).collect();
+    let desc: String = description.trim().chars().take(3500).collect();
+    let os = match std::env::consts::OS {
+        "windows" => "Windows",
+        "macos" => "macOS",
+        "linux" => "Linux",
+        o => o,
+    };
+    let mut e = serde_json::json!({
+        "title": format!("🐛 {title}"),
+        "description": if desc.is_empty() { "*Pas de description.*".to_string() } else { desc },
+        "color": 0x7c6cff,
+        "fields": [
+            { "name": "Version", "value": format!("Hangar {}", env!("CARGO_PKG_VERSION")), "inline": true },
+            { "name": "Système", "value": os, "inline": true },
+        ],
+    });
+    if let Some(name) = image {
+        e["image"] = serde_json::json!({ "url": format!("attachment://{name}") });
+    }
+    e
 }
 
 /// Image choisie par l'utilisateur : (nom, type MIME, octets), 8 Mo au plus.
@@ -61,7 +78,8 @@ pub fn send(title: &str, description: &str, screenshot: Option<&str>) -> Result<
     }
     let file = screenshot.map(read_image).transpose()?;
     // Pas de mention possible : un signalement ne doit notifier personne.
-    let payload = serde_json::json!({ "content": message(title, description), "allowed_mentions": { "parse": [] } });
+    let embed = embed(title, description, file.as_ref().map(|f| f.0.as_str()));
+    let payload = serde_json::json!({ "embeds": [embed], "allowed_mentions": { "parse": [] } });
     ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(30))
         .build()
@@ -80,11 +98,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn message_borne_et_signe() {
-        let m = message(&"t".repeat(300), &"d".repeat(5000));
-        assert!(m.chars().count() <= 2000);
-        assert!(m.starts_with(&format!("**{}**", "t".repeat(100))));
-        assert!(m.contains(env!("CARGO_PKG_VERSION")));
+    fn embed_borne_et_signe() {
+        let e = embed(&"t".repeat(300), &"d".repeat(5000), Some("capture.png"));
+        assert!(e["title"].as_str().unwrap().chars().count() <= 256);
+        assert!(e["description"].as_str().unwrap().chars().count() <= 4096);
+        assert!(e["fields"][0]["value"].as_str().unwrap().contains(env!("CARGO_PKG_VERSION")));
+        assert_eq!(e["image"]["url"], "attachment://capture.png");
+        assert!(embed("t", " ", None)["image"].is_null());
     }
 
     #[test]
