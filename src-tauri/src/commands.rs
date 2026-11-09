@@ -344,12 +344,26 @@ pub async fn install_targets(ctx: Ctxs<'_>, game_id: String) -> Result<Vec<crate
 
 /// Progression (0 à 1) de l'installation ou de la mise à jour d'un jeu Steam ; `None` une fois finie.
 #[tauri::command]
-pub async fn install_progress(ctx: Ctxs<'_>, game_id: String) -> Result<Option<f64>, String> {
+pub async fn install_progress(ctx: Ctxs<'_>, game_id: String) -> Result<Option<(f64, bool)>, String> {
     let id = ctx.known.get(&game_id).and_then(|g| g.steam_app_id);
     Ok(match id {
         Some(id) => blocking(move || crate::manage::steam_progress(id)).await?,
         None => None,
     })
+}
+
+/// Jeux Steam que Steam est en train de télécharger, pour reprendre leur suivi au démarrage.
+#[tauri::command]
+pub async fn steam_downloads() -> Result<Vec<String>, String> {
+    blocking(|| crate::manage::steam_downloading().into_iter().map(|id| format!("steam:{id}")).collect()).await
+}
+
+/// Steam ne laisse pas une autre app piloter ses téléchargements : on affiche sa page des
+/// téléchargements (pause, reprise, annulation), fenêtre visible.
+#[tauri::command]
+pub async fn show_steam_downloads() -> Result<(), String> {
+    crate::veil::lift();
+    blocking(|| launcher::launch(&crate::model::uri("steam://open/downloads"))).await?
 }
 
 /// Réaffiche les fenêtres de launcher cachées pendant un lancement ou une mise à jour.

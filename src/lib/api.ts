@@ -27,8 +27,12 @@ export interface Api {
   installTargets(gameId: string): Promise<InstallTarget[]>;
   /** Installe le jeu dans `dir` (l'un de `installTargets`) ; renvoie le message à afficher. */
   installGame(gameId: string, dir?: string | null): Promise<string>;
-  /** Progression (0 à 1) d'un téléchargement Steam en cours, null une fois fini. */
-  installProgress(gameId: string): Promise<number | null>;
+  /** [progression de 0 à 1, en pause] d'un téléchargement Steam en cours, null une fois fini. */
+  installProgress(gameId: string): Promise<[number, boolean] | null>;
+  /** Jeux Steam en cours de téléchargement (ids Hangar). */
+  steamDownloads(): Promise<string[]>;
+  /** Affiche la page des téléchargements de Steam. */
+  showSteamDownloads(): Promise<void>;
   stopGame(gameId: string): Promise<void>;
   /** Réaffiche les fenêtres de launcher cachées par Hangar ; faux s'il n'y en avait aucune. */
   showLaunchers(): Promise<boolean>;
@@ -150,6 +154,8 @@ async function tauriApi(): Promise<Api> {
     installTargets: (gameId) => invoke('install_targets', { gameId }),
     installGame: (gameId, dir) => invoke('install_game', { gameId, dir: dir ?? null }),
     installProgress: (gameId) => invoke('install_progress', { gameId }),
+    steamDownloads: () => invoke('steam_downloads'),
+    showSteamDownloads: () => invoke('show_steam_downloads'),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
     showLaunchers: () => invoke('show_launchers'),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),

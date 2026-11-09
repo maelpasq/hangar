@@ -100,6 +100,7 @@ export async function checkGameUpdates(): Promise<void> {
 export async function rescan(announce = false): Promise<void> {
   try {
     const n = await library.scan();
+    void runner.resumeDownloads();
     if (announce) ui.toast(`${plural(n, 'jeu', 'jeux')} dans ta bibliothèque`);
   } catch (e) {
     ui.toast(`Le scan a échoué : ${String(e)}`, { error: true });

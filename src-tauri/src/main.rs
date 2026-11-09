@@ -156,6 +156,8 @@ fn main() {
             commands::stop_game,
             commands::show_launchers,
             commands::install_progress,
+            commands::steam_downloads,
+            commands::show_steam_downloads,
             commands::install_targets,
             commands::open_folder,
             commands::resolve_steam_id,

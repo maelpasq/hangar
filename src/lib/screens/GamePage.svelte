@@ -99,6 +99,9 @@
           <button class="ghost stop" onclick={() => { ui.modal = { kind: 'stop', gameId: game.id }; }}>Arrêter</button>
         {:else}
           <PlayButton gameId={game.id} large update />
+          {#if game.id in runner.progress}
+            <button class="ghost stop" onclick={() => runner.showInSteam(game.id)}>Afficher dans Steam</button>
+          {/if}
           {#if game.updatePending && !game.notInstalled}
             <button class="ghost stop" onclick={() => runner.play(game.id)}><Icon name="play" size={15} />Jouer</button>
           {/if}

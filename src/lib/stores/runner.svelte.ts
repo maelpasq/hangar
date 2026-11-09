@@ -52,9 +52,8 @@ class Runner {
   /** Installations, désinstallations ou mises à jour en attente : id -> état du jeu au départ.
    *  Au retour sur la fenêtre, un rescan dit si elles sont faites. */
   private installs = new Map<string, string>();
-  /** Téléchargements Steam suivis : progression de 0 à 1. */
-  progress = $state<Record<string, { value: number; kind: 'install' | 'update' }>>({});
-  /** Début de chaque téléchargement suivi, et s'il a déjà été signalé comme bloqué. */
+  /** Téléchargements Steam suivis : progression de 0 à 1, et pause demandée dans Steam. */
+  progress = $state<Record<string, { value: number; kind: 'install' | 'update'; paused?: boolean }>>({});  /** Début de chaque téléchargement suivi, et s'il a déjà été signalé comme bloqué. */
   private started = new Map<string, { at: number; warned: boolean }>();
   private poll: ReturnType<typeof setInterval> | undefined;
   private lastInstallScan = 0;
@@ -126,18 +125,38 @@ class Runner {
     this.poll ??= setInterval(() => this.pollProgress(), PROGRESS_MS);
   }
 
-  /** « Installation 42 % » ou « Mise à jour 42 % » pendant un téléchargement suivi. */
+  /** Reprend le suivi des téléchargements Steam en cours (Hangar relancé, ou lancés depuis Steam). */
+  async resumeDownloads(): Promise<void> {
+    if (isLinux || isMac) return;
+    for (const id of await api.steamDownloads().catch(() => [])) {
+      const g = library.get(id);
+      if (g) this.follow(id, g.notInstalled ? 'install' : 'update');
+    }
+  }
+
+  /** Page des téléchargements de Steam (pause, reprise, annulation) : Steam ne laisse pas
+   *  une autre app les faire elle-même. */
+  async showInSteam(gameId: string): Promise<void> {
+    try {
+      await api.showSteamDownloads();
+    } catch (e) {
+      ui.toast(String(e), { error: true, gameId });
+    }
+  }
+
+  /** « Installation 42 % », « Mise à jour 42 % » ou « En pause 42 % » pendant un téléchargement suivi. */
   busyLabel(gameId: string): string | null {
     const p = this.progress[gameId];
-    return p ? `${p.kind === 'install' ? 'Installation' : 'Mise à jour'} ${Math.round(p.value * 100)} %` : null;
+    if (!p) return null;
+    return `${p.paused ? 'En pause' : p.kind === 'install' ? 'Installation' : 'Mise à jour'} ${Math.round(p.value * 100)} %`;
   }
 
   private async pollProgress(): Promise<void> {
     for (const [id, p] of Object.entries(this.progress)) {
       const v = await api.installProgress(id).catch(() => null);
       if (v !== null) {
-        this.progress = { ...this.progress, [id]: { ...p, value: v } };
-        this.warnIfStuck(id, v);
+        this.progress = { ...this.progress, [id]: { ...p, value: v[0], paused: v[1] } };
+        if (!v[1]) this.warnIfStuck(id, v[0]);
         continue;
       }
       const { [id]: _done, ...rest } = this.progress;

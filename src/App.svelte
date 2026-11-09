@@ -124,6 +124,7 @@
         api.win.onFocusChange((f) => {
           ui.windowFocused = f;
           if (f) void runner.checkInstalls().then(checkGameUpdates);
+          if (f) void runner.resumeDownloads();
         }),
         api.onTrayLaunch((id) => void runner.play(id)),
         // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.

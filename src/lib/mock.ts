@@ -203,6 +203,8 @@ export function mockApi(): Api {
       return `Démo : ${id} s'installe en arrière-plan.`;
     },
     installProgress: async () => null,
+    steamDownloads: async () => [],
+    showSteamDownloads: async () => {},
     installTargets: async (id) =>
       id.startsWith('steam:') || id.startsWith('epic:')
         ? [

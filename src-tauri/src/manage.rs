@@ -38,16 +38,49 @@ pub fn steam_manifest(id: u32, name: &str, dir: &str) -> String {
     )
 }
 
+fn acf_num(text: &str, k: &str) -> u64 {
+    vdf_values(text, k).first().and_then(|s| s.parse::<u64>().ok()).unwrap_or(0)
+}
+
 /// Progression d'un manifeste Steam en cours de téléchargement (installation ou mise à jour),
-/// `None` quand le jeu est complet.
-pub fn manifest_progress(text: &str) -> Option<f64> {
-    let num = |k: &str| vdf_values(text, k).first().and_then(|s| s.parse::<u64>().ok()).unwrap_or(0);
+/// `None` quand le jeu est complet. Steam ne réécrit le manifeste qu'au départ, en pause et à
+/// la fin : `written` (octets écrits par Steam depuis le début du suivi) complète `BytesStaged`.
+pub fn manifest_progress(text: &str, written: u64) -> Option<f64> {
+    let num = |k: &str| acf_num(text, k);
     let flags = num("StateFlags");
     let busy = flags & 4 == 0 || flags & (2 | 256 | 512 | 1024) != 0;
-    busy.then(|| match num("BytesToDownload") {
-        0 => 0.0,
-        t => (num("BytesDownloaded") as f64 / t as f64).min(1.0),
-    })
+    let ratio = |done: u64, to: u64| if to == 0 { 0.0 } else { (done as f64 / to as f64).min(1.0) };
+    // Les octets écrits ne prouvent pas la fin : 99 % au plus tant que Steam n'a pas fini.
+    let disk = ratio(num("BytesStaged") + written, num("BytesToStage")).min(0.99);
+    busy.then(|| ratio(num("BytesDownloaded"), num("BytesToDownload")).max(disk))
+}
+
+/// Jeux que Steam télécharge en ce moment (installation ou mise à jour démarrée).
+pub fn steam_downloading() -> Vec<u32> {
+    let Some(root) = steam_root() else { return vec![] };
+    libraries(&root)
+        .iter()
+        .filter_map(|l| fs::read_dir(l).ok())
+        .flatten()
+        .flatten()
+        .filter_map(|e| {
+            let id = e.file_name().to_str()?.strip_prefix("appmanifest_")?.strip_suffix(".acf")?.parse().ok()?;
+            let text = fs::read_to_string(e.path()).ok()?;
+            (acf_num(&text, "StateFlags") & 1024 != 0).then_some(id)
+        })
+        .collect()
+}
+
+/// Octets écrits sur le disque par le client Steam depuis son démarrage, avec son pid.
+fn steam_written() -> Option<(u32, u64)> {
+    use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
+    let mut sys = System::new();
+    sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::nothing().with_disk_usage());
+    let names = ["steam.exe", "steam", "steam_osx"];
+    sys.processes()
+        .values()
+        .find(|p| names.iter().any(|n| p.name().to_string_lossy().eq_ignore_ascii_case(n)))
+        .map(|p| (p.pid().as_u32(), p.disk_usage().total_written_bytes))
 }
 
 fn steam_manifest_path(root: &Path, id: u32) -> Option<(PathBuf, PathBuf)> {
@@ -55,10 +88,62 @@ fn steam_manifest_path(root: &Path, id: u32) -> Option<(PathBuf, PathBuf)> {
     libraries(root).into_iter().find(|l| l.join(&file).is_file()).map(|l| (l.join(&file), l))
 }
 
-/// Progression de l'installation ou de la mise à jour d'un jeu Steam.
-pub fn steam_progress(id: u32) -> Option<f64> {
+/// Progression de l'installation ou de la mise à jour d'un jeu Steam, et si Steam l'a mise
+/// en pause (ou en file d'attente).
+pub fn steam_progress(id: u32) -> Option<(f64, bool)> {
+    use std::collections::BTreeMap;
+    use std::sync::Mutex;
+    // appid -> (pid de Steam, octets écrits, BytesStaged) au début du suivi.
+    // shortcut: un téléchargement déjà en cours quand Hangar démarre repart de BytesStaged
+    // (souvent 0) ; à revoir si Steam expose un jour sa progression ailleurs.
+    static BASE: Mutex<BTreeMap<u32, (u32, u64, u64)>> = Mutex::new(BTreeMap::new());
     let (path, _) = steam_manifest_path(&steam_root()?, id)?;
-    manifest_progress(&fs::read_to_string(path).ok()?)
+    let text = fs::read_to_string(path).ok()?;
+    let staged = acf_num(&text, "BytesStaged");
+    let started = acf_num(&text, "StateFlags") & 1024 != 0;
+    let mut base = BASE.lock().unwrap_or_else(|e| e.into_inner());
+    // Seulement quand Steam télécharge ce jeu (UpdateStarted), pas en pause ni en file d'attente.
+    let written = match steam_written().filter(|_| started) {
+        Some((pid, w)) => {
+            let b = base.entry(id).or_insert((pid, w, staged));
+            // Steam relancé ou manifeste réécrit (pause) : on repart de ses nouveaux chiffres.
+            if b.0 != pid || b.2 != staged || w < b.1 {
+                *b = (pid, w, staged);
+            }
+            w - b.1
+        }
+        None => {
+            base.remove(&id);
+            0
+        }
+    };
+    let p = manifest_progress(&text, written);
+    if p.is_none() {
+        base.remove(&id);
+    }
+    let paused = !started || steam_root().and_then(|r| log_paused(&log_tail(&r.join("logs/content_log.txt")), id)) == Some(true);
+    p.map(|v| (v, paused))
+}
+
+/// Fin du journal de téléchargement de Steam (il peut peser plusieurs Mo).
+fn log_tail(path: &Path) -> String {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut s = String::new();
+    if let Ok(mut f) = fs::File::open(path) {
+        let _ = f.seek(SeekFrom::End(-256 * 1024)).or_else(|_| f.seek(SeekFrom::Start(0)));
+        let mut buf = Vec::new();
+        let _ = f.read_to_end(&mut buf);
+        s = String::from_utf8_lossy(&buf).into_owned();
+    }
+    s
+}
+
+/// Steam garde ses `StateFlags` en pause : seul son journal le dit (« state changed » avec
+/// « Suspended », ou sans « Update Running »). `None` si le journal ne parle pas du jeu.
+fn log_paused(log: &str, id: u32) -> Option<bool> {
+    let tag = format!("AppID {id} state changed :");
+    let line = log.lines().rev().find(|l| l.contains(&tag))?;
+    Some(line.contains("Suspended") || !line.contains("Update Running"))
 }
 
 fn process_running(exe: &str) -> bool {
@@ -453,7 +538,17 @@ mod tests {
         assert!(g.is_none(), "en téléchargement : pas encore installé");
         assert_eq!(vdf_values(&acf, "installdir"), vec!["Portal 2"]);
         assert_eq!(vdf_values(&acf, "StateFlags"), vec!["1026"]);
-        assert_eq!(manifest_progress(&acf), Some(0.0));
+        assert_eq!(manifest_progress(&acf, 0), Some(0.0));
+    }
+
+    #[test]
+    fn pause_lue_dans_le_journal() {
+        let log = "[x] AppID 730 state changed : Update Required,Update Queued,Update Running,Update Started,\n\
+                   [x] AppID 620 state changed : Fully Installed,\n\
+                   [x] AppID 730 state changed : Update Required,Update Queued,Update Started, (Suspended)\n";
+        assert_eq!(log_paused(log, 730), Some(true));
+        assert_eq!(log_paused(&log.lines().take(2).collect::<Vec<_>>().join("\n"), 730), Some(false), "en cours");
+        assert_eq!(log_paused(log, 1), None);
     }
 
     #[test]
@@ -461,9 +556,14 @@ mod tests {
         let m = |f: u32, done: u64, to: u64| {
             format!("\"StateFlags\"\t\t\"{f}\"\n\"BytesDownloaded\"\t\t\"{done}\"\n\"BytesToDownload\"\t\t\"{to}\"\n")
         };
-        assert_eq!(manifest_progress(&m(4, 0, 0)), None, "installé");
-        assert_eq!(manifest_progress(&m(1026, 50, 200)), Some(0.25));
-        assert_eq!(manifest_progress(&m(1030, 200, 200)), Some(1.0), "mise à jour qui se termine");
+        assert_eq!(manifest_progress(&m(4, 0, 0), 0), None, "installé");
+        assert_eq!(manifest_progress(&m(1026, 50, 200), 0), Some(0.25));
+        assert_eq!(manifest_progress(&m(1030, 200, 200), 0), Some(1.0), "mise à jour qui se termine");
+        // Manifeste figé à 0 : les octets écrits par Steam font avancer la barre.
+        let s = |staged: u64| format!("{}\"BytesStaged\"\t\t\"{staged}\"\n\"BytesToStage\"\t\t\"400\"\n", m(1026, 0, 300));
+        assert_eq!(manifest_progress(&s(0), 100), Some(0.25));
+        assert_eq!(manifest_progress(&s(100), 100), Some(0.5), "reprise après une pause");
+        assert_eq!(manifest_progress(&s(0), 9999), Some(0.99), "jamais 100 % avant Steam");
     }
 
     #[test]

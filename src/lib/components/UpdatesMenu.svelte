@@ -4,6 +4,7 @@
   import { updateGame } from '../actions';
   import { STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
+  import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
   import { sizeLabel } from '../util/format';
   import Cover from './Cover.svelte';
@@ -14,11 +15,19 @@
   let root = $state<HTMLDivElement>();
   let toggle = $state<HTMLButtonElement>();
 
-  const games = $derived(library.updates);
+  // Téléchargements Steam suivis (installations et mises à jour) avec leur progression.
+  const downloads = $derived(
+    Object.entries(runner.progress).flatMap(([id, p]) => {
+      const g = library.get(id);
+      return g ? [{ g, ...p }] : [];
+    }),
+  );
+  const games = $derived(library.updates.filter((g) => !(g.id in runner.progress)));
   const total = $derived(games.reduce((n, g) => n + (g.updateBytes ?? 0), 0));
+  const overall = $derived(downloads.reduce((n, d) => n + d.value, 0) / (downloads.length || 1));
 
   $effect(() => {
-    if (!games.length) open = false;
+    if (!games.length && !downloads.length) open = false;
   });
 
   onMount(() => {
@@ -47,13 +56,15 @@
   }
 </script>
 
-{#if games.length}
+{#if games.length || downloads.length}
   <div class="wrap" bind:this={root} {onkeydown} role="presentation">
     <button
       bind:this={toggle}
       class="ibtn"
       class:on={open}
-      aria-label="Mises à jour des jeux : {games.length}"
+      aria-label="Mises à jour des jeux : {games.length}{downloads.length
+        ? `, ${downloads.length} téléchargement${downloads.length > 1 ? 's' : ''} en cours`
+        : ''}"
       title="Mises à jour des jeux"
       aria-haspopup="true"
       aria-expanded={open}
@@ -61,10 +72,48 @@
       onclick={() => (open = !open)}
     >
       <Icon name="download" />
-      <span class="badge" aria-hidden="true">{games.length > 9 ? '9+' : games.length}</span>
+      {#if games.length}
+        <span class="badge" aria-hidden="true">{games.length > 9 ? '9+' : games.length}</span>
+      {/if}
+      {#if downloads.length}
+        <span class="mini" aria-hidden="true"><span style:width="{overall * 100}%"></span></span>
+      {/if}
     </button>
     {#if open}
       <div class="panel" id="updates-menu" role="region" aria-label="Mises à jour des jeux">
+        {#if downloads.length}
+          <div class="head"><span>En cours</span></div>
+          <ul>
+            {#each downloads as d (d.g.id)}
+              {@const pct = Math.round(d.value * 100)}
+              <li>
+                <button class="game" onclick={() => { open = false; ui.open(d.g.id); }}>
+                  <span class="thumb"><Cover game={d.g} showName={false} eager /></span>
+                  <span class="txt">
+                    <span class="nm">{library.name(d.g)}</span>
+                    <span class="meta">{runner.busyLabel(d.g.id)}</span>
+                    <span
+                      class="bar"
+                      class:paused={d.paused}
+                      role="progressbar"
+                      aria-label="Téléchargement de {library.name(d.g)}"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={pct}><span style:width="{pct}%"></span></span
+                    >
+                  </span>
+                </button>
+                <button
+                  class="go"
+                  onclick={() => runner.showInSteam(d.g.id)}
+                  aria-label="Afficher {library.name(d.g)} dans Steam"
+                  title="Pause, reprise et annulation dans Steam">Afficher dans Steam</button
+                >
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if games.length}
         <div class="head">
           <span>Mises à jour</span>
           {#if total}<span class="tot">{sizeLabel(total)} à télécharger</span>{/if}
@@ -92,6 +141,7 @@
         <button class="all" onclick={seeAll}
           >{games.length > 6 ? `Voir les ${games.length} jeux` : "Voir l'onglet Mises à jour"}</button
         >
+        {/if}
       </div>
     {/if}
   </div>
@@ -126,6 +176,49 @@
     line-height: 16px;
     text-align: center;
     pointer-events: none;
+  }
+
+  .mini,
+  .bar {
+    display: block;
+    height: 3px;
+    border-radius: 999px;
+    background: rgb(var(--ink) / 0.14);
+    overflow: hidden;
+  }
+
+  .mini {
+    position: absolute;
+    left: 9px;
+    right: 9px;
+    bottom: 5px;
+    pointer-events: none;
+  }
+
+  .bar {
+    width: 100%;
+    height: 4px;
+    margin-top: 2px;
+  }
+
+  .mini span,
+  .bar span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: inherit;
+    transition: width 0.4s var(--ease);
+  }
+
+  .bar.paused span {
+    background: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mini span,
+    .bar span {
+      transition: none;
+    }
   }
 
   .panel {
@@ -203,6 +296,7 @@
   }
 
   .txt {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 3px;
