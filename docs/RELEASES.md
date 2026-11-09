@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.18 - 9 novembre 2026
+**Linux en pause** : la version Linux avait trop de bugs, elle est mise en pause le temps de la refaire. Sous Linux, Hangar n'affiche plus qu'un écran d'attente et ne se lance plus avec ton ordinateur. Quand la nouvelle version Linux sera prête, elle s'installera d'elle-même depuis cet écran. Hangar reste disponible sous Windows et macOS, rien ne change pour toi si tu es sur l'un des deux.
+
 ### 1.2.17 - 9 novembre 2026
 **Signaler un bug** : ton signalement m'arrive mieux présenté (titre, description, version de Hangar, système et capture en grand), pour que je le traite plus vite. **Sécurité** : mise à jour de bibliothèques internes qui faisaient l'objet d'alertes (lecture des archives zip, composants Linux et outils de construction). Rien ne change dans ton utilisation de Hangar.
 
