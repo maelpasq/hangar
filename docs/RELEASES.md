@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.17 - 9 novembre 2026
+**Signaler un bug** : ton signalement m'arrive mieux présenté (titre, description, version de Hangar, système et capture en grand), pour que je le traite plus vite. **Sécurité** : mise à jour de bibliothèques internes qui faisaient l'objet d'alertes (lecture des archives zip, composants Linux et outils de construction). Rien ne change dans ton utilisation de Hangar.
+
 ### 1.2.16 - 9 novembre 2026
 **Fond plus sobre** : la lumière colorée tirée des jaquettes reste sur l'accueil et les fiches de jeux, mais ne déborde plus sur la bibliothèque, les jeux web et les paramètres, qui gardent un fond neutre. L'écran Hangar MC, toujours grisé en attendant Mojang, est prêt : page centrée, fond teinté par l'affiche de la version et dernière version lancée proposée en premier.
 
