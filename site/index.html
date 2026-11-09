@@ -15,7 +15,6 @@
   // Avant le premier rendu : les animations d'apparition n'existent que si le JS tourne, et la carte du système du visiteur passe en premier.
   document.documentElement.classList.add('js');
   if (/Mac/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent)) document.documentElement.classList.add('mac');
-  else if (/Linux/i.test(navigator.userAgentData?.platform || navigator.platform || '') && !/Android/i.test(navigator.userAgent)) document.documentElement.classList.add('linux');
 </script>
 <style>
   /* Fichiers copiés au déploiement (voir .github/workflows/site.yml) */
@@ -261,7 +260,7 @@
 
   /* Installer */
   .install { margin-top: 3.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 16px; }
-  .mac .install .is-mac, .linux .install .is-linux { order: -1; }
+  .mac .install .is-mac { order: -1; }
   .install .tile { min-height: 0; gap: 0; }
   .os { display: flex; align-items: center; gap: 12px; }
   .os .ico { margin: 0; }
@@ -275,6 +274,15 @@
   .install strong { color: var(--text); font-weight: 600; }
   .install ol { margin-bottom: 1.75rem; }
   .install .btn { margin-top: auto; align-self: flex-start; }
+  /* Linux : bientôt de retour */
+  .soon { cursor: default; color: var(--text-2); gap: 12px; }
+  .soon:hover { filter: none; background: var(--surface-3); }
+  .soon:active { transform: none; }
+  .soon i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  @media (prefers-reduced-motion: no-preference) {
+    .soon i { animation: soon 2s ease-in-out infinite; }
+    @keyframes soon { 50% { box-shadow: 0 0 0 7px transparent; opacity: .55; } }
+  }
   .code {
     margin-top: .625rem; display: flex; align-items: center; gap: 8px;
     padding: 6px 6px 6px 14px; border-radius: 14px; background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px var(--border-2);
@@ -592,12 +600,16 @@
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger
           </a>
         </article>
-        <article class="tile is-linux reveal" style="--d:.12s">
+        <article class="tile reveal" style="--d:.12s">
           <div class="os">
             <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg></div>
-            <h3>Linux<small>En pause</small></h3>
+            <h3>Linux<small>Bientôt de retour</small></h3>
           </div>
-          <p>La version Linux est en cours de refonte et n'est plus téléchargeable pour l'instant. Ceux qui l'ont déjà la recevront automatiquement quand elle sera prête.</p>
+          <ol>
+            <li>La version Linux est <strong>en train d'être refaite</strong>, plus stable, pour revenir en AppImage.</li>
+            <li>Tu l'as déjà installée ? <strong>Rien à faire</strong> : elle se mettra à jour toute seule dès qu'elle sera prête.</li>
+          </ol>
+          <span class="btn quiet soon" role="status"><i aria-hidden="true"></i>Arrive bientôt</span>
         </article>
       </div>
       <p class="note reveal">Un bouton « Mettre à jour » apparaît dans Hangar quand une nouvelle version sort.</p>
