@@ -26,6 +26,7 @@
     | 'download'
     | 'globe'
     | 'flag'
+    | 'bug'
     | 'target'
     | 'crosshair'
     | 'crown'
@@ -127,6 +128,10 @@
     <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
   {:else if name === 'flag'}
     <path d="M5 21V4h11l-2 4 2 4H5" />
+  {:else if name === 'bug'}
+    <path d="m8 2 1.9 1.9M16 2l-1.9 1.9M9 7.1V6a3 3 0 0 1 6 0v1.1" /><path
+      d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.5 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"
+    />
   {:else if name === 'target'}
     <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" />
   {:else if name === 'crosshair'}

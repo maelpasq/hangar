@@ -305,6 +305,7 @@ export function mockApi(): Api {
       syncedNow();
     },
     openLink: async () => {},
+    reportBug: async () => { await wait(800); },
     openWebGame: async () => {},
     onWebClosed: async () => () => {},
     mcVersions: async () =>

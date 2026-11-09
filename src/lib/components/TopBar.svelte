@@ -119,6 +119,9 @@
     >
       <Icon name="refresh" class={library.scanning ? 'spin' : ''} />
     </button>
+    <button class="ibtn" aria-label="Signaler un bug" title="Signaler un bug" onclick={() => (ui.modal = { kind: 'bug' })}>
+      <Icon name="bug" />
+    </button>
     <button class="ibtn" aria-label="Mode manette" title="Mode manette" onclick={() => (ui.big = true)}>
       <Icon name="gamepad" />
     </button>

@@ -20,6 +20,7 @@
   import ConfirmUninstall from './lib/modals/ConfirmUninstall.svelte';
   import InstallDir from './lib/modals/InstallDir.svelte';
   import Rename from './lib/modals/Rename.svelte';
+  import BugReport from './lib/modals/BugReport.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import McVersions from './lib/modals/McVersions.svelte';
   import GamePage from './lib/screens/GamePage.svelte';
@@ -254,6 +255,8 @@
     <ConfirmUninstall game={modalGame} />
   {:else if ui.modal?.kind === 'installDir' && modalGame}
     <InstallDir game={modalGame} targets={ui.modal.targets} />
+  {:else if ui.modal?.kind === 'bug'}
+    <BugReport />
   {:else if ui.modal?.kind === 'onboarding'}
     <Onboarding />
   {:else if ui.modal?.kind === 'collections' && modalGame}

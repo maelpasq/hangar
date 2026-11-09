@@ -309,3 +309,7 @@ Les jars restent sur le poste de développement (`src-tauri/resources/mods/`, ig
 ## Linux : pas de flou d'arrière-plan (2026-11-09)
 
 Le retrait des `backdrop-filter` sous Linux (classe `linux`, `base.css`) avait été annulé par « Flou et animations rapides sur tous les systèmes » avant toute release : aucune version Linux publiée ne l'avait. Rétabli. Les images floutées restent en toile (`BlurImage`), le même rendu partout ; seuls les flous d'arrière-plan, recalculés à chaque image par WebKitGTK, sont retirés sous Linux.
+
+## Signaler un bug depuis Hangar (2026-11-09)
+
+Bouton insecte dans la barre du haut : petite fenêtre (titre, description et capture facultatives). L'envoi part du backend (`report.rs`) vers un webhook Discord privé du développeur, avec la version de Hangar et le système. L'adresse du webhook n'est pas dans le dépôt : elle est lue au build (`HANGAR_BUG_WEBHOOK`, secret GitHub de `release.yml`) ; sans elle, l'envoi est refusé avec un message. Elle reste extractible de l'app : en cas d'abus, on la régénère dans Discord. Le formulaire GitHub (trop long pour un joueur) reste pour qui le veut.

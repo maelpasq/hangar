@@ -13,6 +13,7 @@ export type Modal =
   | { kind: 'uninstall'; gameId: string }
   | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
+  | { kind: 'bug' }
   | { kind: 'collections'; gameId: string }
   | { kind: 'mcVersions'; versions: McVersion[]; current: string; onpick: (id: string) => void };
 

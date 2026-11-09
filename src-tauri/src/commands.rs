@@ -158,6 +158,12 @@ pub async fn open_link(link: String) -> Result<(), String> {
     blocking(move || launcher::shell_open(url, "", None, "open")).await?
 }
 
+/// Envoie un signalement de bug (titre, description, capture facultative) au développeur.
+#[tauri::command]
+pub async fn report_bug(title: String, description: String, screenshot: Option<String>) -> Result<(), String> {
+    blocking(move || crate::report::send(&title, &description, screenshot.as_deref())).await?
+}
+
 /// Asynchrone : créer une fenêtre depuis une commande synchrone peut bloquer sous Windows.
 #[tauri::command]
 pub async fn open_web_game(app: AppHandle, id: String) -> Result<(), String> {

@@ -41,6 +41,7 @@ body:
         - Windows 10
         - macOS (Apple Silicon)
         - macOS (Intel)
+        - Linux
     validations:
       required: true
   - type: dropdown

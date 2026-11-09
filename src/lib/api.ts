@@ -80,6 +80,8 @@ export interface Api {
   disconnectAccount(store: StoreId): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link'): Promise<void>;
+  /** Envoie un signalement de bug au développeur (capture : chemin d'une image, facultatif). */
+  reportBug(title: string, description: string, screenshot: string | null): Promise<void>;
   /** Ouvre un jeu du catalogue web-games.json dans sa propre fenêtre Hangar. */
   openWebGame(id: string): Promise<void>;
   /** Fenêtre d'un jeu web fermée (identifiant du catalogue). */
@@ -212,6 +214,7 @@ async function tauriApi(): Promise<Api> {
     connectAccount: (store) => invoke('connect_account', { store }),
     disconnectAccount: (store) => invoke('disconnect_account', { store }),
     openLink: (link) => invoke('open_link', { link }),
+    reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),
     openWebGame: (id) => invoke('open_web_game', { id }),
     onWebClosed: (cb) => on<string>('web://closed', cb),
     mcVersions: () => invoke('mc_versions'),

@@ -13,6 +13,7 @@ mod manage;
 mod minecraft;
 mod model;
 mod presence;
+mod report;
 mod scanner;
 mod size;
 mod state;
@@ -171,6 +172,7 @@ fn main() {
             commands::connect_account,
             commands::disconnect_account,
             commands::open_link,
+            commands::report_bug,
             commands::open_web_game,
             commands::uninstall_game,
             commands::update_game,
