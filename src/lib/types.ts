@@ -148,6 +148,8 @@ export interface PersistedState {
   sort: SortKey;
   /** Assistant de configuration vu (installation neuve, ou une fois après la mise à jour qui l'ajoute). */
   onboarded: boolean;
+  /** Hangar MC : dernière version lancée, affichée en haut de l'écran. */
+  mcLast: string;
   prefs: Prefs;
 }
 

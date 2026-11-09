@@ -21,6 +21,8 @@ describe('état persistant', () => {
     expect(normalizeState({ version: 1, prefs: { webGames: true } }).onboarded).toBe(false);
     expect(normalizeState({ version: 1, onboarded: 'oui' }).onboarded).toBe(false);
     expect(normalizeState({ version: 1, onboarded: true }).onboarded).toBe(true);
+    expect(normalizeState({ version: 1, mcLast: '1.8.9' }).mcLast).toBe('1.8.9');
+    expect(normalizeState({ version: 1, mcLast: 3 }).mcLast).toBe('');
   });
 
   it('migre la v1 (recents, launches, coverCache)', () => {
