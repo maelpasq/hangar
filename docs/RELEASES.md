@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.16 - 9 novembre 2026
+**Fond plus sobre** : la lumière colorée tirée des jaquettes reste sur l'accueil et les fiches de jeux, mais ne déborde plus sur la bibliothèque, les jeux web et les paramètres, qui gardent un fond neutre. L'écran Hangar MC, toujours grisé en attendant Mojang, est prêt : page centrée, fond teinté par l'affiche de la version et dernière version lancée proposée en premier.
+
 ### 1.2.15 - 9 novembre 2026
 **Téléchargements Steam en direct** : le menu Mises à jour affiche les installations et mises à jour Steam en cours avec leur vraie progression, qui avance pendant le téléchargement au lieu de rester figée. Les téléchargements en cours sont retrouvés quand tu relances Hangar, et un bouton « Afficher dans Steam », dans le menu et sur la page du jeu, permet de les mettre en pause, de les reprendre ou de les annuler.
 
