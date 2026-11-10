@@ -438,6 +438,15 @@ pub async fn update_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, Strin
     let Some(game) = ctx.known.get(&game_id).filter(|g| !g.not_installed) else {
         return Err("Ce jeu n'est plus dans la bibliothèque. Actualise-la puis réessaie.".into());
     };
+    // Mise à jour reportée par Steam : seul son bouton de téléchargement la lance, on montre sa page.
+    let scheduled = cfg!(windows) && game.store == "steam" && game.steam_app_id.is_some_and(crate::manage::steam_update_scheduled);
+    if scheduled {
+        crate::veil::lift();
+        let name = game.name.clone();
+        blocking(|| launcher::launch(&crate::model::uri("steam://open/downloads"))).await??;
+        log::info!("mise à jour Steam programmée, page des téléchargements ouverte : {game_id}");
+        return Ok(format!("Steam a programmé la mise à jour de {name} : clique sur le bouton de téléchargement du jeu dans Steam pour la lancer maintenant."));
+    }
     let msg = blocking(move || launcher::update(&game)).await??;
     crate::veil::cover();
     log::info!("mises à jour ouvertes : {game_id}");

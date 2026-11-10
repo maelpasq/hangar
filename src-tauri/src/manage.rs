@@ -68,6 +68,21 @@ pub fn manifest_progress(text: &str, written: u64) -> Option<f64> {
     busy.then(|| ratio(num("BytesDownloaded"), num("BytesToDownload")).max(disk))
 }
 
+/// Mise à jour que Steam a reportée (`ScheduledAutoUpdate` dans le futur, pas encore démarrée) :
+/// Steam retarde celles des jeux pas joués récemment, et aucun lien `steam://` ne la lance.
+pub fn update_scheduled(text: &str, now: u64) -> bool {
+    let flags = acf_num(text, "StateFlags");
+    flags & 2 != 0 && flags & 1024 == 0 && acf_num(text, "ScheduledAutoUpdate") > now
+}
+
+pub fn steam_update_scheduled(id: u32) -> bool {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+    steam_root()
+        .and_then(|r| steam_manifest_path(&r, id))
+        .and_then(|(p, _)| fs::read_to_string(p).ok())
+        .is_some_and(|t| update_scheduled(&t, now))
+}
+
 /// Jeux que Steam télécharge en ce moment (installation ou mise à jour démarrée).
 pub fn steam_downloading() -> Vec<u32> {
     let Some(root) = steam_root() else { return vec![] };
@@ -670,6 +685,16 @@ mod tests {
         assert_eq!(log_paused(log, 730), Some(true));
         assert_eq!(log_paused(&log.lines().take(2).collect::<Vec<_>>().join("\n"), 730), Some(false), "en cours");
         assert_eq!(log_paused(log, 1), None);
+    }
+
+    #[test]
+    fn mise_a_jour_programmee() {
+        let m = |f: u32, at: u64| format!("\"StateFlags\"\t\t\"{f}\"\n\"ScheduledAutoUpdate\"\t\t\"{at}\"\n");
+        assert!(update_scheduled(&m(6, 2000), 1000), "reportée par Steam");
+        assert!(!update_scheduled(&m(6, 500), 1000), "heure passée");
+        assert!(!update_scheduled(&m(6, 0), 1000), "pas de programmation");
+        assert!(!update_scheduled(&m(1030, 2000), 1000), "déjà démarrée");
+        assert!(!update_scheduled(&m(4, 2000), 1000), "à jour");
     }
 
     #[test]
