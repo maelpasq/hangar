@@ -66,7 +66,7 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
 }
 
 /// Copie de secours de state.json : le dernier état lu sans erreur.
-fn state_backup(file: &Path) -> PathBuf {
+pub fn state_backup(file: &Path) -> PathBuf {
     file.with_extension("json.bak")
 }
 
@@ -183,7 +183,7 @@ impl Known {
     /// (ni de chemin réseau `\\serveur\...` qui enverrait l'identité Windows).
     pub fn knows_path(&self, path: &str) -> bool {
         let want = norm_path(path);
-        if want.is_empty() {
+        if want.is_empty() || !local_path(path) {
             return false;
         }
         let owns = |g: &Game| {
@@ -222,6 +222,88 @@ impl Known {
 }
 
 /// Chemin comparable : séparateurs `\`, minuscules, sans séparateur final.
+/// Fichiers et dossiers que l'utilisateur a choisis lui-même : dans une boîte de choix ouverte
+/// par le backend, ou déjà enregistrés dans state.json au démarrage. Le frontend ne peut pas en
+/// ajouter d'autres : un script injecté ne pourrait ni faire lancer le programme de son choix,
+/// ni lire une image ailleurs sur le disque.
+#[derive(Default)]
+pub struct Granted(Mutex<std::collections::HashSet<String>>);
+
+impl Granted {
+    pub fn add(&self, path: &str) {
+        if local_path(path) {
+            self.0.lock().unwrap_or_else(|p| p.into_inner()).insert(norm_path(path));
+        }
+    }
+
+    pub fn has(&self, path: &str) -> bool {
+        local_path(path) && self.0.lock().unwrap_or_else(|p| p.into_inner()).contains(&norm_path(path))
+    }
+
+    /// state.json lu sur le disque : ses jeux manuels et ses dossiers locaux sont ceux de
+    /// l'utilisateur.
+    pub fn trust_state(&self, state: &serde_json::Value) {
+        for p in manual_targets(state).chain(local_folders(state)) {
+            self.add(&p);
+        }
+    }
+
+    /// État envoyé par le frontend : retire les jeux manuels et les dossiers locaux que
+    /// l'utilisateur n'a pas choisis, et recalcule les chemins dérivés d'un jeu manuel
+    /// (dossier, dossier de travail, exe) à partir de sa cible.
+    pub fn sanitize(&self, state: &mut serde_json::Value) {
+        if let Some(list) = state.get_mut("manualGames").and_then(|v| v.as_array_mut()) {
+            list.retain_mut(|g| {
+                let Some(target) = g["launch"]["target"].as_str().map(String::from) else { return false };
+                let ok = g["id"].as_str().is_some_and(|id| id.starts_with("manual:"))
+                    && g["launch"]["kind"] == "exe"
+                    && self.has(&target)
+                    && manual_extension_ok(&target);
+                if !ok {
+                    log::warn!("jeu manuel refusé : cible jamais choisie par l'utilisateur");
+                    return false;
+                }
+                let dir = Path::new(&target).parent().map(|d| d.to_string_lossy().into_owned());
+                let exe = target.to_lowercase().ends_with(".exe").then(|| target.clone());
+                g["installDir"] = dir.clone().into();
+                g["launch"]["cwd"] = dir.into();
+                g["exePath"] = exe.into();
+                if let Some(o) = g.as_object_mut() {
+                    o.remove("logo");
+                }
+                true
+            });
+        }
+        if let Some(list) = state.get_mut("localFolders").and_then(|v| v.as_array_mut()) {
+            list.retain(|f| f.as_str().is_some_and(|f| self.has(f)));
+        }
+    }
+}
+
+fn manual_targets(state: &serde_json::Value) -> impl Iterator<Item = String> + '_ {
+    state["manualGames"].as_array().into_iter().flatten().filter_map(|g| g["launch"]["target"].as_str().map(String::from))
+}
+
+fn local_folders(state: &serde_json::Value) -> impl Iterator<Item = String> + '_ {
+    state["localFolders"].as_array().into_iter().flatten().filter_map(|f| f.as_str().map(String::from))
+}
+
+/// Chemin absolu sur ce PC : pas de partage réseau (`\\serveur\...` enverrait l'identité
+/// Windows) ni de chemin `\\?\`.
+pub fn local_path(p: &str) -> bool {
+    let p = p.trim();
+    !p.is_empty() && !p.starts_with("\\\\") && !p.starts_with("//") && Path::new(p).is_absolute()
+}
+
+/// Ce qu'un jeu ajouté à la main peut lancer (Linux : binaires sans extension).
+fn manual_extension_ok(target: &str) -> bool {
+    if !cfg!(windows) && !cfg!(target_os = "macos") {
+        return true;
+    }
+    let ext = Path::new(target).extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+    ["exe", "lnk", "url", "bat", "app"].contains(&ext.as_str())
+}
+
 fn norm_path(p: &str) -> String {
     p.trim().replace('/', "\\").trim_end_matches('\\').to_lowercase()
 }
@@ -252,6 +334,40 @@ mod tests {
         assert!(names().iter().any(|n| n.contains("corrompu")));
         // Absent mais copie de secours présente : on la reprend aussi.
         assert_eq!(load_state(&f).unwrap()["favorites"][0], "steam:1");
+    }
+
+    #[test]
+    fn seuls_les_chemins_choisis() {
+        if !cfg!(windows) {
+            return;
+        }
+        let g = Granted::default();
+        let jeu = |target: &str| {
+            serde_json::json!({ "id": format!("manual:{target}"), "name": "A", "installDir": "\\\\pirate\\x",
+                "logo": "\\\\pirate\\x.png", "launch": { "kind": "exe", "target": target, "args": "", "cwd": "C:\\Windows" } })
+        };
+        // Déjà dans state.json au démarrage : de confiance.
+        g.trust_state(&serde_json::json!({ "manualGames": [jeu("C:\\Jeux\\A\\a.exe")], "localFolders": ["D:\\Jeux"] }));
+        g.add("C:\\Jeux\\B\\b.lnk"); // choisi dans la boîte de choix
+        g.add("\\\\serveur\\partage\\c.exe"); // jamais un partage réseau
+        let mut s = serde_json::json!({
+            "manualGames": [jeu("C:\\Jeux\\A\\a.exe"), jeu("C:\\Jeux\\B\\b.lnk"), jeu("C:\\Windows\\System32\\cmd.exe"),
+                jeu("\\\\serveur\\partage\\c.exe")],
+            "localFolders": ["D:\\Jeux", "C:\\Users"]
+        });
+        g.sanitize(&mut s);
+        let games = s["manualGames"].as_array().unwrap();
+        assert_eq!(games.len(), 2);
+        assert_eq!(games[0]["installDir"], "C:\\Jeux\\A");
+        assert_eq!(games[0]["launch"]["cwd"], "C:\\Jeux\\A");
+        assert_eq!(games[0]["exePath"], "C:\\Jeux\\A\\a.exe");
+        assert!(games[0].get("logo").is_none());
+        assert_eq!(games[1]["exePath"], serde_json::Value::Null);
+        assert_eq!(s["localFolders"], serde_json::json!(["D:\\Jeux"]));
+        assert!(g.has("c:/jeux/b/B.LNK"), "comparaison sans casse ni séparateur");
+        let k = Known::default();
+        k.set_manual_from_state(&s);
+        assert!(!k.knows_path("\\\\pirate\\x.png"));
     }
 
     #[test]

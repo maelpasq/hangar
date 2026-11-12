@@ -70,8 +70,9 @@ export interface Prefs {
   autoCovers: boolean;
   /** Jeux possédés dans les launchers mais pas installés, affichés dans la bibliothèque. */
   showUninstalled: boolean;
-  /** Clé API SteamGridDB (facultative) pour les jeux absents de Steam. */
-  steamGridDbKey: string;
+  /** Une clé API SteamGridDB (facultative, pour les jeux absents de Steam) est enregistrée
+   * dans le coffre du système. La clé elle-même ne passe jamais par le frontend. */
+  steamGridDb: boolean;
   /** Onglet Jeux web. null : pas encore demandé (première ouverture ou mise à jour). */
   webGames: boolean | null;
   /** Fermer la fenêtre la cache dans la zone de notification au lieu de quitter. */

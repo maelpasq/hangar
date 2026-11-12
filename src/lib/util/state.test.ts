@@ -65,9 +65,10 @@ describe('état persistant', () => {
     expect(normalizeState({ version: 1, theme: 'bleu' }).theme).toBe('dark');
   });
 
-  it('garde la clé SteamGridDB, sans espaces', () => {
-    expect(normalizeState({ version: 1, prefs: { steamGridDbKey: '  abc123 ' } }).prefs.steamGridDbKey).toBe('abc123');
-    expect(normalizeState({ version: 1 }).prefs.steamGridDbKey).toBe('');
+  it('ne garde de SteamGridDB que la présence d’une clé, jamais la clé', () => {
+    expect(normalizeState({ version: 1, prefs: { steamGridDb: true } }).prefs.steamGridDb).toBe(true);
+    expect(normalizeState({ version: 1 }).prefs.steamGridDb).toBe(false);
+    expect(normalizeState({ version: 1, prefs: { steamGridDbKey: 'abc123' } }).prefs).not.toHaveProperty('steamGridDbKey');
   });
 
   it('affiche les jeux non installés par défaut', () => {

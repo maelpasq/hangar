@@ -29,7 +29,7 @@ export function defaultState(): PersistedState {
       startWithWindows: false,
       autoCovers: true,
       showUninstalled: true,
-      steamGridDbKey: '',
+      steamGridDb: false,
       webGames: null,
       closeToTray: true,
       globalShortcut: true,
@@ -85,7 +85,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     for (const k of ['closeToTray', 'globalShortcut', 'discordPresence'] as const) {
       if (typeof p[k] === 'boolean') s.prefs[k] = p[k];
     }
-    if (typeof p.steamGridDbKey === 'string') s.prefs.steamGridDbKey = p.steamGridDbKey.trim();
+    if (typeof p.steamGridDb === 'boolean') s.prefs.steamGridDb = p.steamGridDb;
   }
   if (Array.isArray(raw.collections)) {
     const seen = new Set<string>();

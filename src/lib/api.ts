@@ -2,7 +2,6 @@
 // l'implémentation de démo de mock.ts est utilisée.
 
 import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, McAccount, McPack, McProgress, McVersion, PersistedState, Session, SteamHit, StoreId } from './types';
-import { isLinux } from './util/platform';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -58,7 +57,9 @@ export interface Api {
   resolveSteamId(name: string): Promise<number | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
   /** Jaquette et bannière d'un jeu, toutes sources confondues (store, Steam, SteamGridDB). */
-  findArtwork(gameId: string, steamGridKey: string | null, refresh: boolean): Promise<Artwork>;
+  findArtwork(gameId: string, refresh: boolean): Promise<Artwork>;
+  /** Clé API SteamGridDB, rangée dans le coffre du système (vide : la retire). */
+  setSteamGridKey(key: string): Promise<void>;
   /** Source affichable d'une image distante (en cache disque côté Tauri), ou null si introuvable. */
   image(url: string): Promise<string | null>;
   /** Icône 256 px d'un exécutable (ou d'un logo Xbox), source affichable ou null. */
@@ -129,17 +130,11 @@ async function tauriApi(): Promise<Api> {
   const { invoke, convertFileSrc } = await import('@tauri-apps/api/core');
   const { listen } = await import('@tauri-apps/api/event');
   const { getCurrentWindow } = await import('@tauri-apps/api/window');
-  const dialog = await import('@tauri-apps/plugin-dialog');
   const updater = await import('@tauri-apps/plugin-updater');
   const { relaunch } = await import('@tauri-apps/plugin-process');
   const { getIdentifier, getVersion } = await import('@tauri-apps/api/app');
   let pending: Awaited<ReturnType<typeof updater.check>> = null;
   const w = getCurrentWindow();
-
-  const pick = async (opts: Parameters<typeof dialog.open>[0]) => {
-    const r = await dialog.open({ multiple: false, ...opts });
-    return typeof r === 'string' ? r : null;
-  };
 
   const on = <T>(name: string, cb: (p: T) => void) => listen<T>(name, (e) => cb(e.payload));
 
@@ -170,11 +165,11 @@ async function tauriApi(): Promise<Api> {
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),
-    findArtwork: async (gameId, steamGridKey, refresh) => {
+    setSteamGridKey: (key) => invoke('set_steamgriddb_key', { key }),
+    findArtwork: async (gameId, refresh) => {
       type Img = { path: string; landscape: boolean } | null;
       const a = await invoke<{ cover: Img; hero: Img; source: string }>('find_artwork', {
         gameId,
-        steamGridKey,
         refresh
       });
       return {
@@ -196,15 +191,11 @@ async function tauriApi(): Promise<Api> {
     setAutostart: (on) => invoke('set_autostart', { on }),
     importCover: (gameId, path) => invoke('import_cover', { gameId, path }),
     localSrc: (path) => convertFileSrc(path),
-    pickExe: () =>
-      pick({
-        title: 'Choisir le jeu',
-        // Linux : les binaires des jeux n'ont souvent pas d'extension, pas de filtre.
-        filters: isLinux ? [] : [{ name: 'Jeux et raccourcis', extensions: ['exe', 'lnk', 'url', 'bat', 'app'] }]
-      }),
-    pickFolder: () => pick({ title: 'Choisir un dossier de jeux', directory: true }),
-    pickImage: () =>
-      pick({ title: 'Choisir une image', filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }] }),
+    // Boîtes de choix ouvertes par le backend : lui seul sait quels fichiers l'utilisateur a
+    // choisis (un jeu ajouté à la main ne peut lancer que l'un d'eux).
+    pickExe: () => invoke<string | null>('pick_exe'),
+    pickFolder: () => invoke<string | null>('pick_folder'),
+    pickImage: () => invoke<string | null>('pick_image'),
     onLaunch: async (cb) => {
       const offs = await Promise.all([
         on<{ gameId: string }>('launch://started', (p) => cb({ type: 'started', ...p })),

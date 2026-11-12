@@ -40,7 +40,15 @@ pub fn client() -> Option<String> {
         .ok()
         .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
         .and_then(|v| v.get("rc_default").and_then(|x| x.as_str()).map(super::native_sep))
-        .filter(|p| Path::new(p).exists())
+        .filter(|p| trusted_client(p) && Path::new(p).exists())
+}
+
+/// Le fichier qui donne ce chemin (`ProgramData\Riot Games`) est modifiable par tous les
+/// comptes du PC : on ne lance que le vrai nom du Riot Client, sur ce PC.
+fn trusted_client(p: &str) -> bool {
+    let local = Path::new(p).is_absolute() && !p.starts_with("\\\\") && !p.starts_with("//");
+    let name = Path::new(p).file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    local && (!cfg!(windows) || name == "riotclientservices.exe")
 }
 
 fn client_launch(client: &str, product: &str, patchline: &str) -> Launch {
@@ -104,6 +112,15 @@ pub fn detect() -> Vec<Game> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(windows)]
+    fn seul_le_vrai_riot_client() {
+        assert!(trusted_client(r"C:\Riot Games\Riot Client\RiotClientServices.exe"));
+        assert!(!trusted_client(r"C:\Users\Public\pirate.exe"));
+        assert!(!trusted_client(r"\\serveur\partage\RiotClientServices.exe"));
+        assert!(!trusted_client("RiotClientServices.exe"));
+    }
 
     #[test]
     fn yaml_riot() {

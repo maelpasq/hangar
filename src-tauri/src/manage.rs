@@ -427,6 +427,13 @@ pub fn safe_game_dir(p: &Path) -> bool {
     disk && clean && depth >= 1 && p.is_absolute() && !SYSTEM.contains(&name.as_str())
 }
 
+/// Dossier trop large pour être celui d'un seul jeu : refusé à la suppression, et le suivi
+/// n'y reconnaît pas les processus (« Arrêter » fermerait tout ce qui en est lancé).
+pub fn broad_dir(p: &Path) -> bool {
+    let windows = std::env::var_os("SystemRoot").map(PathBuf::from);
+    !deletable_game_dir(p, &[]) || windows.is_some_and(|w| same_path(&w, p) || strictly_contains(&w, p))
+}
+
 /// Dossier qu'on accepte de supprimer : forme sûre (`safe_game_dir`), ni un dossier de
 /// l'utilisateur ou du système, ni un dossier qui les contient, ni un dossier juste sous le
 /// dossier personnel (Documents, AppData...), ni un dossier qui contient un autre jeu connu.
@@ -457,7 +464,7 @@ fn close_epic() {
     }
     let kill = |force: bool| {
         use std::os::windows::process::CommandExt;
-        let mut c = Command::new("taskkill");
+        let mut c = Command::new(crate::launcher::windows_tool("System32/taskkill.exe"));
         if force {
             c.arg("/F");
         }

@@ -7,6 +7,13 @@ use std::path::Path;
 /// Empêche l'ouverture d'une fenêtre console pour les processus enfants.
 pub const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+/// Programme de Windows par son chemin complet (`%SystemRoot%` + `rel`) : appelé par son seul
+/// nom, il serait d'abord cherché dans le dossier de Hangar.
+pub fn windows_tool(rel: &str) -> std::path::PathBuf {
+    let root = std::env::var_os("SystemRoot").map(std::path::PathBuf::from).filter(|p| p.is_absolute());
+    root.unwrap_or_else(|| std::path::PathBuf::from("C:/Windows")).join(rel)
+}
+
 /// Traduit un code de retour ShellExecute (<= 32) en message français.
 pub fn shell_error(code: isize, target: &str) -> String {
     match code {

@@ -251,6 +251,7 @@ export function mockApi(): Api {
         .map((g) => ({ id: g.steamAppId!, name: g.name }));
     },
     findArtwork: async () => ({ cover: null, hero: null, source: '' }),
+    setSteamGridKey: async () => {},
     image: (url) => {
       let p = imgCache.get(url);
       if (!p) {

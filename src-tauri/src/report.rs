@@ -88,7 +88,12 @@ pub fn send(title: &str, description: &str, screenshot: Option<&str>) -> Result<
         .send_bytes(&multipart(&payload.to_string(), file))
         .map(|_| ())
         .map_err(|e| {
-            log::warn!("signalement de bug non envoyé : {e}");
+            // Jamais `{e}` : le texte des erreurs ureq commence par l'adresse du webhook, jeton compris.
+            let why = match &e {
+                ureq::Error::Status(code, _) => format!("code {code}"),
+                ureq::Error::Transport(t) => format!("{:?}", t.kind()),
+            };
+            log::warn!("signalement de bug non envoyé : {why}");
             "Le signalement n'a pas pu partir. Vérifie ta connexion puis réessaie.".into()
         })
 }

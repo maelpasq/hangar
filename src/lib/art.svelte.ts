@@ -89,12 +89,12 @@ class Art {
   }
 
   private findAuto(g: Game): Promise<Artwork> {
-    const key = library.state.prefs.steamGridDbKey.trim();
+    const key = library.state.prefs.steamGridDb;
     const memo = `${g.id}|${key ? 'k' : ''}`;
     let p = this.auto.get(memo);
     if (!p) {
       const refresh = this.refreshNext.delete(g.id);
-      p = api.findArtwork(g.id, key || null, refresh).catch(() => ({ cover: null, hero: null, source: '' }));
+      p = api.findArtwork(g.id, refresh).catch(() => ({ cover: null, hero: null, source: '' }));
       this.auto.set(memo, p);
     }
     return p;
@@ -122,7 +122,7 @@ class Art {
   hero(g: Game): string | null | undefined {
     const id = this.steamId(g);
     if (!id && !this.autoOn(g)) return null;
-    const key = `${id ?? 'auto'}|${g.id}|${library.state.prefs.steamGridDbKey ? 'k' : ''}`;
+    const key = `${id ?? 'auto'}|${g.id}|${library.state.prefs.steamGridDb ? 'k' : ''}`;
     if (key in this.heroes) return this.heroes[key];
     this.load(`h|${key}`, async () => {
       let h = id ? await firstImage(heroUrls(id)) : null;

@@ -63,14 +63,22 @@ fn norm_dir(d: &str) -> Option<String> {
 impl Spec {
     pub fn from_game(g: &Game) -> Spec {
         let mut s = Spec::default();
-        if let Some(d) = g.install_dir.as_deref().and_then(norm_dir) {
+        // Jeu ajouté à la main ou trouvé dans un dossier local : son exe peut être n'importe où.
+        // Un dossier trop large (D:\Jeux, System32, le profil...) reconnaîtrait des processus
+        // qui ne sont pas le jeu, et « Arrêter » les fermerait : on s'en tient alors au nom de
+        // l'exécutable. Les dossiers donnés par les stores restent tels quels.
+        let manual_exe = g.launch.kind == "exe" && matches!(g.store.as_str(), "local" | "manual");
+        let narrow = |d: &str| (!(manual_exe && crate::manage::broad_dir(Path::new(d)))).then(|| norm_dir(d)).flatten();
+        if let Some(d) = g.install_dir.as_deref().and_then(narrow) {
             s.dirs.push(d);
-        } else if g.launch.kind == "exe" && matches!(g.store.as_str(), "local" | "manual") {
-            if let Some(d) = Path::new(&g.launch.target).parent().and_then(|p| norm_dir(&p.to_string_lossy())) {
-                s.dirs.push(d);
-            }
+        } else if let Some(d) = manual_exe.then(|| Path::new(&g.launch.target).parent()).flatten().and_then(|p| narrow(&p.to_string_lossy())) {
+            s.dirs.push(d);
         }
         s.names = g.process_names.iter().map(|n| n.to_lowercase()).collect();
+        if s.dirs.is_empty() && s.names.is_empty() && manual_exe {
+            let exe = Path::new(&g.launch.target).file_name().map(|n| n.to_string_lossy().to_lowercase());
+            s.names.extend(exe.filter(|n| n.ends_with(".exe")));
+        }
         if g.launch.kind == "exe" && matches!(g.store.as_str(), "riot" | "gog" | "battlenet") {
             s.ignore_exes.push(norm_path(&g.launch.target));
         }
@@ -303,7 +311,7 @@ impl Tracker {
 #[cfg(windows)]
 fn request_close(pid: u32) {
     use std::os::windows::process::CommandExt;
-    let _ = std::process::Command::new("taskkill")
+    let _ = std::process::Command::new(crate::launcher::windows_tool("System32/taskkill.exe"))
         .args(["/PID", &pid.to_string()])
         .creation_flags(crate::launcher::CREATE_NO_WINDOW)
         .output();
@@ -312,7 +320,7 @@ fn request_close(pid: u32) {
 /// Demande la fermeture d'un processus (SIGTERM, le jeu peut sauvegarder).
 #[cfg(not(windows))]
 fn request_close(pid: u32) {
-    let _ = std::process::Command::new("kill").arg(pid.to_string()).output();
+    let _ = std::process::Command::new("/bin/kill").arg(pid.to_string()).output();
 }
 
 #[cfg(test)]
@@ -355,5 +363,14 @@ mod tests {
         let mut r = Game::new("local:c".into(), "C".into(), "local", uri("x"));
         r.install_dir = Some(r"C:\".into());
         assert!(!Spec::from_game(&r).matches("explorer.exe", Some(r"C:\Windows\explorer.exe")));
+        // Exe rangé dans un dossier partagé ou système : seul ce nom d'exe est suivi.
+        for exe in [r"D:\Jeux\jeu.exe", r"C:\Windows\System32\mspaint.exe"] {
+            let g = Game::new("manual:y".into(), "Y".into(), "manual", crate::model::exe(Path::new(exe), ""));
+            let s = Spec::from_game(&g);
+            let name = Path::new(exe).file_name().unwrap().to_string_lossy().into_owned();
+            assert!(s.matches(&name, Some(exe)), "{exe}");
+            let voisin = Path::new(exe).with_file_name("autre.exe").to_string_lossy().into_owned();
+            assert!(!s.matches("autre.exe", Some(&voisin)), "{exe} : un autre programme du même dossier");
+        }
     }
 }

@@ -45,7 +45,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev patchelf
-      - run: npm ci
+      # Sans scripts d'installation : aucune dépendance npm n'en a besoin, et c'est la porte
+      # d'entrée habituelle d'un paquet piégé.
+      - run: npm ci --ignore-scripts
+      # Frontend compilé ici, sans aucun secret : vite et ses plugins ne voient jamais la clé de
+      # signature des mises à jour. tauri-action ne le recompile pas (tauri.prebuilt.conf.json).
+      - name: frontend (sans secrets)
+        run: npm run build:web
       # Notes de la release : la section de cette version dans docs/RELEASES.md.
       - name: notes de version
         id: notes
@@ -79,7 +85,7 @@ jobs:
           releaseName: Hangar ${{ github.ref_name }}
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
-          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json --config src-tauri/tauri.prebuilt.conf.json
       # Second essai si le .dmg a échoué : l'app est déjà compilée, seul l'empaquetage est refait.
       - name: macOS, nouvel essai
         if: steps.build.outcome == 'failure'
@@ -94,17 +100,18 @@ jobs:
           releaseName: Hangar ${{ github.ref_name }}
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
-          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json --config src-tauri/tauri.prebuilt.conf.json
       # Installeur Hangar : embarque le NSIS (toujours utilisé par l'updater), nom stable pour un lien direct.
       - name: installeur Hangar
         if: matrix.os == 'windows-latest'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }} # par l'environnement, jamais collé dans le script
         run: |
           npm run build:setup
           cp installer/target/release/hangar-setup.exe Hangar-Setup.exe
-          gh release upload "${{ github.ref_name }}" Hangar-Setup.exe --clobber
+          gh release upload "$TAG" Hangar-Setup.exe --clobber
       # Jars de Hangar MC : sur le dépôt maelpasq/hangar-mc (release du même tag), pour ne pas
       # encombrer la page des releases de Hangar. MC_TOKEN : jeton limité à ce dépôt (Contents en écriture).
       # Rien tant que Mojang n'a pas validé Hangar MC (APPROVED dans accounts/microsoft.rs).
@@ -113,8 +120,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.MC_TOKEN }}
+          TAG: ${{ github.ref_name }}
         run: |
           grep -q 'APPROVED: bool = true' src-tauri/src/accounts/microsoft.rs || { echo "Hangar MC pas encore validé : jars non publiés"; exit 0; }
-          r=maelpasq/hangar-mc; t="${{ github.ref_name }}"; jars=(src-tauri/resources/mods/hangarmc-*.jar)
+          r=maelpasq/hangar-mc; t="$TAG"; jars=(src-tauri/resources/mods/hangarmc-*.jar)
           gh release create "$t" "${jars[@]}" --repo $r --title "Hangar MC $t" --notes "Mod Hangar MC de Hangar $t, téléchargé par l'app." \
             || gh release upload "$t" "${jars[@]}" --repo $r --clobber

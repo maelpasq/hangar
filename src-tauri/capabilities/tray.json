@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "tray",
+  "description": "Menu de l'icône (zone de notification) : seulement ses deux commandes",
+  "windows": [
+    "tray"
+  ],
+  "permissions": [
+    "allow-tray-state",
+    "allow-tray-action"
+  ]
+}

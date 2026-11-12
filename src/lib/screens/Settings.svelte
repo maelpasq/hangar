@@ -65,7 +65,7 @@
 
   // ─── Réglages simples ───
 
-  type BoolPref = Exclude<keyof Prefs, 'steamGridDbKey' | 'webGames'>;
+  type BoolPref = Exclude<keyof Prefs, 'steamGridDb' | 'webGames'>;
 
   async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
@@ -152,18 +152,33 @@
 
   // ─── Jaquettes ───
 
-  let gridKey = $state(library.state.prefs.steamGridDbKey);
+  // La clé va directement dans le coffre du système : le champ reste vide une fois enregistrée.
+  let gridKey = $state('');
   let showGridKey = $state(false);
-  const gridDirty = $derived(gridKey.trim() !== library.state.prefs.steamGridDbKey);
+  let gridBusy = $state(false);
+  const gridDirty = $derived(gridKey.trim() !== '');
+
+  async function setGridKey(k: string) {
+    if (gridBusy) return;
+    gridBusy = true;
+    try {
+      await api.setSteamGridKey(k);
+      library.state.prefs.steamGridDb = k !== '';
+      library.save();
+      gridKey = '';
+      art.reset();
+      ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
+    } catch (e) {
+      ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
+    } finally {
+      gridBusy = false;
+    }
+  }
 
   function saveGridKey(e?: Event) {
     e?.preventDefault();
     const k = gridKey.trim();
-    if (k === library.state.prefs.steamGridDbKey) return;
-    library.state.prefs.steamGridDbKey = k;
-    library.save();
-    art.reset();
-    ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
+    if (k) void setGridKey(k);
   }
 </script>
 
@@ -482,14 +497,21 @@
                     type={showGridKey ? 'text' : 'password'}
                     autocomplete="off"
                     spellcheck="false"
-                    placeholder="Colle ta clé ici"
+                    placeholder={library.state.prefs.steamGridDb
+                      ? 'Clé enregistrée dans le coffre du système'
+                      : 'Colle ta clé ici'}
                     bind:value={gridKey}
                     onblur={() => saveGridKey()}
                   />
                   <button type="button" class="btn-s" onclick={() => (showGridKey = !showGridKey)}
                     >{showGridKey ? 'Masquer' : 'Afficher'}</button
                   >
-                  <button type="submit" class="btn-s primary" disabled={!gridDirty}>Enregistrer</button>
+                  <button type="submit" class="btn-s primary" disabled={!gridDirty || gridBusy}>Enregistrer</button>
+                  {#if library.state.prefs.steamGridDb}
+                    <button type="button" class="btn-s" disabled={gridBusy} onclick={() => setGridKey('')}
+                      >Retirer</button
+                    >
+                  {/if}
                 </div>
               </form>
             </section>

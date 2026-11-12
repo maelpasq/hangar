@@ -45,7 +45,7 @@ pub fn run_ps(script: &str) -> Option<String> {
     use std::os::windows::process::CommandExt;
     let wide: Vec<u8> = script.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
     let enc = base64::engine::general_purpose::STANDARD.encode(wide);
-    let o = std::process::Command::new("powershell.exe")
+    let o = std::process::Command::new(crate::launcher::windows_tool("System32/WindowsPowerShell/v1.0/powershell.exe"))
         .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", &enc])
         .creation_flags(crate::launcher::CREATE_NO_WINDOW)
         .output()

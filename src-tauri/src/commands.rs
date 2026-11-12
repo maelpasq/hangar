@@ -26,6 +26,8 @@ pub struct Ctx {
     pub xbox_busy: Arc<AtomicBool>,
     pub accounts: Arc<Accounts>,
     pub presence: Arc<crate::presence::Presence>,
+    /// Fichiers et dossiers choisis par l'utilisateur (voir `state::Granted`).
+    pub granted: state::Granted,
 }
 
 type Ctxs<'a> = State<'a, Ctx>;
@@ -37,6 +39,8 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 /// Scan complet en parallèle. Xbox (PowerShell, lent) répond plus tard via `scan://partial`.
 #[tauri::command]
 pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String>) -> Result<Vec<Game>, String> {
+    // Seuls les dossiers que l'utilisateur a choisis lui-même.
+    let local_folders: Vec<String> = local_folders.into_iter().filter(|f| ctx.granted.has(f)).collect();
     let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
     // Tant que Mojang n'a pas validé Hangar MC, personne ne garde le mod (dès le démarrage).
     if !accounts::microsoft::available() {
@@ -160,7 +164,10 @@ pub async fn open_link(link: String) -> Result<(), String> {
 
 /// Envoie un signalement de bug (titre, description, capture facultative) au développeur.
 #[tauri::command]
-pub async fn report_bug(title: String, description: String, screenshot: Option<String>) -> Result<(), String> {
+pub async fn report_bug(ctx: Ctxs<'_>, title: String, description: String, screenshot: Option<String>) -> Result<(), String> {
+    if screenshot.as_deref().is_some_and(|s| !ctx.granted.has(s)) {
+        return Err("Choisis la capture avec le bouton de la fenêtre.".into());
+    }
     blocking(move || crate::report::send(&title, &description, screenshot.as_deref())).await?
 }
 
@@ -243,16 +250,35 @@ pub async fn set_presence(ctx: Ctxs<'_>, game_id: Option<String>, start: u64) ->
 
 #[tauri::command]
 pub fn load_state(ctx: Ctxs<'_>) -> Result<serde_json::Value, String> {
-    let v = state::load_state(&ctx.paths.state_file())?;
+    let file = ctx.paths.state_file();
+    let mut v = state::load_state(&file)?;
+    migrate_grid_key(&file, &mut v);
+    ctx.granted.trust_state(&v);
     ctx.known.set_manual_from_state(&v);
     Ok(v)
 }
 
+/// Les versions d'avant la 1.2.19 gardaient la clé SteamGridDB en clair dans state.json :
+/// elle passe dans le coffre du système et disparaît du fichier (et de sa copie de secours).
+fn migrate_grid_key(file: &std::path::Path, v: &mut serde_json::Value) {
+    let Some(prefs) = v.get_mut("prefs").and_then(|p| p.as_object_mut()) else { return };
+    let Some(key) = prefs.get("steamGridDbKey").and_then(|k| k.as_str()).map(|k| k.trim().to_string()) else { return };
+    if !key.is_empty() && crate::accounts::set_steamgriddb_key(&key).is_err() {
+        return; // coffre indisponible : on réessaiera au prochain démarrage
+    }
+    prefs.remove("steamGridDbKey");
+    prefs.insert("steamGridDb".into(), (!key.is_empty()).into());
+    if let Err(e) = state::save_state(file, v).and_then(|_| state::save_state(&state::state_backup(file), v)) {
+        log::warn!("clé SteamGridDB retirée de state.json : enregistrement impossible : {e}");
+    }
+}
+
 #[tauri::command]
-pub fn save_state(ctx: Ctxs<'_>, state: serde_json::Value) -> Result<(), String> {
+pub fn save_state(ctx: Ctxs<'_>, mut state: serde_json::Value) -> Result<(), String> {
     if !state.is_object() {
         return Err("État invalide.".into());
     }
+    ctx.granted.sanitize(&mut state);
     ctx.known.set_manual_from_state(&state);
     state::save_state(&ctx.paths.state_file(), &state)
 }
@@ -443,15 +469,20 @@ pub async fn image(ctx: Ctxs<'_>, url: String) -> Result<Option<String>, String>
 
 /// Jaquette et bannière d'un jeu connu, trouvées automatiquement (jamais d'erreur : vide si rien).
 #[tauri::command]
-pub async fn find_artwork(
-    ctx: Ctxs<'_>,
-    game_id: String,
-    steam_grid_key: Option<String>,
-    refresh: bool,
-) -> Result<Artwork, String> {
+pub async fn find_artwork(ctx: Ctxs<'_>, game_id: String, refresh: bool) -> Result<Artwork, String> {
     let Some(game) = ctx.known.get(&game_id) else { return Ok(Artwork::default()) };
     let aw = ctx.artwork.clone();
-    blocking(move || aw.find(&game, steam_grid_key.as_deref(), refresh)).await
+    blocking(move || {
+        let key = crate::accounts::steamgriddb_key();
+        aw.find(&game, key.as_deref(), refresh)
+    })
+    .await
+}
+
+/// Enregistre la clé API SteamGridDB dans le coffre du système (vide : la retire).
+#[tauri::command]
+pub async fn set_steamgriddb_key(key: String) -> Result<(), String> {
+    blocking(move || crate::accounts::set_steamgriddb_key(&key)).await?
 }
 
 /// Genre d'un jeu (API appdetails de Steam, en cache). Jamais d'erreur.
@@ -490,8 +521,55 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn import_cover(ctx: Ctxs<'_>, game_id: String, path: String) -> Result<String, String> {
+    if !ctx.granted.has(&path) {
+        return Err("Choisis l'image avec le bouton de la fenêtre.".into());
+    }
     let covers = ctx.paths.covers.clone();
     blocking(move || art::import_cover(&covers, &game_id, &path).map(|p| p.to_string_lossy().into_owned())).await?
+}
+
+/// Boîte de choix d'un fichier ou d'un dossier, ouverte par le backend : ce qui y est choisi
+/// devient un chemin autorisé (`state::Granted`). Le frontend n'a pas accès aux boîtes de
+/// choix lui-même.
+async fn pick(app: AppHandle, ctx: Ctxs<'_>, title: &'static str, filter: Option<(&'static str, &'static [&'static str])>, folder: bool) -> Result<Option<String>, String> {
+    use tauri::Manager;
+    use tauri_plugin_dialog::DialogExt;
+    let path = blocking(move || {
+        let mut d = app.dialog().file().set_title(title);
+        if let Some(w) = app.get_webview_window("main") {
+            d = d.set_parent(&w);
+        }
+        if let Some((name, ext)) = filter {
+            d = d.add_filter(name, ext);
+        }
+        let picked = if folder { d.blocking_pick_folder() } else { d.blocking_pick_file() };
+        picked.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned())
+    })
+    .await?;
+    let Some(path) = path else { return Ok(None) };
+    if !state::local_path(&path) {
+        return Err("Choisis un fichier sur ce PC (pas sur un partage réseau).".into());
+    }
+    ctx.granted.add(&path);
+    Ok(Some(path))
+}
+
+#[tauri::command]
+pub async fn pick_exe(app: AppHandle, ctx: Ctxs<'_>) -> Result<Option<String>, String> {
+    // Linux : les binaires des jeux n'ont souvent pas d'extension, pas de filtre.
+    let filter: Option<(&str, &[&str])> =
+        (!cfg!(target_os = "linux")).then_some(("Jeux et raccourcis", &["exe", "lnk", "url", "bat", "app"]));
+    pick(app, ctx, "Choisir le jeu", filter, false).await
+}
+
+#[tauri::command]
+pub async fn pick_folder(app: AppHandle, ctx: Ctxs<'_>) -> Result<Option<String>, String> {
+    pick(app, ctx, "Choisir un dossier de jeux", None, true).await
+}
+
+#[tauri::command]
+pub async fn pick_image(app: AppHandle, ctx: Ctxs<'_>) -> Result<Option<String>, String> {
+    pick(app, ctx, "Choisir une image", Some(("Images", &["jpg", "jpeg", "png", "webp"])), false).await
 }
 
 /// Hangar MC : `%APPDATA%\.hangarmc` à côté du `.minecraft` officiel (Mac : `hangarmc` à côté

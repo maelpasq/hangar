@@ -160,6 +160,31 @@ fn delete_secret(store: &str) {
     }
 }
 
+/// Clé API SteamGridDB lue dans le coffre (une fois, puis gardée en mémoire : la recherche
+/// des jaquettes la demande pour chaque jeu).
+static GRID_KEY: Mutex<Option<Option<String>>> = Mutex::new(None);
+
+/// Clé API SteamGridDB : dans le coffre du système, jamais dans state.json.
+pub fn steamgriddb_key() -> Option<String> {
+    let mut k = GRID_KEY.lock().unwrap_or_else(|p| p.into_inner());
+    k.get_or_insert_with(|| secret("steamgriddb")).clone()
+}
+
+/// Enregistre (ou retire, si vide) la clé API SteamGridDB.
+pub fn set_steamgriddb_key(key: &str) -> Result<(), String> {
+    let key = key.trim();
+    if !key.chars().all(|c| c.is_ascii_alphanumeric()) || key.len() > 128 {
+        return Err("Cette clé SteamGridDB n'a pas le bon format.".into());
+    }
+    if key.is_empty() {
+        delete_secret("steamgriddb");
+    } else {
+        set_secret("steamgriddb", key)?;
+    }
+    *GRID_KEY.lock().unwrap_or_else(|p| p.into_inner()) = Some((!key.is_empty()).then(|| key.to_string()));
+    Ok(())
+}
+
 // ─────────────────────────── Comptes ───────────────────────────
 
 /// Résultat d'une synchronisation. `secret` : nouveau jeton de rafraîchissement à garder.

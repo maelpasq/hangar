@@ -145,6 +145,7 @@ fn main() {
                 xbox_busy: Arc::new(AtomicBool::new(false)),
                 accounts: Arc::new(accounts::Accounts::new(&paths.config)),
                 presence: Arc::default(),
+                granted: state::Granted::default(),
                 paths,
             };
             app.manage(ctx);
@@ -181,6 +182,10 @@ fn main() {
             commands::search_steam,
             commands::image,
             commands::find_artwork,
+            commands::set_steamgriddb_key,
+            commands::pick_exe,
+            commands::pick_folder,
+            commands::pick_image,
             commands::game_info,
             commands::exe_icon,
             commands::folder_size,
