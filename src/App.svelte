@@ -134,8 +134,9 @@
       offs.push(a, b, d, c, e, f, g);
       if (!alive) offs.forEach((o) => o());
       await library.load();
+      if (library.loadError) ui.toast(library.loadError, { error: true });
       // Configuration en quatre étapes : à l'installation, et une fois pour qui avait déjà Hangar.
-      if (!ui.modal && !library.state.onboarded) ui.modal = { kind: 'onboarding' };
+      else if (!ui.modal && !library.state.onboarded) ui.modal = { kind: 'onboarding' };
       await rescan();
       void updater.check(true);
     })();

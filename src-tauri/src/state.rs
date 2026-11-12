@@ -26,27 +26,97 @@ impl Paths {
     }
 }
 
-/// Écrit un fichier de façon atomique : fichier temporaire puis renommage.
+/// Écrit un fichier de façon atomique : fichier temporaire propre à cette écriture, forcé sur
+/// le disque, puis renommage. Le nom du temporaire reprend le nom complet du fichier (deux
+/// fichiers `java.dll` et `java.exe` écrits en même temps ne partagent pas `java.tmp`) et un
+/// compteur (deux écritures du même fichier en même temps ne se mélangent pas).
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(0);
     if let Some(d) = path.parent() {
         fs::create_dir_all(d).map_err(|e| format!("Impossible de créer {} : {e}", d.display()))?;
     }
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, bytes).map_err(|e| format!("Écriture impossible : {e}"))?;
-    fs::rename(&tmp, path).map_err(|e| format!("Enregistrement impossible : {e}"))
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = path.with_file_name(format!("{name}.{}-{}.tmp", std::process::id(), NEXT.fetch_add(1, Ordering::Relaxed)));
+    let written = fs::File::create(&tmp).and_then(|mut f| {
+        f.write_all(bytes)?;
+        f.sync_all()
+    });
+    if let Err(e) = written {
+        let _ = fs::remove_file(&tmp);
+        return Err(format!("Écriture impossible : {e}"));
+    }
+    // Sous Windows, le renommage échoue un instant si le fichier visé est ouvert ailleurs
+    // (antivirus, autre écriture du même fichier) : quelques nouveaux essais.
+    let mut tries = 0;
+    loop {
+        match fs::rename(&tmp, path) {
+            Ok(()) => return Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && tries < 20 => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(25));
+            }
+            Err(e) => {
+                let _ = fs::remove_file(&tmp);
+                return Err(format!("Enregistrement impossible : {e}"));
+            }
+        }
+    }
 }
 
-/// Lit state.json. Absent : `{}`. Corrompu : mis de côté (jamais supprimé) puis `{}`.
-pub fn load_state(file: &Path) -> serde_json::Value {
-    let empty = serde_json::json!({});
-    let Ok(text) = fs::read_to_string(file) else { return empty };
-    match serde_json::from_str::<serde_json::Value>(&text) {
-        Ok(v) if v.is_object() => v,
-        _ => {
-            let backup = file.with_extension(format!("corrompu-{}.json", crate::tracker::now_ms()));
-            log::error!("state.json illisible, copie de côté dans {}", backup.display());
-            let _ = fs::rename(file, backup);
-            empty
+/// Copie de secours de state.json : le dernier état lu sans erreur.
+fn state_backup(file: &Path) -> PathBuf {
+    file.with_extension("json.bak")
+}
+
+fn parse_state(text: &str) -> Option<serde_json::Value> {
+    serde_json::from_str::<serde_json::Value>(text).ok().filter(|v| v.is_object())
+}
+
+/// Lit state.json.
+/// - Absent : la copie de secours si elle existe, sinon `{}` (première ouverture).
+/// - Illisible (verrouillé par un antivirus, OneDrive...) : nouvel essai pendant quelques
+///   secondes, puis une erreur. Jamais `{}` : le frontend croirait à une première ouverture et
+///   sa prochaine sauvegarde écraserait les vraies données.
+/// - Corrompu : mis de côté (jamais supprimé), puis la copie de secours, sinon `{}`.
+///
+/// Un état lu sans erreur devient la nouvelle copie de secours.
+pub fn load_state(file: &Path) -> Result<serde_json::Value, String> {
+    let backup = || {
+        let v = fs::read_to_string(state_backup(file)).ok().and_then(|t| parse_state(&t));
+        if v.is_some() {
+            log::warn!("state.json repris depuis sa copie de secours");
+        }
+        v.unwrap_or_else(|| serde_json::json!({}))
+    };
+    let mut tries = 0;
+    let text = loop {
+        match fs::read(file) {
+            Ok(bytes) => break bytes,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(backup()),
+            Err(e) if tries >= 10 => {
+                log::error!("state.json illisible : {e}");
+                return Err("Tes données Hangar n'ont pas pu être lues (fichier bloqué par un autre programme). Rien ne sera enregistré avant le prochain démarrage de Hangar.".into());
+            }
+            Err(_) => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(300));
+            }
+        }
+    };
+    match std::str::from_utf8(&text).ok().and_then(parse_state) {
+        Some(v) => {
+            if let Err(e) = write_atomic(&state_backup(file), &text) {
+                log::warn!("copie de secours de state.json impossible : {e}");
+            }
+            Ok(v)
+        }
+        None => {
+            let aside = file.with_extension(format!("corrompu-{}.json", crate::tracker::now_ms()));
+            log::error!("state.json illisible, copie de côté dans {}", aside.display());
+            let _ = fs::rename(file, aside);
+            Ok(backup())
         }
     }
 }
@@ -128,6 +198,21 @@ impl Known {
         manual.values().chain(scanned.values()).any(owns)
     }
 
+    /// Dossiers d'installation de tous les jeux connus sauf `except` : une désinstallation ne
+    /// doit jamais supprimer un dossier qui en contient un.
+    pub fn install_dirs_except(&self, except: &str) -> Vec<std::path::PathBuf> {
+        let manual = self.manual.lock().unwrap_or_else(|p| p.into_inner());
+        let scanned = self.scanned.lock().unwrap_or_else(|p| p.into_inner());
+        manual
+            .values()
+            .chain(scanned.values())
+            .filter(|g| g.id != except)
+            .filter_map(|g| g.install_dir.as_deref())
+            .filter(|d| !d.trim().is_empty())
+            .map(std::path::PathBuf::from)
+            .collect()
+    }
+
     pub fn get(&self, id: &str) -> Option<Game> {
         if let Some(g) = self.manual.lock().unwrap_or_else(|p| p.into_inner()).get(id) {
             return Some(g.clone());
@@ -149,14 +234,52 @@ mod tests {
     fn etat_atomique_et_corrompu() {
         let t = tempfile::tempdir().unwrap();
         let f = t.path().join("state.json");
-        assert_eq!(load_state(&f), serde_json::json!({}));
+        assert_eq!(load_state(&f).unwrap(), serde_json::json!({}));
         save_state(&f, &serde_json::json!({ "version": 1, "favorites": ["steam:1"] })).unwrap();
-        assert_eq!(load_state(&f)["favorites"][0], "steam:1");
-        assert!(!f.with_extension("tmp").exists());
+        assert_eq!(load_state(&f).unwrap()["favorites"][0], "steam:1");
+        let names = || {
+            let mut v: Vec<String> =
+                fs::read_dir(t.path()).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+            v.sort();
+            v
+        };
+        // Aucun temporaire ne traîne, et l'état lu est devenu la copie de secours.
+        assert_eq!(names(), ["state.json", "state.json.bak"]);
         fs::write(&f, "{ cassé").unwrap();
-        assert_eq!(load_state(&f), serde_json::json!({}));
-        // Le fichier corrompu est mis de côté, pas supprimé.
-        assert_eq!(fs::read_dir(t.path()).unwrap().count(), 1);
+        // Corrompu : mis de côté (pas supprimé), et la copie de secours reprend la main.
+        assert_eq!(load_state(&f).unwrap()["favorites"][0], "steam:1");
+        assert_eq!(names().len(), 2);
+        assert!(names().iter().any(|n| n.contains("corrompu")));
+        // Absent mais copie de secours présente : on la reprend aussi.
+        assert_eq!(load_state(&f).unwrap()["favorites"][0], "steam:1");
+    }
+
+    #[test]
+    fn etat_illisible_jamais_vide() {
+        let t = tempfile::tempdir().unwrap();
+        // Un dossier à la place du fichier : la lecture échoue sans que le fichier soit absent.
+        let f = t.path().join("state.json");
+        fs::create_dir(&f).unwrap();
+        assert!(load_state(&f).is_err());
+    }
+
+    #[test]
+    fn ecritures_simultanees() {
+        let t = tempfile::tempdir().unwrap();
+        let dir = t.path().to_path_buf();
+        let handles: Vec<_> = (0..16)
+            .map(|i| {
+                let dir = dir.clone();
+                std::thread::spawn(move || {
+                    let name = if i % 2 == 0 { "java.dll" } else { "java.exe" };
+                    write_atomic(&dir.join(name), name.as_bytes()).unwrap();
+                })
+            })
+            .collect();
+        handles.into_iter().for_each(|h| h.join().unwrap());
+        assert_eq!(fs::read_to_string(dir.join("java.dll")).unwrap(), "java.dll");
+        assert_eq!(fs::read_to_string(dir.join("java.exe")).unwrap(), "java.exe");
+        assert_eq!(fs::read_dir(&dir).unwrap().count(), 2, "aucun temporaire ne reste");
     }
 
     #[test]

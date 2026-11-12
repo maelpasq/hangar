@@ -14,6 +14,8 @@ class Library {
   state = $state<PersistedState>(defaultState());
   /** Première ouverture de Hangar (aucun état sur le disque). */
   fresh = $state(false);
+  /** Message si l'état enregistré n'a pas pu être lu (rien n'est alors enregistré). */
+  loadError = $state<string | null>(null);
   scanning = $state(false);
   /** Vrai dès que la bibliothèque (cache ou scan) est affichable. */
   ready = $state(false);
@@ -97,8 +99,13 @@ class Library {
     return null;
   }
 
+  /** L'état enregistré a été lu : avant (ou si la lecture a échoué), enregistrer écraserait
+   * les vraies données avec l'état par défaut. */
+  private loaded = false;
+
   /** Enregistre l'état (regroupe les écritures rapprochées). */
   save(): void {
+    if (!this.loaded) return;
     clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       api.saveState($state.snapshot(this.state)).catch((e) => console.error('save_state', e));
@@ -111,8 +118,12 @@ class Library {
       // Pas d'état enregistré : première ouverture après l'installation.
       this.fresh = !raw || typeof raw !== 'object' || !Object.keys(raw).length;
       this.state = normalizeState(raw);
+      this.loaded = true;
     } catch (e) {
+      // Fichier bloqué par un autre programme : on garde l'état par défaut en mémoire sans
+      // jamais l'enregistrer, pour ne pas écraser les vraies données.
       console.error('load_state', e);
+      this.loadError = String(e).replace(/^Error:\s*/, '');
     }
     try {
       const cached = await api.loadLibrary();

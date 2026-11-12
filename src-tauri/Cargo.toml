@@ -46,7 +46,9 @@ tempfile = "3"
 opt-level = "s"
 lto = "thin"
 strip = true
-panic = "abort"
+# Pas « abort » : le scan rattrape la panique d'un détecteur (`catch_unwind`) au lieu de
+# fermer Hangar à chaque démarrage à cause d'un fichier de store abîmé.
+panic = "unwind"
 
 # glib 0.18 (imposé par Tauri) avec le correctif de RUSTSEC-2024-0429, voir patches/README.md.
 [patch.crates-io]

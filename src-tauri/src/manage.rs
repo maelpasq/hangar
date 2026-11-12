@@ -17,16 +17,29 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-/// Nom de dossier sûr : un seul niveau, sans caractère interdit par Windows.
+/// Noms de périphériques que Windows réserve, même suivis d'une extension (`nul.txt`).
+const RESERVED_NAMES: &[&str] = &[
+    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1",
+    "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
+
+/// Nom de dossier sûr : un seul niveau, sans caractère interdit par Windows, et que Windows
+/// ne réécrit pas. Windows retire les points et espaces finaux : `...` deviendrait le dossier
+/// parent, `Jeu.` un autre dossier que celui qu'on croit viser.
 pub fn valid_dir_name(d: &str) -> bool {
-    let d = d.trim();
-    !d.is_empty() && d != "." && d != ".." && !d.contains(['/', '\\', ':', '<', '>', '"', '|', '?', '*'])
+    let stem = d.split('.').next().unwrap_or("").trim_end().to_ascii_lowercase();
+    !d.is_empty()
+        && d.trim() == d
+        && !d.ends_with('.')
+        && !d.contains(['/', '\\', ':', '<', '>', '"', '|', '?', '*'])
+        && !d.chars().any(char::is_control)
+        && !RESERVED_NAMES.contains(&stem.as_str())
 }
 
 /// Nom de dossier tiré du nom du jeu quand Steam n'en donne pas.
 fn dir_from_name(name: &str) -> String {
     let d: String = name.chars().filter(|c| !"/\\:<>\"|?*".contains(*c)).collect();
-    let d = d.trim().trim_end_matches('.').to_string();
+    let d = d.trim().trim_end_matches(['.', ' ']).to_string();
     if valid_dir_name(&d) { d } else { "Jeu".into() }
 }
 
@@ -319,7 +332,8 @@ fn remove_dir(d: &Path) -> Result<(), String> {
     }
 }
 
-pub fn steam_uninstall(g: &Game) -> Result<String, String> {
+/// `others` : dossiers des autres jeux connus, qu'une désinstallation ne doit jamais emporter.
+pub fn steam_uninstall(g: &Game, others: &[PathBuf]) -> Result<String, String> {
     let id = g.steam_app_id.ok_or("Ce jeu n'a pas d'identifiant Steam.")?;
     let root = steam_root().ok_or("Steam n'est pas installé.")?;
     let (manifest, lib) = steam_manifest_path(&root, id).ok_or("Steam ne connaît pas ce jeu : actualise la bibliothèque.")?;
@@ -330,6 +344,12 @@ pub fn steam_uninstall(g: &Game) -> Result<String, String> {
         .filter(|d| valid_dir_name(d))
         .ok_or("Dossier du jeu illisible dans le manifeste Steam.")?;
     let game_dir = lib.join("common").join(dir);
+    // Le dossier doit être celui vu au scan, et passer les mêmes garde-fous qu'Epic.
+    let scanned = g.install_dir.as_deref().map(Path::new);
+    if scanned.is_none_or(|s| !same_path(s, &game_dir)) || !deletable_game_dir(&game_dir, others) {
+        log::warn!("désinstallation Steam de {id} refusée : {}", game_dir.display());
+        return Err("Dossier du jeu refusé par sécurité : désinstalle-le depuis Steam.".into());
+    }
     with_steam_closed(&root, false, || {
         remove_dir(&game_dir)?;
         fs::remove_file(&manifest).map_err(|e| format!("Impossible de retirer le jeu de Steam : {e}"))?;
@@ -340,18 +360,83 @@ pub fn steam_uninstall(g: &Game) -> Result<String, String> {
     Ok(format!("{} est désinstallé.", g.name))
 }
 
-/// Dossier qu'on accepte de supprimer : absolu, sous une racine, et pas un dossier système
-/// ou le dossier commun des jeux Epic.
+/// Chemin comparable : séparateurs unifiés, sans séparateur final, sans casse sous Windows.
+fn path_key(p: &Path) -> String {
+    let s = p.to_string_lossy().replace('/', "\\");
+    let s = s.trim_end_matches('\\');
+    if cfg!(windows) { s.to_lowercase() } else { s.to_string() }
+}
+
+fn same_path(a: &Path, b: &Path) -> bool {
+    path_key(a) == path_key(b)
+}
+
+/// `parent` contient-il `child` (strictement) ?
+fn strictly_contains(parent: &Path, child: &Path) -> bool {
+    let (p, c) = (path_key(parent), path_key(child));
+    c.len() > p.len() && c.starts_with(&p) && c[p.len()..].starts_with('\\')
+}
+
+/// Dossiers de l'utilisateur et du système qu'un jeu ne peut pas être, ni contenir.
+fn protected_dirs() -> Vec<PathBuf> {
+    let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")).map(PathBuf::from);
+    let mut dirs: Vec<PathBuf> = [
+        "USERPROFILE", "HOME", "APPDATA", "LOCALAPPDATA", "ProgramData", "ProgramFiles", "ProgramFiles(x86)",
+        "ProgramW6432", "SystemRoot", "PUBLIC", "OneDrive", "TEMP",
+    ]
+    .iter()
+    .filter_map(std::env::var_os)
+    .map(PathBuf::from)
+    .collect();
+    if let Some(h) = home {
+        for d in [
+            "Desktop", "Documents", "Downloads", "Pictures", "Music", "Videos", "Saved Games", "OneDrive", "AppData",
+            "Library", "Applications",
+        ] {
+            dirs.push(h.join(d));
+        }
+    }
+    dirs
+}
+
+/// Forme du chemin acceptable pour une suppression : absolu, sur un disque local (pas de
+/// partage réseau `\\serveur` ni de chemin `\\?\`), au moins un dossier sous la racine, et
+/// aucun morceau que Windows réécrirait (`..`, `...`, `Jeu.`, `Jeu `).
 pub fn safe_game_dir(p: &Path) -> bool {
-    const SYSTEM: &[&str] =
-        &["program files", "program files (x86)", "programdata", "users", "windows", "epic games", "games"];
+    use std::path::{Component, Prefix};
+    const SYSTEM: &[&str] = &[
+        "program files", "program files (x86)", "programdata", "users", "windows", "epic games", "games", "jeux",
+        "steam", "steamlibrary", "steamapps", "common", "xboxgames", "gog games", "ubisoft", "ea games", "riot games",
+    ];
+    let mut comps = p.components();
+    let disk = match comps.next() {
+        Some(Component::Prefix(x)) => matches!(x.kind(), Prefix::Disk(_)) && comps.next() == Some(Component::RootDir),
+        Some(Component::RootDir) => !cfg!(windows),
+        _ => false,
+    };
+    let mut depth = 0;
+    let clean = comps.all(|c| match c {
+        Component::Normal(n) => {
+            depth += 1;
+            let n = n.to_string_lossy();
+            !n.is_empty() && !n.ends_with(['.', ' '])
+        }
+        _ => false,
+    });
     let name = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
-    let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"));
-    p.is_absolute()
-        && p.parent().is_some()
-        && !name.is_empty()
-        && !SYSTEM.contains(&name.as_str())
-        && home.is_none_or(|h| Path::new(&h) != p)
+    disk && clean && depth >= 1 && p.is_absolute() && !SYSTEM.contains(&name.as_str())
+}
+
+/// Dossier qu'on accepte de supprimer : forme sûre (`safe_game_dir`), ni un dossier de
+/// l'utilisateur ou du système, ni un dossier qui les contient, ni un dossier juste sous le
+/// dossier personnel (Documents, AppData...), ni un dossier qui contient un autre jeu connu.
+fn deletable_game_dir(p: &Path, others: &[PathBuf]) -> bool {
+    let protected = protected_dirs();
+    let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")).map(PathBuf::from);
+    safe_game_dir(p)
+        && !protected.iter().any(|d| same_path(d, p) || strictly_contains(p, d))
+        && home.is_none_or(|h| p.parent().is_none_or(|parent| !same_path(parent, &h)))
+        && !others.iter().any(|o| strictly_contains(p, o))
 }
 
 /// Retire un jeu de `LauncherInstalled.dat` (liste des installations du launcher Epic).
@@ -505,14 +590,43 @@ pub fn epic_install(g: &Game, dir: Option<PathBuf>) -> Result<String, String> {
     Ok(msg)
 }
 
-pub fn epic_uninstall(g: &Game) -> Result<String, String> {
+/// Dossier qu'un manifeste Epic permet de supprimer. Le dossier des manifestes est modifiable
+/// par tous les comptes du PC : on n'y croit que s'il n'y a qu'un manifeste pour ce jeu, que son
+/// dossier est celui vu au scan, qu'il passe `deletable_game_dir` et qu'il contient bien
+/// l'exécutable annoncé.
+fn epic_location(items: &[&serde_json::Value], scanned: Option<&str>, others: &[PathBuf]) -> Result<PathBuf, String> {
+    let refused = "Dossier du jeu refusé par sécurité : désinstalle-le depuis Epic Games.";
+    let [item] = items else {
+        return Err(if items.is_empty() {
+            "Epic Games ne connaît pas ce jeu : actualise la bibliothèque.".into()
+        } else {
+            "Epic Games a plusieurs installations de ce jeu : désinstalle-le depuis Epic Games.".into()
+        });
+    };
+    let location = item["InstallLocation"].as_str().map(PathBuf::from).ok_or(refused)?;
+    if scanned.is_none_or(|s| !same_path(Path::new(s), &location)) || !deletable_game_dir(&location, others) {
+        return Err(refused.into());
+    }
+    let exe = item["LaunchExecutable"].as_str().map(Path::new).filter(|e| {
+        !e.as_os_str().is_empty() && e.components().all(|c| matches!(c, std::path::Component::Normal(_)))
+    });
+    if !exe.is_some_and(|e| location.join(e).is_file()) {
+        return Err(refused.into());
+    }
+    Ok(location)
+}
+
+/// `others` : dossiers des autres jeux connus, qu'une désinstallation ne doit jamais emporter.
+pub fn epic_uninstall(g: &Game, others: &[PathBuf]) -> Result<String, String> {
     let app = g.id.strip_prefix("epic:").filter(|a| !a.is_empty()).ok_or("Identifiant Epic invalide.")?;
     let base = crate::scanner::program_data().join("Epic");
-    let (item, location) = epic_items()
-        .into_iter()
-        .find_map(|(p, v)| (v["AppName"].as_str()? == app).then(|| (p, v["InstallLocation"].as_str().map(PathBuf::from))))
-        .ok_or("Epic Games ne connaît pas ce jeu : actualise la bibliothèque.")?;
-    let location = location.filter(|l| safe_game_dir(l)).ok_or("Dossier du jeu refusé par sécurité.")?;
+    let items: Vec<(PathBuf, serde_json::Value)> =
+        epic_items().into_iter().filter(|(_, v)| v["AppName"].as_str() == Some(app)).collect();
+    let values: Vec<&serde_json::Value> = items.iter().map(|(_, v)| v).collect();
+    let location = epic_location(&values, g.install_dir.as_deref(), others).inspect_err(|e| {
+        log::warn!("désinstallation Epic de {app} refusée : {e}");
+    })?;
+    let item = items[0].0.clone();
     if epic_busy() {
         return Err("Epic Games télécharge un jeu : attends la fin du téléchargement puis réessaie.".into());
     }
@@ -569,19 +683,75 @@ mod tests {
     #[test]
     fn noms_et_dossiers_surs() {
         assert!(valid_dir_name("Portal 2"));
-        for bad in ["", " ", "..", "a\\b", "a/b", "C:"] {
+        assert!(valid_dir_name(".hack"));
+        for bad in
+            ["", " ", ".", "..", "...", ". .", "....", "Jeu.", "Jeu ", " Jeu", "a\\b", "a/b", "C:", "nul", "CON.txt", "com1"]
+        {
             assert!(!valid_dir_name(bad), "{bad:?}");
         }
         assert_eq!(dir_from_name("Half-Life: Alyx?"), "Half-Life Alyx");
         assert_eq!(dir_from_name("???"), "Jeu");
+        assert_eq!(dir_from_name("Jeu ."), "Jeu");
         if cfg!(windows) {
             assert!(safe_game_dir(Path::new(r"C:\Program Files\Epic Games\Fortnite")));
             assert!(safe_game_dir(Path::new(r"D:\Fortnite")));
-            assert!(!safe_game_dir(Path::new(r"C:\")));
-            assert!(!safe_game_dir(Path::new(r"C:\Program Files\Epic Games")));
-            assert!(!safe_game_dir(Path::new(r"C:\Users")));
-            assert!(!safe_game_dir(Path::new("Fortnite")));
+            for bad in [
+                r"C:\",
+                r"C:\Program Files\Epic Games",
+                r"C:\Users",
+                "Fortnite",
+                r"C:\Users\x\...",
+                r"C:\Jeux\Fortnite.",
+                r"C:\Jeux\Fortnite ",
+                r"C:\Jeux\..\Windows",
+                r"\\serveur\partage\Fortnite",
+                r"\\?\C:\Jeux\Fortnite",
+                r"D:\SteamLibrary",
+                r"D:\Jeux",
+            ] {
+                assert!(!safe_game_dir(Path::new(bad)), "{bad:?}");
+            }
         }
+    }
+
+    #[test]
+    fn dossiers_proteges_jamais_supprimes() {
+        if !cfg!(windows) {
+            return;
+        }
+        let home = PathBuf::from(std::env::var_os("USERPROFILE").unwrap());
+        let others = [PathBuf::from(r"D:\Bibliotheque\Portal 2")];
+        assert!(deletable_game_dir(Path::new(r"D:\Epic\Fortnite"), &others));
+        assert!(deletable_game_dir(&home.join(r"Jeux\Fortnite"), &others), "un jeu rangé sous le profil reste supprimable");
+        for bad in [home.clone(), home.join("Documents"), home.join("AppData"), home.join("Nimporte")] {
+            assert!(!deletable_game_dir(&bad, &others), "{}", bad.display());
+        }
+        assert!(!deletable_game_dir(&home.join(r"AppData\Local"), &others));
+        assert!(!deletable_game_dir(Path::new(r"D:\Bibliotheque"), &others), "contient un autre jeu");
+        assert!(deletable_game_dir(Path::new(r"D:\Bibliotheque\Portal 2"), &others), "même dossier qu'une autre entrée");
+    }
+
+    #[test]
+    fn manifeste_epic_verifie() {
+        if !cfg!(windows) {
+            return;
+        }
+        let t = tempfile::tempdir().unwrap();
+        let game = t.path().join("Fortnite");
+        fs::create_dir_all(game.join("Bin")).unwrap();
+        fs::write(game.join(r"Bin\Fortnite.exe"), b"").unwrap();
+        let loc = game.to_string_lossy().into_owned();
+        let item = |loc: &str, exe: &str| serde_json::json!({ "InstallLocation": loc, "LaunchExecutable": exe });
+        let ok = item(&loc, r"Bin\Fortnite.exe");
+        assert_eq!(epic_location(&[&ok], Some(&loc), &[]).unwrap(), game);
+        assert!(epic_location(&[], Some(&loc), &[]).is_err(), "aucun manifeste");
+        assert!(epic_location(&[&ok, &ok], Some(&loc), &[]).is_err(), "deux manifestes pour le même jeu");
+        assert!(epic_location(&[&ok], None, &[]).is_err(), "dossier inconnu au scan");
+        let docs = t.path().join("Documents").to_string_lossy().into_owned();
+        assert!(epic_location(&[&item(&docs, r"Bin\Fortnite.exe")], Some(&loc), &[]).is_err(), "autre dossier qu'au scan");
+        assert!(epic_location(&[&item(&loc, r"Bin\Absent.exe")], Some(&loc), &[]).is_err(), "exécutable absent");
+        assert!(epic_location(&[&item(&loc, r"..\Fortnite\Bin\Fortnite.exe")], Some(&loc), &[]).is_err());
+        assert!(epic_location(&[&item(&loc, "")], Some(&loc), &[]).is_err());
     }
 
     #[test]

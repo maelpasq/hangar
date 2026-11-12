@@ -242,10 +242,10 @@ pub async fn set_presence(ctx: Ctxs<'_>, game_id: Option<String>, start: u64) ->
 }
 
 #[tauri::command]
-pub fn load_state(ctx: Ctxs<'_>) -> serde_json::Value {
-    let v = state::load_state(&ctx.paths.state_file());
+pub fn load_state(ctx: Ctxs<'_>) -> Result<serde_json::Value, String> {
+    let v = state::load_state(&ctx.paths.state_file())?;
     ctx.known.set_manual_from_state(&v);
-    v
+    Ok(v)
 }
 
 #[tauri::command]
@@ -393,8 +393,10 @@ pub async fn open_folder(ctx: Ctxs<'_>, path: String) -> Result<(), String> {
     blocking(move || launcher::open_folder(&path)).await?
 }
 
-/// Ouvre la désinstallation d'un jeu installé dans son launcher (ou les Applications de
-/// Windows). Hangar ne supprime rien lui-même. Renvoie le message à afficher.
+/// Désinstalle un jeu. Steam et Epic (Windows) : Hangar supprime lui-même le dossier du jeu et
+/// ses manifestes, avec les garde-fous de `manage.rs`. GOG : désinstalleur silencieux. Les
+/// autres : la désinstallation du launcher ou des Applications de Windows. Renvoie le message
+/// à afficher.
 #[tauri::command]
 pub async fn uninstall_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, String> {
     let Some(game) = ctx.known.get(&game_id).filter(|g| !g.not_installed) else {
@@ -403,7 +405,8 @@ pub async fn uninstall_game(ctx: Ctxs<'_>, game_id: String) -> Result<String, St
     if ctx.tracker.is_tracked(&game_id) {
         return Err("Ferme le jeu avant de le désinstaller.".into());
     }
-    let msg = blocking(move || launcher::uninstall(&game)).await??;
+    let others = ctx.known.install_dirs_except(&game_id);
+    let msg = blocking(move || launcher::uninstall(&game, &others)).await??;
     log::info!("désinstallation ouverte : {game_id}");
     Ok(msg)
 }

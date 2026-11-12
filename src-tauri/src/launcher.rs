@@ -210,11 +210,12 @@ fn silent_uninstaller(g: &crate::model::Game) -> Option<String> {
     (g.store == "gog" && exe.is_file()).then(|| exe.to_string_lossy().into_owned())
 }
 
-pub fn uninstall(g: &crate::model::Game) -> Result<String, String> {
+/// `others` : dossiers des autres jeux connus, que la suppression ne doit jamais emporter.
+pub fn uninstall(g: &crate::model::Game, others: &[std::path::PathBuf]) -> Result<String, String> {
     if cfg!(windows) {
         match g.store.as_str() {
-            "steam" => return crate::manage::steam_uninstall(g),
-            "epic" => return crate::manage::epic_uninstall(g),
+            "steam" => return crate::manage::steam_uninstall(g, others),
+            "epic" => return crate::manage::epic_uninstall(g, others),
             _ => {}
         }
     }
