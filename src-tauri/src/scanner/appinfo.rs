@@ -101,6 +101,10 @@ const DECK: u8 = 3;
 /// Parcourt un bloc KeyValues binaire et relève `common.name`, `common.type`, `config.installdir`
 /// et la compatibilité Linux.
 fn walk(r: &mut R, strs: Option<&[&[u8]]>, depth: usize, section: u8, app: &mut App) -> Option<()> {
+    // Fichier corrompu : pas de récursion sans fin (la fiche de ce jeu est ignorée).
+    if depth > 64 {
+        return None;
+    }
     loop {
         let t = r.u8()?;
         if t == 8 || t == 11 {

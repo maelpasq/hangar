@@ -9,7 +9,33 @@ on:
 permissions:
   contents: write
 jobs:
+  # Tests avant toute publication : build.yml ignore les commits « Version x.y.z ».
+  verify:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22, cache: npm }
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with: { toolchain: stable }
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          shared-key: release
+          workspaces: src-tauri -> target
+          save-if: false
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm run test
+      # Le frontend compilé est requis par tauri::generate_context! dans les tests Rust.
+      - run: npm run build:web
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test
   release:
+    needs: verify
     strategy:
       fail-fast: false
       matrix:

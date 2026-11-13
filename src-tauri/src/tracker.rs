@@ -16,6 +16,11 @@ use tauri::{AppHandle, Emitter};
 const SEARCH_EVERY: Duration = Duration::from_secs(2);
 const FOLLOW_EVERY: Duration = Duration::from_secs(5);
 const SEARCH_MAX: Duration = Duration::from_secs(90);
+/// Aucun passage depuis plus longtemps : le PC était en veille, la session s'arrête là.
+const SLEEP_GAP_MS: u64 = 60_000;
+/// La session en cours est envoyée au frontend au moins chaque minute : fermer Hangar
+/// ou éteindre le PC en pleine partie ne la perd plus.
+const CHECKPOINT_MS: u64 = 60_000;
 
 /// Processus des launchers : jamais considérés comme « le jeu ».
 const LAUNCHER_PROCESSES: &[&str] = &[
@@ -106,7 +111,7 @@ impl Spec {
 
 enum Phase {
     Searching { since: Instant },
-    Running { start: u64, last_seen: u64, pids: Vec<u32> },
+    Running { start: u64, last_seen: u64, saved: u64, pids: Vec<u32> },
 }
 
 struct Entry {
@@ -127,6 +132,33 @@ struct RunningEvent {
 struct EndedEvent {
     game_id: String,
     session: Option<Session>,
+}
+
+/// Point d'étape d'une session (le jeu tourne encore) : le frontend l'enregistre et la
+/// remplace par la suite (même jeu, même début).
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SessionEvent {
+    game_id: String,
+    session: Session,
+}
+
+/// Passage de suivi d'un jeu qui tourne encore : renvoie la session à enregistrer, s'il y en a une.
+fn follow(game_id: &str, start: &mut u64, last_seen: &mut u64, saved: &mut u64, now: u64) -> Option<Session> {
+    let out = if now.saturating_sub(*last_seen) > SLEEP_GAP_MS {
+        // Veille : la session s'arrête au dernier passage, une nouvelle commence au réveil.
+        let s = Session { game_id: game_id.to_string(), start: *start, end: *last_seen };
+        *start = now;
+        *saved = now;
+        Some(s)
+    } else if now.saturating_sub(*saved) >= CHECKPOINT_MS {
+        *saved = now;
+        Some(Session { game_id: game_id.to_string(), start: *start, end: now })
+    } else {
+        None
+    };
+    *last_seen = now;
+    out
 }
 
 pub struct Tracker {
@@ -192,6 +224,7 @@ impl Tracker {
                     let now = now_ms();
                     let mut running = vec![];
                     let mut ended = vec![];
+                    let mut steps = vec![];
                     {
                         let mut list = shared.lock().unwrap_or_else(|p| p.into_inner());
                         list.retain_mut(|e| {
@@ -204,7 +237,7 @@ impl Tracker {
                                 Phase::Searching { since } => {
                                     if let Some(&pid) = pids.first() {
                                         running.push(RunningEvent { game_id: e.game_id.clone(), pid });
-                                        e.phase = Phase::Running { start: now, last_seen: now, pids };
+                                        e.phase = Phase::Running { start: now, last_seen: now, saved: now, pids };
                                         true
                                     } else if since.elapsed() > SEARCH_MAX {
                                         log::info!("suivi : {} jamais détecté, abandon", e.game_id);
@@ -214,14 +247,16 @@ impl Tracker {
                                         true
                                     }
                                 }
-                                Phase::Running { start, last_seen, pids: old } => {
+                                Phase::Running { start, last_seen, saved, pids: old } => {
                                     if pids.is_empty() {
                                         let session =
                                             Session { game_id: e.game_id.clone(), start: *start, end: *last_seen };
                                         ended.push(EndedEvent { game_id: e.game_id.clone(), session: Some(session) });
                                         false
                                     } else {
-                                        *last_seen = now;
+                                        if let Some(session) = follow(&e.game_id, start, last_seen, saved, now) {
+                                            steps.push(SessionEvent { game_id: e.game_id.clone(), session });
+                                        }
                                         *old = pids;
                                         true
                                     }
@@ -239,6 +274,9 @@ impl Tracker {
                     for r in running {
                         log::info!("suivi : {} en cours (pid {})", r.game_id, r.pid);
                         let _ = app.emit("launch://running", r);
+                    }
+                    for s in steps {
+                        let _ = app.emit("launch://session", s);
                     }
                     for e in ended {
                         log::info!("suivi : {} terminé", e.game_id);
@@ -325,6 +363,23 @@ fn request_close(pid: u32) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn veille_et_points_d_etape() {
+        let (mut start, mut seen, mut saved) = (0u64, 0u64, 0u64);
+        // Passages normaux : un point d'étape par minute.
+        assert!(follow("g", &mut start, &mut seen, &mut saved, 5_000).is_none());
+        let s = follow("g", &mut start, &mut seen, &mut saved, 60_000).unwrap();
+        assert_eq!((s.start, s.end), (0, 60_000));
+        assert!(follow("g", &mut start, &mut seen, &mut saved, 65_000).is_none());
+        // Réveil après 8 h de veille : la session s'arrête au dernier passage.
+        let wake = 65_000 + 8 * 3_600_000;
+        let s = follow("g", &mut start, &mut seen, &mut saved, wake).unwrap();
+        assert_eq!((s.start, s.end), (0, 65_000));
+        assert_eq!((start, seen), (wake, wake));
+        let s = follow("g", &mut start, &mut seen, &mut saved, wake + 60_000).unwrap();
+        assert_eq!((s.start, s.end), (wake, wake + 60_000));
+    }
+
     use super::*;
     use crate::model::{uri, Launch};
 

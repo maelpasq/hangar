@@ -13,6 +13,35 @@ const MAX_PARALLEL: usize = 6;
 const MISS_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
 const MAX_IMAGE_BYTES: u64 = 25 * 1024 * 1024;
 
+thread_local! {
+    /// Vrai si une requête de ce thread a échoué pour une raison passagère
+    /// (réseau absent, 429, 5xx) : son résultat ne doit pas être mis en cache.
+    static TRANSIENT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+fn note_error(e: &ureq::Error) {
+    let passing = match e {
+        ureq::Error::Status(code, _) => *code == 429 || *code >= 500,
+        ureq::Error::Transport(_) => true,
+    };
+    if passing {
+        TRANSIENT.with(|c| c.set(true));
+    }
+}
+
+/// Exécute `f` et dit si une de ses requêtes a échoué pour une raison passagère.
+/// Les appels imbriqués remontent aussi leur échec à l'appel englobant.
+pub fn watch_transient<T>(f: impl FnOnce() -> T) -> (T, bool) {
+    let prev = TRANSIENT.with(|c| c.replace(false));
+    let out = f();
+    let hit = TRANSIENT.with(|c| {
+        let hit = c.get();
+        c.set(prev || hit);
+        hit
+    });
+    (out, hit)
+}
+
 /// Hash FNV-1a 64 bits (noms de fichiers du cache).
 pub fn hash(s: &str) -> String {
     let mut h: u64 = 0xcbf29ce484222325;
@@ -148,7 +177,7 @@ impl Art {
             if let Some(k) = bearer.take() {
                 req = req.set("Authorization", &format!("Bearer {k}"));
             }
-            let r = req.call()?;
+            let r = req.call().inspect_err(note_error)?;
             let next = match r.header("location") {
                 Some(loc) if (300..400).contains(&r.status()) => redirect_target(&url, loc),
                 _ => return Ok(r),
@@ -159,7 +188,7 @@ impl Art {
             }
             url = next;
         }
-        self.agent.get(&url).call()
+        self.agent.get(&url).call().inspect_err(note_error)
     }
 
     /// Chemin local d'une image distante, téléchargée si absente. `None` si introuvable.
@@ -206,7 +235,8 @@ impl Art {
                 let _ = fs::remove_file(miss);
                 Some(file.to_path_buf())
             }
-            Err(ureq::Error::Status(code, _)) if (400..500).contains(&code) => {
+            // 429 : trop de requêtes, l'image existe peut-être, on réessaiera.
+            Err(ureq::Error::Status(code, _)) if (400..500).contains(&code) && code != 429 => {
                 let _ = fs::write(miss, b"");
                 None
             }

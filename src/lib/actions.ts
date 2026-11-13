@@ -44,15 +44,18 @@ export function uninstallGame(id: string): void {
   if (g && !g.notInstalled) ui.modal = { kind: 'uninstall', gameId: id };
 }
 
-/** Désinstalle par le désinstalleur du jeu, sinon par son launcher (Hangar ne supprime rien lui-même). */
+/** Désinstalle : Hangar supprime lui-même les jeux Steam et Epic (avec garde-fous, manage.rs),
+ * sinon le désinstalleur du jeu ou son launcher. */
 export async function confirmUninstall(id: string): Promise<void> {
   const g = library.get(id);
   if (!g || g.notInstalled) return;
   ui.toast(`Désinstallation de ${library.name(g)}…`, { gameId: id });
   try {
     ui.toast(await api.uninstallGame(id), { gameId: id });
-    await rescan();
+    // État noté avant le rescan : sinon il est déjà final et le suivi ne s'arrête jamais.
     runner.watchInstall(id);
+    await rescan();
+    runner.settleInstall(id);
   } catch (e) {
     ui.toast(String(e), { error: true, gameId: id });
   }

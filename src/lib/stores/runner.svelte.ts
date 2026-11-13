@@ -52,6 +52,8 @@ class Runner {
   /** Installations, désinstallations ou mises à jour en attente : id -> état du jeu au départ.
    *  Au retour sur la fenêtre, un rescan dit si elles sont faites. */
   private installs = new Map<string, string>();
+  /** Installations demandées et pas encore parties (double clic, manette). */
+  private installing = new Set<string>();
   /** Téléchargements Steam suivis : progression de 0 à 1, et pause demandée dans Steam. */
   progress = $state<Record<string, { value: number; kind: 'install' | 'update'; paused?: boolean }>>({});  /** Début de chaque téléchargement suivi, et s'il a déjà été signalé comme bloqué. */
   private started = new Map<string, { at: number; warned: boolean }>();
@@ -92,6 +94,16 @@ class Runner {
   /** Installe le jeu : demande d'abord le dossier quand le launcher en a plusieurs à proposer. */
   async install(gameId: string): Promise<void> {
     ui.menu = null;
+    if (this.installing.has(gameId)) return;
+    this.installing.add(gameId);
+    try {
+      await this.askInstall(gameId);
+    } finally {
+      this.installing.delete(gameId);
+    }
+  }
+
+  private async askInstall(gameId: string): Promise<void> {
     // Téléchargement déjà lancé (Hangar rouvert entre-temps) : on reprend juste sa progression.
     if (library.get(gameId)?.store === 'steam' && (await api.installProgress(gameId).catch(() => null)) !== null) {
       this.follow(gameId, 'install');
@@ -100,11 +112,22 @@ class Runner {
     const targets = await api.installTargets(gameId).catch(() => []);
     // Mode manette : pas de fenêtre à la souris, le dossier par défaut du launcher.
     if (targets.length && !ui.big) ui.modal = { kind: 'installDir', gameId, targets };
-    else await this.installTo(gameId, targets[0]?.path ?? null);
+    else await this.startInstall(gameId, targets[0]?.path ?? null);
+  }
+
+  /** Installation dans le dossier choisi (fenêtre des dossiers). */
+  async installTo(gameId: string, dir: string | null): Promise<void> {
+    if (this.installing.has(gameId)) return;
+    this.installing.add(gameId);
+    try {
+      await this.startInstall(gameId, dir);
+    } finally {
+      this.installing.delete(gameId);
+    }
   }
 
   /** Steam sous Windows : en arrière-plan avec sa progression ; ailleurs dans leur launcher. */
-  async installTo(gameId: string, dir: string | null): Promise<void> {
+  private async startInstall(gameId: string, dir: string | null): Promise<void> {
     const g = library.get(gameId);
     if (!g) return;
     try {
@@ -191,6 +214,12 @@ class Runner {
     this.installs.set(gameId, installState(gameId));
   }
 
+  /** Oublie une installation suivie dont l'état a déjà changé (désinstallation directe finie). */
+  settleInstall(gameId: string): void {
+    const was = this.installs.get(gameId);
+    if (was !== undefined && installState(gameId) !== was) this.installs.delete(gameId);
+  }
+
   /** Retour sur Hangar : rescan si une installation est en cours (au plus toutes les 30 s). */
   async checkInstalls(): Promise<void> {
     if (!this.installs.size || Date.now() - this.lastInstallScan < INSTALL_RESCAN_MS) return;
@@ -251,6 +280,17 @@ class Runner {
           this.closeTimer = setTimeout(() => this.closeOverlay(true), 700);
         }
         break;
+      case 'session': {
+        // Point d'étape d'une partie en cours. Après une veille, une nouvelle session
+        // commence : le chronomètre repart de son début.
+        library.recordSession(e.session);
+        const shown = this.running[e.gameId];
+        if (shown !== undefined && e.session.start > shown + 60_000) {
+          this.running = { ...this.running, [e.gameId]: e.session.start };
+          this.syncPresence();
+        }
+        break;
+      }
       case 'ended': {
         const { [e.gameId]: _gone, ...rest } = this.running;
         this.running = rest;

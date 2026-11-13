@@ -119,7 +119,9 @@ impl Artworks {
             }
         }
         let mut cacheable = true;
-        let art = self.resolve(game, key, &mut cacheable);
+        let (art, transient) = crate::art::watch_transient(|| self.resolve(game, key, &mut cacheable));
+        // Réseau absent, 429 ou 5xx : on réessaiera au prochain affichage plutôt que dans 3 jours.
+        cacheable &= !transient;
         log::info!(
             "artwork {} : jaquette {}, bannière {} ({})",
             game.id,
@@ -307,10 +309,15 @@ impl Artworks {
         }
         // Le nom d'origine accepte une correspondance par préfixe ; un nom raccourci
         // (sans « Launcher »...) doit correspondre exactement, pour éviter les faux amis.
-        let id = name_variants(name)
-            .iter()
-            .enumerate()
-            .find_map(|(i, n)| if i == 0 { self.art.resolve_steam_id(n) } else { self.art.resolve_steam_id_exact(n) });
+        let (id, transient) = crate::art::watch_transient(|| {
+            name_variants(name)
+                .iter()
+                .enumerate()
+                .find_map(|(i, n)| if i == 0 { self.art.resolve_steam_id(n) } else { self.art.resolve_steam_id_exact(n) })
+        });
+        if id.is_none() && transient {
+            return None;
+        }
         let mut c = self.lock();
         c.steam_ids.insert(k, SteamIdEntry { id: id.unwrap_or(0), at: now() });
         self.persist(&c);

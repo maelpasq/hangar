@@ -179,5 +179,6 @@ export interface SteamHit {
 export type LaunchEvent =
   | { type: 'started'; gameId: string }
   | { type: 'running'; gameId: string; pid: number }
+  | { type: 'session'; gameId: string; session: Session }
   | { type: 'ended'; gameId: string; session: Session | null }
   | { type: 'failed'; gameId: string; message: string };

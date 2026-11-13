@@ -142,6 +142,7 @@ interface PersistedState {
 |---|---|---|
 | `launch://started` | `{ gameId }` | ShellExecute réussi |
 | `launch://running` | `{ gameId, pid }` | Premier processus du jeu détecté |
+| `launch://session` | `{ gameId, session }` | Partie en cours : point d'étape chaque minute, ou session close après une veille (le frontend remplace la session de même début) |
 | `launch://ended` | `{ gameId, session }` | Plus aucun processus du jeu depuis 5 s |
 | `launch://failed` | `{ gameId, message }` | Échec |
 | `scan://partial` | `Game[]` | Un détecteur lent (Xbox) a répondu |

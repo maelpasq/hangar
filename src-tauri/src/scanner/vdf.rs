@@ -124,6 +124,19 @@ impl Parser<'_> {
         }
     }
 
+    /// Saute un bloc déjà ouvert jusqu'à son `}` (boucle, jamais de récursion).
+    fn skip(&mut self) {
+        let mut open = 1usize;
+        while open > 0 {
+            match self.token() {
+                Some(Tok::Open) => open += 1,
+                Some(Tok::Close) => open -= 1,
+                Some(Tok::Str(_)) => {}
+                None => return,
+            }
+        }
+    }
+
     /// Lit des paires jusqu'à `}` ou la fin du texte.
     fn object(&mut self, depth: u32) -> Vec<(String, Vdf)> {
         let mut items = Vec::new();
@@ -132,17 +145,16 @@ impl Parser<'_> {
                 Some(Tok::Str(k)) => k,
                 Some(Tok::Close) | None => return items,
                 Some(Tok::Open) => {
-                    // Accolade orpheline : on lit le bloc et on l'ignore.
-                    self.object(depth + 1);
+                    // Accolade orpheline : on saute le bloc.
+                    self.skip();
                     continue;
                 }
             };
             match self.token() {
                 Some(Tok::Str(v)) => items.push((key, Vdf::Str(v))),
                 Some(Tok::Open) if depth < 64 => items.push((key, Vdf::Obj(self.object(depth + 1)))),
-                Some(Tok::Open) => {
-                    self.object(depth + 1);
-                }
+                // Trop profond (fichier corrompu) : bloc sauté sans récursion.
+                Some(Tok::Open) => self.skip(),
                 Some(Tok::Close) | None => return items,
             }
         }
@@ -171,6 +183,16 @@ mod tests {
         let apps2 = v.path(&["userlocalconfigstore", "software", "valve", "steam", "Apps"]).unwrap();
         assert_eq!(apps2.get("284160").unwrap().get_u64("lastplayed"), Some(1793600000));
         assert_eq!(apps.entries().len(), 3);
+    }
+
+    #[test]
+    fn accolades_sans_fin_sans_debordement() {
+        // Fichier corrompu : des milliers d'accolades imbriquées, avec ou sans clé.
+        let deep = format!("\"a\" {{ {}\"b\" \"1\"", "\"k\" {".repeat(100_000));
+        let v = parse(&deep);
+        assert!(v.get("a").and_then(|a| a.get("k")).is_some());
+        let orphan = format!("{}\"x\" \"2\"", "{".repeat(100_000));
+        let _ = parse(&orphan);
     }
 
     #[test]

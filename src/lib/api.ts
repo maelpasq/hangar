@@ -179,6 +179,7 @@ async function tauriApi(): Promise<Api> {
       const offs = await Promise.all([
         on<{ gameId: string }>('launch://started', (p) => cb({ type: 'started', ...p })),
         on<{ gameId: string; pid: number }>('launch://running', (p) => cb({ type: 'running', ...p })),
+        on<{ gameId: string; session: Session }>('launch://session', (p) => cb({ type: 'session', ...p })),
         on<{ gameId: string; session: Session | null }>('launch://ended', (p) => cb({ type: 'ended', ...p })),
         on<{ gameId: string; message: string }>('launch://failed', (p) => cb({ type: 'failed', ...p }))
       ]);

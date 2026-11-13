@@ -111,7 +111,8 @@
     const offs: (() => void)[] = [];
     let alive = true;
     (async () => {
-      const [a, b, d, c, e, f, g] = await Promise.all([
+      // allSettled : un écouteur qui échoue ne doit pas bloquer le chargement et le scan.
+      const listeners = await Promise.allSettled([
         api.onLaunch((e) => runner.handle(e)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
@@ -130,7 +131,10 @@
         api.onMainHidden(() => (ui.big = false)),
         api.onWebClosed((id) => runner.webClosed(id))
       ]);
-      offs.push(a, b, d, c, e, f, g);
+      for (const l of listeners) {
+        if (l.status === 'fulfilled') offs.push(l.value);
+        else console.error('listen', l.reason);
+      }
       if (!alive) offs.forEach((o) => o());
       await library.load();
       if (library.loadError) ui.toast(library.loadError, { error: true });

@@ -47,6 +47,9 @@ class Library {
 
   genres = $state<Record<string, string | null>>({});
   private genreAsked = new Set<string>();
+  /** Requêtes de genre en attente : 3 à la fois au plus (sinon Steam répond 429). */
+  private genreQueue: string[] = [];
+  private genreActive = 0;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private libTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -89,14 +92,25 @@ class Library {
     if (g.id in this.genres) return this.genres[g.id];
     if (!this.genreAsked.has(g.id)) {
       this.genreAsked.add(g.id);
-      queueMicrotask(() => {
-        api
-          .gameInfo(g.id)
-          .then((r) => (this.genres[g.id] = r.genre || null))
-          .catch(() => (this.genres[g.id] = null));
-      });
+      this.genreQueue.push(g.id);
+      queueMicrotask(() => this.pumpGenres());
     }
     return null;
+  }
+
+  private pumpGenres(): void {
+    while (this.genreActive < 3 && this.genreQueue.length) {
+      const id = this.genreQueue.shift()!;
+      this.genreActive++;
+      api
+        .gameInfo(id)
+        .then((r) => (this.genres[id] = r.genre || null))
+        .catch(() => (this.genres[id] = null))
+        .finally(() => {
+          this.genreActive--;
+          this.pumpGenres();
+        });
+    }
   }
 
   /** L'état enregistré a été lu : avant (ou si la lecture a échoué), enregistrer écraserait
@@ -136,9 +150,29 @@ class Library {
     }
   }
 
-  /** Scan complet en arrière-plan ; la liste est remplacée sans clignotement. */
-  async scan(): Promise<number> {
-    if (this.scanning) return this.visible.length;
+  private scanJob: Promise<number> | null = null;
+  private scanNext: Promise<number> | null = null;
+
+  /**
+   * Scan complet en arrière-plan ; la liste est remplacée sans clignotement. Demandé
+   * pendant un scan, il en relance un seul après lui, que tous les demandeurs attendent :
+   * ils lisent donc une bibliothèque à jour (fin d'installation, dossier ajouté).
+   */
+  scan(): Promise<number> {
+    if (!this.scanJob) {
+      this.scanJob = this.runScan().finally(() => (this.scanJob = null));
+      return this.scanJob;
+    }
+    this.scanNext ??= this.scanJob
+      .catch(() => {})
+      .then(() => {
+        this.scanNext = null;
+        return this.scan();
+      });
+    return this.scanNext;
+  }
+
+  private async runScan(): Promise<number> {
     this.scanning = true;
     try {
       const games = await api.scanGames($state.snapshot(this.state.localFolders));
@@ -151,6 +185,9 @@ class Library {
       return this.visible.length;
     } finally {
       this.scanning = false;
+      // Premier scan en échec sans cache : on quitte l'écran de chargement (l'erreur est
+      // annoncée par rescan).
+      this.ready = true;
     }
   }
 
@@ -277,14 +314,21 @@ class Library {
     this.save();
   }
 
+  /**
+   * Ajoute une session, ou prolonge celle qui a le même jeu et le même début (points
+   * d'étape envoyés chaque minute pendant la partie) : seul le temps en plus est compté.
+   */
   recordSession(s: Session): void {
-    const ms = Math.max(0, s.end - s.start);
+    const prev = this.state.sessions.find((x) => x.gameId === s.gameId && x.start === s.start);
+    const from = prev ? Math.max(prev.end, s.start) : s.start;
+    const ms = Math.max(0, s.end - from);
+    const session = prev && prev.end > s.end ? prev : s;
     const t = { ...this.totals(s.gameId) };
     t.playMs += ms;
-    t.lastPlayed = Math.max(t.lastPlayed, s.end);
+    t.lastPlayed = Math.max(t.lastPlayed, session.end);
     this.state.totals[s.gameId] = t;
     const min = Date.now() - SESSION_DAYS * 86_400_000;
-    this.state.sessions = [...this.state.sessions.filter((x) => x.end >= min), s];
+    this.state.sessions = [...this.state.sessions.filter((x) => x.end >= min && x !== prev), session];
     this.save();
   }
 }

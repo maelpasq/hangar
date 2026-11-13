@@ -85,13 +85,18 @@ impl Infos {
             }
         }
         let url = format!("https://store.steampowered.com/api/appdetails?appids={appid}&l=french&filters=genres");
-        let parsed = match self.art.get_json(&url, None) {
+        let (res, transient) = crate::art::watch_transient(|| self.art.get_json(&url, None));
+        let parsed = match res {
             Ok(v) => parse_genres(&v, appid),
             Err(code) => {
                 log::warn!("appdetails {appid} : erreur {code}");
                 None
             }
         };
+        // Réseau absent, 429 ou 5xx : rien en cache, on réessaiera plus tard.
+        if transient {
+            return GameInfo { genre: parsed.flatten() };
+        }
         let entry = Entry { ok: parsed.is_some(), genre: parsed.clone().flatten(), at: now() };
         let mut c = self.lock();
         c.insert(appid, entry);

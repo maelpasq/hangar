@@ -234,3 +234,11 @@ glib 0.18 (imposé par Tauri 2) et deepmerge 4.3.1 n'ont pas de version corrigé
 ## Version Linux en pause (9 nov. 2026)
 
 La version Linux avait trop de bugs : elle est désactivée en attendant d'être refaite. La release suivante publie encore l'AppImage, pour que les installations existantes la reçoivent par mise à jour : sous Linux, Hangar n'affiche plus que `src/lib/screens/LinuxBlocked.svelte` (`?linux` pour le voir avec `npm run dev:web`), et le backend s'arrête là (`main.rs`, `cfg!(target_os = "linux")`) : pas de scan, pas d'icône, fermer quitte, démarrage avec le système retiré. L'écran garde la recherche de mise à jour : `release.yml` continue de construire l'AppImage pour que `latest.json` ait toujours une entrée Linux, et la future version Linux arrivera chez eux d'elle-même. Le site et le README ne proposent plus Linux. Le CI compile et teste toujours Linux. Pour réactiver : retirer ces deux blocages et rétablir la carte Linux du site et la section du README.
+
+## Audit : constats moyens (novembre 2026)
+
+- Images, genres et appid Steam : un échec passager (réseau absent, 429, 5xx) n'est plus mis en cache (`art::watch_transient`) ; seul un vrai « introuvable » l'est (3 à 7 jours). Un 429 ne crée plus de `.miss` pour une image.
+- Parseurs VDF (texte et `appinfo.vdf` binaire) : au-delà de 64 niveaux, le bloc est sauté par une boucle, jamais par récursion.
+- Suivi des jeux : point d'étape `launch://session` chaque minute, que le frontend enregistre en remplaçant la session de même début (fermer Hangar en pleine partie perd au plus une minute). Plus d'une minute sans passage du suivi = veille : la session s'arrête au dernier passage et une nouvelle commence au réveil.
+- Frontend : un scan demandé pendant un scan en relance un seul après lui, attendu par tous les demandeurs. Écouteurs du démarrage en `Promise.allSettled`. Écran de chargement quitté même si le premier scan échoue. Échap dans le menu contextuel ne quitte plus la fiche. Une installation déjà demandée n'est pas relancée par un double clic. Désinstallation : état noté avant le rescan. Genres : 3 requêtes à la fois au plus.
+- `release.yml` : job `verify` (check, vitest, cargo test sous Windows) avant la publication.

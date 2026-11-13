@@ -73,6 +73,8 @@
     const i = btns.indexOf(document.activeElement as HTMLButtonElement);
     if (e.key === 'Escape' || e.key === 'Tab') {
       e.preventDefault();
+      // Sinon App voit Échap sans menu ouvert et quitte la fiche du jeu.
+      e.stopPropagation();
       ui.menu = null;
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
