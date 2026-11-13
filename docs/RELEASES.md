@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.21 - 13 novembre 2026
+**Hangar MC a son logo** : le bouton grisé de la barre latérale affiche le logo de Hangar MC, l'arche et l'étoile de Hangar en pixels, à la place de l'icône cube. Le bouton présente toujours ce qui arrive, une mise à jour le débloquera.
+
 ### 1.2.20 - 13 novembre 2026
 **Hangar MC arrive** : son bouton revient dans la barre latérale, grisé avec une étiquette « Bientôt ». Il présente le client Minecraft de Hangar : toutes les versions du jeu, Fabric intégré et nos propres modules, lancées en un clic. Une mise à jour le débloquera, sans rien à faire de ton côté. **Mises à jour Steam reportées** : Steam repousse parfois la mise à jour d'un jeu peu joué, et rien ne permet de la lancer de l'extérieur. Dans ce cas, « Mettre à jour » ouvre la page des téléchargements de Steam et te dit de cliquer sur le bouton de téléchargement du jeu.
 
