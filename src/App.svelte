@@ -21,6 +21,7 @@
   import InstallDir from './lib/modals/InstallDir.svelte';
   import Rename from './lib/modals/Rename.svelte';
   import BugReport from './lib/modals/BugReport.svelte';
+  import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import GamePage from './lib/screens/GamePage.svelte';
   import Home from './lib/screens/Home.svelte';
@@ -245,6 +246,8 @@
     <InstallDir game={modalGame} targets={ui.modal.targets} />
   {:else if ui.modal?.kind === 'bug'}
     <BugReport />
+  {:else if ui.modal?.kind === 'mcSoon'}
+    <HangarMcSoon />
   {:else if ui.modal?.kind === 'onboarding'}
     <Onboarding />
   {:else if ui.modal?.kind === 'collections' && modalGame}

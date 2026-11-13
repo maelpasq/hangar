@@ -30,7 +30,7 @@
         : ui.screen
   );
 
-  const nav = $derived<{ key: string; label: string; icon: IconName; count?: number; go: () => void }[]>([
+  const nav = $derived<{ key: string; label: string; icon: IconName; count?: number; soon?: boolean; go: () => void }[]>([
     { key: 'home', label: 'Accueil', icon: 'home', go: () => ui.home() },
     { key: 'library', label: 'Bibliothèque', icon: 'grid', count: library.installed.length, go: () => ui.libraryAll() },
     { key: 'favorites', label: 'Favoris', icon: 'star', count: library.favorites.length, go: () => ui.favorites() },
@@ -41,6 +41,8 @@
       ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
+    // Hangar MC pas encore ouvert : bouton grisé qui présente ce qui arrive.
+    { key: 'hangarmc', label: 'Hangar MC', icon: 'cube', soon: true, go: () => (ui.modal = { kind: 'mcSoon' }) },
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 
@@ -67,15 +69,16 @@
       <button
         class="navb"
         class:on={current === n.key}
+        class:soon={n.soon}
         aria-current={current === n.key ? 'page' : undefined}
-        aria-label={rail ? n.label : undefined}
+        aria-label={rail ? (n.soon ? `${n.label}, bientôt` : n.label) : undefined}
         title={rail ? n.label : undefined}
         onclick={n.go}
       >
         <span class="ic"><Icon name={n.icon} /></span>
         {#if !rail}
           <span>{n.label}</span>
-          <span class="count num">{n.count ?? ''}</span>
+          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
         {/if}
       </button>
     {/each}
@@ -284,6 +287,25 @@
   .count {
     margin-left: auto;
     font-size: 12px;
+    color: var(--muted-2);
+  }
+
+  .navb.soon {
+    color: var(--muted-2);
+  }
+
+  .navb.soon .ic {
+    opacity: 0.6;
+  }
+
+  .soon-tag {
+    margin-left: auto;
+    padding: 1px 7px;
+    border: 1px solid var(--border-3);
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
     color: var(--muted-2);
   }
 

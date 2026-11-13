@@ -13,6 +13,7 @@ export type Modal =
   | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
   | { kind: 'bug' }
+  | { kind: 'mcSoon' }
   | { kind: 'collections'; gameId: string };
 
 export interface Toast {
