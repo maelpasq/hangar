@@ -27,7 +27,7 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 - **Collections et filtres** : range tes jeux dans tes propres listes et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
 - **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar.
 - **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
-- **Hangar MC (bientôt)** : le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules, lancées en un clic. Son bouton est déjà dans la barre latérale, une mise à jour le débloquera.
+- **Hangar MC (bientôt)** : le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules, lancées en un clic. Son bouton, à son logo, est déjà dans la barre latérale, une mise à jour le débloquera.
 - **Discord** : tes amis voient à quoi tu joues, avec la jaquette du jeu et ton temps de jeu (à activer dans **Paramètres > Général**).
 - **Prêt en quatre étapes** : à la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta couleur et les jeux web. Tu peux le relancer depuis **Paramètres > Général**.
 - **Mises à jour de Hangar intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour Hangar » apparaît dans l'app.
