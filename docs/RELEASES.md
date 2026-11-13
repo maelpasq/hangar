@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.20 - 13 novembre 2026
+**Hangar MC arrive** : son bouton revient dans la barre latérale, grisé avec une étiquette « Bientôt ». Il présente le client Minecraft de Hangar : toutes les versions du jeu, Fabric intégré et nos propres modules, lancées en un clic. Une mise à jour le débloquera, sans rien à faire de ton côté. **Mises à jour Steam reportées** : Steam repousse parfois la mise à jour d'un jeu peu joué, et rien ne permet de la lancer de l'extérieur. Dans ce cas, « Mettre à jour » ouvre la page des téléchargements de Steam et te dit de cliquer sur le bouton de téléchargement du jeu.
+
 ### 1.2.19 - 13 novembre 2026
 **Plus sûr** : ta clé SteamGridDB rejoint tes comptes dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS) au lieu d'un fichier, et un bouton Retirer l'efface dans **Paramètres > Jaquettes**. Hangar n'ouvre que les jeux, dossiers et images que tu as choisis toi-même, refuse les partages réseau et ne lance plus que le bon programme de Riot. **Désinstaller sans risque** : Hangar ne supprime que le dossier du jeu vu par son launcher, jamais un dossier personnel, système ou qui contient un autre jeu. **Tes données protégées** : si ton fichier de bibliothèque est bloqué ou abîmé, Hangar réessaie ou reprend sa copie de secours au lieu de repartir de zéro, et un launcher au fichier corrompu ne fait plus fermer Hangar au démarrage. **Hangar MC** : l'onglet grisé quitte la barre latérale en attendant sa sortie.
 
