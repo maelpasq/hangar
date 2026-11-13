@@ -42,7 +42,7 @@ npm install            # dépendances frontend + CLI Tauri
 npm run dev            # lance l'app dans l'environnement de test séparé (Hangar Test)
 npm run test-env:clean # supprime l'environnement de test (données, comptes, démarrage auto)
 npm run build          # exe + installeur NSIS dans src-tauri/target/release
-npm run mod            # compile le mod Hangar MC pour chaque version (mod/<version>/ + cœur mod/common, JAVA_HOME = JDK 25) vers src-tauri/resources/mods
+npm run mod            # compile le mod Hangar MC (dépôt privé maelpasq/hangar-mc, cloné à côté : ../hangar-mc, JAVA_HOME = JDK 25) vers src-tauri/resources/mods
 npm run verify         # check + tests + cargo test + clippy + tirets cadratins, sortie courte
 npm run check          # svelte-check + tsc
 npm run test           # tests frontend (vitest)
