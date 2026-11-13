@@ -400,11 +400,13 @@ mod tests {
 
     #[test]
     fn jeux_manuels_connus() {
+        // Chemin absolu du système qui fait tourner le test (`c:/...` n'en est pas un hors Windows).
+        let (target, other_case) = if cfg!(windows) { ("C:\\a.exe", "c:/A.exe") } else { ("/jeux/a.exe", "/JEUX/A.exe") };
         let k = Known::default();
         k.set_manual_from_state(&serde_json::json!({
             "manualGames": [
                 { "id": "manual:c:\\a.exe", "name": "A", "store": "manual",
-                  "launch": { "kind": "exe", "target": "C:\\a.exe", "args": "" } },
+                  "launch": { "kind": "exe", "target": target, "args": "" } },
                 { "id": "steam:1", "name": "Intrus", "store": "manual",
                   "launch": { "kind": "uri", "target": "steam://x", "args": "" } },
                 { "pas": "un jeu" }
@@ -412,7 +414,7 @@ mod tests {
         }));
         assert!(k.get("manual:c:\\a.exe").is_some());
         assert!(k.get("steam:1").is_none());
-        assert!(k.knows_path("c:/A.exe"));
+        assert!(k.knows_path(other_case));
         assert!(!k.knows_path(r"\\serveur\partage"));
         assert!(!k.knows_path(""));
     }
