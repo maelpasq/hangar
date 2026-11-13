@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, McAccount, McPack, McProgress, McVersion, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -91,27 +91,6 @@ export interface Api {
   openWebGame(id: string): Promise<void>;
   /** Fenêtre d'un jeu web fermée (identifiant du catalogue). */
   onWebClosed(cb: (id: string) => void): Promise<() => void>;
-  /** Hangar MC : versions officielles de Minecraft (Fabric ou Legacy Fabric), la plus récente d'abord. */
-  mcVersions(): Promise<McVersion[]>;
-  /** Fichiers de Hangar MC (le mod), pas inclus dans l'installeur. */
-  mcPack(): Promise<McPack>;
-  /** Les télécharge ; l'avancement arrive par onMcProgress (version `hangarmc`). */
-  mcPackInstall(): Promise<void>;
-  /** Télécharge Minecraft, Java, Fabric et les mods de Hangar MC pour cette version. */
-  mcInstall(id: string): Promise<void>;
-  mcLaunch(id: string): Promise<void>;
-  onMcProgress(cb: (p: McProgress) => void): Promise<() => void>;
-  mcAccount(): Promise<McAccount>;
-  /** Code à saisir sur microsoft.com/link. */
-  mcLoginStart(): Promise<{ userCode: string; url: string }>;
-  /** Attend la saisie du code ; renvoie le pseudo Minecraft. */
-  mcLoginFinish(): Promise<string>;
-  /** Retire un compte. */
-  mcLogout(uuid: string): Promise<void>;
-  /** Choisit le compte qui joue. */
-  mcSelect(uuid: string): Promise<void>;
-  /** Abandonne la connexion en cours. */
-  mcLoginCancel(): Promise<void>;
   /** Les comptes ont été synchronisés : rescanner. */
   onAccountsSynced(cb: () => void): Promise<() => void>;
   appVersion(): Promise<string>;
@@ -214,18 +193,6 @@ async function tauriApi(): Promise<Api> {
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),
     openWebGame: (id) => invoke('open_web_game', { id }),
     onWebClosed: (cb) => on<string>('web://closed', cb),
-    mcVersions: () => invoke('mc_versions'),
-    mcPack: () => invoke('mc_pack'),
-    mcPackInstall: () => invoke('mc_pack_install'),
-    mcInstall: (id) => invoke('mc_install', { id }),
-    mcLaunch: (id) => invoke('mc_launch', { id }),
-    onMcProgress: (cb) => on<McProgress>('mc://progress', cb),
-    mcAccount: () => invoke('mc_account'),
-    mcLoginStart: () => invoke('mc_login_start'),
-    mcLoginFinish: () => invoke('mc_login_finish'),
-    mcLogout: (uuid) => invoke('mc_logout', { uuid }),
-    mcSelect: (uuid) => invoke('mc_select', { uuid }),
-    mcLoginCancel: () => invoke('mc_login_cancel'),
     onAccountsSynced: (cb) => on<null>('accounts://synced', () => cb()),
     appVersion: () => getVersion(),
     checkUpdate: async () => {

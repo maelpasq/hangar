@@ -204,6 +204,7 @@
   .tile .big { font-size: clamp(2.75rem, 5vw, 3.75rem); font-weight: 750; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
   .wide { grid-column: span 2; }
   .tall { grid-row: span 2; }
+  .lg-wide { grid-column: span 2; }
   .visual { margin-top: auto; padding-top: 1.5rem; }
 
   .stores { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -328,6 +329,7 @@
   @media (max-width: 900px) {
     .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tall { grid-row: auto; }
+    .lg-wide { grid-column: auto; }
     .md-wide { grid-column: span 2; }
     .privacy { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.75rem; }
     .privacy .ico { flex: none; width: 4rem; height: 4rem; border-radius: 20px; margin: 0; }
@@ -515,13 +517,7 @@
           <p>Tes amis voient à quoi tu joues, avec sa jaquette et le temps de jeu. À activer si tu veux.</p>
         </article>
 
-        <article class="tile md-wide reveal">
-          <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg></div>
-          <h3>Hangar MC, bientôt.</h3>
-          <p>Minecraft, toutes versions, avec Fabric et nos modules. Téléchargé seulement si tu le veux, dès que Mojang aura validé.</p>
-        </article>
-
-        <article class="tile reveal">
+        <article class="tile lg-wide reveal">
           <div class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M14 15h4"/></svg></div>
           <h3>Toujours à portée.</h3>
           <p>Tes jeux récents dans la zone de notification, et <kbd>Ctrl Alt H</kbd> pour afficher ou cacher Hangar.</p>
@@ -553,13 +549,11 @@
           <button type="button" role="tab" id="tab-0" aria-controls="view-0" aria-selected="true">Bibliothèque</button>
           <button type="button" role="tab" id="tab-1" aria-controls="view-1" aria-selected="false" tabindex="-1">Fiche d'un jeu</button>
           <button type="button" role="tab" id="tab-2" aria-controls="view-2" aria-selected="false" tabindex="-1">Jeux web</button>
-          <button type="button" role="tab" id="tab-3" aria-controls="view-3" aria-selected="false" tabindex="-1">Hangar MC</button>
         </div>
         <div class="views">
           <figure class="frame" id="view-0" role="tabpanel" aria-labelledby="tab-0" data-caption="Tous tes jeux au même endroit, filtrés par store en un clic."><img src="images/bibliotheque.webp" width="1440" height="900" loading="lazy" alt="Bibliothèque de Hangar avec les filtres par store"></figure>
           <figure class="frame" id="view-1" role="tabpanel" aria-labelledby="tab-1" aria-hidden="true" data-caption="Sa bannière, ton temps de jeu, ta dernière partie et ton activité."><img src="images/jeu.webp" width="1440" height="900" loading="lazy" alt="Fiche d'un jeu avec sa bannière, son temps de jeu et son activité"></figure>
           <figure class="frame" id="view-2" role="tabpanel" aria-labelledby="tab-2" aria-hidden="true" data-caption="Une quarantaine de jeux navigateur, les récents en tête."><img src="images/jeux-web.webp" width="1440" height="900" loading="lazy" alt="Onglet Jeux web de Hangar"></figure>
-          <figure class="frame" id="view-3" role="tabpanel" aria-labelledby="tab-3" aria-hidden="true" data-caption="Hangar MC, bientôt : Minecraft, toutes versions, avec Fabric et nos modules."><img src="images/hangar-mc.webp" width="1440" height="900" loading="lazy" alt="Écran Hangar MC : versions de Minecraft avec leurs affiches"></figure>
         </div>
         <p class="caption" aria-live="polite">Tous tes jeux au même endroit, filtrés par store en un clic.</p>
       </div>

@@ -1610,7 +1610,6 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
- "sha1_smol",
  "sysinfo",
  "tauri",
  "tauri-build",
@@ -1628,7 +1627,6 @@ dependencies = [
  "windows 0.62.2",
  "windows-sys 0.59.0",
  "winreg 0.52.0",
- "zip",
 ]
 
 [[package]]
@@ -3865,12 +3863,6 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
-
-[[package]]
-name = "sha1_smol"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
 name = "sha2"
@@ -6361,7 +6353,6 @@ checksum = "0700e6c427aff64acdbf02e85fbfd946c2ee12319d1af013092f3a2178914ff8"
 dependencies = [
  "constant_time_eq",
  "crc32fast",
- "flate2",
  "getrandom 0.4.3",
  "indexmap 2.14.2",
  "libc",
@@ -6370,7 +6361,6 @@ dependencies = [
  "typed-path",
  "windows-sys 0.61.2",
  "zeroize",
- "zopfli",
 ]
 
 [[package]]
@@ -6384,18 +6374,6 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-
-[[package]]
-name = "zopfli"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaf7fc5d30c28483d93805c4a5e12b05bbb52407fa67c5f8bd552374cd01fb11"
-dependencies = [
- "bumpalo",
- "crc32fast",
- "log",
- "simd-adler32",
-]
 
 [[package]]
 name = "zvariant"

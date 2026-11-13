@@ -14,11 +14,9 @@ const home = homedir();
 const dirs =
   process.platform === 'win32'
     ? [
-        ...[process.env.APPDATA, process.env.LOCALAPPDATA].filter(Boolean).map((d) => join(d, ID)),
-        ...(process.env.APPDATA ? [join(process.env.APPDATA, '.hangarmc-test')] : [])
+        ...[process.env.APPDATA, process.env.LOCALAPPDATA].filter(Boolean).map((d) => join(d, ID))
       ]
     : [
-        join(home, 'Library', 'Application Support', 'hangarmc-test'),
         join(home, 'Library', 'Application Support', ID),
         join(home, 'Library', 'Caches', ID),
         join(home, 'Library', 'Logs', ID),
@@ -27,8 +25,8 @@ const dirs =
       ];
 
 for (const d of dirs) {
-  // garde-fou : jamais un autre chemin (Hangar MC de l'app installée : `.hangarmc`, sans -test)
-  if (!d.includes(ID) && !d.includes(NAME) && !d.endsWith('hangarmc-test')) continue;
+  // garde-fou : jamais un autre chemin
+  if (!d.includes(ID) && !d.includes(NAME)) continue;
   if (existsSync(d)) {
     rmSync(d, { recursive: true, force: true });
     console.log(`supprimé : ${d}`);
@@ -45,7 +43,7 @@ const quiet = (cmd, args) => {
   }
 };
 
-// Toutes les entrées du coffre de test (compte-steam, compte-minecraft-<uuid>...), et rien d'autre.
+// Toutes les entrées du coffre de test (compte-steam, compte-gog...), et rien d'autre.
 if (process.platform === 'win32') {
   let list = '';
   try {

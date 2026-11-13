@@ -56,17 +56,6 @@
     "allow-update-game",
     "allow-set-desktop",
     "allow-set-tray-recents",
-    "allow-set-presence",
-    "allow-mc-versions",
-    "allow-mc-install",
-    "allow-mc-pack",
-    "allow-mc-pack-install",
-    "allow-mc-launch",
-    "allow-mc-account",
-    "allow-mc-login-start",
-    "allow-mc-login-finish",
-    "allow-mc-logout",
-    "allow-mc-select",
-    "allow-mc-login-cancel"
+    "allow-set-presence"
   ]
 }

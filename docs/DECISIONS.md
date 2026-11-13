@@ -194,85 +194,6 @@ Choix faits quand la documentation ne tranchait pas. Le plus simple qui respecte
 - Garde-fous : Epic n'est jamais fermé pendant un téléchargement (manifeste dans `Pending` ou installation incomplète) : la désinstallation est refusée et le dossier est laissé au choix dans la fenêtre d'Epic. Un seul redémarrage de Steam à la fois. Téléchargement Steam resté à 0 % après 5 min : toast (Steam déconnecté, hors ligne ou file d'attente). « Installer » sur un jeu Steam dont le téléchargement tourne déjà reprend simplement sa progression.
 - Restent dans leur launcher : l'installation Epic (fenêtre de confirmation, dossier déjà choisi), GOG, Riot et Xbox (il faudrait réécrire leur téléchargeur) et la désinstallation des jeux Ubisoft, EA, Battle.net et Riot. macOS garde l'ancien comportement.
 
-## Hangar MC, étape 1 : Minecraft vanilla (8 novembre 2026)
-
-- Écran « Minecraft » dans la barre latérale (pas de maquette : même mise en page que « Jeux web »). Liste des versions officielles, installation, puis « Jouer ».
-- Tout vient des serveurs de Mojang (manifeste des versions, jeu, bibliothèques, ressources, Java fourni par Mojang pour chaque version) et va dans `%APPDATA%\.hangarmc`, à côté du `.minecraft` officiel (Mac : `~/Library/Application Support/hangarmc`, à côté de `minecraft`, selon la convention de Mojang). Hangar Test utilise `.hangarmc-test`, supprimé par `npm run test-env:clean`. Rien n'est redistribué par Hangar. Le code refuse toute adresse hors de `*.mojang.com` et `*.minecraft.net`.
-- Fichiers vérifiés (taille et SHA-1 de Mojang), téléchargés à 8 en parallèle, écrits de façon atomique ; une version n'est « installée » qu'avec son fichier `.hangar-ok` final. Ressources et bibliothèques partagées entre versions.
-- Versions 1.13 et plus seulement (format d'arguments moderne). Natives : extraites pour 1.13 à 1.18 (comme le launcher officiel), chargées depuis le classpath par LWJGL à partir de 1.19. Configuration log4j de Mojang passée au jeu (faille Log4Shell des versions 1.13 à 1.18.0).
-- Hangar MC est détaché du Minecraft officiel (jamais le `.minecraft`, contrairement à Lunar Client qui partage ses mondes et options) mais toutes ses sessions sont reliées : un seul dossier de jeu (`.hangarmc/game` : mondes, options, captures) pour toutes les versions. 2 Go de mémoire, sortie du jeu dans `.hangarmc/lancement.log`.
-- « Jouer » demande un compte Microsoft (étape 2) : pas de mode hors ligne. Le test `minecraft::tests::vrai_lancement` (ignoré par défaut) installe la dernière version dans un dossier temporaire et vérifie que le jeu démarre.
-
-## Hangar MC, étape 2 : compte Microsoft (8 novembre 2026)
-
-- Connexion par code (« device code ») : Hangar affiche un code, ouvre microsoft.com/link dans le navigateur, et attend. Pas de fenêtre de connexion dans Hangar, pas de mot de passe qui transite par l'app. Puis Xbox Live, XSTS, `login_with_xbox` et le profil Minecraft (`src-tauri/src/accounts/microsoft.rs`), sur la liste fermée d'hôtes de `accounts/mod.rs`.
-- Coffre du système (`compte-minecraft`) : le jeton de rafraîchissement Microsoft, le pseudo et l'UUID, rien d'autre. Les jetons du jeu (valables 24 h) sont redemandés à chaque « Jouer », et le jeton Microsoft remplacé à chaque fois.
-- Messages clairs pour les refus Xbox (pas de profil Xbox, compte enfant, pays) et pour un compte qui ne possède pas Minecraft Java Edition.
-- `CLIENT_ID` : application Azure « Hangar » (client public, identifiant non secret). Tant que Mojang ne l'a pas approuvée (formulaire AppID Review), la connexion Microsoft et Xbox fonctionne mais `login_with_xbox` répond 403 : Hangar affiche « Mojang n'a pas encore autorisé Hangar ». `CLIENT_ID` vide : bouton de connexion masqué.
-
-## Hangar MC, étape 3 : Fabric (8 novembre 2026)
-
-- Option « Fabric » dans l'écran Minecraft (préférence `mcFabric`, désactivée par défaut). Activée, « Installer » ajoute le dernier chargeur Fabric stable de la version (`meta.fabricmc.net`, bibliothèques sur `maven.fabricmc.net`, vérifiées par SHA-1 et taille), et « Jouer » lance Minecraft avec Fabric. Une version sans Fabric (trop récente) donne un message clair.
-- La version Fabric (`fabric-loader-x-y`) est rangée comme une version à part qui hérite de la version vanilla ; `versions/<id>/fabric` dit laquelle est installée. Au lancement : bibliothèques Fabric en tête du classpath, puis celles de Minecraft, classe principale de Fabric, arguments ajoutés à ceux de Minecraft (comme le launcher officiel avec `inheritsFrom`).
-- Testé en vrai (`vrai_lancement_fabric`, ignoré par défaut) : Minecraft 26.3 démarre avec Fabric Loader 0.20.1.
-
-## Hangar MC, étape 4 : le mod Hangar MC (8 novembre 2026)
-
-- Mod Fabric côté client dans `mod/` (Java 25, Gradle 9.8.2 et Fabric Loom, comme le modèle officiel de Fabric pour 26.3). Premiers modules : FPS et CPS (gauche | droit, comptés à chaque image) en haut à gauche, sprint automatique sur la touche V (modifiable dans Contrôles, catégorie « Hangar MC »).
-- `npm run mod` (JAVA_HOME = JDK 25, Temurin 25 installé par winget sur le PC de dev) compile le mod et copie le jar dans `src-tauri/resources/hangarmc-mod.jar`, commité et embarqué dans Hangar (`include_bytes!`, 5 Ko) : pas de téléchargement de plus, pas de JDK dans le CI. Un test vérifie que le jar et `MOD_MC` correspondent à `mod/gradle.properties`.
-- Avec l'option Fabric, l'installation ajoute Fabric API (Maven de Fabric, vérifié par son SHA-1) dans `.hangarmc/mods/<version>/`, et le lancement y écrit le mod Hangar MC si la version est `MOD_MC`, puis passe ces jars à Fabric par `-Dfabric.addMods`. Mods propres à chaque version : `game/mods`, partagé par toutes les versions, ne reçoit rien.
-
-## Hangar MC : Fabric toujours inclus, choix des versions, mode test sans compte (8 novembre 2026)
-
-- Plus d'option Fabric : comme un client du type Lunar, chaque installation ajoute Fabric et Fabric API, et chaque partie se lance avec Fabric, Fabric API et le mod Hangar MC (sur `MOD_MC`). La liste ne montre que les versions que Fabric prend en charge (`meta.fabricmc.net/v2/versions/game`). La préférence `mcFabric` est retirée.
-- Choix de la version dans une fenêtre (`modals/McVersions.svelte`, affichée par App comme les autres) : tuiles regroupées par famille (Minecraft 26, 1.21, 1.20...), date de sortie, « Dernière », « Installée », filtre « Installées seulement ». L'écran met la version choisie en grand, avec « Changer de version » et « Installer » / « Jouer ».
-- Pas de mode sans compte, même dans Hangar Test : Mojang refuse les applications qui permettent de jouer sans vérifier l'authentification et la possession du jeu (formulaire AppID Review). « Jouer » exige toujours un compte Microsoft qui possède Minecraft Java Edition.
-- Chemins avec accent (`C:\Users\Zoé\...`) : Fabric ne reconnaît pas seul ses propres bibliothèques, les charge deux fois (`knot` et `app`) et les mods plantent au démarrage (ClassCastException sur `IMixinConfigPlugin`). Hangar passe donc la liste des bibliothèques de Fabric dans `-Dfabric.systemLibraries`. Le test `vrai_lancement` (dossier choisi par `HANGAR_MC_ROOT`, compte Microsoft connecté dans Hangar Test obligatoire) exige maintenant 20 s sans plantage après le chargement du moteur graphique.
-
-## Hangar MC : modules du mod 0.2.0
-
-- Développement du mod sans compte : `gradlew runClient` (dans `mod/`, JAVA_HOME = JDK 25) lance le jeu de développement de Fabric, dossier `mod/run` (ignoré par Git). Ce n'est pas Hangar : la règle « pas de jeu sans compte » de Hangar MC reste entière.
-- Modules : FPS et CPS, touches (ZQSD selon les touches réglées, clics avec CPS, saut), coordonnées et direction, armure et objet en main avec la solidité restante. Chacun s'active ou se coupe dans le menu Hangar MC (touche Maj droite), enregistré dans `config/hangarmc.properties` (commun à toutes les versions). Pas encore de déplacement des éléments à l'écran.
-- Zoom : touche C maintenue, champ de vision du monde divisé par 4 (mixin sur `Camera.calculateFov`) avec la caméra fluide du jeu. C sert aussi à « Enregistrer la barre » en créatif, comme sur les autres clients ; la touche se change dans les commandes.
-
-## Hangar MC : versions façon Lunar et anciennes versions
-
-- L'écran met en avant les mêmes familles que Lunar (26, 1.21, 1.8, 1.20, 1.19, 1.7, 1.18, 1.16, 1.17, 1.12), chacune sur sa dernière version, en tuiles pixel (`McCover`, nom de la mise à jour). « Toutes les versions » ouvre la popup avec chaque version que Fabric ou Legacy Fabric prend en charge (1.3 et plus).
-- Avant la 1.14 : Legacy Fabric (`meta.legacyfabric.net`, même format que Fabric) et Legacy Fabric API (`repo.legacyfabric.net`), Java 8 de Mojang (`jre-legacy`), arguments `minecraftArguments` et arguments JVM du launcher officiel, ressources « virtual » / « map_to_resources » copiées sous leur nom. Les bibliothèques LWJGL de Legacy Fabric sont retirées (pas de .jar principal pour leurs natives) : LWJGL 2 de Mojang à la place, à revoir pour les Mac Apple Silicon.
-- Vérifié par de vrais lancements 1.8.9, 1.7.10 et 1.12.2 (test `vrai_lancement`, `HANGAR_MC_VERSION`). Ce test de développement prend un profil factice sans compte connecté ; l'app refuse toujours de lancer sans compte.
-
-## Hangar MC : affiches, comptes multiples, textes
-
-- Tuiles et bannière : l'affiche officielle de chaque version, prise dans les notes de version du launcher officiel (`launchercontent.mojang.com/v2/javaPatchNotes.json`, images en cache comme les jaquettes). Une famille prend l'affiche de sa première version (la grande mise à jour). Pas d'affiche avant la 1.13 (1.12, 1.8, 1.7) : jaquette pixel `McCover`.
-- Plusieurs comptes Microsoft, un actif : bouton « Compte » en haut à droite de l'écran, menu pour choisir, ajouter ou retirer. Coffre : `compte-minecraft` (liste et compte actif) et `compte-minecraft-<uuid>` (jeton de chaque compte, le coffre de Windows limitant une entrée à 2,5 Ko). `test-env:clean` retire toutes les entrées « Hangar Test ».
-- L'écran s'appelle « Hangar MC » (barre latérale comprise) et ses textes présentent le client, pas seulement le jeu.
-- Révision : 1.8 et 1.7 (pas d'affiche officielle) prennent une image officielle de minecraft.net sur ce qu'elles ont apporté (`om_header.jpg`, monument océanique ; `badlands-header.jpg`), avec « MINECRAFT » et le nom de la mise à jour écrits par Hangar MC en police pixel. Seulement des images de Mojang, jamais d'images trouvées ailleurs.
-- Révision : les tuiles prennent l'affiche officielle de chaque mise à jour (page des mises à jour de minecraft.net, `www.minecraft.net/content/dam/...`, chargée et mise en cache par le backend comme les jaquettes), de la plus récente à la plus ancienne, 5 par rangée, nommées « Hangar MC 1.21 ». Les images des notes de version ne servent plus qu'à la bannière quand la famille n'a pas d'affiche. 1.8 et 1.7 : pas d'affiche officielle trouvée en ligne, jaquette pixel. Les cartes du bas de l'écran (ajouts, raccourcis, dossier) sont retirées à la demande de l'utilisateur.
-
-## Hangar MC : un mod identique sur toutes les versions
-
-- Le mod a un cœur commun (`mod/common`, Java 8 pour tourner aussi sur Legacy Fabric) : HUD (FPS et CPS, coordonnées, touches, armure), menu Maj droite dessiné par le cœur lui-même aux couleurs de Hangar, réglages (`config/hangarmc.properties`, partagés entre versions), zoom et sprint, textes français / anglais selon la langue du jeu. Chaque version de Minecraft n'a qu'une liaison (`Platform` : dessiner, lire les touches et le joueur, ouvrir le menu) et ses mixins (zoom, et HUD / tick quand l'API manque).
-- Un dossier Gradle par version (`mod/26.3`, `mod/1.8.9`), compilé à part (`gradlew -p <version> build`) avec l'outil le plus récent de sa génération : Fabric Loom et les noms officiels de Mojang pour les versions modernes, Legacy Fabric (legacy-looming, noms Legacy Yarn, Java 8) pour 1.8 / 1.7, qui n'ont pas de noms officiels. Version du mod commune : `mod/common.properties`.
-- `npm run mod` compile chaque dossier et copie `src-tauri/resources/mods/hangarmc-<version>.jar` ; Hangar met le jar de la version lancée (`MODS` dans `minecraft.rs`), rien pour une version qui n'en a pas encore.
-- 26.x numérote le clic gauche 1 (`InputConstants.MOUSE_BUTTON_LEFT`), pas 0 : le menu ne réagissait pas.
-- `gradlew -p <version> runClient` lance le jeu de développement de la version (sans compte, hors de Hangar).
-- Versions couvertes (une par famille, celle que lancent les tuiles) : 26.3, 1.21.11, 1.20.6, 1.19.4, 1.18.2, 1.17.1, 1.16.5 (Fabric, noms officiels de Mojang), 1.12.2, 1.8.9, 1.7.10 (Legacy Fabric). Un jar sert seulement sa version exacte ; les autres versions d'une famille se lancent sans mod pour l'instant.
-- Les versions Fabric d'avant la 26 partagent `mod/modern.gradle` (Loom « remap » le plus récent, noms officiels de Mojang, Java de la version : 8, 16, 17 ou 21) et leurs ressources `mod/common/fabric` (fabric.mod.json, mixins, traductions des touches). Chaque dossier n'a que sa liaison et son mixin de zoom.
-- Différences prises en charge par les liaisons : dessin par `GuiGraphics` (1.20 et plus) ou `PoseStack` (1.16 à 1.19), HUD par `HudElementRegistry` (1.21.6 et plus) ou `HudRenderCallback`, clic de souris par événement (1.21.9 et plus), FPS lus dans le texte de débogage quand le compteur est privé (1.16 à 1.18, 1.7.10), constantes GLFW en 1.16.5, coordonnées et direction recalculées en 1.7.10.
-- Fabric API pour 1.16 / 1.17 est publiée sous la famille (`+1.17`) : Hangar la cherche sous la version exacte puis sous la famille.
-- Le paquet Fabric API publié n'a pas toujours ses modules dedans (1.18.2) ni le même identifiant (`fabric` en 1.16 / 1.17) : comme pour Legacy, les versions d'avant la 26 embarquent dans leur jar les quatre modules utilisés (`fabric-api-base`, `fabric-key-binding-api-v1`, `fabric-lifecycle-events-v1`, `fabric-rendering-v1`) et ne dépendent que d'eux. Vérifié par de vrais lancements des dix versions.
-
-## Hangar MC : fichiers téléchargés à part
-
-Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) : seules leurs empreintes SHA-1 le sont (`build.rs`). À la première ouverture de l'écran Hangar MC, l'écran est grisé et une fenêtre propose de les télécharger depuis la release GitHub de la version de Hangar (`releases/download/v<version>/hangarmc-<mc>.jar`, déposés par `release.yml`), vers `.hangarmc/hangarmc/`. Si la version de Hangar change le mod, la mise à jour se fait sans redemander. En debug (Hangar Test), les jars sont copiés depuis `src-tauri/resources/mods` : la release de la version en cours ne les a pas encore. Minecraft, Java et Fabric étaient déjà téléchargés à la demande, version par version.
-
-## Hangar MC : accueil du mod et titre de la fenêtre
-
-- L'écran titre du jeu est remplacé par l'accueil de Hangar MC (`mod/common/.../core/Home.java`, dessiné par le cœur, le même sur toutes les versions) : fond sombre de Hangar (`#0a0b0f`, pas de dégradé coloré, refusé par l'utilisateur), logo de Hangar en pixels monochrome, « HANGAR MC » en lettres pixel, version du jeu et nom de la mise à jour, boutons Solo, Multijoueur, Options, Hangar MC (menu des modules), Quitter, collines sombres dont l'herbe prend l'accent. Pas de Realms, de langue ni d'accessibilité sur l'accueil (accessibles par Options).
-- Remplacement par un mixin sur `TitleScreen.init` (annulé, puis ouverture de l'accueil) : couvre toutes les façons dont le jeu ouvre son écran titre (démarrage, déconnexion, fermeture d'un menu sans monde).
-- Fenêtre du jeu nommée « Hangar MC <mod> - Minecraft <jeu> » : mixin sur `Minecraft.createTitle` (1.16 et plus), `Display.setTitle` au premier tick avant la 1.14 (le jeu ne change plus son titre ensuite).
-- Le logo pixel remplace aussi le bloc d'herbe dans l'écran Hangar MC de l'app (`McLogo.svelte`).
-
 ## Linux (CachyOS)
 
 - Paquet : **AppImage** seul (`tauri.linux.conf.json`), construit sur Ubuntu 22.04 (glibc ancienne) pour tourner sur les distributions récentes dont CachyOS / Arch. Le bouton « Mettre à jour » marche avec l'AppImage (`latest.json` reçoit `linux-x86_64` par `tauri-action`). Pas de .deb / .rpm / PKGBUILD.
@@ -281,18 +202,6 @@ Les jars du mod Hangar MC ne sont plus embarqués dans l'exe (`include_bytes!`) 
 - Pas de détection Epic, GOG Galaxy, Ubisoft, EA, Battle.net, Riot ni Xbox sous Linux (pas de launcher officiel). Heroic, Lutris et Bottles ne sont pas encore lus.
 - Comptes : coffre Secret Service (KWallet ou GNOME Keyring) via `keyring` (`sync-secret-service`).
 - Installation et désinstallation pilotées par Hangar (Steam, Epic) restent réservées à Windows ; sous Linux, « Désinstaller » ouvre Steam ou le dossier du jeu.
-
-## Jars de Hangar MC hors de la page des releases (2026-11-08)
-
-GitHub ne permet pas de masquer un fichier d'une release. Depuis la 1.2.9, les jars `hangarmc-*.jar` sont publiés par `release.yml` dans la release du même tag sur le dépôt public `maelpasq/hangar-mc` (secret `MC_TOKEN`), et `PACK_URL` pointe là. Les releases jusqu'à la 1.2.8 gardent leurs jars : les versions installées les téléchargent encore.
-
-
-## Pas de jar Hangar MC avant la validation de Mojang (2026-11-08)
-
-Tant que `APPROVED` (`accounts/microsoft.rs`) vaut `false` : Hangar supprime au démarrage (`scan_games`) les jars chez l'utilisateur (dossier `hangarmc` et copies `mods/<version>/hangarmc.jar`), `mc_pack_install` refuse, et `release.yml` ne publie pas les jars sur `maelpasq/hangar-mc`. Le jour où `APPROVED` passe à `true`, la version publiée met les jars sur `hangar-mc` (à rendre public) et l'app les propose au téléchargement.
-
-
-Les jars restent sur le poste de développement (`src-tauri/resources/mods/`, ignorés par Git) : retirés du dépôt et de toutes les releases. À la validation : `APPROVED = true`, recommitter les jars (le CI les lit dans le dépôt), rendre `hangar-mc` public, puis publier.
 
 ## Flou et animations rapides sur tous les systèmes
 
@@ -325,7 +234,3 @@ glib 0.18 (imposé par Tauri 2) et deepmerge 4.3.1 n'ont pas de version corrigé
 ## Version Linux en pause (9 nov. 2026)
 
 La version Linux avait trop de bugs : elle est désactivée en attendant d'être refaite. La release suivante publie encore l'AppImage, pour que les installations existantes la reçoivent par mise à jour : sous Linux, Hangar n'affiche plus que `src/lib/screens/LinuxBlocked.svelte` (`?linux` pour le voir avec `npm run dev:web`), et le backend s'arrête là (`main.rs`, `cfg!(target_os = "linux")`) : pas de scan, pas d'icône, fermer quitte, démarrage avec le système retiré. L'écran garde la recherche de mise à jour : `release.yml` continue de construire l'AppImage pour que `latest.json` ait toujours une entrée Linux, et la future version Linux arrivera chez eux d'elle-même. Le site et le README ne proposent plus Linux. Le CI compile et teste toujours Linux. Pour réactiver : retirer ces deux blocages et rétablir la carte Linux du site et la section du README.
-
-## Hangar MC : le mod dans son propre dépôt (13 nov. 2026)
-
-Le code du mod (`mod/`, `scripts/mod.mjs`, `scripts/mc-pack.mjs`) quitte le dépôt public de Hangar pour le dépôt privé `maelpasq/hangar-mc`, avec son historique (le mod y est à la racine). L'historique de Hangar a été réécrit pour retirer ces fichiers et les anciens jars (`src-tauri/resources/mods/`, `src-tauri/resources/hangarmc-mod.jar`), puis poussé en force avec les tags. Le dépôt hangar-mc se clone à côté de Hangar (`../hangar-mc`) : `npm run mod` lance son `scripts/mod.mjs`, qui copie les jars dans `src-tauri/resources/mods` comme avant. Les tests de `minecraft.rs` lisent ses sources seulement s'il est là.

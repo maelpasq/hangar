@@ -11,7 +11,6 @@
 
 pub mod epic;
 pub mod gog;
-pub mod microsoft;
 pub mod steam;
 pub mod updates;
 
@@ -42,11 +41,6 @@ const API_HOSTS: &[&str] = &[
     // Mises à jour des jeux : versions Epic (compte connecté) et GOG (public).
     "launcher-public-service-prod06.ol.epicgames.com",
     "content-system.gog.com",
-    // Hangar MC : compte Microsoft, Xbox Live, profil Minecraft.
-    "login.microsoftonline.com",
-    "user.auth.xboxlive.com",
-    "xsts.auth.xboxlive.com",
-    "api.minecraftservices.com",
 ];
 
 pub fn allowed(url: &str) -> bool {

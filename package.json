@@ -14,7 +14,6 @@
     "build:setup": "cargo build --release --manifest-path installer/Cargo.toml",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && tsc -p tsconfig.node.json",
     "test": "vitest run",
-    "mod": "node ../hangar-mc/scripts/mod.mjs src-tauri/resources/mods",
     "verify": "node scripts/verify.mjs",
     "tauri": "tauri",
     "brand": "node scripts/brand.mjs"
@@ -34,7 +33,6 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
-    "@fontsource-variable/pixelify-sans": "^5.3.0",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-process": "^2.4.0",

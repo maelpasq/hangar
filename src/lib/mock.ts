@@ -4,13 +4,8 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { AccountStatus, Game, LaunchEvent, McAccount, McPack, McProgress, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, Game, LaunchEvent, PersistedState, Session, StoreId } from './types';
 import { defaultState } from './util/state';
-
-const mcInstalled = new Set<string>(['1.20.1']);
-let mcPack: McPack = 'absent';
-const mcAccount: McAccount = { available: true, accounts: [], active: null };
-const mcProgress = new Set<(p: McProgress) => void>();
 
 interface DemoGame {
   id: string;
@@ -311,60 +306,6 @@ export function mockApi(): Api {
     reportBug: async () => { await wait(800); },
     openWebGame: async () => {},
     onWebClosed: async () => () => {},
-    mcVersions: async () =>
-      [
-        ['26.3', '2026-10-21'], ['26.2', '2026-07-14'], ['26.1', '2026-03-24'], ['1.21.11', '2025-12-09'], ['1.21.10', '2025-10-07'],
-        ['1.21.8', '2025-07-17'], ['1.21.4', '2024-12-03'], ['1.20.6', '2024-04-29'], ['1.20.1', '2023-06-12'], ['1.19.4', '2023-03-14'],
-        ['1.18.2', '2022-02-28'], ['1.17.1', '2021-07-06'], ['1.16.5', '2021-01-15'], ['1.14.4', '2019-07-19'], ['1.12.2', '2017-09-18'],
-        ['1.8.9', '2015-12-09'], ['1.7.10', '2014-06-26']
-      ].map(([id, releaseTime]) => ({ id, releaseTime, installed: mcInstalled.has(id), image: null })),
-    mcPack: async () => mcPack,
-    mcPackInstall: async () => {
-      for (let done = 0; done <= 10; done++) {
-        mcProgress.forEach((cb) => cb({ version: 'hangarmc', step: 'Hangar MC', done, total: 10 }));
-        await wait(150);
-      }
-      mcPack = 'ok';
-    },
-    mcInstall: async (id) => {
-      const steps: [string, number][] = [['Java', 120], ['Jeu', 60], ['Ressources', 400], ['Fabric', 12]];
-      for (const [step, total] of steps) {
-        for (let done = 0; done <= total; done += total / 10) {
-          mcProgress.forEach((cb) => cb({ version: id, step, done, total }));
-          await wait(120);
-        }
-      }
-      mcInstalled.add(id);
-    },
-    mcLaunch: async () => {
-      if (!mcAccount.active) throw 'Ajoute un compte Microsoft pour jouer.';
-      await wait(800);
-    },
-    mcAccount: async () => ({ ...mcAccount, accounts: [...mcAccount.accounts] }),
-    mcLoginStart: async () => {
-      await wait(400);
-      return { userCode: 'HGR4-MC72', url: 'https://www.microsoft.com/link' };
-    },
-    mcLoginFinish: async () => {
-      await wait(3000);
-      const name = mcAccount.accounts.length ? 'Alex' : 'Steve';
-      const uuid = `${name.toLowerCase()}0000`;
-      mcAccount.accounts = [...mcAccount.accounts.filter((a) => a.uuid !== uuid), { name, uuid }];
-      mcAccount.active = uuid;
-      return name;
-    },
-    mcLogout: async (uuid) => {
-      mcAccount.accounts = mcAccount.accounts.filter((a) => a.uuid !== uuid);
-      if (mcAccount.active === uuid) mcAccount.active = mcAccount.accounts[0]?.uuid ?? null;
-    },
-    mcSelect: async (uuid) => {
-      mcAccount.active = uuid;
-    },
-    mcLoginCancel: async () => {},
-    onMcProgress: async (cb) => {
-      mcProgress.add(cb);
-      return () => mcProgress.delete(cb);
-    },
     onAccountsSynced: async (cb) => {
       synced.add(cb);
       return () => synced.delete(cb);

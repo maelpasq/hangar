@@ -32,10 +32,6 @@ const ALLOWED_HOSTS: &[&str] = &[
     "images.gog.com",
     "store-images.s-microsoft.com",
     "displaycatalog.mp.microsoft.com",
-    // Affiches des versions de Minecraft (notes de version du launcher officiel, page des mises à
-    // jour de minecraft.net), écran Hangar MC.
-    "launchercontent.mojang.com",
-    "www.minecraft.net",
 ];
 
 pub fn allowed_url(url: &str) -> bool {

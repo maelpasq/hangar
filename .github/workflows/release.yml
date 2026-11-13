@@ -112,17 +112,3 @@ jobs:
           npm run build:setup
           cp installer/target/release/hangar-setup.exe Hangar-Setup.exe
           gh release upload "$TAG" Hangar-Setup.exe --clobber
-      # Jars de Hangar MC : sur le dépôt maelpasq/hangar-mc (release du même tag), pour ne pas
-      # encombrer la page des releases de Hangar. MC_TOKEN : jeton limité à ce dépôt (Contents en écriture).
-      # Rien tant que Mojang n'a pas validé Hangar MC (APPROVED dans accounts/microsoft.rs).
-      - name: jars Hangar MC
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.MC_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          grep -q 'APPROVED: bool = true' src-tauri/src/accounts/microsoft.rs || { echo "Hangar MC pas encore validé : jars non publiés"; exit 0; }
-          r=maelpasq/hangar-mc; t="$TAG"; jars=(src-tauri/resources/mods/hangarmc-*.jar)
-          gh release create "$t" "${jars[@]}" --repo $r --title "Hangar MC $t" --notes "Mod Hangar MC de Hangar $t, téléchargé par l'app." \
-            || gh release upload "$t" "${jars[@]}" --repo $r --clobber

@@ -10,7 +10,6 @@ mod desktop;
 mod info;
 mod launcher;
 mod manage;
-mod minecraft;
 mod model;
 mod presence;
 mod report;
@@ -205,17 +204,6 @@ fn main() {
             commands::tray_state,
             commands::tray_action,
             commands::set_presence,
-            commands::mc_versions,
-            commands::mc_install,
-            commands::mc_pack,
-            commands::mc_pack_install,
-            commands::mc_launch,
-            commands::mc_account,
-            commands::mc_login_start,
-            commands::mc_login_finish,
-            commands::mc_logout,
-            commands::mc_select,
-            commands::mc_login_cancel,
         ])
         .build(context)
         .expect("erreur au démarrage de Hangar")

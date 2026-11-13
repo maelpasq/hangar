@@ -149,8 +149,6 @@ export interface PersistedState {
   sort: SortKey;
   /** Assistant de configuration vu (installation neuve, ou une fois après la mise à jour qui l'ajoute). */
   onboarded: boolean;
-  /** Hangar MC : dernière version lancée, affichée en haut de l'écran. */
-  mcLast: string;
   prefs: Prefs;
 }
 
@@ -183,32 +181,3 @@ export type LaunchEvent =
   | { type: 'running'; gameId: string; pid: number }
   | { type: 'ended'; gameId: string; session: Session | null }
   | { type: 'failed'; gameId: string; message: string };
-
-/** Hangar MC : version officielle de Minecraft. */
-export interface McVersion {
-  id: string;
-  releaseTime: string;
-  /** Minecraft, Fabric et les mods installés : prête à jouer. */
-  installed: boolean;
-  /** Affiche officielle de la version (notes de version de Mojang), si elle existe. */
-  image: string | null;
-}
-
-/** Compte Microsoft de Hangar MC. `available` : connexion possible dans cette version. */
-export interface McAccount {
-  available: boolean;
-  accounts: { name: string; uuid: string }[];
-  /** UUID du compte qui joue. */
-  active: string | null;
-}
-
-/** Fichiers de Hangar MC (téléchargés à part du launcher) : jamais, à jour, ou à mettre à jour. */
-export type McPack = 'absent' | 'ok' | 'outdated';
-
-/** Avancement d'une installation de Minecraft (fichiers téléchargés de l'étape en cours). */
-export interface McProgress {
-  version: string;
-  step: string;
-  done: number;
-  total: number;
-}

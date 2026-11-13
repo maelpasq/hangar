@@ -8,7 +8,6 @@
   import { library, presentStores } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import Icon, { type IconName } from './Icon.svelte';
-  import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
 
   let { rail = false }: { rail?: boolean } = $props();
@@ -42,7 +41,6 @@
       ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
-    { key: 'minecraft', label: 'Hangar MC', icon: 'cube', go: () => ui.minecraft() },
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 
@@ -74,7 +72,7 @@
         title={rail ? n.label : undefined}
         onclick={n.go}
       >
-        <span class="ic">{#if n.key === 'minecraft'}<McLogo size={19} />{:else}<Icon name={n.icon} />{/if}</span>
+        <span class="ic"><Icon name={n.icon} /></span>
         {#if !rail}
           <span>{n.label}</span>
           <span class="count num">{n.count ?? ''}</span>
