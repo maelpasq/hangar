@@ -78,7 +78,7 @@ Sans clé SteamGridDB, beaucoup de jeux (ceux qui ne sont pas sur Steam : Epic, 
 2. Va dans **[Préférences > API](https://www.steamgriddb.com/profile/preferences/api)** et génère ta clé.
 3. Dans Hangar, ouvre **Paramètres > Jaquettes**, colle la clé dans **Clé API SteamGridDB** puis clique sur **Enregistrer**.
 
-Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur ton ordinateur et n'est envoyée qu'à SteamGridDB.
+Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur ton ordinateur, dans le coffre du système, et n'est envoyée qu'à SteamGridDB.
 
 ## Jeux détectés
 
@@ -116,7 +116,7 @@ Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne
 - **Signaler un bug** (bouton insecte, seulement quand tu envoies) : ton titre, ta description, ta capture si tu en joins une, la version de Hangar et ton système partent vers le salon Discord privé du développeur.
 - **Mises à jour de Hangar** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour Hangar ».
 
-Ta clé SteamGridDB, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS, KWallet ou GNOME Keyring sous Linux), jamais dans un fichier.
+Ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Ta clé SteamGridDB et les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS, KWallet ou GNOME Keyring sous Linux), jamais dans un fichier.
 
 ## Contribuer
 

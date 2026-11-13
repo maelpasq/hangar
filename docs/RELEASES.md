@@ -29,7 +29,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```powershell
    (Invoke-RestMethod "https://api.github.com/repos/maelpasq/hangar/actions/runs?per_page=3").workflow_runs | % { "$($_.name) #$($_.run_number) $($_.status)/$($_.conclusion)" }
    ```
-7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`. Les jars de Hangar MC (`hangarmc-*.jar`) sont dans la release du même tag sur https://github.com/maelpasq/hangar-mc/releases (secret `MC_TOKEN` : jeton limité à ce dépôt, Contents en écriture). Sans eux, l'écran Hangar MC de cette version ne peut pas installer le mod.
+7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`.
 
 Fichiers de la release :
 - `Hangar-Setup.exe` : installeur aux couleurs de Hangar (`installer/`), celui à donner aux gens. Il embarque l'installeur NSIS.
@@ -44,6 +44,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 ## Historique
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
+
+### 1.2.19 - 13 novembre 2026
+**Plus sûr** : ta clé SteamGridDB rejoint tes comptes dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS) au lieu d'un fichier, et un bouton Retirer l'efface dans **Paramètres > Jaquettes**. Hangar n'ouvre que les jeux, dossiers et images que tu as choisis toi-même, refuse les partages réseau et ne lance plus que le bon programme de Riot. **Désinstaller sans risque** : Hangar ne supprime que le dossier du jeu vu par son launcher, jamais un dossier personnel, système ou qui contient un autre jeu. **Tes données protégées** : si ton fichier de bibliothèque est bloqué ou abîmé, Hangar réessaie ou reprend sa copie de secours au lieu de repartir de zéro, et un launcher au fichier corrompu ne fait plus fermer Hangar au démarrage. **Hangar MC** : l'onglet grisé quitte la barre latérale en attendant sa sortie.
 
 ### 1.2.18 - 9 novembre 2026
 **Linux en pause** : la version Linux avait trop de bugs, elle est mise en pause le temps de la refaire. Sous Linux, Hangar n'affiche plus qu'un écran d'attente et ne se lance plus avec ton ordinateur. Quand la nouvelle version Linux sera prête, elle s'installera d'elle-même depuis cet écran. Hangar reste disponible sous Windows et macOS, rien ne change pour toi si tu es sur l'un des deux.
