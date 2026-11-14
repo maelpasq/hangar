@@ -24,12 +24,12 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 - **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » la lance en arrière-plan dans le bon launcher, sans afficher sa fenêtre. Le menu Mises à jour (icône en haut) montre les installations et mises à jour Steam en cours avec leur vraie progression, même après un redémarrage de Hangar, et « Afficher dans Steam » permet de les mettre en pause ou de les annuler. Quand Steam a reporté la mise à jour d'un jeu peu joué, Hangar ouvre ses téléchargements et te dit sur quel bouton cliquer.
 - **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start ou Xbox pour l'ouvrir, A pour jouer), avec un onglet par collection. Sous Windows, le bouton Xbox ramène Hangar en mode manette même depuis un jeu ou une autre app.
 - **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
-- **Collections et filtres** : range tes jeux dans tes propres listes (le « + » de la barre latérale ouvre une fenêtre avec recherche pour cocher les jeux) et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
+- **Collections et filtres** : range tes jeux dans tes propres listes (le « + » de la barre latérale ouvre une fenêtre avec recherche pour cocher les jeux) et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), bouton Actualiser (rescan, comptes et mises à jour d'un clic), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
 - **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar.
 - **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
 - **Hangar MC (bientôt)** : le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules, lancées en un clic. Son bouton, à son logo, est déjà dans la barre latérale, une mise à jour le débloquera.
 - **Discord** : tes amis voient à quoi tu joues, avec la jaquette du jeu et ton temps de jeu (à activer dans **Paramètres > Général**).
-- **Prêt en cinq étapes** : à la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta couleur, les jeux web et l'onglet sur lequel Hangar s'ouvre (Accueil, Bibliothèque, Favoris, Jeux web ou une collection). Tu peux le relancer depuis **Paramètres > Général**.
+- **Prêt en six étapes** : à la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta clé SteamGridDB (guidée pas à pas), ta couleur (au choix ou n'importe quelle teinte), les jeux web et l'onglet sur lequel Hangar s'ouvre (Accueil, Bibliothèque, Favoris, Jeux web ou une collection). Tu peux le relancer depuis **Paramètres > Général**.
 - **Mises à jour de Hangar intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour Hangar » apparaît dans l'app, et une fenêtre te montre ensuite ce qui a changé (à revoir dans **Paramètres > Général > Nouveautés**).
 
 ![Bibliothèque](docs/images/bibliotheque.webp)
@@ -73,7 +73,7 @@ La version Linux est en pause : elle avait trop de bugs et sera refaite. Elle n'
 
 ## ⚠ Indispensable : ta clé SteamGridDB
 
-Sans clé SteamGridDB, beaucoup de jeux (ceux qui ne sont pas sur Steam : Epic, Riot, jeux locaux...) restent sans jaquette. La clé est gratuite et prend deux minutes :
+Sans clé SteamGridDB, beaucoup de jeux (ceux qui ne sont pas sur Steam : Epic, Riot, jeux locaux...) restent sans jaquette. La clé est gratuite et prend deux minutes. Hangar te guide pas à pas à la première ouverture et dans **Paramètres > Jaquettes**, et te le rappelle (en rouge) tant qu'elle manque :
 
 1. Crée un compte sur **[steamgriddb.com](https://www.steamgriddb.com)** (connexion avec Steam possible).
 2. Va dans **[Préférences > API](https://www.steamgriddb.com/profile/preferences/api)** et génère ta clé.
