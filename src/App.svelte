@@ -25,7 +25,9 @@
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import StartPage from './lib/modals/StartPage.svelte';
+  import WhatsNew from './lib/modals/WhatsNew.svelte';
   import { openStartPage } from './lib/start-page';
+  import { RELEASES, notesBetween } from './lib/util/release-notes';
   import GamePage from './lib/screens/GamePage.svelte';
   import Home from './lib/screens/Home.svelte';
   import Library from './lib/screens/Library.svelte';
@@ -110,6 +112,26 @@
 
   // Pas d'ambiance propre aux écrans Bibliothèque / Paramètres : on garde la dernière.
 
+  /** Après une mise à jour de Hangar, montre une fois ses notes de version. À l'installation
+   * (configuration pas encore faite), retient seulement la version, sans fenêtre. */
+  async function whatsNew() {
+    let version: string;
+    try {
+      version = await api.appVersion();
+    } catch {
+      return;
+    }
+    const since = library.state.lastVersion;
+    if (since === version) return;
+    const show = library.state.onboarded && notesBetween(RELEASES, since, version).length > 0;
+    if (show && !ui.modal) ui.modal = { kind: 'whatsNew', version, since };
+    // Fenêtre déjà prise (configuration, onglet de départ) : les notes attendent le prochain démarrage.
+    else if (!show) {
+      library.state.lastVersion = version;
+      library.save();
+    }
+  }
+
   onMount(() => {
     const offs: (() => void)[] = [];
     let alive = true;
@@ -153,6 +175,7 @@
         if (!ui.modal && !library.state.onboarded) ui.modal = { kind: 'onboarding' };
         // Onglet de départ : proposé une fois à qui avait fait la configuration avant son arrivée.
         else if (!ui.modal && library.state.prefs.startPage === null) ui.modal = { kind: 'startPage' };
+        await whatsNew();
       }
       await rescan();
       void updater.check(true);
@@ -270,6 +293,8 @@
     <Onboarding />
   {:else if ui.modal?.kind === 'startPage'}
     <StartPage />
+  {:else if ui.modal?.kind === 'whatsNew'}
+    <WhatsNew version={ui.modal.version} since={ui.modal.since} manual={ui.modal.manual === true} />
   {:else if ui.modal?.kind === 'collections' && modalGame}
     <Collections game={modalGame} />
   {:else if ui.modal?.kind === 'collectionEdit'}

@@ -118,6 +118,7 @@ Navigation par section à gauche (Général, Apparence, Launchers, Bibliothèque
   - GOG et Epic : « Se connecter » ouvre la page de connexion officielle dans une fenêtre à part ; Hangar récupère un jeton, jamais le mot de passe.
   - Chaque compte connecté affiche le pseudo, le nombre de jeux, la date de synchro ou l'erreur, et « Déconnecter » (efface le jeton). Synchro à la connexion puis au plus toutes les 6 h, en arrière-plan.
   - Ubisoft Connect, EA app, Battle.net, Xbox : pas de connexion (pas d'API sûre pour une app tierce, ou mot de passe à faire transiter).
+- **Mise à jour** : version de Hangar, « Rechercher » / « Installer et redémarrer », et « Nouveautés » qui rouvre les notes de la version. Au premier démarrage après une mise à jour, la fenêtre « Hangar a été mis à jour » montre une fois les notes de chaque version reçue (tirées de l'historique de `docs/RELEASES.md`, embarqué au build) ; rien à l'installation.
 - **Jeux masqués** : liste avec bouton « Afficher ».
 - **Jeux ajoutés à la main** : liste avec bouton « Retirer ».
 

@@ -23,6 +23,7 @@ export function defaultState(): PersistedState {
     theme: 'dark',
     sort: 'recent',
     onboarded: false,
+    lastVersion: null,
     prefs: {
       minimizeOnLaunch: true,
       startWithWindows: false,
@@ -74,6 +75,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   if (raw.theme === 'dark' || raw.theme === 'light' || raw.theme === 'system') s.theme = raw.theme;
   if (raw.sort === 'recent' || raw.sort === 'az' || raw.sort === 'hours') s.sort = raw.sort as SortKey;
   s.onboarded = raw.onboarded === true;
+  if (typeof raw.lastVersion === 'string' && /^\d+(\.\d+)*$/.test(raw.lastVersion)) s.lastVersion = raw.lastVersion;
   if (isObj(raw.prefs)) {
     const p = raw.prefs;
     if (typeof p.minimizeOnLaunch === 'boolean') s.prefs.minimizeOnLaunch = p.minimizeOnLaunch;

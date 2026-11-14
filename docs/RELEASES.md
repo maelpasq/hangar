@@ -17,6 +17,8 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    - puis des sections `#### Nouveautés`, `#### Améliorations`, `#### Corrections` (seulement celles qui ont du contenu), chacune en liste à puces : un point par changement visible, concret, du point de vue de l'utilisateur (ce qui change pour lui, où, sur quel système si ce n'est pas partout) ;
    - jamais de `###` dans l'entrée (il marque la version suivante), ni de détail interne (noms de fichiers, refactorisations, CI) sauf s'il a un effet visible.
 
+   Cette même entrée s'affiche **dans Hangar**, dans la fenêtre « Hangar a été mis à jour » au premier démarrage après la mise à jour (et via Paramètres > Général > Nouveautés), pour que chacun comprenne pourquoi il a mis à jour. Elle est lue dans ce fichier au build (`src/lib/util/release-notes.ts`, aucun réseau) : sans entrée, pas de fenêtre. Seuls l'accroche, les titres `####`, les puces et le gras `**...**` sont rendus. Vérifie le rendu avant de committer : `npm run dev:web`, Paramètres > Général > Nouveautés.
+
    Puis committer :
    ```bash
    git commit -am "Versions : notes de la 1.2.1"
@@ -34,7 +36,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```powershell
    (Invoke-RestMethod "https://api.github.com/repos/maelpasq/hangar/actions/runs?per_page=3").workflow_runs | % { "$($_.name) #$($_.run_number) $($_.status)/$($_.conclusion)" }
    ```
-7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`. Son texte doit afficher le patch note complet de l'étape 3 ; s'il est vide ou tronqué, corrige-le à la main sur la page de la release.
+7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`. Son texte doit afficher le patch note complet de l'étape 3 ; s'il est vide ou tronqué, corrige-le à la main sur la page de la release. La fenêtre de notes dans l'app vient du fichier embarqué, pas de la release : une correction sur GitHub ne la change pas.
 
 Fichiers de la release :
 - `Hangar-Setup.exe` : installeur aux couleurs de Hangar (`installer/`), celui à donner aux gens. Il embarque l'installeur NSIS.

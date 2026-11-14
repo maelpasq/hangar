@@ -5,7 +5,11 @@ import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
 import type { AccountStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
+import { RELEASES } from './util/release-notes';
 import { defaultState } from './util/state';
+
+/** Version affichée en démo : la dernière de docs/RELEASES.md. */
+const DEMO_VERSION = RELEASES[0]?.version ?? '1.0.0';
 
 interface DemoGame {
   id: string;
@@ -82,6 +86,8 @@ function demoState(now: number): PersistedState {
     }
   });
   s.localFolders = ['D:\\Jeux', 'E:\\Emulation'];
+  // Notes de la version de démo déjà vues (sinon la fenêtre Nouveautés à chaque chargement).
+  s.lastVersion = DEMO_VERSION;
   return s;
 }
 
@@ -324,7 +330,7 @@ export function mockApi(): Api {
       synced.add(cb);
       return () => synced.delete(cb);
     },
-    appVersion: async () => '1.0.0',
+    appVersion: async () => DEMO_VERSION,
     checkUpdate: async () => {
       await new Promise((r) => setTimeout(r, 600));
       return { version: '1.1.0' };

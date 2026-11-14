@@ -154,6 +154,8 @@ export interface PersistedState {
   sort: SortKey;
   /** Assistant de configuration vu (installation neuve, ou une fois après la mise à jour qui l'ajoute). */
   onboarded: boolean;
+  /** Version de Hangar dont les notes ont été vues (null : inconnue, avant la 1.2.24). */
+  lastVersion: string | null;
   prefs: Prefs;
 }
 

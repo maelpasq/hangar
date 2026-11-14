@@ -13,6 +13,8 @@ export type Modal =
   | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
   | { kind: 'startPage' }
+  /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
+  | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
   | { kind: 'bug' }
   | { kind: 'mcSoon' }
   | { kind: 'collections'; gameId: string }

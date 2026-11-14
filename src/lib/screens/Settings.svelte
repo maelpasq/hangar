@@ -19,6 +19,7 @@
   import type { AccountStatus, Prefs, StartPage, StoreId, Theme } from '../types';
   import { plural, relativeDay } from '../util/format';
   import { isLinux, isMac } from '../util/platform';
+  import { RELEASES } from '../util/release-notes';
 
   type SectionId = 'general' | 'appearance' | 'launchers' | 'library' | 'covers';
 
@@ -296,6 +297,11 @@
                   <span class="lbl">Hangar {version}</span>
                   <span class="hint" aria-live="polite">{updater.label}</span>
                 </span>
+                {#if version && RELEASES.some((r) => r.version === version)}
+                  <button class="btn-s" onclick={() => (ui.modal = { kind: 'whatsNew', version, since: null, manual: true })}
+                    >Nouveautés</button
+                  >
+                {/if}
                 {#if updater.phase === 'available'}
                   <button class="btn-s primary" onclick={() => updater.install()}>Installer et redémarrer</button>
                 {:else}
