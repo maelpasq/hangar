@@ -12,7 +12,12 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```
    Chaque étape doit afficher `ok`. `git status` doit être propre et la branche doit être `main`.
 2. **Le numéro** : toujours `patch`, règle fixée par l'utilisateur. Chaque version ajoute 0.0.1 au dernier chiffre (1.2.1 -> 1.2.2 -> 1.2.3...), petite correction comme grosse nouveauté. Jamais `minor` ni `major`, même pour une grosse mise à jour.
-3. **Ajouter l'entrée de la version** en haut de « Historique » ci-dessous (numéro, date, description pour les utilisateurs), puis committer :
+3. **Ajouter l'entrée de la version** en haut de « Historique » ci-dessous (numéro, date, description pour les utilisateurs), puis committer. Cette entrée devient telle quelle le texte de la release GitHub (`release.yml`) : ce doit être un **vrai patch note**, pas un paragraphe vague. Repars de tous les commits depuis la dernière version (`git log --oneline vX.Y.Z..HEAD`) et écris :
+   - une phrase d'accroche qui résume la version ;
+   - puis des sections `#### Nouveautés`, `#### Améliorations`, `#### Corrections` (seulement celles qui ont du contenu), chacune en liste à puces : un point par changement visible, concret, du point de vue de l'utilisateur (ce qui change pour lui, où, sur quel système si ce n'est pas partout) ;
+   - jamais de `###` dans l'entrée (il marque la version suivante), ni de détail interne (noms de fichiers, refactorisations, CI) sauf s'il a un effet visible.
+
+   Puis committer :
    ```bash
    git commit -am "Versions : notes de la 1.2.1"
    ```
@@ -29,7 +34,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    ```powershell
    (Invoke-RestMethod "https://api.github.com/repos/maelpasq/hangar/actions/runs?per_page=3").workflow_runs | % { "$($_.name) #$($_.run_number) $($_.status)/$($_.conclusion)" }
    ```
-7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`.
+7. **Vérifier la release** sur https://github.com/maelpasq/hangar/releases : elle doit contenir `Hangar-Setup.exe`, `Hangar_x.y.z_x64-setup.exe` et sa `.sig`, `Hangar_x.y.z_universal.dmg`, `Hangar_universal.app.tar.gz` et sa `.sig`, `Hangar_x.y.z_amd64.AppImage` et sa `.sig`, et `latest.json`. Son texte doit afficher le patch note complet de l'étape 3 ; s'il est vide ou tronqué, corrige-le à la main sur la page de la release.
 
 Fichiers de la release :
 - `Hangar-Setup.exe` : installeur aux couleurs de Hangar (`installer/`), celui à donner aux gens. Il embarque l'installeur NSIS.
