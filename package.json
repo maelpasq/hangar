@@ -5,8 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "tauri dev --config src-tauri/tauri.test.conf.json",
-    "test-env:clean": "node scripts/test-env.mjs",
+    "dev": "tauri dev",
     "version": "node scripts/sync-version.mjs && git add src-tauri/Cargo.toml src-tauri/Cargo.lock installer/Cargo.toml installer/Cargo.lock",
     "dev:web": "vite",
     "build": "tauri build",

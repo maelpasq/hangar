@@ -145,7 +145,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` ouvre l'app avec rechargement à chaud, dans un environnement de test séparé (« Hangar Test ») : il ne touche ni à une Hangar déjà installée, ni à ses données ou ses comptes. `npm run test-env:clean` le supprime. Pour travailler sur l'interface seule dans un navigateur, avec 40 jeux de démo (dont 4 à installer) :
+`npm run dev` ouvre l'app avec rechargement à chaud. Pour travailler sur l'interface seule dans un navigateur, avec 40 jeux de démo (dont 4 à installer) :
 
 ```bash
 npm run dev:web

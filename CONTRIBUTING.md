@@ -14,11 +14,9 @@ Les prérequis et les commandes sont dans le [README](README.md#pour-les-dévelo
 
 ```bash
 npm install
-npm run dev       # l'app, dans un environnement de test séparé (« Hangar Test »)
+npm run dev       # l'app, avec rechargement à chaud
 npm run dev:web   # l'interface seule dans un navigateur, avec des jeux de démo
 ```
-
-`npm run dev` ne touche jamais à une Hangar déjà installée : identité, données, comptes et démarrage automatique à part, sans mise à jour automatique. `npm run test-env:clean` supprime cet environnement.
 
 ## Règles du projet
 
