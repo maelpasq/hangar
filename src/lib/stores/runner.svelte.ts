@@ -2,7 +2,7 @@
 
 import { rescan, showLauncher } from '../actions';
 import { api } from '../api';
-import type { LaunchEvent } from '../types';
+import type { LaunchEvent, LauncherPrompt } from '../types';
 import { elapsed } from '../util/format';
 import { isLinux, isMac } from '../util/platform';
 import { library } from './library.svelte';
@@ -13,10 +13,16 @@ export interface Launching {
   /** 0 = ouverture du launcher, 1 = démarrage du jeu, 2 = bon jeu */
   step: 0 | 1 | 2;
   key: number;
+  /** Steam attend une réponse (Steam Cloud) : la question est posée dans l'écran de lancement. */
+  prompt?: LauncherPrompt;
+  /** La boîte de Steam est montrée, l'utilisateur y fait son choix. */
+  inLauncher?: boolean;
 }
 
 /** Fermeture de l'overlay au plus tard après ce délai. */
 const OVERLAY_MAX_MS = 4000;
+/** Question d'un launcher reçue jusqu'à ce délai après le lancement (recherche du jeu par le suivi). */
+const PROMPT_MAX_MS = 95_000;
 /** Relevé de la progression des téléchargements Steam. */
 const PROGRESS_MS = 2000;
 /** Téléchargement Steam resté à 0 % aussi longtemps : signalé. */
@@ -31,6 +37,7 @@ const installState = (id: string): string => {
 
 class Runner {
   launching = $state<Launching | null>(null);
+  private lastLaunch: { gameId: string; at: number } | null = null;
   /** Jeux dont un processus est détecté, avec l'heure de début. */
   running = $state<Record<string, number>>({});
   /** Jeux web ouverts dans leur fenêtre, avec l'heure d'ouverture (présence Discord seulement). */
@@ -82,6 +89,7 @@ class Runner {
     ui.searchOpen = false;
     ui.menu = null;
     this.launching = { gameId, step: 0, key: ++this.seq };
+    this.lastLaunch = { gameId, at: Date.now() };
     clearTimeout(this.closeTimer);
     this.closeTimer = setTimeout(() => this.closeOverlay(true), OVERLAY_MAX_MS);
     try {
@@ -251,7 +259,37 @@ class Runner {
 
   cancel(): void {
     clearTimeout(this.closeTimer);
+    const p = this.launching?.prompt;
+    if (p) api.answerLauncherPrompt(p.hwnd, false).catch(() => {});
     this.launching = null;
+  }
+
+  /** Question d'un launcher : posée dans l'écran de lancement, rouvert pour le dernier jeu lancé
+   *  s'il s'est déjà fermé (Steam synchronise avant de répondre). Sinon sa boîte est montrée. */
+  ask(p: LauncherPrompt): void {
+    const l = this.launching;
+    const last = this.lastLaunch;
+    if (l && !l.prompt) {
+      this.launching = { ...l, prompt: p, inLauncher: false };
+    } else if (!l && last && Date.now() - last.at < PROMPT_MAX_MS && !this.running[last.gameId]) {
+      clearTimeout(this.closeTimer);
+      this.launching = { gameId: last.gameId, step: 1, key: ++this.seq, prompt: p, inLauncher: false };
+      if (this.minimizedByUs) {
+        this.minimizedByUs = false;
+        api.win.restore().catch(() => {});
+      }
+    } else {
+      api.answerLauncherPrompt(p.hwnd, true).catch(() => {});
+    }
+  }
+
+  /** Réponse à la question : Annuler ferme la boîte de Steam, sinon elle est montrée pour le choix. */
+  answer(show: boolean): void {
+    const l = this.launching;
+    if (!l?.prompt) return;
+    if (!show) return this.cancel();
+    api.answerLauncherPrompt(l.prompt.hwnd, true).catch((e) => ui.toast(String(e), { error: true, gameId: l.gameId }));
+    this.launching = { ...l, prompt: undefined, inLauncher: true };
   }
 
   async stop(gameId: string): Promise<void> {
@@ -275,7 +313,7 @@ class Runner {
         this.tick();
         this.syncPresence();
         if (mine) {
-          this.launching = { ...l, step: 2 };
+          this.launching = { ...l, step: 2, prompt: undefined, inLauncher: false };
           clearTimeout(this.closeTimer);
           this.closeTimer = setTimeout(() => this.closeOverlay(true), 700);
         }
@@ -321,7 +359,8 @@ class Runner {
 
   private closeOverlay(ok: boolean): void {
     const l = this.launching;
-    if (!l) return;
+    // Une question ou un choix dans Steam en cours : l'écran reste jusqu'à la réponse.
+    if (!l || ((l.prompt || l.inLauncher) && l.step < 2)) return;
     clearTimeout(this.closeTimer);
     this.launching = null;
     if (!ok) return;

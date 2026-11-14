@@ -88,6 +88,7 @@ fn main() {
     let builder = if test_env { builder } else { builder.plugin(tauri_plugin_updater::Builder::new().build()) };
     builder
         .setup(move |app| {
+            veil::init(app.handle().clone());
             accounts::set_vault(if test_env { "Hangar Test" } else { "Hangar" });
             if test_env {
                 if let Some(w) = app.get_webview_window("main") {
@@ -169,6 +170,7 @@ fn main() {
             commands::load_library,
             commands::save_library,
             commands::launch_game,
+            commands::answer_launcher_prompt,
             commands::install_game,
             commands::stop_game,
             commands::show_launchers,

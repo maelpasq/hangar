@@ -24,6 +24,7 @@
     "allow-load-library",
     "allow-save-library",
     "allow-launch-game",
+    "allow-answer-launcher-prompt",
     "allow-install-game",
     "allow-stop-game",
     "allow-show-launchers",

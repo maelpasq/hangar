@@ -113,6 +113,7 @@ interface PersistedState {
 | `scan_games(localFolders) -> Game[]` | Scan complet, en parallèle (un thread par détecteur), Xbox inclus |
 | `load_state() -> PersistedState` / `save_state(state)` | Persistance atomique, migrations par `version` |
 | `launch_game(game) -> ()` | Lance, démarre le suivi du processus, émet les événements ci-dessous |
+| `answer_launcher_prompt(hwnd, show)` | Réponse à `launch://prompt` : `show` montre la boîte du launcher au-dessus de Hangar, sinon elle est fermée (annulée) |
 | `install_game(gameId)` | Jeu non installé : ouvre son installation dans le launcher (pas de suivi de processus) |
 | `stop_game(gameId)` | Termine proprement les processus du jeu |
 | `accounts_status() -> AccountStatus[]` | Par store : détecté, connectable, connecté, pseudo, nombre de jeux, date de synchro, erreur. Jamais de jeton |
@@ -144,6 +145,7 @@ interface PersistedState {
 | `launch://running` | `{ gameId, pid }` | Premier processus du jeu détecté |
 | `launch://session` | `{ gameId, session }` | Partie en cours : point d'étape chaque minute, ou session close après une veille (le frontend remplace la session de même début) |
 | `launch://ended` | `{ gameId, session }` | Plus aucun processus du jeu depuis 5 s |
+| `launch://prompt` | `{ kind, hwnd }` | Boîte de Steam Cloud (synchronisation impossible, cloud obsolète, conflit) cachée par le voile : la question est posée dans l'écran de lancement |
 | `launch://failed` | `{ gameId, message }` | Échec |
 | `scan://partial` | `Game[]` | Un détecteur lent (Xbox) a répondu |
 | `tray://launch` | `gameId` | Jeu choisi dans le menu de l'icône (le frontend le lance comme depuis la bibliothèque) |

@@ -114,6 +114,7 @@
       // allSettled : un écouteur qui échoue ne doit pas bloquer le chargement et le scan.
       const listeners = await Promise.allSettled([
         api.onLaunch((e) => runner.handle(e)),
+        api.onLauncherPrompt((p) => runner.ask(p)),
         api.onScanPartial((g) => {
           library.mergePartial(g);
         }),

@@ -176,6 +176,13 @@ export interface SteamHit {
   name: string;
 }
 
+/** Boîte de Steam Cloud qui attend une réponse avant de lancer le jeu, posée dans Hangar. */
+export interface LauncherPrompt {
+  kind: 'syncFailed' | 'pending' | 'conflict';
+  /** Fenêtre de Steam (cachée) à qui renvoyer la réponse. */
+  hwnd: number;
+}
+
 export type LaunchEvent =
   | { type: 'started'; gameId: string }
   | { type: 'running'; gameId: string; pid: number }

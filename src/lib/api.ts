@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -76,6 +76,10 @@ export interface Api {
   pickFolder(): Promise<string | null>;
   pickImage(): Promise<string | null>;
   onLaunch(cb: (e: LaunchEvent) => void): Promise<() => void>;
+  /** Le launcher attend une réponse (Steam Cloud) : Hangar pose la question. */
+  onLauncherPrompt(cb: (p: LauncherPrompt) => void): Promise<() => void>;
+  /** `show` : montre la boîte du launcher au-dessus de Hangar ; sinon elle est annulée. */
+  answerLauncherPrompt(hwnd: number, show: boolean): Promise<void>;
   onScanPartial(cb: (games: Game[]) => void): Promise<() => void>;
   accountsStatus(): Promise<AccountStatus[]>;
   /** Clé d'API Web Steam de l'utilisateur ; renvoie le nombre de jeux trouvés. */
@@ -185,6 +189,8 @@ async function tauriApi(): Promise<Api> {
       ]);
       return () => offs.forEach((o) => o());
     },
+    onLauncherPrompt: (cb) => on<LauncherPrompt>('launch://prompt', cb),
+    answerLauncherPrompt: (hwnd, show) => invoke('answer_launcher_prompt', { hwnd, show }),
     onScanPartial: (cb) => on<Game[]>('scan://partial', cb),
     accountsStatus: () => invoke('accounts_status'),
     connectSteam: (key) => invoke('connect_steam', { key }),

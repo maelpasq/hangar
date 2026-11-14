@@ -330,6 +330,13 @@ pub async fn launch_game(app: AppHandle, ctx: Ctxs<'_>, game_id: String) -> Resu
     Ok(())
 }
 
+/// Réponse à une question d'un launcher posée dans l'écran de lancement (`launch://prompt`) :
+/// `show` montre sa boîte au-dessus de Hangar, sinon elle est annulée.
+#[tauri::command]
+pub fn answer_launcher_prompt(hwnd: i64, show: bool) -> Result<(), String> {
+    crate::veil::answer(hwnd, show)
+}
+
 /// Installe un jeu possédé : Steam en arrière-plan par Hangar (Windows), les autres dans leur
 /// launcher. Renvoie le message à afficher.
 #[tauri::command]

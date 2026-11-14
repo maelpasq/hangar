@@ -4,7 +4,7 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { AccountStatus, Game, LaunchEvent, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
 import { defaultState } from './util/state';
 
 interface DemoGame {
@@ -156,6 +156,9 @@ export function mockApi(): Api {
   const listeners = new Set<(e: LaunchEvent) => void>();
   const running = new Map<string, { start: number; timers: number[] }>();
   const emit = (e: LaunchEvent) => listeners.forEach((l) => l(e));
+  // Démo d'une question de Steam Cloud : `?prompt=syncFailed` (ou pending, conflict).
+  const promptKind = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('prompt') : null;
+  const prompts = new Set<(p: LauncherPrompt) => void>();
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const imgCache = new Map<string, Promise<string | null>>();
   const connected = new Map<StoreId, AccountStatus>();
@@ -186,6 +189,11 @@ export function mockApi(): Api {
       const entry = { start: 0, timers: [] as number[] };
       running.set(gameId, entry);
       entry.timers.push(window.setTimeout(() => emit({ type: 'started', gameId }), 1000));
+      if (promptKind) {
+        const kind = promptKind as LauncherPrompt['kind'];
+        entry.timers.push(window.setTimeout(() => prompts.forEach((cb) => cb({ kind, hwnd: 1 })), 1600));
+        return;
+      }
       entry.timers.push(
         window.setTimeout(() => {
           entry.start = Date.now();
@@ -276,6 +284,11 @@ export function mockApi(): Api {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
+    onLauncherPrompt: async (cb) => {
+      prompts.add(cb);
+      return () => prompts.delete(cb);
+    },
+    answerLauncherPrompt: async () => {},
     onScanPartial: async () => () => {},
     accountsStatus: async () =>
       (['steam', 'epic', 'gog', 'ubisoft', 'ea', 'battlenet', 'riot', 'xbox'] as StoreId[]).map(
