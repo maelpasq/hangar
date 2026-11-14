@@ -52,6 +52,18 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.24 - 14 novembre 2026
+Le bouton Xbox te ramène dans Hangar depuis n'importe où, créer une collection se fait en quelques clics, et chaque mise à jour te dit désormais ce qui a changé.
+
+#### Nouveautés
+- **Bouton Xbox partout** (Windows) : depuis un jeu, une autre app ou avec Hangar caché, le bouton Xbox de ta manette ramène Hangar au premier plan et ouvre le mode manette.
+- **Nouvelle collection** : le « + » de la section Collections, dans la barre latérale, ouvre une fenêtre où tu donnes un nom et coches tes jeux, avec une barre de recherche pour les trouver vite.
+- **Ajouter des jeux** : dans une collection, une carte en fin de grille rouvre cette fenêtre, avec les jeux de la collection déjà cochés.
+- **Notes de version** : après chaque mise à jour, Hangar te montre une fois ce qui a changé. Tu peux les revoir dans **Paramètres > Général > Nouveautés**.
+
+#### Améliorations
+- La section **Collections** reste visible dans la barre latérale, même quand tu n'en as encore aucune.
+
 ### 1.2.23 - 14 novembre 2026
 Hangar s'ouvre maintenant sur l'onglet de ton choix, et le mode manette se pilote plus naturellement, avec tes collections à portée de pouce.
 
