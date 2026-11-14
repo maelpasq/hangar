@@ -20,6 +20,7 @@ pub fn product_name(product: &str) -> String {
         "valorant" => "VALORANT".to_string(),
         "bacon" => "Legends of Runeterra".to_string(),
         "lion" => "2XKO".to_string(),
+        "teamfighttactics" => "TFT".to_string(),
         other => other.replace('_', " "),
     }
 }
@@ -133,6 +134,7 @@ mod tests {
     #[test]
     fn noms() {
         assert_eq!(product_name("valorant"), "VALORANT");
+        assert_eq!(product_name("teamfighttactics"), "TFT");
         assert_eq!(product_name("nouveau_jeu"), "nouveau jeu");
         assert!(process_names("valorant").contains(&"VALORANT-Win64-Shipping.exe".to_string()));
     }

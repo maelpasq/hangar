@@ -110,7 +110,12 @@ impl Artworks {
     pub fn find(&self, game: &Game, sgdb_key: Option<&str>, refresh: bool) -> Artwork {
         let key = sgdb_key.map(str::trim).filter(|k| !k.is_empty());
         // « v2 » : nouvelle source (Microsoft Store par le nom), les anciens échecs sont retentés.
-        let ck = format!("{}|{}|v2", game.id, if key.is_some() { "sgdb" } else { "-" });
+        let ck = format!(
+            "{}|{}|v2{}",
+            game.id,
+            if key.is_some() { "sgdb" } else { "-" },
+            if search_name(&game.id).is_some() { "n" } else { "" }
+        );
         if !refresh {
             if let Some(e) = self.lock().entries.get(&ck).cloned() {
                 if entry_usable(&e, now()) {
@@ -138,6 +143,15 @@ impl Artworks {
     }
 
     fn resolve(&self, game: &Game, key: Option<&str>, cacheable: &mut bool) -> Artwork {
+        // Nom affiché court (TFT) : les sources d'images le connaissent sous son nom complet.
+        let named;
+        let game = match search_name(&game.id) {
+            Some(n) => {
+                named = Game { name: n.to_string(), ..game.clone() };
+                &named
+            }
+            None => game,
+        };
         let mut out = Artwork::default();
         let mut sources: Vec<String> = vec![];
         let mut apply = |found: Found, name: &str, out: &mut Artwork| {
@@ -557,6 +571,14 @@ pub fn xbox_candidates(v: &Value) -> Found {
 
 /// Résultat d'`autosuggest` : premier jeu dont le titre (sans « - Windows », « - Xbox »...)
 /// est exactement `name`, pour éviter les faux amis (Robux, guides...).
+/// Nom à chercher dans les sources d'images quand le nom affiché est une abréviation.
+fn search_name(id: &str) -> Option<&'static str> {
+    match id {
+        "riot:teamfighttactics" => Some("Teamfight Tactics"),
+        _ => None,
+    }
+}
+
 pub fn ms_pick(v: &Value, name: &str) -> Option<String> {
     let want = crate::scanner::norm(name);
     v.get("Results")?.as_array()?.iter().flat_map(|r| r.get("Products").and_then(Value::as_array).into_iter().flatten()).find_map(|p| {
