@@ -50,6 +50,19 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.23 - 14 novembre 2026
+Hangar s'ouvre maintenant sur l'onglet de ton choix, et le mode manette se pilote plus naturellement, avec tes collections à portée de pouce.
+
+#### Nouveautés
+- **Onglet de départ** : choisis sur quel onglet Hangar s'ouvre (Accueil, Bibliothèque, Favoris, Jeux web ou l'une de tes collections). Le choix se fait dans une nouvelle 5e étape de la configuration de départ et se change dans **Paramètres > Général**. Si cet onglet disparaît (Jeux web désactivé, collection supprimée), Hangar revient à l'Accueil.
+- Si tu avais déjà fait la configuration, une petite fenêtre te propose ce choix une seule fois ; la fermer garde l'Accueil, comme avant.
+- **Mode manette** : chaque collection non vide a son propre onglet, entre Favoris et Tous les jeux.
+- **Mode manette** : le bouton Xbox (ou PS, ou Home) ouvre et ferme le mode manette, comme Start.
+
+#### Améliorations
+- **Mode manette** : haut et bas restent dans la même colonne de jaquettes au lieu de partir en diagonale, et le stick suit la direction que tu pousses le plus.
+- **Mode manette** : la barre d'onglets défile quand tes collections ne tiennent pas toutes à l'écran.
+
 ### 1.2.22 - 14 novembre 2026
 **Steam Cloud ne bloque plus le lancement** : quand Steam ne peut pas synchroniser tes sauvegardes, il ouvre une petite fenêtre et attend ta réponse. Cette fenêtre restait cachée derrière l'écran de lancement de Hangar et le jeu ne démarrait jamais. Hangar te pose maintenant la question lui-même, et toute fenêtre de launcher qui attend trop longtemps repasse au premier plan. **Plus fiable** : une coupure réseau ne laisse plus un jeu sans jaquette pendant des jours, ton temps de jeu est enregistré chaque minute (rien de perdu après une mise en veille), un fichier Steam abîmé ne bloque plus le scan et Hangar s'ouvre même si le premier scan échoue. Plus de faux message « l'installation n'a pas abouti », ni de double installation sur un double clic. **Teamfight Tactics** s'affiche sous le nom TFT, avec sa jaquette.
 
