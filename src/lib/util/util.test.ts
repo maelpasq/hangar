@@ -91,5 +91,7 @@ describe('manette', () => {
     expect([...pressed(pad([0, 12]))].sort()).toEqual(['a', 'up']);
     expect([...pressed(pad([], [0.9, -0.2]))]).toEqual(['right']);
     expect(pressed(pad([], [0.3, 0.3])).size).toBe(0);
+    expect([...pressed(pad([], [0.6, -0.8]))]).toEqual(['up']);
+    expect([...pressed(pad([16]))]).toEqual(['start']);
   });
 });

@@ -274,7 +274,7 @@
               <div class="srow">
                 <span class="txt"
                   ><span class="lbl">Mode manette</span><span class="hint"
-                    >Plein écran, à la manette ou au clavier. Le bouton Start l'ouvre aussi.</span
+                    >Plein écran, à la manette ou au clavier. Les boutons Start et Xbox l'ouvrent aussi.</span
                   ></span
                 >
                 <button class="btn-s" onclick={() => (ui.big = true)}><Icon name="gamepad" size={15} />Ouvrir</button>

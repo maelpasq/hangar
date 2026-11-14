@@ -1,6 +1,6 @@
 <script lang="ts">
   // Mode manette : plein écran, grandes jaquettes, navigation à la croix ou au stick.
-  // A : jouer · Y : favori · X : fiche du jeu · LB / RB : onglet · B ou Start : quitter.
+  // A : jouer · Y : favori · X : fiche du jeu · LB / RB : onglet · B, Start ou Xbox : quitter.
   // Le clavier marche aussi (flèches, Entrée, Échap, Tab).
   import { onMount, tick } from 'svelte';
   import { api } from '../api';
@@ -16,7 +16,8 @@
   import { hoursLabel, relativeDay } from '../util/format';
   import BlurImage from '../components/BlurImage.svelte';
 
-  type Tab = 'recent' | 'favorites' | 'all' | 'toInstall';
+  /** 'recent', 'favorites', 'all', 'toInstall' ou `collection:<id>`. */
+  type Tab = string;
 
   const byName = (a: Game, b: Game) => library.name(a).localeCompare(library.name(b), 'fr');
   const tabs = $derived(
@@ -28,6 +29,7 @@
           games: [...library.installed].sort((a, b) => library.totals(b.id).lastPlayed - library.totals(a.id).lastPlayed || byName(a, b))
         },
         { id: 'favorites', label: 'Favoris', games: [...library.favorites].sort(byName) },
+        ...library.state.collections.map((c) => ({ id: `collection:${c.id}`, label: c.name, games: library.inCollection(c.id).sort(byName) })),
         { id: 'all', label: 'Tous les jeux', games: [...library.installed].sort(byName) },
         { id: 'toInstall', label: 'À installer', games: [...library.toInstall].sort(byName) }
       ] as { id: Tab; label: string; games: Game[] }[]
@@ -56,10 +58,10 @@
     el?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
   }
 
+  /** Colonnes réelles de la grille (l'espace entre les jaquettes compris) : haut / bas restent dans la colonne. */
   function measure() {
-    const first = grid?.querySelector<HTMLElement>('.tile');
-    if (!grid || !first) return;
-    cols = Math.max(1, Math.round(grid.clientWidth / first.offsetWidth));
+    if (!grid) return;
+    cols = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length);
   }
 
   function switchTab(step: number) {
@@ -67,6 +69,14 @@
     tab = tabs[(i + step + tabs.length) % tabs.length].id;
     index = 0;
     void focusTile();
+    void showTab();
+  }
+
+  /** Beaucoup de collections : l'onglet choisi reste visible dans la barre. */
+  let nav: HTMLElement | undefined = $state();
+  async function showTab() {
+    await tick();
+    nav?.querySelector('button.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
   }
 
   function move(d: number) {
@@ -178,7 +188,7 @@
 
   <header>
     <span class="brand"><Logo size={34} /><span>Hangar</span></span>
-    <nav class="tabs" aria-label="Onglets">
+    <nav class="tabs" aria-label="Onglets" bind:this={nav}>
       <span class="pad" aria-hidden="true">LB</span>
       {#each tabs as t (t.id)}
         <button
@@ -306,13 +316,18 @@
 
   .tabs {
     flex: 1;
+    min-width: 0;
     display: flex;
-    justify-content: center;
+    justify-content: safe center;
     align-items: center;
     gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .tabs button {
+    flex: none;
+    white-space: nowrap;
     height: 44px;
     padding: 0 20px;
     border-radius: 22px;
@@ -327,6 +342,7 @@
   }
 
   .pad {
+    flex: none;
     padding: 4px 8px;
     border-radius: 6px;
     border: 1px solid var(--border-3);

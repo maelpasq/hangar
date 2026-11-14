@@ -154,7 +154,7 @@
     // Mises à jour des jeux : vérifiées toutes les 10 min, même fenêtre cachée dans la zone de notification.
     const updates = setInterval(() => void checkGameUpdates(), 10 * 60_000);
     offs.push(() => clearInterval(updates));
-    // Manette : Start ouvre le mode manette (qui prend ensuite les commandes).
+    // Manette : Start ou Xbox ouvre le mode manette (qui prend ensuite les commandes).
     offs.push(gamepad.start());
     offs.push(
       gamepad.listen((a) => {

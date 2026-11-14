@@ -14,7 +14,9 @@ const BUTTONS: [number, PadAction][] = [
   [3, 'y'],
   [4, 'lb'],
   [5, 'rb'],
-  [9, 'start']
+  [9, 'start'],
+  // Bouton Xbox (Guide, PS, Home) : ouvre et ferme le mode manette comme Start.
+  [16, 'start']
 ];
 export const REPEATS = new Set<PadAction>(['up', 'down', 'left', 'right']);
 const DEAD_ZONE = 0.5;
@@ -23,10 +25,14 @@ const DEAD_ZONE = 0.5;
 export function pressed(pad: Pick<Gamepad, 'buttons' | 'axes'>): Set<PadAction> {
   const out = new Set<PadAction>();
   for (const [i, a] of BUTTONS) if (pad.buttons[i]?.pressed) out.add(a);
+  // Stick : seulement l'axe dominant, pour qu'un geste un peu en biais ne bouge pas en diagonale.
   const [x = 0, y = 0] = pad.axes;
-  if (x < -DEAD_ZONE) out.add('left');
-  if (x > DEAD_ZONE) out.add('right');
-  if (y < -DEAD_ZONE) out.add('up');
-  if (y > DEAD_ZONE) out.add('down');
+  if (Math.abs(x) >= Math.abs(y)) {
+    if (x < -DEAD_ZONE) out.add('left');
+    if (x > DEAD_ZONE) out.add('right');
+  } else {
+    if (y < -DEAD_ZONE) out.add('up');
+    if (y > DEAD_ZONE) out.add('down');
+  }
   return out;
 }
