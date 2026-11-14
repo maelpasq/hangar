@@ -5,6 +5,7 @@
   import { api } from '../api';
   import { art } from '../art.svelte';
   import Icon, { type IconName } from '../components/Icon.svelte';
+  import Dropdown from '../components/Dropdown.svelte';
   import Segmented from '../components/Segmented.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
@@ -14,7 +15,8 @@
   import { ui } from '../stores/ui.svelte';
   import { updater } from '../stores/update.svelte';
   import { runner } from '../stores/runner.svelte';
-  import type { AccountStatus, Prefs, StoreId, Theme } from '../types';
+  import { startPages } from '../start-page';
+  import type { AccountStatus, Prefs, StartPage, StoreId, Theme } from '../types';
   import { plural, relativeDay } from '../util/format';
   import { isLinux, isMac } from '../util/platform';
 
@@ -65,7 +67,7 @@
 
   // ─── Réglages simples ───
 
-  type BoolPref = Exclude<keyof Prefs, 'steamGridDb' | 'webGames'>;
+  type BoolPref = Exclude<keyof Prefs, 'steamGridDb' | 'webGames' | 'startPage'>;
 
   async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
@@ -85,6 +87,16 @@
       if (on) runner.syncPresence();
       else api.setPresence(null, 0).catch(() => {});
     }
+  }
+
+  const startOptions = $derived(startPages(library.state.prefs.webGames === true));
+  const startPage = $derived<StartPage>(
+    startOptions.find((o) => o.value === library.state.prefs.startPage)?.value ?? 'home'
+  );
+
+  function setStartPage(p: StartPage) {
+    library.state.prefs.startPage = p;
+    library.save();
   }
 
   const tray = isMac ? 'la barre des menus' : 'la zone de notification';
@@ -230,6 +242,12 @@
                   }}
                 />
               </div>
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Onglet de départ</span><span class="hint">L'onglet sur lequel Hangar s'ouvre.</span></span
+                >
+                <Dropdown label="Onglet de départ" bind:value={() => startPage, setStartPage} options={startOptions} />
+              </div>
             </section>
 
             <section class="group" aria-label="Bureau">
@@ -264,7 +282,7 @@
               <div class="srow">
                 <span class="txt"
                   ><span class="lbl">Configuration de départ</span><span class="hint"
-                    >Launchers, jeux locaux, couleur et jeux web, en quatre étapes.</span
+                    >Launchers, jeux locaux, couleur, jeux web et onglet de départ, en cinq étapes.</span
                   ></span
                 >
                 <button class="btn-s" onclick={() => (ui.modal = { kind: 'onboarding' })}>Revoir</button>

@@ -23,6 +23,8 @@
   import BugReport from './lib/modals/BugReport.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
+  import StartPage from './lib/modals/StartPage.svelte';
+  import { openStartPage } from './lib/start-page';
   import GamePage from './lib/screens/GamePage.svelte';
   import Home from './lib/screens/Home.svelte';
   import Library from './lib/screens/Library.svelte';
@@ -139,8 +141,13 @@
       if (!alive) offs.forEach((o) => o());
       await library.load();
       if (library.loadError) ui.toast(library.loadError, { error: true });
-      // Configuration en quatre étapes : à l'installation, et une fois pour qui avait déjà Hangar.
-      else if (!ui.modal && !library.state.onboarded) ui.modal = { kind: 'onboarding' };
+      else {
+        openStartPage();
+        // Configuration de départ : à l'installation, et une fois pour qui avait déjà Hangar.
+        if (!ui.modal && !library.state.onboarded) ui.modal = { kind: 'onboarding' };
+        // Onglet de départ : proposé une fois à qui avait fait la configuration avant son arrivée.
+        else if (!ui.modal && library.state.prefs.startPage === null) ui.modal = { kind: 'startPage' };
+      }
       await rescan();
       void updater.check(true);
     })();
@@ -255,6 +262,8 @@
     <HangarMcSoon />
   {:else if ui.modal?.kind === 'onboarding'}
     <Onboarding />
+  {:else if ui.modal?.kind === 'startPage'}
+    <StartPage />
   {:else if ui.modal?.kind === 'collections' && modalGame}
     <Collections game={modalGame} />
   {/if}

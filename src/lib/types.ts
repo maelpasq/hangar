@@ -64,6 +64,9 @@ export interface Totals {
 
 export type SortKey = 'recent' | 'az' | 'hours';
 
+/** Onglet où Hangar s'ouvre. */
+export type StartPage = 'home' | 'library' | 'favorites' | 'web' | `collection:${string}`;
+
 export interface Prefs {
   minimizeOnLaunch: boolean;
   startWithWindows: boolean;
@@ -81,6 +84,8 @@ export interface Prefs {
   globalShortcut: boolean;
   /** « Joue à ... » sur Discord pendant une partie (désactivé par défaut : visible des amis). */
   discordPresence: boolean;
+  /** Onglet ouvert au démarrage. null : pas encore demandé (première ouverture ou mise à jour). */
+  startPage: StartPage | null;
 }
 
 /** Liste de jeux faite par l'utilisateur (« Avec les potes », « À finir »...). */

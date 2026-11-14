@@ -80,6 +80,14 @@ describe('état persistant', () => {
     expect(normalizeState({ version: 1, prefs: { discordPresence: true } }).prefs.discordPresence).toBe(true);
   });
 
+  it("onglet de départ : pas encore demandé par défaut, valeur inconnue ignorée", () => {
+    expect(normalizeState({ version: 1, prefs: {} }).prefs.startPage).toBeNull();
+    expect(normalizeState({ version: 1, prefs: { startPage: 'favorites' } }).prefs.startPage).toBe('favorites');
+    expect(normalizeState({ version: 1, prefs: { startPage: 'minecraft' } }).prefs.startPage).toBeNull();
+    expect(normalizeState({ version: 1, prefs: { startPage: 'collection:c1' } }).prefs.startPage).toBe('collection:c1');
+    expect(normalizeState({ version: 1, prefs: { startPage: 'collection:' } }).prefs.startPage).toBeNull();
+  });
+
   it('nettoie les collections', () => {
     const s = normalizeState({
       version: 1,

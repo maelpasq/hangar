@@ -12,6 +12,7 @@ export type Modal =
   | { kind: 'uninstall'; gameId: string }
   | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
+  | { kind: 'startPage' }
   | { kind: 'bug' }
   | { kind: 'mcSoon' }
   | { kind: 'collections'; gameId: string };

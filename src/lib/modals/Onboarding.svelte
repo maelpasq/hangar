@@ -1,14 +1,16 @@
 <script lang="ts">
-  // Configuration en quatre étapes courtes (launchers, jeux locaux, couleur, jeux web), montrée une fois
+  // Configuration en cinq étapes courtes (launchers, jeux locaux, couleur, jeux web, onglet de départ), montrée une fois
   // à l'installation comme à qui avait déjà Hangar : les réglages affichés sont les siens.
   // Chaque choix s'applique tout de suite. « Tout passer » ou fermer garde les choix déjà faits
   // et laisse le reste tel quel (jeux web désactivés s'ils n'avaient jamais été proposés).
   import { addFolder } from '../actions';
   import Segmented from '../components/Segmented.svelte';
+  import StartPagePicker from '../components/StartPagePicker.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
   import Icon from '../components/Icon.svelte';
   import Modal from '../components/Modal.svelte';
+  import { openStartPage } from '../start-page';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
   import { accounts } from '../stores/accounts.svelte';
   import { library } from '../stores/library.svelte';
@@ -17,7 +19,7 @@
   import { plural } from '../util/format';
   import games from '../web-games.json';
 
-  const TITLES = ['Tes launchers', 'Tes jeux hors launcher', 'Ta couleur', 'Les jeux web'];
+  const TITLES = ['Tes launchers', 'Tes jeux hors launcher', 'Ta couleur', 'Les jeux web', 'Ton onglet de départ'];
   const PREVIEW = ['openfront', 'krunker', 'slither', 'skribbl'];
   const covers = import.meta.glob<string>('../../assets/web-games/*.webp', { eager: true, import: 'default' });
   const preview = PREVIEW.map((id) => covers[`../../assets/web-games/${id}.webp`]).filter(Boolean);
@@ -31,6 +33,8 @@
   let web = $state(library.state.prefs.webGames ?? true);
   // Qui avait Hangar avant les jeux web les découvre ici.
   const webIsNew = !library.fresh && library.state.prefs.webGames === null;
+  const startIsNew = !library.fresh && library.state.prefs.startPage === null;
+  const isNew = (i: number) => (i === 3 && webIsNew) || (i === 4 && startIsNew);
   void accounts.refresh();
 
   // Launchers trouvés sur l'appareil en premier.
@@ -44,9 +48,12 @@
 
   function finish(webOn: boolean) {
     library.state.prefs.webGames = webOn;
+    const start = library.state.prefs.startPage;
+    library.state.prefs.startPage = start === null || (start === 'web' && !webOn) ? 'home' : start;
     library.state.onboarded = true;
     library.save();
     ui.modal = null;
+    openStartPage();
   }
 
   function enableAll() {
@@ -69,7 +76,7 @@
         onclick={() => (step = i)}
       ></button>
     {/each}
-    {#if step === TITLES.length - 1 && webIsNew}<span class="new">Nouveau</span>{/if}
+    {#if isNew(step)}<span class="new">Nouveau</span>{/if}
   </div>
 
   {#key step}
@@ -127,6 +134,9 @@
             library.save();
           }}
         />
+      {:else if step === 4}
+        <p class="txt">L'onglet sur lequel Hangar s'ouvre à chaque démarrage.</p>
+        <StartPagePicker webGames={web} />
       {:else}
         <div class="strip" aria-hidden="true">
           {#each preview as src (src)}<img {src} alt="" />{/each}

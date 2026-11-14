@@ -32,7 +32,8 @@ export function defaultState(): PersistedState {
       webGames: null,
       closeToTray: true,
       globalShortcut: true,
-      discordPresence: false
+      discordPresence: false,
+      startPage: null
     }
   };
 }
@@ -83,6 +84,9 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     for (const k of ['closeToTray', 'globalShortcut', 'discordPresence'] as const) {
       if (typeof p[k] === 'boolean') s.prefs[k] = p[k];
     }
+    const sp = p.startPage;
+    if (sp === 'home' || sp === 'library' || sp === 'favorites' || sp === 'web') s.prefs.startPage = sp;
+    else if (typeof sp === 'string' && /^collection:.+/.test(sp)) s.prefs.startPage = sp as `collection:${string}`;
     if (typeof p.steamGridDb === 'boolean') s.prefs.steamGridDb = p.steamGridDb;
   }
   if (Array.isArray(raw.collections)) {
