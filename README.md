@@ -22,14 +22,14 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 - **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. Sous Windows, les launchers restent cachés en arrière-plan : tu ne vois que ton jeu. Si Steam Cloud a une question à te poser (synchronisation impossible, conflit de sauvegardes), elle s'affiche dans l'écran de lancement de Hangar.
 - **Désinstaller** depuis Hangar, après confirmation : les jeux Steam, Epic et GOG sont supprimés sans ouvrir leur launcher.
 - **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » la lance en arrière-plan dans le bon launcher, sans afficher sa fenêtre. Le menu Mises à jour (icône en haut) montre les installations et mises à jour Steam en cours avec leur vraie progression, même après un redémarrage de Hangar, et « Afficher dans Steam » permet de les mettre en pause ou de les annuler. Quand Steam a reporté la mise à jour d'un jeu peu joué, Hangar ouvre ses téléchargements et te dit sur quel bouton cliquer.
-- **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start ou Xbox pour l'ouvrir, A pour jouer).
+- **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start ou Xbox pour l'ouvrir, A pour jouer), avec un onglet par collection.
 - **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
 - **Collections et filtres** : range tes jeux dans tes propres listes et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
 - **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar.
 - **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
 - **Hangar MC (bientôt)** : le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules, lancées en un clic. Son bouton, à son logo, est déjà dans la barre latérale, une mise à jour le débloquera.
 - **Discord** : tes amis voient à quoi tu joues, avec la jaquette du jeu et ton temps de jeu (à activer dans **Paramètres > Général**).
-- **Prêt en quatre étapes** : à la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta couleur et les jeux web. Tu peux le relancer depuis **Paramètres > Général**.
+- **Prêt en cinq étapes** : à la première ouverture, un assistant règle tes launchers, tes dossiers de jeux, ta couleur, les jeux web et l'onglet sur lequel Hangar s'ouvre (Accueil, Bibliothèque, Favoris, Jeux web ou une collection). Tu peux le relancer depuis **Paramètres > Général**.
 - **Mises à jour de Hangar intégrées** : quand une nouvelle version sort, un bouton « Mettre à jour Hangar » apparaît dans l'app.
 
 ![Bibliothèque](docs/images/bibliotheque.webp)
