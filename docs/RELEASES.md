@@ -52,6 +52,18 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.25 - 15 novembre 2026
+Plus aucun jeu sans jaquette : Hangar te guide pour obtenir ta clé SteamGridDB, et le bouton Actualiser fait enfin tout d'un coup.
+
+#### Nouveautés
+- **Clé SteamGridDB guidée** : un guide en trois étapes (ouvrir la page API, générer la clé, la coller) t'accompagne, dans une nouvelle étape « Tes jaquettes » de la configuration de départ et dans **Paramètres > Jaquettes**. La clé est vérifiée auprès de SteamGridDB avant d'être enregistrée.
+- **Rappel tant que la clé manque** : un point rouge sur Paramètres dans la barre latérale et une alerte en haut des Paramètres te signalent que des jaquettes risquent de manquer, jusqu'à ce que la clé soit enregistrée.
+- **N'importe quelle couleur dès le départ** : l'étape « Ta couleur » de la configuration propose la pastille « + » pour choisir la teinte que tu veux, comme dans les Paramètres.
+
+#### Améliorations
+- **Bouton Actualiser** : en haut de Hangar, il met à jour tes comptes connectés, relance le scan, t'annonce les nouvelles mises à jour de jeux et cherche une nouvelle version de Hangar, en un seul clic.
+- **Collections** : si une collection porte déjà le nom choisi, Hangar te prévient et te demande si tu veux quand même en créer une autre.
+
 ### 1.2.24 - 14 novembre 2026
 Le bouton Xbox te ramène dans Hangar depuis n'importe où, créer une collection se fait en quelques clics, et chaque mise à jour te dit désormais ce qui a changé.
 
