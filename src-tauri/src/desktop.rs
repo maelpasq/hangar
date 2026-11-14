@@ -78,6 +78,7 @@ fn leave_fullscreen(w: &WebviewWindow) -> bool {
 pub fn hide_main(app: &AppHandle) {
     let Some(w) = main_window(app) else { return };
     leave_fullscreen(&w);
+    crate::guide::forget();
     let _ = w.hide();
     let _ = app.emit_to("main", "main://hidden", ());
 }

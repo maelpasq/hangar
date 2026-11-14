@@ -89,7 +89,8 @@ Premier lancement (aucun historique) : le carrousel montre les jeux avec banniè
 
 ### 3.5 bis Mode manette
 
-- Ouvert par le bouton manette de la barre du haut (à côté d'Actualiser), Paramètres > Général ou les boutons Start et Xbox (Guide, PS) d'une manette. Sous Windows, le bouton Xbox marche aussi quand une autre app (ou un jeu) est devant ou que Hangar est caché : Hangar revient au premier plan en mode manette. Plein écran par-dessus l'app.
+- Ouvert par le bouton manette de la barre du haut (à côté d'Actualiser) ou Paramètres > Mode manette. Si « Activer le mode manette » est coché (Paramètres > Mode manette, désactivé par défaut), les boutons Start et Xbox (Guide, PS, Home) d'une manette l'ouvrent aussi. Sous Windows, le bouton Xbox marche alors aussi quand une autre app (ou un jeu) est devant ou que Hangar est caché : Hangar revient au premier plan en mode manette, et le quitter (B, Start, Xbox, Échap) renvoie Hangar là où il était (caché ou réduit), sans le laisser en fenêtre par-dessus. Plein écran par-dessus l'app.
+- Activer le mode manette ouvre une fenêtre qui liste ce qui utilise déjà le bouton central selon le système et la manette (Game Bar de Windows, vérifiée dans le registre, Steam, PlayStation, Switch Pro / 8BitDo, PC portables, Launchpad sur Mac) ; la même liste et un rappel sous la case restent dans l'onglet.
 - Onglets Récents, Favoris, une par collection, Tous les jeux, À installer (LB / RB), les vides cachés (sauf Récents). Grandes jaquettes, la jaquette choisie grossit avec un anneau d'accent ; bannière floutée du jeu en fond ; nom, temps de jeu et dernière session en haut.
 - A : jouer (ou installer), Y : favori, X : fiche du jeu, B, Start ou Xbox : quitter. Croix ou stick gauche pour se déplacer (le stick suit son axe dominant, haut / bas restent dans la colonne), avec répétition. Au clavier : flèches, Entrée, Échap, Page préc. / suiv.
 

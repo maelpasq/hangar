@@ -15,6 +15,7 @@
   import Collections from './lib/modals/Collections.svelte';
   import CollectionEdit from './lib/modals/CollectionEdit.svelte';
   import BigPicture from './lib/screens/BigPicture.svelte';
+  import PadSetup from './lib/modals/PadSetup.svelte';
   import { gamepad } from './lib/stores/gamepad.svelte';
   import ChangeCover from './lib/modals/ChangeCover.svelte';
   import ConfirmStop from './lib/modals/ConfirmStop.svelte';
@@ -86,9 +87,9 @@
 
   // Bureau : fermeture dans la zone de notification et raccourci global.
   $effect(() => {
-    const { closeToTray, globalShortcut } = library.state.prefs;
+    const { closeToTray, globalShortcut, padButton } = library.state.prefs;
     api
-      .setDesktop(closeToTray, globalShortcut)
+      .setDesktop(closeToTray, globalShortcut, padButton)
       .then((d) => {
         ui.desktop = d;
       })
@@ -153,10 +154,13 @@
           if (f) void runner.resumeDownloads();
         }),
         api.onTrayLaunch((id) => void runner.play(id)),
-        // Bouton Xbox depuis une autre app : Hangar revient devant, en mode manette.
-        api.onPadGuide(() => {
+        // Bouton Xbox depuis une autre app : Hangar revient devant, en mode manette. Le
+        // mode manette déjà ouvert mais sans le focus (Game Bar par-dessus) se ferme.
+        api.onPadGuide((what) => {
           gamepad.ignoreStart();
-          if (!ui.modal && !runner.launching) ui.big = true;
+          if (what === 'close') ui.closeBig(true);
+          else if (!ui.modal && !runner.launching) ui.big = true;
+          else void api.padBack(false);
         }),
         // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.
         api.onMainHidden(() => (ui.big = false)),
@@ -187,7 +191,7 @@
     offs.push(gamepad.start());
     offs.push(
       gamepad.listen((a) => {
-        if (a === 'start' && !ui.modal && !runner.launching) ui.big = true;
+        if (a === 'start' && library.state.prefs.padButton && !ui.modal && !runner.launching) ui.big = true;
       })
     );
     return () => {
@@ -295,6 +299,8 @@
     <StartPage />
   {:else if ui.modal?.kind === 'whatsNew'}
     <WhatsNew version={ui.modal.version} since={ui.modal.since} manual={ui.modal.manual === true} />
+  {:else if ui.modal?.kind === 'padSetup'}
+    <PadSetup />
   {:else if ui.modal?.kind === 'collections' && modalGame}
     <Collections game={modalGame} />
   {:else if ui.modal?.kind === 'collectionEdit'}

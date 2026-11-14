@@ -84,6 +84,8 @@ export interface Prefs {
   globalShortcut: boolean;
   /** « Joue à ... » sur Discord pendant une partie (désactivé par défaut : visible des amis). */
   discordPresence: boolean;
+  /** Mode manette : Start et le bouton central (Xbox, PS, Home) l'ouvrent, même depuis une autre app (désactivé par défaut). */
+  padButton: boolean;
   /** Onglet ouvert au démarrage. null : pas encore demandé (première ouverture ou mise à jour). */
   startPage: StartPage | null;
 }

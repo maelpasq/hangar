@@ -270,3 +270,11 @@ Au premier démarrage après une mise à jour, Hangar montre une fois « Hangar 
 - Nouvelle étape « Tes jaquettes » (3e sur 6) dans la configuration de départ, et guide identique dans Paramètres > Jaquettes (`SteamGridSetup.svelte`) : ouvrir la page API (`open_link` « steamgriddb-api »), générer la clé, la coller (une clé de 32 caractères collée s'enregistre seule).
 - Tant qu'aucune clé n'est enregistrée, tout est en rouge (demande de l'utilisateur) : point sur « Paramètres » dans la sidebar (pulsé, sauf mouvement réduit), alerte en haut de chaque section des Paramètres, point sur « Jaquettes », étapes du guide. Pas de bouton pour faire taire l'alerte.
 - À l'enregistrement, le backend essaie la clé sur l'API SteamGridDB (`search/autocomplete`) : un 401/403 la refuse avec un message clair ; une erreur réseau ne bloque pas l'enregistrement.
+
+## Mode manette : onglet, activation et retour à l'app d'avant (2026-11-15)
+
+- Onglet « Mode manette » dans les Paramètres (entre Apparence et Launchers) : case « Activer le mode manette », rappel, bouton Ouvrir et liste « Selon ta manette » (`src/lib/pad-tips.ts`).
+- L'activation (pref `padButton`) est désactivée par défaut, y compris pour qui avait déjà Hangar : sans elle, ni Start ni le bouton central n'ouvrent le mode manette (la barre du haut et l'onglet le peuvent toujours). L'activer ouvre une fenêtre qui dit quoi désactiver (Game Bar, Steam...).
+- Game Bar : lue dans `HKCU\Software\Microsoft\GameBar`, valeur `UseNexusForGameBarEnabled` (absente = active). Bouton « Ouvrir les réglages de la Game Bar » : `ms-settings:gaming-gamebar` via `open_link`.
+- Quand le bouton Xbox ramène Hangar depuis une autre app, l'état d'avant (caché, réduit, derrière) est gardé ; quitter le mode manette par B, Start, Xbox, Échap ou la croix y renvoie Hangar (caché, ou réduit pour rendre la main à l'app d'avant). Ouvrir la fiche d'un jeu (X) ou lancer un jeu oublie cet état.
+- Mode manette en plein écran mais sans le focus, Game Bar active sur le bouton : le bouton Xbox le ferme (la Game Bar a pris le focus au même appui).

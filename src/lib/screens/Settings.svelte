@@ -6,6 +6,8 @@
   import { art } from '../art.svelte';
   import Icon, { type IconName } from '../components/Icon.svelte';
   import Dropdown from '../components/Dropdown.svelte';
+  import PadTips from '../components/PadTips.svelte';
+  import { padFromAnywhere, padNote } from '../pad-tips';
   import Segmented from '../components/Segmented.svelte';
   import SteamGridSetup from '../components/SteamGridSetup.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
@@ -22,7 +24,7 @@
   import { isLinux, isMac } from '../util/platform';
   import { RELEASES } from '../util/release-notes';
 
-  type SectionId = 'general' | 'appearance' | 'launchers' | 'library' | 'covers';
+  type SectionId = 'general' | 'appearance' | 'pad' | 'launchers' | 'library' | 'covers';
 
   const os = isMac ? 'macOS' : isLinux ? 'Linux' : 'Windows';
 
@@ -41,6 +43,7 @@
   const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number; alert?: boolean }[]>([
     { id: 'general', label: 'Général', icon: 'sliders' },
     { id: 'appearance', label: 'Apparence', icon: 'sun' },
+    { id: 'pad', label: 'Mode manette', icon: 'gamepad' },
     {
       id: 'launchers',
       label: 'Launchers',
@@ -56,6 +59,7 @@
   const intro: Record<SectionId, string> = {
     general: 'Comportement de Hangar et mises à jour.',
     appearance: "Thème et couleur de l'interface.",
+    pad: 'Hangar en plein écran, à la manette ou au clavier.',
     launchers:
       'Les launchers où Hangar cherche tes jeux. Relie un compte pour retrouver aussi ceux qui ne sont pas sur cet appareil.',
     library: 'Dossiers de jeux, ajouts à la main et jeux masqués.',
@@ -84,6 +88,8 @@
       }
     }
     if (key === 'autoCovers') art.reset();
+    // Mode manette activé : ce qu'il faut désactiver pour que le bouton n'ouvre que Hangar.
+    if (key === 'padButton' && on) ui.modal = { kind: 'padSetup' };
     // Discord : la présence en cours s'affiche ou s'efface tout de suite.
     if (key === 'discordPresence') {
       if (on) runner.syncPresence();
@@ -267,14 +273,6 @@
               {/if}
               <div class="srow">
                 <span class="txt"
-                  ><span class="lbl">Mode manette</span><span class="hint"
-                    >Plein écran, à la manette ou au clavier. Les boutons Start et Xbox l'ouvrent aussi.</span
-                  ></span
-                >
-                <button class="btn-s" onclick={() => (ui.big = true)}><Icon name="gamepad" size={15} />Ouvrir</button>
-              </div>
-              <div class="srow">
-                <span class="txt"
                   ><span class="lbl">Configuration de départ</span><span class="hint"
                     >Launchers, jeux locaux, jaquettes, couleur, jeux web et onglet de départ, en six étapes.</span
                   ></span
@@ -352,6 +350,35 @@
                   </label>
                 </div>
               </div>
+            </section>
+          {:else if section === 'pad'}
+            <section class="group" aria-label="Mode manette">
+              <h3>Mode manette</h3>
+              <div class="srow pad-on">
+                <span class="txt"
+                  ><span class="lbl">Activer le mode manette</span><span class="hint"
+                    >{padFromAnywhere
+                      ? "Start et le bouton central de la manette (Xbox, PS, Home) ouvrent Hangar en plein écran, même depuis un jeu ou une autre app. Rappuyer te ramène où tu étais."
+                      : 'Start et le bouton central de la manette (Xbox, PS, Home) ouvrent Hangar en plein écran.'}</span
+                  ></span
+                >
+                <Toggle on={library.state.prefs.padButton} label="Activer le mode manette" onchange={(v) => setPref('padButton', v)} />
+              </div>
+              <p class="pad-note"><Icon name="alert" size={14} />{padNote}</p>
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">Ouvrir le mode manette</span><span class="hint"
+                    >Croix ou stick pour choisir, A pour jouer, Y favori, X fiche du jeu, LB / RB pour changer d'onglet, B pour quitter. Au clavier : flèches, Entrée, Échap.</span
+                  ></span
+                >
+                <button class="btn-s" onclick={() => (ui.big = true)}><Icon name="gamepad" size={15} />Ouvrir</button>
+              </div>
+            </section>
+
+            <section class="group" aria-label="Selon ta manette">
+              <h3>Selon ta manette</h3>
+              <p class="gdesc">Ce qui peut déjà utiliser le bouton central et s'ouvrir par-dessus Hangar.</p>
+              <PadTips />
             </section>
           {:else if section === 'launchers'}
             <section class="group" aria-label="Launchers et comptes">
@@ -757,6 +784,27 @@
   .srow.actions {
     min-height: 0;
     padding: 12px 0 14px;
+  }
+
+  /* Rappel sous « Activer le mode manette ». */
+  .srow.pad-on {
+    padding-bottom: 6px;
+  }
+
+  .pad-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 0 0 14px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .pad-note :global(svg) {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--star);
   }
 
   .srow.off .lbl,

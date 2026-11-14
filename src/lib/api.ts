@@ -40,7 +40,11 @@ export interface Api {
   /** Ouvre les mises à jour d'un jeu dans son launcher ; renvoie le message à afficher. */
   updateGame(gameId: string): Promise<string>;
   /** Fermeture dans la zone de notification et raccourci global. */
-  setDesktop(closeToTray: boolean, globalShortcut: boolean): Promise<DesktopInfo>;
+  setDesktop(closeToTray: boolean, globalShortcut: boolean, padButton: boolean): Promise<DesktopInfo>;
+  /** Mode manette fermé : Hangar retourne là où il était si le bouton Xbox l'avait ramené (`restore`). */
+  padBack(restore: boolean): Promise<void>;
+  /** La Game Bar de Windows s'ouvre avec le bouton Xbox (faux hors Windows). */
+  gameBarOnButton(): Promise<boolean>;
   /** Jeux récents du menu de l'icône et apparence de l'app (thème, accent). */
   setTrayRecents(games: TrayGame[], theme: string, accent: string): Promise<void>;
   /** Fenêtre du menu de l'icône : son contenu. */
@@ -54,7 +58,8 @@ export interface Api {
   /** Un jeu a été choisi dans le menu de l'icône. */
   onTrayLaunch(cb: (gameId: string) => void): Promise<() => void>;
   /** Bouton Xbox pressé alors qu'une autre app était devant : Hangar vient d'être ramené. */
-  onPadGuide(cb: () => void): Promise<() => void>;
+  /** Bouton Xbox depuis une autre app : 'open' (Hangar ramené devant) ou 'close' (mode manette sans le focus). */
+  onPadGuide(cb: (what: 'open' | 'close') => void): Promise<() => void>;
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
@@ -90,7 +95,7 @@ export interface Api {
   connectAccount(store: StoreId): Promise<number>;
   disconnectAccount(store: StoreId): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
-  openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api'): Promise<void>;
+  openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
   /** Envoie un signalement de bug au développeur (capture : chemin d'une image, facultatif). */
   reportBug(title: string, description: string, screenshot: string | null): Promise<void>;
   /** Ouvre un jeu du catalogue web-games.json dans sa propre fenêtre Hangar. */
@@ -140,14 +145,16 @@ async function tauriApi(): Promise<Api> {
     showLaunchers: () => invoke('show_launchers'),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
     updateGame: (gameId) => invoke('update_game', { gameId }),
-    setDesktop: (closeToTray, globalShortcut) => invoke('set_desktop', { closeToTray, globalShortcut }),
+    setDesktop: (closeToTray, globalShortcut, padButton) => invoke('set_desktop', { closeToTray, globalShortcut, padButton }),
+    padBack: (restore) => invoke('pad_back', { restore }),
+    gameBarOnButton: () => invoke('game_bar_on_button'),
     setTrayRecents: (games, theme, accent) => invoke('set_tray_recents', { games, theme, accent }),
     trayState: () => invoke('tray_state'),
     trayAction: (action) => invoke('tray_action', { action }),
     onMainHidden: (cb) => on<null>('main://hidden', () => cb()),
     setPresence: (gameId, start) => invoke('set_presence', { gameId, start: Math.max(0, Math.round(start)) }),
     onTrayLaunch: (cb) => on<string>('tray://launch', cb),
-    onPadGuide: (cb) => on<null>('pad://guide', () => cb()),
+    onPadGuide: (cb) => on<string>('pad://guide', (w) => cb(w === 'close' ? 'close' : 'open')),
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),

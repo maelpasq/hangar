@@ -1,5 +1,6 @@
 // État de l'interface : écran courant, recherche, modales, menu contextuel, toasts.
 
+import { api } from '../api';
 import type { DesktopInfo, InstallTarget, StoreId } from '../types';
 
 export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
@@ -13,6 +14,7 @@ export type Modal =
   | { kind: 'installDir'; gameId: string; targets: InstallTarget[] }
   | { kind: 'onboarding' }
   | { kind: 'startPage' }
+  | { kind: 'padSetup' }
   /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
   | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
   | { kind: 'bug' }
@@ -53,6 +55,12 @@ class Ui {
   store = $state<StoreId | 'all'>('all');
   /** Mode manette : interface plein écran par-dessus l'app. */
   big = $state(false);
+  /** Ferme le mode manette. `restore` : s'il avait été ouvert par le bouton Xbox depuis une autre
+   * app, Hangar retourne là où il était (caché, réduit) au lieu de rester en fenêtre par-dessus. */
+  closeBig(restore: boolean): void {
+    this.big = false;
+    api.padBack(restore).catch(() => {});
+  }
   /** Ce que le bureau permet (Discord, raccourci), donné par le backend. */
   desktop = $state<DesktopInfo | null>(null);
   gameId = $state<string | null>(null);

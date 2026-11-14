@@ -1,11 +1,70 @@
 //! Bouton Xbox (Guide) d'une manette, lu partout, même quand une autre app est au premier plan :
 //! il ramène Hangar devant et ouvre le mode manette. Quand Hangar a déjà le focus, la fenêtre
 //! gère elle-même le bouton (API Gamepad : ouvre et ferme le mode manette comme Start).
+//! Fermer le mode manette ouvert ainsi rend la main à l'app d'avant : Hangar retourne là où il
+//! était (caché, réduit ou derrière), sans rester en fenêtre par-dessus.
 //!
 //! Windows seulement : `XInputGetStateEx` (ordinal 100 de xinput1_4.dll), seule façon de lire
 //! le bouton Guide, que `XInputGetState` masque. Ailleurs, rien (l'API Gamepad de la fenêtre).
 
-use tauri::AppHandle;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager};
+
+/// Réglage « Mode manette » : le bouton ramène Hangar (désactivé par défaut).
+static ENABLED: AtomicBool = AtomicBool::new(false);
+
+/// Où était Hangar avant que le bouton le ramène devant.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(not(windows), allow(dead_code))]
+enum Before {
+    Hidden,
+    Minimized,
+    Behind,
+}
+
+static BEFORE: Mutex<Option<Before>> = Mutex::new(None);
+
+pub fn set_enabled(on: bool) {
+    ENABLED.store(on, Ordering::Relaxed);
+}
+
+/// Hangar caché : l'état d'avant le bouton ne sert plus.
+pub fn forget() {
+    if let Ok(mut b) = BEFORE.lock() {
+        *b = None;
+    }
+}
+
+/// Le mode manette vient de se fermer : si le bouton l'avait ouvert depuis une autre app et
+/// que `restore` est vrai (B, Start, Xbox, Échap), Hangar retourne là où il était.
+pub fn back(app: &AppHandle, restore: bool) {
+    let before = BEFORE.lock().ok().and_then(|mut b| b.take());
+    let (Some(before), true) = (before, restore) else { return };
+    if before == Before::Hidden {
+        return crate::desktop::hide_main(app);
+    }
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.set_fullscreen(false);
+        let _ = w.minimize();
+    }
+}
+
+/// La Game Bar de Windows s'ouvre-t-elle avec le bouton Xbox ? (réglage « Ouvrir la Game Bar
+/// avec ce bouton sur une manette », actif tant que la valeur n'existe pas). Faux ailleurs.
+pub fn game_bar_on_button() -> bool {
+    #[cfg(windows)]
+    {
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        RegKey::predef(HKEY_CURRENT_USER)
+            .open_subkey(r"Software\Microsoft\GameBar")
+            .and_then(|k| k.get_value::<u32, _>("UseNexusForGameBarEnabled"))
+            .map(|v| v != 0)
+            .unwrap_or(true)
+    }
+    #[cfg(not(windows))]
+    false
+}
 
 /// Lance la lecture du bouton dans son propre fil (Windows).
 pub fn start(app: AppHandle) {
@@ -19,6 +78,18 @@ pub fn start(app: AppHandle) {
     let _ = app;
 }
 
+/// État de la fenêtre avant que le bouton la ramène devant.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn before_state(visible: bool, minimized: bool) -> Before {
+    if !visible {
+        Before::Hidden
+    } else if minimized {
+        Before::Minimized
+    } else {
+        Before::Behind
+    }
+}
+
 /// Bouton Guide enfoncé maintenant alors qu'il ne l'était pas avant.
 fn pressed_now(prev: bool, now: bool) -> bool {
     now && !prev
@@ -26,6 +97,7 @@ fn pressed_now(prev: bool, now: bool) -> bool {
 
 #[cfg(windows)]
 mod win {
+    use std::sync::atomic::Ordering;
     use std::time::{Duration, Instant};
     use tauri::{AppHandle, Emitter, Manager};
     use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
@@ -97,19 +169,42 @@ mod win {
     }
 
     fn on_guide(app: &AppHandle) {
-        let Some(w) = app.get_webview_window("main") else { return };
-        let front = w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false) && !w.is_minimized().unwrap_or(false);
-        if front {
+        if !super::ENABLED.load(Ordering::Relaxed) {
             return;
         }
+        let Some(w) = app.get_webview_window("main") else { return };
+        let visible = w.is_visible().unwrap_or(false);
+        let minimized = w.is_minimized().unwrap_or(false);
+        let focused = w.is_focused().unwrap_or(false);
+        if visible && focused && !minimized {
+            return; // la fenêtre lit le bouton elle-même
+        }
+        // Mode manette déjà affiché mais sans le focus parce que la Game Bar, ouverte par le
+        // même bouton, l'a pris : le bouton le ferme, comme si Hangar avait le focus.
+        if visible && !minimized && w.is_fullscreen().unwrap_or(false) && super::game_bar_on_button() {
+            let _ = app.emit_to("main", "pad://guide", "close");
+            return;
+        }
+        let before = super::before_state(visible, minimized);
+        if let Ok(mut b) = super::BEFORE.lock() {
+            *b = Some(before);
+        }
         crate::desktop::show_main(app);
-        let _ = app.emit_to("main", "pad://guide", ());
+        let _ = app.emit_to("main", "pad://guide", "open");
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::pressed_now;
+    use super::{before_state, pressed_now, Before};
+
+    #[test]
+    fn etat_avant_le_bouton() {
+        assert_eq!(before_state(false, false), Before::Hidden);
+        assert_eq!(before_state(false, true), Before::Hidden);
+        assert_eq!(before_state(true, true), Before::Minimized);
+        assert_eq!(before_state(true, false), Before::Behind);
+    }
 
     #[test]
     fn appui_seulement_au_front_montant() {

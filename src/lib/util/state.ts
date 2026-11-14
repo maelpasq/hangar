@@ -34,6 +34,7 @@ export function defaultState(): PersistedState {
       closeToTray: true,
       globalShortcut: true,
       discordPresence: false,
+      padButton: false,
       startPage: null
     }
   };
@@ -83,7 +84,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (typeof p.autoCovers === 'boolean') s.prefs.autoCovers = p.autoCovers;
     if (typeof p.showUninstalled === 'boolean') s.prefs.showUninstalled = p.showUninstalled;
     if (typeof p.webGames === 'boolean') s.prefs.webGames = p.webGames;
-    for (const k of ['closeToTray', 'globalShortcut', 'discordPresence'] as const) {
+    for (const k of ['closeToTray', 'globalShortcut', 'discordPresence', 'padButton'] as const) {
       if (typeof p[k] === 'boolean') s.prefs[k] = p[k];
     }
     const sp = p.startPage;

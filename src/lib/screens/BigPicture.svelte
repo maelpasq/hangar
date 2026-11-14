@@ -47,8 +47,15 @@
   const hero = $derived(focused ? (art.hero(focused) ?? art.cover(focused)?.src ?? null) : null);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /** Quitter (B, Start, Xbox, Échap, croix) : retour à l'app d'avant si le bouton Xbox a ouvert le mode. */
   function exit() {
-    ui.big = false;
+    ui.closeBig(true);
+  }
+
+  /** Lancer un jeu : Hangar ne retourne plus à son état d'avant en sortant ensuite. */
+  function play(id: string) {
+    api.padBack(false).catch(() => {});
+    void runner.play(id);
   }
 
   async function focusTile() {
@@ -116,7 +123,7 @@
       case 'rb':
         return switchTab(1);
       case 'a':
-        if (focused) void runner.play(focused.id);
+        if (focused) play(focused.id);
         return;
       case 'y':
         if (focused) library.toggleFav(focused.id);
@@ -124,7 +131,7 @@
       case 'x':
         if (focused) {
           const id = focused.id;
-          exit();
+          ui.closeBig(false);
           ui.open(id);
         }
         return;
@@ -236,7 +243,7 @@
         onpointermove={() => {
           if (pointer && index !== i) index = i;
         }}
-        onclick={() => runner.play(g.id)}
+        onclick={() => play(g.id)}
       >
         <Cover game={g} fontSize={20} eager={i < 18} />
         {#if library.isFav(g.id)}<span class="fav" aria-hidden="true"><Icon name="star" size={16} /></span>{/if}

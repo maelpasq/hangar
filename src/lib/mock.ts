@@ -235,6 +235,8 @@ export function mockApi(): Api {
     uninstallGame: async (id) => `Démo : désinstallation de ${id} en cours…`,
     updateGame: async (id) => `Démo : ${id} se met à jour en arrière-plan.`,
     setDesktop: async () => ({ presenceAvailable: true, shortcut: 'Ctrl+Alt+H', shortcutOk: true }),
+    padBack: async () => {},
+    gameBarOnButton: async () => true,
     setTrayRecents: async () => {},
     trayState: async () => ({
       games: [

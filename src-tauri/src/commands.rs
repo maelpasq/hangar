@@ -153,9 +153,23 @@ pub async fn open_link(link: String) -> Result<(), String> {
         "steam-api-key" => "https://steamcommunity.com/dev/apikey",
         "microsoft-link" => "https://www.microsoft.com/link",
         "steamgriddb-api" => "https://www.steamgriddb.com/profile/preferences/api",
+        "gamebar-settings" if cfg!(windows) => "ms-settings:gaming-gamebar",
         _ => return Err("Lien inconnu.".into()),
     };
     blocking(move || launcher::shell_open(url, "", None, "open")).await?
+}
+
+/// Le mode manette vient de se fermer : Hangar retourne là où il était si le bouton Xbox
+/// l'avait ramené devant (`restore` : fermé par B, Start, Xbox ou Échap).
+#[tauri::command]
+pub fn pad_back(app: AppHandle, restore: bool) {
+    crate::guide::back(&app, restore);
+}
+
+/// La Game Bar de Windows s'ouvre avec le bouton Xbox (faux hors Windows).
+#[tauri::command]
+pub fn game_bar_on_button() -> bool {
+    crate::guide::game_bar_on_button()
 }
 
 /// Envoie un signalement de bug (titre, description, capture facultative) au développeur.
@@ -183,10 +197,12 @@ pub struct DesktopInfo {
     shortcut_ok: bool,
 }
 
-/// Réglages du bureau : fermeture dans la zone de notification, raccourci global.
+/// Réglages du bureau : fermeture dans la zone de notification, raccourci global, bouton
+/// de la manette (mode manette activé).
 #[tauri::command]
-pub fn set_desktop(app: AppHandle, close_to_tray: bool, global_shortcut: bool) -> DesktopInfo {
+pub fn set_desktop(app: AppHandle, close_to_tray: bool, global_shortcut: bool, pad_button: bool) -> DesktopInfo {
     crate::desktop::set_close_to_tray(close_to_tray);
+    crate::guide::set_enabled(pad_button);
     DesktopInfo {
         presence_available: !crate::presence::CLIENT_ID.is_empty(),
         shortcut: crate::desktop::SHORTCUT_LABEL,

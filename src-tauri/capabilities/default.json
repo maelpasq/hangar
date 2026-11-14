@@ -56,6 +56,8 @@
     "allow-uninstall-game",
     "allow-update-game",
     "allow-set-desktop",
+    "allow-pad-back",
+    "allow-game-bar-on-button",
     "allow-set-tray-recents",
     "allow-set-presence"
   ]

@@ -204,6 +204,8 @@ fn main() {
             commands::uninstall_game,
             commands::update_game,
             commands::set_desktop,
+            commands::pad_back,
+            commands::game_bar_on_button,
             commands::set_tray_recents,
             commands::tray_state,
             commands::tray_action,
