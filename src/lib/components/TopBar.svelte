@@ -112,12 +112,12 @@
     <UpdatesMenu />
     <button
       class="ibtn"
-      aria-label="Actualiser la bibliothèque"
-      title="Actualiser la bibliothèque"
+      aria-label="Actualiser la bibliothèque et rechercher les mises à jour"
+      title="Actualiser la bibliothèque et rechercher les mises à jour"
       disabled={library.scanning}
       onclick={onrefresh}
     >
-      <Icon name="refresh" class={library.scanning ? 'spin' : ''} />
+      <Icon name="refresh" class={library.scanning || updater.phase === 'checking' ? 'spin' : ''} />
     </button>
     <button class="ibtn" aria-label="Signaler un bug" title="Signaler un bug" onclick={() => (ui.modal = { kind: 'bug' })}>
       <Icon name="bug" />

@@ -1,7 +1,7 @@
 <script lang="ts">
   // Coque de l'app : barre latérale, barre du haut, écran courant, overlays.
   import { onMount } from 'svelte';
-  import { checkGameUpdates, rescan } from './lib/actions';
+  import { checkGameUpdates, refreshAll, rescan } from './lib/actions';
   import { updater } from './lib/stores/update.svelte';
   import { api } from './lib/api';
   import { isLinux } from './lib/util/platform';
@@ -245,7 +245,7 @@
   <Sidebar {rail} />
 
   <main>
-    <TopBar bind:input={search} onrefresh={() => rescan(true)} />
+    <TopBar bind:input={search} onrefresh={() => void refreshAll()} />
     {#key ui.navKey}
       {#if ui.screen === 'home'}
         <Home />

@@ -1,7 +1,9 @@
 // Actions qui touchent à la fois la bibliothèque et l'interface.
 
 import { api } from './api';
+import { accounts } from './stores/accounts.svelte';
 import { library } from './stores/library.svelte';
+import { updater } from './stores/update.svelte';
 import { runner } from './stores/runner.svelte';
 import { ui } from './stores/ui.svelte';
 import { plural } from './util/format';
@@ -85,6 +87,22 @@ export async function checkGameUpdates(): Promise<void> {
   lastUpdateCheck = Date.now();
   const before = new Set(library.updates.map((g) => g.id));
   await rescan();
+  announceUpdates(before);
+}
+
+/** Bouton Actualiser de la barre du haut : comptes, scan complet, mises à jour des jeux et de Hangar. */
+export async function refreshAll(): Promise<void> {
+  if (library.scanning) return;
+  lastUpdateCheck = Date.now();
+  const before = new Set(library.updates.map((g) => g.id));
+  void accounts.refresh();
+  void updater.check(true);
+  await rescan(true);
+  announceUpdates(before);
+}
+
+/** Annonce les jeux dont la mise à jour est apparue depuis `before`. */
+function announceUpdates(before: Set<string>): void {
   const fresh = library.updates.filter((g) => !before.has(g.id));
   if (fresh.length === 1) {
     const g = fresh[0];
