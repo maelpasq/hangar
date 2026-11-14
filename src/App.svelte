@@ -130,6 +130,11 @@
           if (f) void runner.resumeDownloads();
         }),
         api.onTrayLaunch((id) => void runner.play(id)),
+        // Bouton Xbox depuis une autre app : Hangar revient devant, en mode manette.
+        api.onPadGuide(() => {
+          gamepad.ignoreStart();
+          if (!ui.modal && !runner.launching) ui.big = true;
+        }),
         // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.
         api.onMainHidden(() => (ui.big = false)),
         api.onWebClosed((id) => runner.webClosed(id))

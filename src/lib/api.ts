@@ -53,6 +53,8 @@ export interface Api {
   setPresence(gameId: string | null, start: number): Promise<void>;
   /** Un jeu a été choisi dans le menu de l'icône. */
   onTrayLaunch(cb: (gameId: string) => void): Promise<() => void>;
+  /** Bouton Xbox pressé alors qu'une autre app était devant : Hangar vient d'être ramené. */
+  onPadGuide(cb: () => void): Promise<() => void>;
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
@@ -145,6 +147,7 @@ async function tauriApi(): Promise<Api> {
     onMainHidden: (cb) => on<null>('main://hidden', () => cb()),
     setPresence: (gameId, start) => invoke('set_presence', { gameId, start: Math.max(0, Math.round(start)) }),
     onTrayLaunch: (cb) => on<string>('tray://launch', cb),
+    onPadGuide: (cb) => on<null>('pad://guide', () => cb()),
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),

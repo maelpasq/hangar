@@ -14,6 +14,8 @@ class Pad {
   /** Action enfoncée -> prochaine répétition (ms). */
   private held = new Map<PadAction, number>();
   private raf = 0;
+  /** Start ignoré jusqu'à son relâchement (ms limite) : le bouton Xbox qui vient de ramener Hangar. */
+  private skipStart = 0;
 
   start(): () => void {
     const update = () => {
@@ -29,6 +31,11 @@ class Pad {
       cancelAnimationFrame(this.raf);
       this.raf = 0;
     };
+  }
+
+  /** Ignore Start (et Xbox) jusqu'à ce qu'il soit relâché, 3 s au plus. */
+  ignoreStart(): void {
+    this.skipStart = performance.now() + 3000;
   }
 
   /** Abonne un écouteur ; renvoie la fonction de désabonnement. */
@@ -47,6 +54,10 @@ class Pad {
     }
     // Hors focus, Chromium renvoie des manettes figées : on ignore.
     if (!document.hasFocus()) now.clear();
+    if (this.skipStart) {
+      if (t > this.skipStart || (document.hasFocus() && !now.has('start'))) this.skipStart = 0;
+      else now.delete('start');
+    }
     for (const a of [...this.held.keys()]) if (!now.has(a)) this.held.delete(a);
     for (const a of now) {
       const next = this.held.get(a);

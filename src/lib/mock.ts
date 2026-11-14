@@ -243,6 +243,7 @@ export function mockApi(): Api {
     onMainHidden: async () => () => {},
     setPresence: async () => {},
     onTrayLaunch: async () => () => {},
+    onPadGuide: async () => () => {},
     resolveSteamId: async () => null,
     searchSteam: async (query) => {
       await wait(250);

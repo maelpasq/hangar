@@ -7,6 +7,7 @@ mod art;
 mod artwork;
 mod commands;
 mod desktop;
+mod guide;
 mod info;
 mod launcher;
 mod manage;
@@ -150,6 +151,7 @@ fn main() {
             };
             app.manage(ctx);
             desktop::fix_restored_size(app.handle());
+            guide::start(app.handle().clone());
             if let Err(e) = desktop::init_tray(app.handle()) {
                 log::error!("icône de la zone de notification : {e}");
             }

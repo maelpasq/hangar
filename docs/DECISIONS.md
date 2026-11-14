@@ -256,3 +256,7 @@ Le voile cachait aussi la boîte « Synchronisation impossible » de Steam : Ste
 ## Onglet de départ (14 nov. 2026)
 
 `prefs.startPage` : Accueil, Bibliothèque, Favoris, Jeux web (seulement si l'onglet est activé) ou une collection (`collection:<id>`). Choix disparu ensuite (Jeux web désactivé, collection supprimée) : Hangar retombe sur l'Accueil. Demandé en 5e étape de la configuration de départ, modifiable dans Paramètres > Général. `null` = jamais demandé : qui avait déjà fait la configuration voit une fois la popup « Ton onglet de départ » (badge Nouveau) ; la fermer garde l'Accueil. Pas d'option « dernier onglet ouvert » pour rester simple.
+
+## Bouton Xbox global (Windows)
+
+Le bouton Xbox est lu par le backend (`src-tauri/src/guide.rs`) avec `XInputGetStateEx` (ordinal 100 de xinput1_4.dll), seule API qui expose le bouton Guide, toutes les 40 ms tant qu'une manette est branchée (recherche toutes les 2 s sinon). Quand Hangar n'est pas devant, il le ramène et ouvre le mode manette ; quand il a le focus, le frontend garde la main (API Gamepad, ouvre et ferme). Start est ignoré jusqu'à son relâchement pour que le mode manette ne se referme pas aussitôt. La Game Bar de Windows s'ouvre aussi sur ce bouton tant que l'utilisateur ne l'a pas désactivée dans ses paramètres. macOS et Linux : pas de lecture globale pour l'instant.
