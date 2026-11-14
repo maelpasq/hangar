@@ -15,7 +15,9 @@ export type Modal =
   | { kind: 'startPage' }
   | { kind: 'bug' }
   | { kind: 'mcSoon' }
-  | { kind: 'collections'; gameId: string };
+  | { kind: 'collections'; gameId: string }
+  /** Nouvelle collection (sans id) ou ajout de jeux à une collection. */
+  | { kind: 'collectionEdit'; collectionId?: string };
 
 export interface Toast {
   id: number;

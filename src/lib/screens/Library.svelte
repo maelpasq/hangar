@@ -144,7 +144,9 @@
   const cols = $derived(Math.max(1, Math.floor((width + GAP_X) / (MIN_CARD + GAP_X))));
   const cardW = $derived((width - (cols - 1) * GAP_X) / cols);
   const rowH = $derived(cardW * 1.5 + INFO_H + GAP_Y);
-  const rows = $derived(Math.ceil(list.length / cols));
+  // Collection : une carte « Ajouter des jeux » termine la grille.
+  const addCard = $derived(!!coll);
+  const rows = $derived(Math.ceil((list.length + (addCard ? 1 : 0)) / cols));
   const range = $derived.by(() => {
     if (!virtual) return { from: 0, to: list.length, padTop: 0, padBottom: 0 };
     const rel = scrollTop - gridTop;
@@ -246,7 +248,7 @@
     </div>
   {/if}
 
-  {#if list.length}
+  {#if list.length || (coll && !base.length)}
     <div
       class="grid"
       bind:this={gridEl}
@@ -257,18 +259,20 @@
       {#each list.slice(range.from, range.to) as g, i (g.id)}
         <GameCard game={g} index={virtual ? 0 : i} animate={!virtual || range.from === 0} />
       {/each}
+      {#if coll && range.to === list.length}
+        <button class="addc" onclick={() => (ui.modal = { kind: 'collectionEdit', collectionId: coll.id })}>
+          <span class="addf">
+            <span class="addi"><Icon name="plus" size={22} stroke={2} /></span>
+            <span>Ajouter des jeux</span>
+          </span>
+        </button>
+      {/if}
     </div>
   {:else if ui.favOnly && !library.favorites.length}
     <div class="empty">
       <Icon name="star" size={28} />
       <strong>Aucun favori pour l'instant</strong>
       <span>Clique sur l'étoile d'une jaquette pour épingler un jeu ici.</span>
-    </div>
-  {:else if coll && !base.length}
-    <div class="empty">
-      <Icon name="layers" size={28} />
-      <strong>Collection vide</strong>
-      <span>Fais un clic droit sur un jeu, puis « Collections », pour l'ajouter ici.</span>
     </div>
   {:else if filtering && base.length}
     <div class="empty">
@@ -386,5 +390,60 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
     gap: 26px 20px;
+  }
+
+  /* Carte « Ajouter des jeux » : même format qu'une jaquette, bordure pointillée. */
+  .addc {
+    display: block;
+    min-width: 0;
+    align-self: start;
+    text-align: center;
+    color: var(--text-3);
+  }
+
+  .addf {
+    aspect-ratio: 2 / 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 1.5px dashed var(--border-3);
+    border-radius: var(--r-cover);
+    font-size: 14px;
+    font-weight: 600;
+    transition:
+      border-color 0.2s,
+      background 0.2s,
+      color 0.2s,
+      transform 0.4s var(--ease);
+  }
+
+  .addi {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--surface-2);
+  }
+
+  .addc:hover .addf,
+  .addc:focus-visible .addf {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    background: var(--accent-soft);
+    color: var(--strong);
+    transform: translateY(-6px);
+  }
+
+  .addc:focus-visible {
+    outline: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .addc:hover .addf,
+    .addc:focus-visible .addf {
+      transform: none;
+    }
   }
 </style>

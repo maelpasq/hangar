@@ -86,9 +86,19 @@
   </nav>
 
   <nav class="scroll list" aria-label="Collections et stores">
-    {#if collections.length}
-      {#if !rail}<p class="sec stores">Collections</p>{:else}<div class="sep"></div>{/if}
-      {#each collections as c (c.id)}
+    <!-- Toujours présent, même sans collection : le « + » en crée une. -->
+    {#if !rail}
+      <div class="sech">
+        <p class="sec stores">Collections</p>
+        <button
+          class="ibtn newc"
+          aria-label="Nouvelle collection"
+          title="Nouvelle collection"
+          onclick={() => (ui.modal = { kind: 'collectionEdit' })}><Icon name="plus" size={14} stroke={2.2} /></button
+        >
+      </div>
+    {:else}<div class="sep"></div>{/if}
+    {#each collections as c (c.id)}
         {@const on = current === `c:${c.id}`}
         <button
           class="navb store"
@@ -104,7 +114,16 @@
             <span class="count num">{c.count}</span>
           {/if}
         </button>
-      {/each}
+    {/each}
+    {#if rail}
+      <button
+        class="navb store"
+        aria-label="Nouvelle collection"
+        title="Nouvelle collection"
+        onclick={() => (ui.modal = { kind: 'collectionEdit' })}
+      >
+        <span class="ic" aria-hidden="true"><Icon name="plus" size={16} stroke={2} /></span>
+      </button>
     {/if}
     {#if !rail}<p class="sec stores">Stores</p>{:else}<div class="sep"></div>{/if}
     {#each stores as s (s)}
@@ -195,6 +214,24 @@
 
   .sec.stores {
     padding-top: 22px;
+  }
+
+  .sech {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .newc {
+    width: 26px;
+    height: 26px;
+    margin: 0 6px 4px 0;
+    border-radius: 8px;
+    color: var(--muted);
+  }
+
+  .newc:hover {
+    color: var(--strong);
   }
 
   .sep {

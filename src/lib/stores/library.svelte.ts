@@ -300,6 +300,13 @@ class Library {
     this.save();
   }
 
+  /** Remplace la liste des jeux d'une collection (popup d'ajout). */
+  setCollectionGames(id: string, games: string[]): void {
+    const list = [...new Set(games)];
+    this.state.collections = this.state.collections.map((c) => (c.id === id ? { ...c, games: list } : c));
+    this.save();
+  }
+
   setCustomCover(id: string, value: string | null): void {
     if (value === null) delete this.state.customCovers[id];
     else this.state.customCovers[id] = value;

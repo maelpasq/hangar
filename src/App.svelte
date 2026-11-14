@@ -13,6 +13,7 @@
   import TopBar from './lib/components/TopBar.svelte';
   import AddGame from './lib/modals/AddGame.svelte';
   import Collections from './lib/modals/Collections.svelte';
+  import CollectionEdit from './lib/modals/CollectionEdit.svelte';
   import BigPicture from './lib/screens/BigPicture.svelte';
   import { gamepad } from './lib/stores/gamepad.svelte';
   import ChangeCover from './lib/modals/ChangeCover.svelte';
@@ -271,6 +272,8 @@
     <StartPage />
   {:else if ui.modal?.kind === 'collections' && modalGame}
     <Collections game={modalGame} />
+  {:else if ui.modal?.kind === 'collectionEdit'}
+    <CollectionEdit collectionId={ui.modal.collectionId} />
   {/if}
 
   <Toast />
