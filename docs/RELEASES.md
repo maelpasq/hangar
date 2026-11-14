@@ -45,6 +45,9 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.22 - 14 novembre 2026
+**Steam Cloud ne bloque plus le lancement** : quand Steam ne peut pas synchroniser tes sauvegardes, il ouvre une petite fenêtre et attend ta réponse. Cette fenêtre restait cachée derrière l'écran de lancement de Hangar et le jeu ne démarrait jamais. Hangar te pose maintenant la question lui-même, et toute fenêtre de launcher qui attend trop longtemps repasse au premier plan. **Plus fiable** : une coupure réseau ne laisse plus un jeu sans jaquette pendant des jours, ton temps de jeu est enregistré chaque minute (rien de perdu après une mise en veille), un fichier Steam abîmé ne bloque plus le scan et Hangar s'ouvre même si le premier scan échoue. Plus de faux message « l'installation n'a pas abouti », ni de double installation sur un double clic. **Teamfight Tactics** s'affiche sous le nom TFT, avec sa jaquette.
+
 ### 1.2.21 - 13 novembre 2026
 **Hangar MC a son logo** : le bouton grisé de la barre latérale affiche le logo de Hangar MC, l'arche et l'étoile de Hangar en pixels, à la place de l'icône cube. Le bouton présente toujours ce qui arrive, une mise à jour le débloquera.
 
