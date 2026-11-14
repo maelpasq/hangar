@@ -1,10 +1,11 @@
 <script lang="ts">
-  // Configuration en cinq étapes courtes (launchers, jeux locaux, couleur, jeux web, onglet de départ), montrée une fois
+  // Configuration en six étapes courtes (launchers, jeux locaux, jaquettes, couleur, jeux web, onglet de départ), montrée une fois
   // à l'installation comme à qui avait déjà Hangar : les réglages affichés sont les siens.
   // Chaque choix s'applique tout de suite. « Tout passer » ou fermer garde les choix déjà faits
   // et laisse le reste tel quel (jeux web désactivés s'ils n'avaient jamais été proposés).
   import { addFolder } from '../actions';
   import Segmented from '../components/Segmented.svelte';
+  import SteamGridSetup from '../components/SteamGridSetup.svelte';
   import StartPagePicker from '../components/StartPagePicker.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
@@ -19,7 +20,7 @@
   import { plural } from '../util/format';
   import games from '../web-games.json';
 
-  const TITLES = ['Tes launchers', 'Tes jeux hors launcher', 'Ta couleur', 'Les jeux web', 'Ton onglet de départ'];
+  const TITLES = ['Tes launchers', 'Tes jeux hors launcher', 'Tes jaquettes', 'Ta couleur', 'Les jeux web', 'Ton onglet de départ'];
   const PREVIEW = ['openfront', 'krunker', 'slither', 'skribbl'];
   const covers = import.meta.glob<string>('../../assets/web-games/*.webp', { eager: true, import: 'default' });
   const preview = PREVIEW.map((id) => covers[`../../assets/web-games/${id}.webp`]).filter(Boolean);
@@ -34,7 +35,8 @@
   // Qui avait Hangar avant les jeux web les découvre ici.
   const webIsNew = !library.fresh && library.state.prefs.webGames === null;
   const startIsNew = !library.fresh && library.state.prefs.startPage === null;
-  const isNew = (i: number) => (i === 3 && webIsNew) || (i === 4 && startIsNew);
+  const isNew = (i: number) =>
+    (i === 2 && !library.fresh && !library.state.prefs.steamGridDb) || (i === 4 && webIsNew) || (i === 5 && startIsNew);
   void accounts.refresh();
 
   // Launchers trouvés sur l'appareil en premier.
@@ -114,6 +116,13 @@
         </div>
         <button class="btn add" onclick={addFolder}><Icon name="plus" size={15} stroke={2} />Ajouter un dossier</button>
       {:else if step === 2}
+        <p class="txt">
+          Hangar trouve seul les jaquettes des jeux Steam. Pour les autres (Riot, Battle.net, Minecraft, jeux locaux...), il
+          lui faut une clé <strong>SteamGridDB</strong> : un site communautaire gratuit d'images de jeux. Sans elle, ces
+          jeux gardent une jaquette générée. Deux minutes suffisent.
+        </p>
+        <SteamGridSetup id="onb-sgdb-key" />
+      {:else if step === 3}
         <p class="txt">La teinte des boutons, de la sélection et des lueurs, sur fond sombre ou clair.</p>
         <div class="swatches">
           <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
@@ -150,7 +159,7 @@
             library.save();
           }}
         />
-      {:else if step === 4}
+      {:else if step === 5}
         <p class="txt">L'onglet sur lequel Hangar s'ouvre à chaque démarrage.</p>
         <StartPagePicker webGames={web} />
       {:else}
@@ -219,6 +228,10 @@
   .txt {
     color: var(--text-3);
     line-height: 1.5;
+  }
+
+  .txt strong {
+    color: var(--strong);
   }
 
   .grid {

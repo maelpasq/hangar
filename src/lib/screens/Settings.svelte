@@ -7,6 +7,7 @@
   import Icon, { type IconName } from '../components/Icon.svelte';
   import Dropdown from '../components/Dropdown.svelte';
   import Segmented from '../components/Segmented.svelte';
+  import SteamGridSetup from '../components/SteamGridSetup.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
@@ -37,7 +38,7 @@
   const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
   const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
 
-  const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number }[]>([
+  const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number; alert?: boolean }[]>([
     { id: 'general', label: 'Général', icon: 'sliders' },
     { id: 'appearance', label: 'Apparence', icon: 'sun' },
     {
@@ -48,7 +49,7 @@
       badge: connectedCount || undefined
     },
     { id: 'library', label: 'Bibliothèque', icon: 'folder' },
-    { id: 'covers', label: 'Jaquettes', icon: 'image' }
+    { id: 'covers', label: 'Jaquettes', icon: 'image', alert: !library.state.prefs.steamGridDb }
   ]);
   const current = $derived(sections.find((s) => s.id === section)!);
 
@@ -165,33 +166,12 @@
 
   // ─── Jaquettes ───
 
-  // La clé va directement dans le coffre du système : le champ reste vide une fois enregistrée.
-  let gridKey = $state('');
-  let showGridKey = $state(false);
-  let gridBusy = $state(false);
-  const gridDirty = $derived(gridKey.trim() !== '');
+  /** Pas de clé SteamGridDB : alerte en haut de chaque section jusqu'à ce qu'elle soit ajoutée. */
+  const needGrid = $derived(!library.state.prefs.steamGridDb);
 
-  async function setGridKey(k: string) {
-    if (gridBusy) return;
-    gridBusy = true;
-    try {
-      await api.setSteamGridKey(k);
-      library.state.prefs.steamGridDb = k !== '';
-      library.save();
-      gridKey = '';
-      art.reset();
-      ui.toast(k ? 'Clé SteamGridDB enregistrée, recherche des jaquettes...' : 'Clé SteamGridDB retirée');
-    } catch (e) {
-      ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
-    } finally {
-      gridBusy = false;
-    }
-  }
-
-  function saveGridKey(e?: Event) {
-    e?.preventDefault();
-    const k = gridKey.trim();
-    if (k) void setGridKey(k);
+  function goGrid() {
+    go('covers');
+    setTimeout(() => document.getElementById('sgdb-key')?.focus(), 50);
   }
 </script>
 
@@ -213,6 +193,7 @@
           <Icon name={s.icon} size={17} />
           <span class="nl">{s.label}</span>
           {#if s.badge}<span class="badge num" aria-label="{s.badge} connecté{s.badge > 1 ? 's' : ''}">{s.badge}</span>{/if}
+          {#if s.alert}<span class="alert-dot" role="img" aria-label="Clé SteamGridDB à ajouter"></span>{/if}
         </button>
       {/each}
     </nav>
@@ -223,6 +204,18 @@
           <h2>{current.title ?? current.label}</h2>
           <p>{intro[section]}</p>
         </header>
+
+        {#if needGrid && section !== 'covers'}
+          <div class="grid-alert" role="alert">
+            <span class="ga-ico"><Icon name="alert" size={18} stroke={2.2} /></span>
+            <p>
+              <strong>Ajoute ta clé SteamGridDB.</strong>
+              Sans elle, les jeux absents de Steam (Riot, Battle.net, jeux locaux...) n'ont pas de vraie jaquette. C'est
+              gratuit et prend deux minutes : Hangar te guide.
+            </p>
+            <button class="btn-s primary" onclick={goGrid}>Ajouter ma clé</button>
+          </div>
+        {/if}
 
         <div class="groups">
           {#if section === 'general'}
@@ -283,7 +276,7 @@
               <div class="srow">
                 <span class="txt"
                   ><span class="lbl">Configuration de départ</span><span class="hint"
-                    >Launchers, jeux locaux, couleur, jeux web et onglet de départ, en cinq étapes.</span
+                    >Launchers, jeux locaux, jaquettes, couleur, jeux web et onglet de départ, en six étapes.</span
                   ></span
                 >
                 <button class="btn-s" onclick={() => (ui.modal = { kind: 'onboarding' })}>Revoir</button>
@@ -506,38 +499,17 @@
             </section>
 
             <section class="group" aria-label="SteamGridDB">
-              <h3>SteamGridDB <span class="opt">facultatif</span></h3>
-              <form class="srow stack" onsubmit={saveGridKey}>
-                <span class="txt">
-                  <label class="lbl" for="sgdb-key">Clé API SteamGridDB</label>
-                  <span class="hint"
-                    >Trouve les images des jeux absents de Steam (Hytale, Roblox, VALORANT...). Clé gratuite sur
-                    steamgriddb.com, menu Préférences puis API.</span
-                  >
-                </span>
-                <div class="sfield">
-                  <input
-                    id="sgdb-key"
-                    type={showGridKey ? 'text' : 'password'}
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder={library.state.prefs.steamGridDb
-                      ? 'Clé enregistrée dans le coffre du système'
-                      : 'Colle ta clé ici'}
-                    bind:value={gridKey}
-                    onblur={() => saveGridKey()}
-                  />
-                  <button type="button" class="btn-s" onclick={() => (showGridKey = !showGridKey)}
-                    >{showGridKey ? 'Masquer' : 'Afficher'}</button
-                  >
-                  <button type="submit" class="btn-s primary" disabled={!gridDirty || gridBusy}>Enregistrer</button>
-                  {#if library.state.prefs.steamGridDb}
-                    <button type="button" class="btn-s" disabled={gridBusy} onclick={() => setGridKey('')}
-                      >Retirer</button
-                    >
-                  {/if}
-                </div>
-              </form>
+              <h3>SteamGridDB <span class="opt" class:need={needGrid}>{needGrid ? 'à faire' : 'activé'}</span></h3>
+              <div class="sgdb">
+                {#if needGrid}
+                  <p class="sgdb-intro">
+                    <strong>SteamGridDB</strong> est un site communautaire gratuit d'images de jeux. Hangar trouve seul les
+                    jaquettes des jeux Steam ; pour tous les autres (Riot, Battle.net, Minecraft, Xbox, jeux locaux...), il
+                    lui faut ta clé personnelle. Sans elle, ces jeux gardent une jaquette générée.
+                  </p>
+                {/if}
+                <SteamGridSetup removable />
+              </div>
             </section>
           {/if}
         </div>
@@ -636,7 +608,60 @@
     font-weight: 700;
   }
 
+  .alert-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
   /* ─── Panneau ─── */
+
+  /* Clé SteamGridDB manquante : rappel en haut de chaque section. */
+  .grid-alert {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: var(--r-section);
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    animation: hgFade 0.3s ease both;
+  }
+
+  .ga-ico {
+    flex-shrink: 0;
+    color: var(--accent-text);
+  }
+
+  .grid-alert p {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-3);
+  }
+
+  .grid-alert strong,
+  .sgdb-intro strong {
+    color: var(--strong);
+  }
+
+  .sgdb {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px 0 18px;
+  }
+
+  .sgdb-intro {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-3);
+  }
+
 
   .panel {
     min-width: 0;
@@ -691,6 +716,10 @@
     color: var(--muted-2);
   }
 
+  .opt.need {
+    color: var(--accent-text);
+  }
+
   .gdesc {
     padding-bottom: 6px;
     font-size: 13px;
@@ -713,15 +742,6 @@
   }
 
   /* Ligne avec un champ : le champ passe sous le texte. */
-  .srow.stack {
-    flex-wrap: wrap;
-  }
-
-  .srow.stack .sfield {
-    flex-basis: 100%;
-  }
-
-
   .srow.actions {
     min-height: 0;
     padding: 12px 0 14px;

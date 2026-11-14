@@ -264,3 +264,9 @@ Le bouton Xbox est lu par le backend (`src-tauri/src/guide.rs`) avec `XInputGetS
 ## Fenêtre des notes de version après une mise à jour
 
 Au premier démarrage après une mise à jour, Hangar montre une fois « Hangar a été mis à jour » avec le patch note de la version (accroche, sections, puces, gras), pour que chacun sache pourquoi il a mis à jour. Les notes viennent de l'historique de `docs/RELEASES.md`, embarqué au build (`src/lib/util/release-notes.ts`) : aucun appel réseau et toujours la même source que le texte de la release GitHub. `lastVersion` (état) retient la dernière version vue : qui a sauté des versions voit toutes les entrées manquées (5 au plus) ; `null` (avant cette version) montre seulement la version courante ; à l'installation (configuration pas faite), la version est retenue sans fenêtre. Si une autre fenêtre de démarrage passe avant (configuration, onglet de départ), les notes attendent le démarrage suivant. Paramètres > Général > Mise à jour : bouton « Nouveautés » pour les revoir.
+
+## Clé SteamGridDB guidée (onboarding et Paramètres)
+
+- Nouvelle étape « Tes jaquettes » (3e sur 6) dans la configuration de départ, et guide identique dans Paramètres > Jaquettes (`SteamGridSetup.svelte`) : ouvrir la page API (`open_link` « steamgriddb-api »), générer la clé, la coller (une clé de 32 caractères collée s'enregistre seule).
+- Tant qu'aucune clé n'est enregistrée : alerte en haut de chaque section des Paramètres et pastille sur « Jaquettes ». Pas de bouton pour la faire taire, à la demande de l'utilisateur.
+- À l'enregistrement, le backend essaie la clé sur l'API SteamGridDB (`search/autocomplete`) : un 401/403 la refuse avec un message clair ; une erreur réseau ne bloque pas l'enregistrement.

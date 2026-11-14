@@ -152,6 +152,7 @@ pub async fn open_link(link: String) -> Result<(), String> {
     let url = match link.as_str() {
         "steam-api-key" => "https://steamcommunity.com/dev/apikey",
         "microsoft-link" => "https://www.microsoft.com/link",
+        "steamgriddb-api" => "https://www.steamgriddb.com/profile/preferences/api",
         _ => return Err("Lien inconnu.".into()),
     };
     blocking(move || launcher::shell_open(url, "", None, "open")).await?
@@ -491,9 +492,21 @@ pub async fn find_artwork(ctx: Ctxs<'_>, game_id: String, refresh: bool) -> Resu
 }
 
 /// Enregistre la clé API SteamGridDB dans le coffre du système (vide : la retire).
+/// Une clé non vide est d'abord essayée sur l'API : refusée (401/403), elle n'est pas gardée.
 #[tauri::command]
-pub async fn set_steamgriddb_key(key: String) -> Result<(), String> {
-    blocking(move || crate::accounts::set_steamgriddb_key(&key)).await?
+pub async fn set_steamgriddb_key(ctx: Ctxs<'_>, key: String) -> Result<(), String> {
+    let art = ctx.art.clone();
+    blocking(move || {
+        let k = key.trim();
+        if !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric()) {
+            let url = "https://www.steamgriddb.com/api/v2/search/autocomplete/portal";
+            if let Err(401 | 403) = art.get_json(url, Some(k)) {
+                return Err("SteamGridDB ne reconnaît pas cette clé. Recopie-la en entier depuis la page API.".into());
+            }
+        }
+        crate::accounts::set_steamgriddb_key(k)
+    })
+    .await?
 }
 
 /// Genre d'un jeu (API appdetails de Steam, en cache). Jamais d'erreur.

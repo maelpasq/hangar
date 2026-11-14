@@ -90,7 +90,7 @@ export interface Api {
   connectAccount(store: StoreId): Promise<number>;
   disconnectAccount(store: StoreId): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
-  openLink(link: 'steam-api-key' | 'microsoft-link'): Promise<void>;
+  openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api'): Promise<void>;
   /** Envoie un signalement de bug au développeur (capture : chemin d'une image, facultatif). */
   reportBug(title: string, description: string, screenshot: string | null): Promise<void>;
   /** Ouvre un jeu du catalogue web-games.json dans sa propre fenêtre Hangar. */
