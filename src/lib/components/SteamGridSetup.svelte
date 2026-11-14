@@ -93,7 +93,7 @@
           >Elle s'ouvre dans ton navigateur. Connecte-toi avec le bouton « Login » en haut à droite, puis « Sign in
           through Steam » : ton compte Steam suffit, c'est gratuit.</span
         >
-        <button type="button" class="btn sm primary go" onclick={open}
+        <button type="button" class="btn sm danger go" onclick={open}
           ><Icon name="globe" size={15} />{opened ? 'Rouvrir la page' : 'Ouvrir SteamGridDB'}</button
         >
       </div>
@@ -128,7 +128,7 @@
             {onpaste}
           />
           <button type="button" class="btn sm" onclick={() => (show = !show)}>{show ? 'Masquer' : 'Afficher'}</button>
-          <button type="submit" class="btn sm" class:primary={looksRight} disabled={!clean || busy}
+          <button type="submit" class="btn sm" class:danger={looksRight} disabled={!clean || busy}
             >{busy ? 'Vérification...' : 'Enregistrer'}</button
           >
         </div>
@@ -164,14 +164,14 @@
     display: grid;
     place-items: center;
     border-radius: 50%;
-    background: var(--accent-soft);
-    color: var(--accent-text);
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: var(--danger-text);
     font-size: 12.5px;
     font-weight: 700;
   }
 
   li.did .n {
-    background: var(--accent);
+    background: var(--success);
     color: #fff;
   }
 

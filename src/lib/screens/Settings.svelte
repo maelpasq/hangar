@@ -213,7 +213,7 @@
               Sans elle, les jeux absents de Steam (Riot, Battle.net, jeux locaux...) n'ont pas de vraie jaquette. C'est
               gratuit et prend deux minutes : Hangar te guide.
             </p>
-            <button class="btn-s primary" onclick={goGrid}>Ajouter ma clé</button>
+            <button class="btn-s alarm" onclick={goGrid}>Ajouter ma clé</button>
           </div>
         {/if}
 
@@ -612,8 +612,9 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    margin-left: auto;
+    background: var(--danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 25%, transparent);
   }
 
   /* ─── Panneau ─── */
@@ -626,14 +627,25 @@
     margin-bottom: 18px;
     padding: 14px 16px;
     border-radius: var(--r-section);
-    background: var(--accent-soft);
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
     animation: hgFade 0.3s ease both;
   }
 
   .ga-ico {
     flex-shrink: 0;
-    color: var(--accent-text);
+    color: var(--danger-text);
+  }
+
+  .btn-s.alarm {
+    background: var(--danger);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-s.alarm:hover {
+    background: color-mix(in srgb, var(--danger) 85%, #fff);
   }
 
   .grid-alert p {
@@ -717,7 +729,7 @@
   }
 
   .opt.need {
-    color: var(--accent-text);
+    color: var(--danger-text);
   }
 
   .gdesc {

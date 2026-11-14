@@ -47,6 +47,9 @@
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 
+  /** Point rouge sur Paramètres tant que la clé SteamGridDB n'est pas ajoutée. */
+  const alertOn = (key: string) => key === 'settings' && !library.state.prefs.steamGridDb;
+
   const collections = $derived(
     library.state.collections.map((c) => ({ ...c, count: library.inCollection(c.id).length }))
   );
@@ -72,14 +75,22 @@
         class:on={current === n.key}
         class:soon={n.soon}
         aria-current={current === n.key ? 'page' : undefined}
-        aria-label={rail ? (n.soon ? `${n.label}, bientôt` : n.label) : undefined}
+        aria-label={rail || alertOn(n.key)
+          ? n.soon
+            ? `${n.label}, bientôt`
+            : alertOn(n.key)
+              ? `${n.label}, clé SteamGridDB à ajouter`
+              : n.label
+          : undefined}
         title={rail ? n.label : undefined}
         onclick={n.go}
       >
         <span class="ic">{#if n.key === 'hangarmc'}<McLogo size={19} />{:else}<Icon name={n.icon} />{/if}</span>
         {#if !rail}
           <span>{n.label}</span>
-          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
+          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
+        {:else if alertOn(n.key)}
+          <span class="alert-dot rail-dot" aria-hidden="true"></span>
         {/if}
       </button>
     {/each}
@@ -326,6 +337,33 @@
     margin-left: auto;
     font-size: 12px;
     color: var(--muted-2);
+  }
+
+  .alert-dot {
+    margin-left: auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 25%, transparent);
+  }
+
+  .rail-dot {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .alert-dot {
+      animation: hgAlertPulse 2s ease-in-out infinite;
+    }
+  }
+
+  @keyframes hgAlertPulse {
+    50% {
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 10%, transparent);
+    }
   }
 
   .navb.soon {

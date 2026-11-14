@@ -268,5 +268,5 @@ Au premier démarrage après une mise à jour, Hangar montre une fois « Hangar 
 ## Clé SteamGridDB guidée (onboarding et Paramètres)
 
 - Nouvelle étape « Tes jaquettes » (3e sur 6) dans la configuration de départ, et guide identique dans Paramètres > Jaquettes (`SteamGridSetup.svelte`) : ouvrir la page API (`open_link` « steamgriddb-api »), générer la clé, la coller (une clé de 32 caractères collée s'enregistre seule).
-- Tant qu'aucune clé n'est enregistrée : alerte en haut de chaque section des Paramètres et pastille sur « Jaquettes ». Pas de bouton pour la faire taire, à la demande de l'utilisateur.
+- Tant qu'aucune clé n'est enregistrée, tout est en rouge (demande de l'utilisateur) : point sur « Paramètres » dans la sidebar (pulsé, sauf mouvement réduit), alerte en haut de chaque section des Paramètres, point sur « Jaquettes », étapes du guide. Pas de bouton pour faire taire l'alerte.
 - À l'enregistrement, le backend essaie la clé sur l'API SteamGridDB (`search/autocomplete`) : un 401/403 la refuse avec un message clair ; une erreur réseau ne bloque pas l'enregistrement.
