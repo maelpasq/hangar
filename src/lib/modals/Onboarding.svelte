@@ -45,6 +45,13 @@
   );
   const on = (s: StoreId) => !library.state.disabledStores.includes(s);
   const accent = $derived(library.state.accent.toLowerCase());
+  const custom = $derived(!ACCENTS.some((a) => a.color === accent));
+
+  // Pendant le glisser du sélecteur : aperçu en direct, enregistrement au relâcher.
+  function setAccent(c: string, save = true) {
+    library.state.accent = c;
+    if (save) library.save();
+  }
 
   function finish(webOn: boolean) {
     library.state.prefs.webGames = webOn;
@@ -108,22 +115,31 @@
         <button class="btn add" onclick={addFolder}><Icon name="plus" size={15} stroke={2} />Ajouter un dossier</button>
       {:else if step === 2}
         <p class="txt">La teinte des boutons, de la sélection et des lueurs, sur fond sombre ou clair.</p>
-        <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
-          {#each ACCENTS as a (a.color)}
-            <button
-              class="sw"
-              class:on={accent === a.color}
-              role="radio"
-              aria-checked={accent === a.color}
-              aria-label="Accent {a.name}"
-              title={a.name}
-              style:background={a.color}
-              onclick={() => {
-                library.state.accent = a.color;
-                library.save();
-              }}
-            ></button>
-          {/each}
+        <div class="swatches">
+          <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
+            {#each ACCENTS as a (a.color)}
+              <button
+                class="sw"
+                class:on={accent === a.color}
+                role="radio"
+                aria-checked={accent === a.color}
+                aria-label="Accent {a.name}"
+                title={a.name}
+                style:background={a.color}
+                onclick={() => setAccent(a.color)}
+              ></button>
+            {/each}
+          </div>
+          <label class="sw custom" class:on={custom} title="Couleur personnalisée" style:background={custom ? accent : undefined}>
+            <span class="sr-only">Couleur personnalisée</span>
+            {#if !custom}<Icon name="plus" size={17} stroke={2.2} />{/if}
+            <input
+              type="color"
+              value={accent}
+              oninput={(e) => setAccent(e.currentTarget.value, false)}
+              onchange={(e) => setAccent(e.currentTarget.value)}
+            />
+          </label>
         </div>
         <Segmented
           value={library.state.theme}
@@ -265,6 +281,30 @@
     box-shadow:
       0 0 0 3px var(--panel),
       0 0 0 5px var(--strong);
+  }
+
+  /* Pastille personnalisée : l'<input type="color"> invisible la recouvre et ouvre le sélecteur. */
+  .custom {
+    position: relative;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: #fff;
+    background: conic-gradient(#f2556b, #f59e0b, #22c55e, #22b8f0, #7c6cff, #f2556b);
+  }
+
+  .custom input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .custom:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .strip {
