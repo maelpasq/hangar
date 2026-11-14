@@ -1,5 +1,6 @@
 <script lang="ts">
   // Collections d'un jeu : cases à cocher, et création d'une nouvelle collection.
+  import ConfirmDuplicateCollection from './ConfirmDuplicateCollection.svelte';
   import Modal from '../components/Modal.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -12,8 +13,18 @@
     ui.modal = null;
   };
 
-  function create(e: SubmitEvent) {
+  // Nom déjà pris : demande confirmation avant de créer.
+  let confirming = $state(false);
+
+  function submit(e: SubmitEvent) {
     e.preventDefault();
+    if (!name.trim()) return;
+    if (library.hasCollectionNamed(name)) confirming = true;
+    else create();
+  }
+
+  function create() {
+    confirming = false;
     if (library.createCollection(name, game.id)) name = '';
   }
 </script>
@@ -37,7 +48,7 @@
       {/each}
     </ul>
   {/if}
-  <form id="coll-form" class="new" onsubmit={create}>
+  <form id="coll-form" class="new" onsubmit={submit}>
     <div class="field">
       <label for="coll-new">Nouvelle collection</label>
       <input id="coll-new" bind:value={name} maxlength="60" placeholder="Avec les potes, À finir..." />
@@ -49,6 +60,10 @@
     <button class="btn primary" onclick={close}>Terminé</button>
   {/snippet}
 </Modal>
+
+{#if confirming}
+  <ConfirmDuplicateCollection {name} oncancel={() => (confirming = false)} onconfirm={create} />
+{/if}
 
 <style>
   .lead {

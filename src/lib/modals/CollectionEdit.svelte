@@ -1,6 +1,7 @@
 <script lang="ts">
   // Nouvelle collection, ou ajout de jeux à une collection : nom, recherche et cases à cocher.
   import { onMount } from 'svelte';
+  import ConfirmDuplicateCollection from './ConfirmDuplicateCollection.svelte';
   import Cover from '../components/Cover.svelte';
   import Icon from '../components/Icon.svelte';
   import Modal from '../components/Modal.svelte';
@@ -40,6 +41,9 @@
     picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
   }
 
+  // Nom déjà pris : demande confirmation avant de créer.
+  let confirming = $state(false);
+
   function save(e?: SubmitEvent) {
     e?.preventDefault();
     if (!canSave) return;
@@ -48,6 +52,15 @@
       close();
       return;
     }
+    if (library.hasCollectionNamed(name)) {
+      confirming = true;
+      return;
+    }
+    create();
+  }
+
+  function create() {
+    confirming = false;
     const id = library.createCollection(name);
     if (!id) return;
     library.setCollectionGames(id, picked);
@@ -98,6 +111,10 @@
     <button class="btn primary" type="submit" form="coll-edit" disabled={!canSave}>{coll ? 'Enregistrer' : 'Créer'}</button>
   {/snippet}
 </Modal>
+
+{#if confirming}
+  <ConfirmDuplicateCollection {name} oncancel={() => (confirming = false)} onconfirm={create} />
+{/if}
 
 <style>
   .col {

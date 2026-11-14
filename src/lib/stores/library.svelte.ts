@@ -270,6 +270,12 @@ class Library {
     return c ? this.visible.filter((g) => c.games.includes(g.id)) : [];
   }
 
+  /** Vrai si une collection porte déjà ce nom (sans tenir compte de la casse ni des espaces autour). */
+  hasCollectionNamed(name: string): boolean {
+    const key = name.trim().slice(0, 60).toLocaleLowerCase('fr');
+    return !!key && this.state.collections.some((c) => c.name.toLocaleLowerCase('fr') === key);
+  }
+
   /** Crée une collection (avec un premier jeu éventuel) et renvoie son id. */
   createCollection(name: string, gameId?: string): string | null {
     const clean = name.trim().slice(0, 60);
