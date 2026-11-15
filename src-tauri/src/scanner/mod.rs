@@ -1,5 +1,5 @@
 //! Détection des jeux installés : Steam, Epic, GOG, Ubisoft, EA, Battle.net,
-//! Riot, Xbox / Microsoft Store, jeux installés hors store et dossiers locaux.
+//! Riot, Rockstar, Xbox / Microsoft Store, jeux installés hors store et dossiers locaux.
 //!
 //! Chaque détecteur renvoie une liste vide en cas d'erreur (store absent, clé
 //! de registre manquante, fichier corrompu) et journalise la raison.
@@ -16,6 +16,7 @@ pub mod local;
 pub mod macapps;
 pub mod registry;
 pub mod riot;
+pub mod rockstar;
 pub mod stats;
 pub mod steam;
 pub mod ubisoft;
@@ -28,7 +29,7 @@ use std::path::{Path, PathBuf};
 
 /// Priorité de dédoublonnage (un même dossier détecté par deux sources).
 pub const STORE_PRIORITY: &[&str] = &[
-    "steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "xbox", "local", "manual",
+    "steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "rockstar", "xbox", "local", "manual",
 ];
 
 /// Données partagées des launchers : `%PROGRAMDATA%` sous Windows, `/Users/Shared` sous macOS.
@@ -70,6 +71,7 @@ pub fn launcher_present(store: &str) -> bool {
         "epic" => pd.join("Epic").join("EpicGamesLauncher").is_dir(),
         "gog" => gog::galaxy_installed(),
         "riot" => riot::client().is_some(),
+        "rockstar" => rockstar::launcher_exe().is_some(),
         _ if !cfg!(windows) => false,
         "ubisoft" => local.join("Ubisoft Game Launcher").is_dir() || pd.join("Ubisoft").is_dir(),
         "ea" => pd.join("EA Desktop").is_dir() || local.join("Electronic Arts").join("EA Desktop").is_dir(),
@@ -149,6 +151,7 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
         ("ea", ea::detect),
         ("battlenet", battlenet::detect),
         ("riot", riot::detect),
+        ("rockstar", rockstar::detect),
         ("installés", installed::detect),
         // Jeux possédés non installés : après les détecteurs ci-dessus, pour que
         // dedupe (tri stable) garde la version installée d'un même id.
@@ -156,6 +159,7 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
         ("epic (non installés)", epic::owned),
         ("gog (non installés)", gog::owned),
         ("riot (non installés)", riot::owned),
+        ("rockstar (non installés)", rockstar::owned),
     ];
     let mut games: Vec<Game> = std::thread::scope(|s| {
         let handles: Vec<_> = detectors

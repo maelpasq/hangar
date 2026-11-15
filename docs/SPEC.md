@@ -15,6 +15,7 @@ Une seule app pour retrouver et lancer tous les jeux installés sur le PC, quel 
 | EA app | Clés de désinstallation (HKLM 32/64 bits + HKCU) dont le dossier contient `__Installer\installerdata.xml` ou dont l'éditeur est Electronic Arts | Exe principal du jeu (il ouvre l'EA app lui-même) |
 | Battle.net | Clés de désinstallation dont `UninstallString` contient `Battle.net` et `--uid=` ; table uid vers code produit | `Battle.net.exe --exec="launch <CODE>"`, sinon `battlenet://<CODE>` |
 | Riot Games | `%PROGRAMDATA%\Riot Games\RiotClientInstalls.json` (`rc_default`) et `Metadata\<produit>.<patchline>\*.product_settings.yaml` | `RiotClientServices.exe --launch-product=<p> --launch-patchline=<pl>` |
+| Rockstar Games Launcher | Clés de désinstallation de l'éditeur Rockstar Games dont `UninstallString` contient `-uninstall=<titre>` (sauf `launcher`) ; `Launcher.exe` via la clé du launcher, `Rockstar Games\Launcher\InstallFolder` ou `Program Files` | `Launcher.exe -launchTitleInFolder "<dossier du jeu>"` |
 | Xbox / Microsoft Store | PowerShell `Get-AppxPackage`, ne garder que les paquets qui contiennent `MicrosoftGame.config` | `shell:AppsFolder\<PackageFamilyName>!<AppId>` |
 | Dossiers locaux | Dossiers choisis par l'utilisateur : un jeu par sous-dossier, exe choisi par heuristique (voir ARCHITECTURE.md) avec **priorité au launcher du jeu s'il existe** | L'exe trouvé |
 | Ajout manuel | L'utilisateur choisit un `.exe`, `.lnk`, `.url` ou `.bat`, un nom et des arguments | Tel quel |
@@ -29,11 +30,12 @@ Les jeux du compte qui ne sont pas installés ont leur onglet à part, « À ins
 | Epic Games | `catcache.bin` (catalogue local du launcher) : catégorie `games`, hors DLC (`mainGameItem`), plateforme du système | `com.epicgames.launcher://apps/<ns>%3A<catalogItemId>%3A<appName>?action=install` |
 | GOG | Base de GOG Galaxy `galaxy-2.0.db` : titres des `releaseKey` `gog_<id>` de `LibraryReleases`, hors DLC (`ReleaseProperties.isDlc`) | `goggalaxy://openGameView/<id>` |
 | Riot Games | Si le Riot Client est installé : League of Legends, VALORANT, Legends of Runeterra, 2XKO (gratuits) | `RiotClientServices.exe --launch-product=<p> --launch-patchline=live` |
+| Rockstar Games | Si le launcher est installé : titres des fichiers `%LOCALAPPDATA%\Rockstar Games\Launcher\<profil>\buildcollection_<titre>_<n>.xml` (titres connus seulement) | `Launcher.exe` (l'installation se fait dans le launcher) |
 | Ubisoft, EA, Battle.net, Xbox | Pas de liste locale lisible (cache chiffré ou compte en ligne) : seuls les jeux installés | - |
 
 Règles communes :
 
-- Un même dossier d'installation détecté par deux sources n'apparaît qu'une fois (priorité : Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox, local, manuel).
+- Un même dossier d'installation détecté par deux sources n'apparaît qu'une fois (priorité : Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Rockstar, Xbox, local, manuel).
 - Ignorer les outils et redistribuables Steam (Steamworks Common Redistributables, Proton, Steam Linux Runtime, SDK, serveurs dédiés, bandes-son).
 - Le scan complet doit prendre moins de 3 secondes sur un PC avec 100 jeux (hors PowerShell Xbox, qui tourne en parallèle et met à jour la liste quand il répond).
 - Au démarrage, la dernière bibliothèque connue s'affiche instantanément (cache), puis un scan s'exécute en arrière-plan et met à jour la liste sans clignotement.

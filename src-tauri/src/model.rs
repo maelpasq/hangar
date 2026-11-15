@@ -99,6 +99,7 @@ pub fn default_launcher(store: &str) -> &'static str {
         "ea" => "EA app",
         "battlenet" => "Battle.net",
         "riot" => "Riot Client",
+        "rockstar" => "Rockstar Games Launcher",
         "xbox" => "Xbox",
         _ => "l'exécutable du jeu",
     }

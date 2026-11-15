@@ -198,7 +198,7 @@ pub fn update_target(g: &crate::model::Game) -> Result<(String, String), String>
             "ms-windows-store://downloadsandupdates".into(),
             format!("Le Microsoft Store met {name} à jour en arrière-plan."),
         )),
-        "ubisoft" | "ea" | "battlenet" | "riot" => {
+        "ubisoft" | "ea" | "battlenet" | "riot" | "rockstar" => {
             Err(format!("{} met {name} à jour au lancement : lance le jeu depuis Hangar.", g.launcher_name))
         }
         _ => Err(format!("{name} n'a pas de launcher : ses mises à jour se font hors de Hangar.")),

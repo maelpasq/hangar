@@ -34,6 +34,7 @@ const PATHS: Record<string, (n: string) => string> = {
   battlenet: (n) => `C:\\Program Files (x86)\\${n}`,
   xbox: (n) => `C:\\XboxGames\\${n}\\Content`,
   riot: (n) => `C:\\Riot Games\\${n}`,
+  rockstar: (n) => `C:\\Program Files\\Rockstar Games\\${n}`,
   local: (n) => `D:\\Jeux\\${n}`
 };
 
@@ -300,7 +301,7 @@ export function mockApi(): Api {
     answerLauncherPrompt: async () => {},
     onScanPartial: async () => () => {},
     accountsStatus: async () =>
-      (['steam', 'epic', 'gog', 'ubisoft', 'ea', 'battlenet', 'riot', 'xbox'] as StoreId[]).map(
+      (['steam', 'epic', 'gog', 'ubisoft', 'ea', 'battlenet', 'riot', 'rockstar', 'xbox'] as StoreId[]).map(
         (store) =>
           connected.get(store) ?? {
             store,

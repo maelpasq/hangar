@@ -15,6 +15,7 @@ export const STORE_ORDER: StoreId[] = [
   'ea',
   'battlenet',
   'riot',
+  'rockstar',
   'xbox',
   'local',
   'manual'
@@ -29,6 +30,7 @@ export const STORES: Record<StoreId, StoreMeta> = {
   battlenet: { label: 'Battle.net', color: '#38a3ff', launcher: 'Battle.net' },
   xbox: { label: 'Xbox', color: '#4ade80', launcher: 'Xbox' },
   riot: { label: 'Riot Games', color: '#ff5c6c', launcher: 'Riot Client' },
+  rockstar: { label: 'Rockstar Games', color: '#fcaf17', launcher: 'Rockstar Games Launcher' },
   local: { label: 'Local', color: '#f5a524', launcher: "l'exécutable du jeu" },
   manual: { label: 'Ajoutés', color: '#a78bfa', launcher: "l'exécutable du jeu" }
 };

@@ -26,7 +26,7 @@ use std::time::Duration;
 /// Launchers dont le compte peut être connecté.
 pub const CONNECTABLE: &[&str] = &["steam", "gog", "epic"];
 /// Stores affichés dans les Paramètres (tag « Détecté »).
-const ALL_STORES: &[&str] = &["steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "xbox"];
+const ALL_STORES: &[&str] = &["steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "rockstar", "xbox"];
 /// Resynchronisation automatique au plus toutes les 6 h (au moment d'un scan).
 const SYNC_EVERY_MS: u64 = 6 * 3_600_000;
 

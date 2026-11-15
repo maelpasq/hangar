@@ -1,6 +1,6 @@
 # Hangar - instructions pour Claude Code
 
-Hangar est un launcher de jeux pour Windows 10/11, macOS et Linux (AppImage, visée : CachyOS) : il détecte automatiquement tous les jeux installés (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox / Microsoft Store, dossiers locaux, ajouts manuels), les affiche avec leurs vraies jaquettes et les lance via leur launcher, ou directement via l'exécutable quand il n'y a pas de launcher.
+Hangar est un launcher de jeux pour Windows 10/11, macOS et Linux (AppImage, visée : CachyOS) : il détecte automatiquement tous les jeux installés (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Rockstar Games Launcher, Xbox / Microsoft Store, dossiers locaux, ajouts manuels), les affiche avec leurs vraies jaquettes et les lance via leur launcher, ou directement via l'exécutable quand il n'y a pas de launcher.
 
 ## Documents (à consulter, pas à lire en entier)
 

@@ -28,7 +28,7 @@ const LAUNCHER_PROCESSES: &[&str] = &[
     "battle.net.exe", "agent.exe", "riotclientservices.exe", "riotclientux.exe", "riotclientuxrender.exe",
     "riotclientcrashhandler.exe", "galaxyclient.exe", "galaxyclient helper.exe", "galaxycommunication.exe",
     "upc.exe", "uplaywebcore.exe", "ubisoftconnect.exe", "eadesktop.exe", "eabackgroundservice.exe",
-    "eaconnect_microsoft.exe", "xboxapp.exe", "gamingservices.exe",
+    "eaconnect_microsoft.exe", "xboxapp.exe", "gamingservices.exe", "rockstarservice.exe",
     // macOS
     "steam_osx", "steam helper", "epicgameslauncher", "epicwebhelper", "battle.net", "riotclientservices",
     "riot client", "gog galaxy",
@@ -84,7 +84,7 @@ impl Spec {
             let exe = Path::new(&g.launch.target).file_name().map(|n| n.to_string_lossy().to_lowercase());
             s.names.extend(exe.filter(|n| n.ends_with(".exe")));
         }
-        if g.launch.kind == "exe" && matches!(g.store.as_str(), "riot" | "gog" | "battlenet") {
+        if g.launch.kind == "exe" && matches!(g.store.as_str(), "riot" | "gog" | "battlenet" | "rockstar") {
             s.ignore_exes.push(norm_path(&g.launch.target));
         }
         s

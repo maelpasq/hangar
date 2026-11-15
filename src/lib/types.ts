@@ -9,6 +9,7 @@ export type StoreId =
   | 'battlenet'
   | 'xbox'
   | 'riot'
+  | 'rockstar'
   | 'local'
   | 'manual';
 
