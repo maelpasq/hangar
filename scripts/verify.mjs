@@ -3,6 +3,14 @@
 import { spawnSync, execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+// Dans le dossier d'une branche de session (scripts/session.mjs), cargo réutilise le dossier de
+// compilation du dossier principal : les dépendances ne sont pas recompilées pour chaque session.
+const git = (args) => execSync(`git ${args}`, { encoding: 'utf8' }).trim();
+if (!process.env.CARGO_TARGET_DIR && git('rev-parse --abbrev-ref HEAD').startsWith('session/')) {
+  const main = git('worktree list --porcelain').match(/^worktree (.+)$/m)[1];
+  process.env.CARGO_TARGET_DIR = `${main}/src-tauri/target`;
+}
+
 const steps = [
   ['check', 'npm run check'],
   ['test', 'npx vitest run --reporter=dot'],
