@@ -8,12 +8,23 @@
     title,
     onclose,
     width = 460,
+    maxHeight,
     class: cls = '',
     children,
     footer
-  }: { title: string; onclose: () => void; width?: number; class?: string; children: Snippet; footer?: Snippet } = $props();
+  }: {
+    title: string;
+    onclose: () => void;
+    width?: number;
+    /** Hauteur maximale en pixels (sinon presque tout l'écran) ; seul le contenu défile. */
+    maxHeight?: number;
+    class?: string;
+    children: Snippet;
+    footer?: Snippet;
+  } = $props();
 
   let box: HTMLDivElement;
+  let body: HTMLDivElement;
   const id = `m${Math.random().toString(36).slice(2, 8)}`;
 
   const FOCUSABLE = 'button:not([disabled]), input, [href], [tabindex]:not([tabindex="-1"])';
@@ -21,7 +32,9 @@
   onMount(() => {
     const prev = document.activeElement as HTMLElement | null;
     const first = box.querySelector<HTMLElement>('input, .autofocus') ?? box.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
+    // Sans défilement : un bouton du pied ne doit pas faire descendre le contenu.
+    first?.focus({ preventScroll: true });
+    body.scrollTop = 0;
     return () => prev?.focus?.();
   });
 
@@ -59,12 +72,13 @@
     aria-modal="true"
     aria-labelledby={id}
     style:width="min({width}px, calc(100vw - 40px))"
+    style:max-height={maxHeight ? `min(${maxHeight}px, calc(100vh - 60px))` : null}
   >
     <div class="head">
       <h2 {id}>{title}</h2>
       <button class="ibtn close" aria-label="Fermer" onclick={onclose}><Icon name="x" size={16} /></button>
     </div>
-    <div class="body">{@render children()}</div>
+    <div class="body" bind:this={body}>{@render children()}</div>
     {#if footer}<div class="foot">{@render footer()}</div>{/if}
   </div>
 </div>
@@ -82,8 +96,10 @@
   }
 
   .box {
+    display: flex;
+    flex-direction: column;
     max-height: calc(100vh - 60px);
-    overflow: auto;
+    overflow: hidden;
     background: var(--panel);
     border: 1px solid var(--border-2);
     border-radius: var(--r-section);
@@ -95,6 +111,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
     padding: 20px 16px 6px 24px;
   }
 
@@ -111,16 +128,23 @@
   }
 
   .body {
+    min-height: 0;
+    overflow: auto;
     padding: 10px 24px 8px;
     display: flex;
     flex-direction: column;
     gap: 14px;
   }
 
+  .body > :global(*) {
+    flex-shrink: 0;
+  }
+
   .foot {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    flex-shrink: 0;
     padding: 14px 24px 22px;
   }
 </style>

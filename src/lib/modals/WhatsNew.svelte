@@ -25,7 +25,7 @@
   {#each boldParts(text) as p, i (i)}{#if p.bold}<strong>{p.text}</strong>{:else}{p.text}{/if}{/each}
 {/snippet}
 
-<Modal title={updated ? 'Hangar a été mis à jour' : 'Nouveautés de Hangar'} onclose={done} width={540}>
+<Modal title={updated ? 'Hangar a été mis à jour' : 'Nouveautés de Hangar'} onclose={done} width={540} maxHeight={560}>
   {#each notes as r (r.version)}
     <section class="rel" aria-label="Version {r.version}">
       <p class="ver"><span class="tag">Version {r.version}</span><span class="date">{r.date}</span></p>
