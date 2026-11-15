@@ -57,6 +57,7 @@ Une simple correction de bug, sans nouveauté à annoncer, ne prend pas le `patc
   ```
   Le script monte le numéro partout, crée le commit « Version 1.2.27.1 » et le tag annoté `v1.2.27+1`. Puis étapes 5 à 7. La release s'appelle « Hangar v1.2.27.1 », son texte dit « Correctif de la version 1.2.27, sans nouveauté ».
 - La version suivante avec patch note reprend `npm version patch` : 1.2.27+2 -> 1.2.28.
+- Mot-clé **« PUSH PATCH »** : tout d'un coup, sans redemander. Amener sur `main` les commits de l'app faits sur `dev` depuis la dernière version (cherry-pick, jamais les commits Hangar Test), étapes 1 et 2, `npm run correctif`, push avec le tag, suivi de la construction et vérification de la release (fichiers en `1.2.27+1`, `latest.json` avec la version `1.2.27+1`). Ni site, ni README, ni entrée d'historique. Puis reporter le commit « Version 1.2.27.1 » sur `dev`.
 
 Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne déplace jamais un tag déjà poussé, des utilisateurs ont peut-être déjà la version.
 
