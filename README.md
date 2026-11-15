@@ -4,7 +4,7 @@
 
 **Tous tes jeux, un seul launcher.** Pour Windows 10/11 et macOS. La version Linux est en pause (en cours de refonte).
 
-Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic. Les jeux que tu possèdes sans les avoir installés sont là aussi, prêts à installer.
+Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Connect, EA app, Battle.net, Riot, Rockstar, Xbox...), les affiche avec leurs vraies jaquettes et les lance en un clic. Les jeux que tu possèdes sans les avoir installés sont là aussi, prêts à installer.
 
 ### [⬇ Télécharger Hangar](https://github.com/maelpasq/hangar/releases/latest)
 
@@ -17,15 +17,15 @@ Hangar trouve tout seul les jeux de ton ordinateur (Steam, Epic, GOG, Ubisoft Co
 ## Ce que fait Hangar
 
 - **Détection automatique** de tous tes jeux, quel que soit le store, plus tes dossiers de jeux et les jeux que tu ajoutes à la main.
-- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; Hangar te demande dans quel dossier de leur launcher les installer, avec la place libre de chaque disque. Les jeux Steam se téléchargent en arrière-plan, avec la progression dans Hangar. Relie tes comptes Steam, GOG ou Epic pour retrouver toute ta bibliothèque. Sous Linux, le filtre « Compatibles Linux » ne garde que les jeux qui y tournent (version Linux, ou Vérifié / Jouable sur Steam Deck).
+- **Jeux à installer** : les jeux de tes launchers qui ne sont pas sur cet ordinateur ont leur onglet « À installer » ; Hangar te demande dans quel dossier de leur launcher les installer, avec la place libre de chaque disque. Les jeux Steam se téléchargent en arrière-plan, avec la progression dans Hangar. Relie tes comptes Steam, GOG, Epic ou Xbox pour retrouver toute ta bibliothèque. Sous Linux, le filtre « Compatibles Linux » ne garde que les jeux qui y tournent (version Linux, ou Vérifié / Jouable sur Steam Deck).
 - **Vraies jaquettes et bannières**, trouvées automatiquement (Steam, stores, SteamGridDB) et gardées en cache.
 - **Lancement en un clic**, via le launcher du jeu ou directement son exécutable. Sous Windows, les launchers restent cachés en arrière-plan : tu ne vois que ton jeu. Si Steam Cloud a une question à te poser (synchronisation impossible, conflit de sauvegardes), elle s'affiche dans l'écran de lancement de Hangar.
 - **Désinstaller** depuis Hangar, après confirmation : les jeux Steam, Epic et GOG sont supprimés sans ouvrir leur launcher.
 - **Mises à jour des jeux** : Hangar repère les jeux Steam, Epic et GOG qui attendent une mise à jour, les range dans un onglet « Mises à jour » et te prévient par une notification. « Mettre à jour » la lance en arrière-plan dans le bon launcher, sans afficher sa fenêtre. Le menu Mises à jour (icône en haut) montre les installations et mises à jour Steam en cours avec leur vraie progression, même après un redémarrage de Hangar, et « Afficher dans Steam » permet de les mettre en pause ou de les annuler. Quand Steam a reporté la mise à jour d'un jeu peu joué, Hangar ouvre ses téléchargements et te dit sur quel bouton cliquer.
-- **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start ou Xbox pour l'ouvrir, A pour jouer), avec un onglet par collection. Sous Windows, le bouton Xbox ramène Hangar en mode manette même depuis un jeu ou une autre app.
-- **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours.
+- **Mode manette** : Hangar en plein écran, à jouer depuis le canapé (bouton Start ou Xbox pour l'ouvrir, A pour jouer), avec un onglet par collection. Sous Windows, le bouton Xbox ramène Hangar en mode manette même depuis un jeu ou une autre app, et le quitter te rend l'app où tu étais. À activer dans **Paramètres > Mode manette**, avec des conseils pour chaque manette (Xbox, PlayStation, Switch Pro, 8BitDo, PC portables).
+- **Suivi du temps de jeu** : Hangar chronomètre chaque session, affiche la dernière partie, le nombre de lancements et l'activité des 14 derniers jours. Avec un compte Epic, GOG ou Xbox relié, il reprend aussi le temps de jeu enregistré par ces stores. La fiche d'un jeu montre tes succès Steam et Xbox.
 - **Collections et filtres** : range tes jeux dans tes propres listes (le « + » de la barre latérale ouvre une fenêtre avec recherche pour cocher les jeux) et filtre par store, genre ou temps de jeu. Recherche instantanée (`Ctrl K` / `⌘ K`), bouton Actualiser (rescan, comptes et mises à jour d'un clic), favoris, tri, jeux masqués, thème clair ou sombre, couleur d'accent.
-- **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar.
+- **Toujours à portée** : tes jeux récents dans la zone de notification (barre des menus sous macOS), et `Ctrl+Alt+H` pour afficher ou cacher Hangar. En fermant la fenêtre, Hangar te demande s'il reste en arrière-plan ou s'il quitte (choix à retenir, modifiable dans **Paramètres > Bureau**).
 - **Jeux web** : un onglet de jeux navigateur connus (.io et classiques), à lancer sans rien installer.
 - **Hangar MC (bientôt)** : le client Minecraft de Hangar, toutes les versions du jeu avec Fabric et nos propres modules, lancées en un clic. Son bouton, à son logo, est déjà dans la barre latérale, une mise à jour le débloquera.
 - **Discord** : tes amis voient à quoi tu joues, avec la jaquette du jeu et ton temps de jeu (à activer dans **Paramètres > Général**).
@@ -92,16 +92,17 @@ Hangar recherche alors les jaquettes et bannières manquantes. La clé reste sur
 | EA app | ✓ | | |
 | Battle.net | ✓ | | |
 | Riot Games | ✓ | ✓ | |
+| Rockstar Games Launcher | ✓ | | |
 | Xbox / Microsoft Store | ✓ | | |
 | Jeux installés hors store | ✓ (raccourcis et programmes installés) | ✓ (apps de la catégorie Jeux) | ✓ (raccourcis de la catégorie Jeux) |
 | Dossiers de jeux locaux | ✓ | ✓ | ✓ |
 | Ajout manuel | ✓ | ✓ | ✓ |
 
-Les jeux possédés mais pas installés viennent de Steam, Epic, GOG Galaxy et du Riot Client présents sur l'ordinateur, et des comptes que tu relies dans **Paramètres > Launchers et comptes** (Steam avec ta clé d'API Web, GOG et Epic par leur page de connexion officielle).
+Les jeux possédés mais pas installés viennent de Steam, Epic, GOG Galaxy, du Riot Client et du Rockstar Games Launcher présents sur l'ordinateur, et des comptes que tu relies dans **Paramètres > Launchers et comptes** (Steam avec ta clé d'API Web, guidée pas à pas, GOG et Epic par leur page de connexion officielle, Xbox sous Windows avec un code à saisir sur microsoft.com/link). Pour Xbox, seuls les jeux PC déjà lancés au moins une fois apparaissent : Xbox ne donne pas la liste complète aux autres apps.
 
 Un jeu manque ? Ajoute son dossier dans **Paramètres > Bibliothèque > Dossiers de jeux locaux**, ou utilise **Ajouter un jeu** en bas de la barre latérale.
 
-« Masquer » cache seulement un jeu dans Hangar, sans rien supprimer. Seul « Désinstaller », après ta confirmation, supprime les fichiers du jeu (le dossier connu de son launcher, jamais un dossier système ni ton dossier personnel) ; pour Ubisoft, EA, Battle.net et Riot, il passe la main au launcher du jeu.
+« Masquer » cache seulement un jeu dans Hangar, sans rien supprimer. Seul « Désinstaller », après ta confirmation, supprime les fichiers du jeu (le dossier connu de son launcher, jamais un dossier système ni ton dossier personnel) ; pour Ubisoft, EA, Battle.net, Riot et Rockstar, il passe la main au launcher du jeu.
 
 Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pamal.hangar` sous Windows, `~/Library/Application Support/studio.pamal.hangar` sous macOS et `~/.config/studio.pamal.hangar` sous Linux.
 
@@ -110,7 +111,7 @@ Tes données (réglages, favoris, temps de jeu) sont dans `%APPDATA%\studio.pama
 Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne transfère d'information vers d'autres systèmes en réseau que pour les fonctions suivantes :
 
 - **Jaquettes et infos des jeux** : le nom ou l'identifiant d'un jeu est envoyé à Steam, Epic Games, GOG, au Microsoft Store et, si tu as saisi ta clé, à SteamGridDB, pour récupérer ses images et son genre.
-- **Comptes reliés** (seulement si tu en relies un) : Hangar demande la liste de tes jeux à Steam, GOG ou Epic Games, directement auprès de leurs serveurs.
+- **Comptes reliés** (seulement si tu en relies un) : Hangar demande la liste de tes jeux, leur temps de jeu et tes succès à Steam, GOG, Epic Games ou Xbox (Microsoft), directement auprès de leurs serveurs.
 - **Mises à jour des jeux** : Hangar compare la version de tes jeux GOG installés à la liste publique de GOG et, si ton compte Epic est relié, celle de tes jeux Epic à leur dernière version (au plus toutes les 6 heures). Les mises à jour Steam, et celles déjà lancées dans Epic, sont lues sur ton ordinateur.
 - **Discord** (seulement si tu l'actives) : le nom et la jaquette de ton jeu passent par l'app Discord installée sur ton ordinateur.
 - **Jeux web** : le site d'un jeu n'est contacté que quand tu le lances, dans sa propre fenêtre.
