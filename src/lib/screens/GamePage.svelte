@@ -68,16 +68,25 @@
     ui.ambient = hero ?? cover?.src ?? null;
   });
 
-  // Succès Steam : seulement avec le compte Steam relié (le backend répond null sinon).
-  let achievements = $state<Achievements | null>(null);
+  // Succès : donnés avec la liste du compte Xbox, ou demandés ici pour Steam (compte Steam relié
+  // seulement, le backend répond null sinon).
+  let steamAch = $state<Achievements | null>(null);
+  const achievements = $derived(game.achievements ?? steamAch);
+  /** Progression en % : par le nombre de succès, sinon par le Gamerscore (Xbox). */
+  const achPct = $derived.by(() => {
+    const a = achievements;
+    if (!a) return 0;
+    if (a.total) return Math.round((a.unlocked / a.total) * 100);
+    return a.gamerscoreTotal ? Math.round(((a.gamerscore ?? 0) / a.gamerscoreTotal) * 100) : 0;
+  });
   $effect(() => {
     const id = game.id;
-    achievements = null;
-    if (!game.steamAppId) return;
+    steamAch = null;
+    if (!game.steamAppId || game.achievements) return;
     let alive = true;
     api
       .steamAchievements(id)
-      .then((a) => alive && (achievements = a))
+      .then((a) => alive && (steamAch = a))
       .catch(() => {});
     return () => {
       alive = false;
@@ -155,18 +164,34 @@
         <dd>{#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</dd>
         <dt>Ajouté</dt>
         <dd>{added ? dateLabel(added) : '-'}</dd>
+        {#if game.developer}
+          <dt>Développeur</dt>
+          <dd>{game.developer}</dd>
+        {/if}
+        {#if game.publisher && game.publisher !== game.developer}
+          <dt>Éditeur</dt>
+          <dd>{game.publisher}</dd>
+        {/if}
+        {#if game.released}
+          <dt>Sortie</dt>
+          <dd>{dateLabel(game.released)}</dd>
+        {/if}
         {#if achievements}
-          {@const pct = Math.round((achievements.unlocked / achievements.total) * 100)}
           <dt>Succès</dt>
           <dd class="ach">
-            <span class="num">{formatNumber(achievements.unlocked)} sur {formatNumber(achievements.total)} · {pct} %</span>
+            <span class="num"
+              >{#if achievements.total}{formatNumber(achievements.unlocked)} sur {formatNumber(achievements.total)}{:else}{formatNumber(
+                  achievements.unlocked
+                )} débloqué{achievements.unlocked > 1 ? 's' : ''}{/if}{#if achievements.gamerscoreTotal}
+                · {formatNumber(achievements.gamerscore ?? 0)} G sur {formatNumber(achievements.gamerscoreTotal)}{/if} · {achPct} %</span
+            >
             <span
               class="ach-bar"
               role="progressbar"
               aria-label="Succès débloqués"
               aria-valuemin={0}
-              aria-valuemax={achievements.total}
-              aria-valuenow={achievements.unlocked}><span style:width="{pct}%"></span></span
+              aria-valuemax={100}
+              aria-valuenow={achPct}><span style:width="{achPct}%"></span></span
             >
           </dd>
         {/if}

@@ -1,4 +1,4 @@
-//! Comptes des launchers (Steam, GOG, Epic) : liste complète des jeux possédés.
+//! Comptes des launchers (Steam, GOG, Epic, Xbox) : liste complète des jeux possédés.
 //!
 //! Sécurité (code public) :
 //! - clés et jetons uniquement dans le coffre du système (keyring) : jamais dans les fichiers de
@@ -7,12 +7,14 @@
 //!   contiennent jamais l'URL (la clé Steam est dans la requête) ;
 //! - connexion GOG / Epic dans une fenêtre à part sans aucune permission Tauri (pas d'IPC), en
 //!   navigation privée ; le code d'autorisation est intercepté à la navigation, côté Rust ;
+//! - Xbox : code à saisir sur microsoft.com/link, l'app attend le jeton ;
 //! - les identifiants venus des API sont validés avant d'entrer dans une URL.
 
 pub mod epic;
 pub mod gog;
 pub mod steam;
 pub mod updates;
+pub mod xbox;
 
 use crate::model::Game;
 use serde::{Deserialize, Serialize};
@@ -23,12 +25,18 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-/// Launchers dont le compte peut être connecté.
+/// Launchers dont le compte peut être connecté (Xbox : jeux PC, seulement sous Windows).
+#[cfg(windows)]
+pub const CONNECTABLE: &[&str] = &["steam", "gog", "epic", "xbox"];
+#[cfg(not(windows))]
 pub const CONNECTABLE: &[&str] = &["steam", "gog", "epic"];
 /// Stores affichés dans les Paramètres (tag « Détecté »).
 const ALL_STORES: &[&str] = &["steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "rockstar", "xbox"];
 /// Resynchronisation automatique au plus toutes les 6 h (au moment d'un scan).
 const SYNC_EVERY_MS: u64 = 6 * 3_600_000;
+/// Format des listes gardées : une liste plus ancienne est resynchronisée au prochain scan
+/// (2 : infos Xbox, succès, studio, sortie, jeux vus par la Game Bar).
+const FORMAT: u32 = 2;
 
 /// Seuls hôtes joignables par ce module (HTTPS).
 const API_HOSTS: &[&str] = &[
@@ -41,6 +49,12 @@ const API_HOSTS: &[&str] = &[
     // Mises à jour des jeux : versions Epic (compte connecté) et GOG (public).
     "launcher-public-service-prod06.ol.epicgames.com",
     "content-system.gog.com",
+    // Compte Xbox : connexion Microsoft, jetons Xbox Live, historique et temps de jeu.
+    "login.microsoftonline.com",
+    "user.auth.xboxlive.com",
+    "xsts.auth.xboxlive.com",
+    "titlehub.xboxlive.com",
+    "userstats.xboxlive.com",
 ];
 
 pub fn allowed(url: &str) -> bool {
@@ -80,9 +94,27 @@ pub struct Http {
 
 fn http_error(e: ureq::Error) -> String {
     match e {
-        ureq::Error::Status(401 | 403, _) => "Accès refusé par le service : reconnecte le compte.".into(),
-        ureq::Error::Status(code, _) => format!("Le service a répondu une erreur {code}, réessaie plus tard."),
-        ureq::Error::Transport(_) => "Service injoignable, vérifie ta connexion.".into(),
+        ureq::Error::Status(code, r) => {
+            // Code d'erreur du service dans le journal : seulement des champs connus et courts,
+            // jamais le corps brut, l'URL ni les jetons envoyés.
+            let body: Value = r.into_json().unwrap_or_default();
+            let field = |k: &str| match &body[k] {
+                Value::String(s) if s.len() <= 64 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') => s.clone(),
+                Value::Number(n) => n.to_string(),
+                _ => String::new(),
+            };
+            log::warn!("comptes : réponse {code} {} {}", field("error"), field("XErr"));
+            if code == 401 || code == 403 {
+                "Accès refusé par le service : reconnecte le compte.".into()
+            } else {
+                format!("Le service a répondu une erreur {code}, réessaie plus tard.")
+            }
+        }
+        ureq::Error::Transport(t) => {
+            // Le type seulement : le message complet contient l'URL (et la clé Steam).
+            log::warn!("comptes : service injoignable ({})", t.kind());
+            "Service injoignable, vérifie ta connexion.".into()
+        }
     }
 }
 
@@ -122,6 +154,39 @@ impl Http {
             req = req.set("Authorization", &format!("Basic {b}"));
         }
         req.send_form(form).map_err(http_error)?.into_json().map_err(|_| "Réponse illisible du service.".into())
+    }
+
+    /// Requête avec des en-têtes libres et un corps JSON facultatif (services Xbox).
+    pub fn send(&self, method: &str, url: &str, headers: &[(&str, &str)], body: Option<&Value>) -> Result<Value, String> {
+        Self::check(url)?;
+        let mut req = self.agent.request(method, url).set("Accept", "application/json");
+        for (k, v) in headers {
+            req = req.set(k, v);
+        }
+        let res = match body {
+            Some(b) => req.send_json(b),
+            None => req.call(),
+        };
+        res.map_err(http_error)?.into_json().map_err(|_| "Réponse illisible du service.".into())
+    }
+
+    /// POST (formulaire, ou JSON si `json`) qui rend le code HTTP et le corps d'une erreur
+    /// (0 : réseau ou réponse illisible), pour les services qui y mettent la raison.
+    pub fn post_raw(&self, url: &str, form: &[(&str, &str)], json: Option<&Value>) -> Result<Value, (u16, Value)> {
+        Self::check(url).map_err(|_| (0, Value::Null))?;
+        let req = self.agent.post(url).set("Accept", "application/json");
+        let res = match json {
+            Some(b) => req.send_json(b),
+            None => req.send_form(form),
+        };
+        match res {
+            Ok(r) => r.into_json().map_err(|_| (0, Value::Null)),
+            Err(ureq::Error::Status(c, r)) => Err((c, r.into_json().unwrap_or_default())),
+            Err(ureq::Error::Transport(t)) => {
+                log::warn!("comptes : service injoignable ({})", t.kind());
+                Err((0, Value::Null))
+            }
+        }
     }
 }
 
@@ -189,6 +254,8 @@ pub struct Fetched {
     pub secret: Option<String>,
     /// Dernière version de chaque jeu (Epic : AppName -> buildVersion).
     pub latest: HashMap<String, String>,
+    /// Xbox : jeux PC d'autres stores vus par la Game Bar.
+    pub seen: Vec<xbox::Seen>,
 }
 
 /// Ce que Hangar garde sur disque d'un compte connecté (rien de secret).
@@ -200,6 +267,8 @@ struct Synced {
     synced_at: u64,
     error: Option<String>,
     latest: HashMap<String, String>,
+    seen: Vec<xbox::Seen>,
+    format: u32,
 }
 
 /// Résultat de la dernière vérification GOG (`updates.json`).
@@ -253,12 +322,7 @@ pub struct Accounts {
     achievements: Mutex<HashMap<u32, CachedAchievements>>,
 }
 
-/// Succès d'un jeu, envoyés à la fiche.
-#[derive(Serialize, Clone, Copy, Debug)]
-pub struct Achievements {
-    pub unlocked: u32,
-    pub total: u32,
-}
+pub use crate::model::Achievements;
 
 type CachedAchievements = (u64, Option<Achievements>);
 
@@ -268,7 +332,11 @@ const ACHIEVEMENTS_EVERY_MS: u64 = 3_600_000;
 impl Accounts {
     pub fn new(config_dir: &Path) -> Self {
         let file = config_dir.join("accounts.json");
-        let data = std::fs::read(&file).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+        let mut data: HashMap<String, Synced> =
+            std::fs::read(&file).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+        for d in data.values_mut().filter(|d| d.format < FORMAT) {
+            d.synced_at = 0;
+        }
         let gog_file = config_dir.join("updates.json");
         let gog = std::fs::read(&gog_file).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
         Accounts {
@@ -309,7 +377,7 @@ impl Accounts {
         let key = secret("steam")?;
         match steam::achievements(&self.http, &key, app_id) {
             Ok(v) => {
-                let v = v.map(|(unlocked, total)| Achievements { unlocked, total });
+                let v = v.map(|(unlocked, total)| Achievements { unlocked, total, ..Default::default() });
                 lock(&self.achievements).insert(app_id, (now, v));
                 v
             }
@@ -321,9 +389,29 @@ impl Accounts {
     }
 
     /// Ajoute aux jeux du scan ceux des comptes connectés et retient ce que chaque compte apporte.
+    /// Les jeux Xbox arrivent à part, avec le scan Xbox (`merge_xbox`).
     pub fn merge_into(&self, games: &mut Vec<Game>) {
-        let gains = merge(games, self.games());
-        *lock(&self.gains) = gains;
+        let extra = self.games().into_iter().filter(|g| g.store != "xbox").collect();
+        let mut gains = merge(games, extra);
+        // Jeux d'autres stores vus par Xbox : dernière session, temps de jeu.
+        if let Some(x) = lock(&self.data).get("xbox") {
+            let n = xbox::apply_seen(games, &x.seen);
+            if n > 0 {
+                log::info!("Xbox : {n} jeu(x) d'autres stores complété(s)");
+            }
+        }
+        let mut cur = lock(&self.gains);
+        if let Some(x) = cur.remove("xbox") {
+            gains.insert("xbox".into(), x);
+        }
+        *cur = gains;
+    }
+
+    /// Ajoute au scan Xbox (tardif) les jeux du compte Xbox connecté.
+    pub fn merge_xbox(&self, games: &mut Vec<Game>) {
+        let extra = lock(&self.data).get("xbox").map(|s| s.games.clone()).unwrap_or_default();
+        let gain = merge(games, extra).remove("xbox").unwrap_or_default();
+        lock(&self.gains).insert("xbox".into(), gain);
     }
 
     /// Vrai si des jeux GOG installés n'ont pas été vérifiés depuis 6 h.
@@ -374,7 +462,7 @@ impl Accounts {
                 Status {
                     store: s.to_string(),
                     detected: crate::scanner::launcher_present(s),
-                    connectable: CONNECTABLE.contains(&s),
+                    connectable: CONNECTABLE.contains(&s) && (s != "xbox" || xbox::available()),
                     connected: d.is_some(),
                     user: d.and_then(|d| d.user.clone()),
                     games: d.map(|d| d.games.len()).unwrap_or(0),
@@ -399,6 +487,7 @@ impl Accounts {
             "steam" => steam::fetch(&self.http, secret),
             "gog" => gog::fetch(&self.http, secret),
             "epic" => epic::fetch(&self.http, secret),
+            "xbox" if cfg!(windows) => xbox::fetch(&self.http, secret),
             _ => Err("Ce launcher ne propose pas de connexion.".into()),
         }
     }
@@ -425,6 +514,8 @@ impl Accounts {
                 entry.user = f.user.or(entry.user.take());
                 entry.games = f.games;
                 entry.latest = f.latest;
+                entry.seen = f.seen;
+                entry.format = FORMAT;
                 entry.error = None;
             }
             Err(e) => {
@@ -450,16 +541,27 @@ impl Accounts {
 
     /// Premier enregistrement : le secret n'est gardé que si la liste a pu être lue.
     fn connect(&self, store: &str, sec: &str) -> Result<usize, String> {
-        let f = self.fetch(store, sec)?;
-        set_secret(store, f.secret.as_deref().unwrap_or(sec))?;
+        let f = self.fetch(store, sec).inspect_err(|e| log::warn!("compte {store} : connexion impossible ({e})"))?;
+        set_secret(store, f.secret.as_deref().unwrap_or(sec)).inspect_err(|e| log::warn!("compte {store} : {e}"))?;
         let n = f.games.len();
         lock(&self.data).insert(
             store.to_string(),
-            Synced { user: f.user, games: f.games, synced_at: now_ms(), error: None, latest: f.latest },
+            Synced { user: f.user, games: f.games, synced_at: now_ms(), error: None, latest: f.latest, seen: f.seen, format: FORMAT },
         );
         self.save();
         log::info!("compte {store} connecté : {n} jeu(x)");
         Ok(n)
+    }
+
+    /// Xbox, étape 1 : code à saisir sur microsoft.com/link.
+    pub fn xbox_code(&self) -> Result<xbox::DeviceCode, String> {
+        xbox::start(&self.http)
+    }
+
+    /// Xbox, étape 2 : attend la connexion sur la page Microsoft, puis lit les jeux du compte.
+    pub fn connect_xbox(&self) -> Result<usize, String> {
+        let refresh = xbox::wait(&self.http)?;
+        self.connect("xbox", &refresh)
     }
 
     pub fn connect_steam(&self, key: &str) -> Result<usize, String> {
@@ -509,6 +611,12 @@ pub fn merge(games: &mut Vec<Game>, extra: Vec<Game>) -> HashMap<String, Gain> {
                 }
                 cur.store_play_ms = cur.store_play_ms.max(g.store_play_ms);
                 cur.store_last_played = cur.store_last_played.max(g.store_last_played);
+                // Ce que le compte sait en plus (Xbox : genre, studio, éditeur, sortie, succès).
+                cur.genre = cur.genre.take().or(g.genre);
+                cur.developer = cur.developer.take().or(g.developer);
+                cur.publisher = cur.publisher.take().or(g.publisher);
+                cur.released = cur.released.or(g.released);
+                cur.achievements = cur.achievements.or(g.achievements);
             }
             None => {
                 let gain = gains.entry(g.store.clone()).or_default();
@@ -567,6 +675,7 @@ pub fn login(app: &tauri::AppHandle, store: &str) -> Result<String, String> {
         b = b.initialization_script(s);
     }
     let w = b.build().map_err(|_| "Impossible d'ouvrir la fenêtre de connexion.".to_string())?;
+    log::info!("connexion {store} : fenêtre ouverte");
     let closed = slot.clone();
     w.on_window_event(move |e| {
         if matches!(e, tauri::WindowEvent::Destroyed) {
@@ -574,6 +683,9 @@ pub fn login(app: &tauri::AppHandle, store: &str) -> Result<String, String> {
         }
     });
     let r = rx.recv_timeout(Duration::from_secs(900));
+    if r.is_err() {
+        log::info!("connexion {store} : fenêtre fermée sans code");
+    }
     let _ = w.destroy();
     r.map_err(|_| "Connexion annulée.".into())
 }

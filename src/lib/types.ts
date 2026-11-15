@@ -45,6 +45,11 @@ export interface Game {
   notInstalled?: boolean;
   /** Non installé et jouable sous Linux (version native, ou Vérifié / Jouable sur Steam Deck). */
   linux?: boolean;
+  /** Studio, éditeur, date de sortie (ms) et succès, quand un compte les donne (Xbox). */
+  developer?: string;
+  publisher?: string;
+  released?: number;
+  achievements?: Achievements;
   /** Mise à jour en attente ou en cours dans le launcher (Steam). */
   updatePending?: boolean;
   /** Reste à télécharger pour cette mise à jour, en octets. */
@@ -192,7 +197,10 @@ export interface AccountStatus {
 /** Succès Steam d'un jeu (compte Steam connecté). */
 export interface Achievements {
   unlocked: number;
+  /** 0 : nombre total inconnu (certains jeux Xbox) ; le Gamerscore donne alors la progression. */
   total: number;
+  gamerscore?: number;
+  gamerscoreTotal?: number;
 }
 
 export interface SteamHit {

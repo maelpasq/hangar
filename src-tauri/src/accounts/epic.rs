@@ -113,7 +113,7 @@ pub fn fetch(http: &Http, refresh: &str) -> Result<Fetched, String> {
             Err(e) => log::debug!("Epic : temps de jeu indisponible ({e})"),
         }
     }
-    Ok(Fetched { user: t.user, games, secret: Some(t.refresh), latest })
+    Ok(Fetched { user: t.user, games, secret: Some(t.refresh), latest, ..Default::default() })
 }
 
 /// Temps de jeu par AppName (`artifactId`), en ms.

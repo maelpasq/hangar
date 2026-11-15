@@ -97,8 +97,13 @@ export interface Api {
   accountsStatus(): Promise<AccountStatus[]>;
   /** Clé d'API Web Steam de l'utilisateur ; renvoie le nombre de jeux trouvés. */
   connectSteam(key: string): Promise<number>;
-  /** Connexion GOG / Epic dans une fenêtre officielle ; renvoie le nombre de jeux trouvés. */
+  /** Connexion GOG / Epic dans une fenêtre officielle ; Xbox : attend la saisie du code de
+   *  `xboxLoginCode` sur microsoft.com/link. Renvoie le nombre de jeux trouvés. */
   connectAccount(store: StoreId): Promise<number>;
+  /** Xbox : code à saisir sur microsoft.com/link. */
+  xboxLoginCode(): Promise<{ userCode: string; url: string }>;
+  /** Xbox : abandonne l'attente de la connexion. */
+  xboxLoginCancel(): Promise<void>;
   disconnectAccount(store: StoreId): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
@@ -214,6 +219,8 @@ async function tauriApi(): Promise<Api> {
     accountsStatus: () => invoke('accounts_status'),
     connectSteam: (key) => invoke('connect_steam', { key }),
     connectAccount: (store) => invoke('connect_account', { store }),
+    xboxLoginCode: () => invoke('xbox_login_code'),
+    xboxLoginCancel: () => invoke('xbox_login_cancel'),
     disconnectAccount: (store) => invoke('disconnect_account', { store }),
     openLink: (link) => invoke('open_link', { link }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),

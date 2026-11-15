@@ -180,6 +180,7 @@
     if (s === 'epic')
       parts.push(a.updates ? plural(a.updates, 'mise à jour trouvée', 'mises à jour trouvées') : 'suivi des mises à jour');
     if (s === 'steam') parts.push('succès sur la fiche des jeux');
+    if (s === 'xbox') parts.push('succès, studio et date de sortie sur la fiche des jeux');
     return parts.length
       ? `Grâce au compte : ${parts.join(', ')}`
       : "Grâce au compte : rien de plus que ce que l'appareil montre déjà";
@@ -439,6 +440,12 @@
                         aria-controls="steam-form"
                         onclick={() => (steamOpen = !steamOpen)}>{steamOpen ? 'Annuler' : 'Relier'}</button
                       >
+                    {:else if s === 'xbox' && accounts.xboxCode}
+                      <button class="btn-s" aria-controls="xbox-code" onclick={() => accounts.cancelXbox()}>Annuler</button>
+                    {:else if s === 'xbox'}
+                      <button class="btn-s primary" disabled={!!accounts.busy} onclick={() => accounts.connectXbox()}
+                        >{accounts.busy === s ? 'Connexion...' : 'Relier'}</button
+                      >
                     {:else}
                       <button class="btn-s primary" disabled={!!accounts.busy} onclick={() => accounts.connect(s)}
                         >{accounts.busy === s ? 'Connexion...' : 'Relier'}</button
@@ -495,6 +502,24 @@
                   </div>
                 </form>
                 {/if}
+                {#if s === 'xbox' && accounts.xboxCode && !a?.connected}
+                  <div class="sub" id="xbox-code">
+                    <span class="lbl">Code de connexion Xbox</span>
+                    <ol class="steps">
+                      <li>La page <strong>microsoft.com/link</strong> vient de s'ouvrir dans ton navigateur.</li>
+                      <li>Colle ce code (il est déjà copié), puis connecte-toi avec ton compte Xbox et accepte.</li>
+                      <li>Reviens ici : Hangar ajoute tes jeux tout seul.</li>
+                    </ol>
+                    <div class="sfield">
+                      <span class="xcode" aria-label="Code {accounts.xboxCode.split('').join(' ')}">{accounts.xboxCode}</span>
+                      <button type="button" class="btn-s" onclick={() => accounts.copyXboxCode()}>Copier</button>
+                      <button type="button" class="btn-s" onclick={() => api.openLink('microsoft-link').catch(() => {})}
+                        >Ouvrir la page</button
+                      >
+                    </div>
+                    <span class="hint" aria-live="polite">En attente de la connexion...</span>
+                  </div>
+                {/if}
               {/each}
             </section>
 
@@ -502,9 +527,9 @@
               <Icon name="check" size={16} stroke={2.2} />
               <p>
                 « Relier » ouvre la page de connexion officielle du launcher : Hangar ne voit jamais ton mot de passe.
-                Clés et jetons restent dans le coffre de {os}, jamais dans les fichiers de Hangar. Ubisoft Connect, EA app,
-                Battle.net et Xbox n'offrent pas de connexion sûre aux apps tierces : Hangar y lit seulement les jeux de
-                cet appareil.
+                Clés et jetons restent dans le coffre de {os}, jamais dans les fichiers de Hangar. Pour Xbox, tu saisis un
+                code sur la page Microsoft ; Hangar ajoute ensuite les jeux PC déjà lancés avec ton compte. Ubisoft Connect, EA app et Battle.net n'offrent pas de connexion sûre aux
+                apps tierces : Hangar y lit seulement les jeux de cet appareil.
               </p>
             </aside>
 
@@ -1028,7 +1053,20 @@
     margin-top: 6px;
   }
 
-  /* Étapes de création de la clé Steam. */
+  /* Code de connexion Xbox, à recopier sur microsoft.com/link. */
+  .xcode {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--strong);
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: var(--surface-3);
+    user-select: all;
+  }
+
+  /* Étapes de création de la clé Steam (et de la connexion Xbox). */
   .steps {
     margin: 2px 0;
     padding-left: 20px;

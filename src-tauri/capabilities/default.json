@@ -51,6 +51,8 @@
     "allow-connect-steam",
     "allow-connect-account",
     "allow-disconnect-account",
+    "allow-xbox-login-code",
+    "allow-xbox-login-cancel",
     "allow-open-link",
     "allow-report-bug",
     "allow-open-web-game",

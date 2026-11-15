@@ -11,6 +11,9 @@ class Accounts {
   /** Store en cours de connexion. */
   busy = $state<StoreId | null>(null);
   byStore = $derived(new Map(this.list.map((a) => [a.store, a])));
+  /** Xbox : code à saisir sur microsoft.com/link pendant la connexion. */
+  xboxCode = $state<string | null>(null);
+  private xboxCancelled = false;
 
   async refresh(): Promise<void> {
     try {
@@ -28,7 +31,8 @@ class Accounts {
       ui.toast(`${STORES[store].label} connecté : ${plural(n, 'jeu trouvé', 'jeux trouvés')}`);
       return true;
     } catch (e) {
-      ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
+      // Annulée par l'utilisateur : rien à annoncer.
+      if (!(store === 'xbox' && this.xboxCancelled)) ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
       return false;
     } finally {
       this.busy = null;
@@ -42,6 +46,45 @@ class Accounts {
 
   connect(store: StoreId): Promise<boolean> {
     return this.run(store, () => api.connectAccount(store));
+  }
+
+  /** Xbox : affiche un code, ouvre microsoft.com/link, puis attend la connexion. */
+  async connectXbox(): Promise<boolean> {
+    if (this.busy) return false;
+    this.busy = 'xbox';
+    try {
+      this.xboxCode = (await api.xboxLoginCode()).userCode;
+    } catch (e) {
+      this.busy = null;
+      ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
+      return false;
+    }
+    this.xboxCancelled = false;
+    await this.copyXboxCode(false);
+    api.openLink('microsoft-link').catch(() => {});
+    this.busy = null;
+    try {
+      return await this.run('xbox', () => api.connectAccount('xbox'));
+    } finally {
+      this.xboxCode = null;
+    }
+  }
+
+  cancelXbox(): void {
+    this.xboxCancelled = true;
+    this.xboxCode = null;
+    api.xboxLoginCancel().catch(() => {});
+  }
+
+  /** Copie le code Xbox ; `announce` : dit aussi quand la copie a réussi. */
+  async copyXboxCode(announce = true): Promise<void> {
+    if (!this.xboxCode) return;
+    try {
+      await navigator.clipboard.writeText(this.xboxCode);
+      if (announce) ui.toast('Code copié');
+    } catch {
+      if (announce) ui.toast('Copie impossible, recopie le code à la main', { error: true });
+    }
   }
 
   async disconnect(store: StoreId): Promise<void> {

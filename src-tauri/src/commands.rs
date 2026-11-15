@@ -71,8 +71,9 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
         let first = games.clone();
         let app2 = app.clone();
         std::thread::spawn(move || {
-            let xbox = scanner::scan_xbox(&first);
+            let mut xbox = scanner::scan_xbox(&first);
             if let Some(ctx) = tauri::Manager::try_state::<Ctx>(&app2) {
+                ctx.accounts.merge_xbox(&mut xbox);
                 ctx.known.add_scanned(&xbox);
             }
             let _ = app2.emit("scan://partial", xbox);
@@ -122,17 +123,41 @@ pub async fn connect_steam(app: AppHandle, ctx: Ctxs<'_>, key: String) -> Result
     Ok(n)
 }
 
-/// Connexion GOG / Epic dans une fenêtre de connexion officielle. Renvoie le nombre de jeux.
+/// Connexion GOG / Epic dans une fenêtre de connexion officielle ; Xbox : attend la saisie du
+/// code de `xbox_login_code` sur microsoft.com/link. Renvoie le nombre de jeux.
 #[tauri::command]
 pub async fn connect_account(app: AppHandle, ctx: Ctxs<'_>, store: String) -> Result<usize, String> {
-    if store != "gog" && store != "epic" {
+    if store == "steam" || !accounts::CONNECTABLE.contains(&store.as_str()) {
         return Err("Ce launcher ne propose pas de connexion.".into());
     }
     let acc = ctx.accounts.clone();
     let app2 = app.clone();
-    let n = blocking(move || accounts::login(&app2, &store).and_then(|code| acc.finish_login(&store, &code))).await??;
+    let n = blocking(move || {
+        if store == "xbox" {
+            acc.connect_xbox()
+        } else {
+            accounts::login(&app2, &store).and_then(|code| acc.finish_login(&store, &code))
+        }
+    })
+    .await??;
     let _ = app.emit("accounts://synced", ());
     Ok(n)
+}
+
+/// Xbox : code à saisir sur microsoft.com/link (puis `connect_account("xbox")` attend).
+#[tauri::command]
+pub async fn xbox_login_code(ctx: Ctxs<'_>) -> Result<accounts::xbox::DeviceCode, String> {
+    if !accounts::xbox::available() {
+        return Err("La connexion Xbox n'est pas disponible dans cette version de Hangar.".into());
+    }
+    let acc = ctx.accounts.clone();
+    blocking(move || acc.xbox_code()).await?
+}
+
+/// Xbox : abandonne l'attente de la connexion.
+#[tauri::command]
+pub fn xbox_login_cancel() {
+    accounts::xbox::cancel();
 }
 
 #[tauri::command]

@@ -169,6 +169,8 @@ export function mockApi(): Api {
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const imgCache = new Map<string, Promise<string | null>>();
   const connected = new Map<StoreId, AccountStatus>();
+  // Connexion Xbox de démo : attente du code, annulable.
+  let xboxWaiting = false;
   const synced = new Set<() => void>();
   const syncedNow = () => synced.forEach((cb) => cb());
   const link = (store: StoreId, user: string | null, games: number) => {
@@ -323,7 +325,7 @@ export function mockApi(): Api {
           connected.get(store) ?? {
             store,
             detected: store !== 'battlenet',
-            connectable: ['steam', 'gog', 'epic'].includes(store),
+            connectable: ['steam', 'gog', 'epic', 'xbox'].includes(store),
             connected: false,
             games: 0,
             added: 0,
@@ -337,7 +339,21 @@ export function mockApi(): Api {
         throw 'Clé invalide : une clé Steam fait 32 caractères (chiffres et lettres A à F).';
       return link('steam', null, 214);
     },
+    xboxLoginCode: async () => {
+      await wait(400);
+      xboxWaiting = true;
+      return { userCode: 'HGR4X2BQ', url: 'https://www.microsoft.com/link' };
+    },
+    xboxLoginCancel: async () => {
+      xboxWaiting = false;
+    },
     connectAccount: async (store) => {
+      if (store === 'xbox') {
+        await wait(6000);
+        if (!xboxWaiting) throw 'Connexion annulée.';
+        xboxWaiting = false;
+        return link(store, 'Joueur', 17);
+      }
       await wait(1200);
       return link(store, 'Joueur', store === 'gog' ? 38 : 112);
     },

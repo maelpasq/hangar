@@ -65,6 +65,29 @@ pub struct Game {
     /// Non installé et jouable sous Linux : version native (Steam, GOG) ou Vérifié / Jouable sur Steam Deck.
     #[serde(default)]
     pub linux: bool,
+    /// Studio, éditeur et date de sortie (ms epoch), quand un compte les donne (Xbox).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub developer: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub publisher: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub released: Option<u64>,
+    /// Succès donnés avec la liste du compte (Xbox) ; ceux de Steam sont demandés à la fiche.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub achievements: Option<Achievements>,
+}
+
+/// Succès d'un jeu. `total` à 0 : nombre total inconnu (Xbox le tait pour certains jeux) ;
+/// le Gamerscore (Xbox) donne alors la progression.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Achievements {
+    pub unlocked: u32,
+    pub total: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gamerscore: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gamerscore_total: Option<u32>,
 }
 
 /// Session envoyée au frontend : `{ gameId, start, end }` en millisecondes epoch.

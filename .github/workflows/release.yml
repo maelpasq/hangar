@@ -106,6 +106,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           HANGAR_BUG_WEBHOOK: ${{ secrets.HANGAR_BUG_WEBHOOK }}
+          HANGAR_MS_CLIENT_ID: ${{ secrets.HANGAR_MS_CLIENT_ID }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Hangar ${{ github.ref_name }}
@@ -121,6 +122,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           HANGAR_BUG_WEBHOOK: ${{ secrets.HANGAR_BUG_WEBHOOK }}
+          HANGAR_MS_CLIENT_ID: ${{ secrets.HANGAR_MS_CLIENT_ID }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Hangar ${{ github.ref_name }}

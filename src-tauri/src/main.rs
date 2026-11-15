@@ -199,6 +199,8 @@ fn main() {
             commands::connect_steam,
             commands::connect_account,
             commands::disconnect_account,
+            commands::xbox_login_code,
+            commands::xbox_login_cancel,
             commands::open_link,
             commands::report_bug,
             commands::open_web_game,

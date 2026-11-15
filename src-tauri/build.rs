@@ -17,6 +17,9 @@ fn main() {
     // capacité (`capabilities/*.json`) lui accorde. La liste vient de `generate_handler!` dans
     // main.rs, pour ne jamais en oublier une.
     println!("cargo:rerun-if-changed=src/main.rs");
+    // Valeurs fixées au build (secrets GitHub), jamais dans le dépôt.
+    println!("cargo:rerun-if-env-changed=HANGAR_MS_CLIENT_ID");
+    println!("cargo:rerun-if-env-changed=HANGAR_BUG_WEBHOOK");
     let commands: &'static [&'static str] = Box::leak(app_commands().into_boxed_slice());
     // Une commande ajoutée sans permission serait refusée à l'exécution : on l'arrête ici.
     println!("cargo:rerun-if-changed=capabilities");
