@@ -1,6 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
+import type { CloudStatus } from './types';
 import { displayVersion } from './util/release-notes';
 import type { AccountStatus, Achievements, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
@@ -110,6 +111,16 @@ export interface Api {
   /** Xbox : abandonne l'attente de la connexion. */
   xboxLoginCancel(): Promise<void>;
   disconnectAccount(store: StoreId): Promise<void>;
+  /** Compte Hangar : état (demande au serveur si un jeton est rangé). */
+  cloudStatus(): Promise<CloudStatus>;
+  /** Connexion dans le navigateur, retour par 127.0.0.1 ; rend l'état une fois connecté. */
+  cloudLogin(deviceId: string): Promise<CloudStatus>;
+  cloudCancelLogin(): Promise<void>;
+  /** Déconnecte ce poste ; les données restent sur le poste et sur le compte. */
+  cloudLogout(): Promise<void>;
+  cloudRenameDevice(id: string, name: string): Promise<CloudStatus>;
+  /** Déconnecte un autre poste à distance. */
+  cloudForgetDevice(id: string): Promise<CloudStatus>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
   /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
@@ -231,6 +242,12 @@ async function tauriApi(): Promise<Api> {
     xboxLoginCode: () => invoke('xbox_login_code'),
     xboxLoginCancel: () => invoke('xbox_login_cancel'),
     disconnectAccount: (store) => invoke('disconnect_account', { store }),
+    cloudStatus: () => invoke('cloud_status'),
+    cloudLogin: (deviceId) => invoke('cloud_login', { deviceId }),
+    cloudCancelLogin: () => invoke('cloud_cancel_login'),
+    cloudLogout: () => invoke('cloud_logout'),
+    cloudRenameDevice: (id, name) => invoke('cloud_rename_device', { id, name }),
+    cloudForgetDevice: (id) => invoke('cloud_forget_device', { id }),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),

@@ -14,6 +14,7 @@
   import Toggle from '../components/Toggle.svelte';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
   import { accounts } from '../stores/accounts.svelte';
+  import { cloud } from '../stores/cloud.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import { updater } from '../stores/update.svelte';
@@ -24,11 +25,28 @@
   import { isLinux, isMac } from '../util/platform';
   import { RELEASES, notesBetween } from '../util/release-notes';
 
-  type SectionId = 'general' | 'appearance' | 'pad' | 'launchers' | 'library' | 'covers';
+  type SectionId = 'account' | 'general' | 'appearance' | 'pad' | 'launchers' | 'library' | 'covers';
 
   const os = isMac ? 'macOS' : isLinux ? 'Linux' : 'Windows';
 
   let section = $state<SectionId>('general');
+  // Section demandée d'ailleurs (clic sur le compte dans la barre latérale).
+  $effect(() => {
+    const want = ui.settingsSection;
+    if (want) {
+      go(want as SectionId);
+      ui.settingsSection = null;
+    }
+  });
+  void cloud.refresh();
+
+  // Compte Hangar : renommer ce poste.
+  let renaming = $state<string | null>(null);
+  let newName = $state('');
+  async function saveName(e: SubmitEvent) {
+    e.preventDefault();
+    if (renaming && newName.trim() && (await cloud.renameDevice(renaming, newName))) renaming = null;
+  }
   let version = $state('');
   api.appVersion().then(
     (v) => (version = v),
@@ -46,6 +64,7 @@
   );
 
   const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number; alert?: boolean }[]>([
+    { id: 'account', label: 'Compte', title: 'Compte Hangar', icon: 'user' },
     { id: 'general', label: 'Général', icon: 'sliders' },
     { id: 'appearance', label: 'Apparence', icon: 'sun' },
     { id: 'pad', label: 'Mode manette', icon: 'gamepad' },
@@ -62,6 +81,7 @@
   const current = $derived(sections.find((s) => s.id === section)!);
 
   const intro: Record<SectionId, string> = {
+    account: 'Facultatif. Hangar reste complet sans compte.',
     general: 'Comportement de Hangar et mises à jour.',
     appearance: "Thème et couleur de l'interface.",
     pad: 'Hangar en plein écran, à la manette ou au clavier.',
@@ -260,7 +280,86 @@
         {/if}
 
         <div class="groups">
-          {#if section === 'general'}
+          {#if section === 'account'}
+            {@const s = cloud.status}
+            {#if s.connected}
+              <section class="group" aria-label="Ton compte">
+                <h3>Ton compte</h3>
+                <div class="srow">
+                  <span class="avatar" aria-hidden="true">{cloud.initial}</span>
+                  <span class="txt">
+                    <span class="lbl ell">{cloud.name}</span>
+                    <span class="hint ell">{s.user?.email ?? ''}</span>
+                  </span>
+                  {#if s.offline}<span class="tag off">Hors ligne</span>{:else}<span class="tag ok">Connecté</span>{/if}
+                  <button class="btn-s" onclick={() => cloud.logout()}>Se déconnecter</button>
+                </div>
+                <p class="gdesc">
+                  La synchronisation de tes favoris, collections et réglages entre tes PC arrive dans une prochaine
+                  version. Se déconnecter garde tout sur ce PC.
+                </p>
+              </section>
+
+              <section class="group" aria-label="Postes reliés">
+                <h3>Postes reliés</h3>
+                {#each s.devices as d (d.id)}
+                  <div class="srow" class:off={!d.connected}>
+                    <span class="ico"><Icon name="monitor" size={18} /></span>
+                    {#if renaming === d.id}
+                      <form class="sfield grow" onsubmit={saveName}>
+                        <label class="sr-only" for="device-name">Nom de ce poste</label>
+                        <input id="device-name" maxlength="60" autocomplete="off" bind:value={newName} />
+                        <button type="button" class="btn-s" onclick={() => (renaming = null)}>Annuler</button>
+                        <button type="submit" class="btn-s primary" disabled={!newName.trim()}>Enregistrer</button>
+                      </form>
+                    {:else}
+                      <span class="txt">
+                        <span class="lbl ell">{d.name}</span>
+                        <span class="hint"
+                          >{d.connected ? `Vu : ${relativeDay(d.lastSeen).toLowerCase()}` : 'Déconnecté'}</span
+                        >
+                      </span>
+                      {#if d.current}<span class="tag conn">Ce PC</span>{/if}
+                      {#if d.current && !s.offline}
+                        <button
+                          class="btn-s"
+                          aria-label="Renommer {d.name}"
+                          onclick={() => {
+                            renaming = d.id;
+                            newName = d.name;
+                          }}><Icon name="edit" size={15} />Renommer</button
+                        >
+                      {:else if d.connected && !s.offline}
+                        <button class="btn-s danger" aria-label="Déconnecter {d.name}" onclick={() => cloud.forgetDevice(d.id)}
+                          >Déconnecter</button
+                        >
+                      {/if}
+                    {/if}
+                  </div>
+                {:else}
+                  <p class="sempty">Liste indisponible hors ligne.</p>
+                {/each}
+              </section>
+            {:else}
+              <section class="group" aria-label="Compte Hangar">
+                <h3>Se connecter</h3>
+                <p class="gdesc">
+                  Un compte Hangar gardera tes favoris, collections, renommages et réglages, et les retrouvera sur tes
+                  autres PC. Ton navigateur s'ouvre pour te connecter avec un code reçu par e-mail, Discord ou Google.
+                </p>
+                <div class="srow actions">
+                  {#if cloud.busy}
+                    <span class="hint">Termine la connexion dans ton navigateur...</span>
+                    <button class="btn-s" onclick={() => cloud.cancel()}>Annuler</button>
+                  {:else}
+                    <button class="btn-s primary" onclick={() => cloud.login()}
+                      ><Icon name="user" size={15} />Se connecter</button
+                    >
+                  {/if}
+                </div>
+              </section>
+            {/if}
+          {:else if section === 'general'}
             <section class="group" aria-label="Comportement">
               <h3>Comportement</h3>
               {@render toggleRow('minimizeOnLaunch', "Réduire Hangar au lancement d'un jeu", 'La fenêtre revient quand tu quittes le jeu.')}
@@ -991,6 +1090,25 @@
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
+  }
+
+  .sfield.grow {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Compte Hangar : initiale sur fond d'accent tant qu'il n'y a pas d'avatar. */
+  .avatar {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
   }
 
   .sfield input {

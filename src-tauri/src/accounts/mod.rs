@@ -205,15 +205,15 @@ fn entry(store: &str) -> Result<keyring::Entry, String> {
         .map_err(|_| "Le coffre d'identifiants du système est indisponible.".into())
 }
 
-fn secret(store: &str) -> Option<String> {
+pub(crate) fn secret(store: &str) -> Option<String> {
     entry(store).ok()?.get_password().ok().filter(|s| !s.is_empty())
 }
 
-fn set_secret(store: &str, value: &str) -> Result<(), String> {
+pub(crate) fn set_secret(store: &str, value: &str) -> Result<(), String> {
     entry(store)?.set_password(value).map_err(|_| "Impossible d'enregistrer dans le coffre du système.".into())
 }
 
-fn delete_secret(store: &str) {
+pub(crate) fn delete_secret(store: &str) {
     if let Ok(e) = entry(store) {
         let _ = e.delete_credential();
     }

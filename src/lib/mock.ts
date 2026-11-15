@@ -4,7 +4,7 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { AccountStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, CloudStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
 import { RELEASES } from './util/release-notes';
 import { defaultState } from './util/state';
 
@@ -171,6 +171,8 @@ export function mockApi(): Api {
   const connected = new Map<StoreId, AccountStatus>();
   // Connexion Xbox de démo : attente du code, annulable.
   let xboxWaiting = false;
+  let cloud: CloudStatus = { connected: false, offline: false, revoked: false, user: null, devices: [] };
+  let cloudCancelled = false;
   const synced = new Set<() => void>();
   const syncedNow = () => synced.forEach((cb) => cb());
   const link = (store: StoreId, user: string | null, games: number) => {
@@ -362,6 +364,38 @@ export function mockApi(): Api {
     disconnectAccount: async (store) => {
       connected.delete(store);
       syncedNow();
+    },
+    // Compte Hangar de démo : connexion en 2 s (annulable), deux postes.
+    cloudStatus: async () => structuredClone(cloud),
+    cloudLogin: async () => {
+      cloudCancelled = false;
+      await wait(2000);
+      if (cloudCancelled) throw '';
+      cloud = {
+        connected: true,
+        offline: false,
+        revoked: false,
+        user: { name: 'Alex', email: 'alex@exemple.fr' },
+        devices: [
+          { id: 'a'.repeat(32), name: 'PC-SALON', createdAt: Date.now() - 864e5 * 30, lastSeen: Date.now(), connected: true, current: true },
+          { id: 'b'.repeat(32), name: 'Portable', createdAt: Date.now() - 864e5 * 9, lastSeen: Date.now() - 864e5 * 2, connected: true, current: false }
+        ]
+      };
+      return structuredClone(cloud);
+    },
+    cloudCancelLogin: async () => {
+      cloudCancelled = true;
+    },
+    cloudLogout: async () => {
+      cloud = { connected: false, offline: false, revoked: false, user: null, devices: [] };
+    },
+    cloudRenameDevice: async (id, name) => {
+      cloud.devices = cloud.devices.map((d) => (d.id === id ? { ...d, name } : d));
+      return structuredClone(cloud);
+    },
+    cloudForgetDevice: async (id) => {
+      cloud.devices = cloud.devices.map((d) => (d.id === id ? { ...d, connected: false } : d));
+      return structuredClone(cloud);
     },
     openLink: async () => {},
     openGameLink: async () => {},

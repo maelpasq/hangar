@@ -12,7 +12,7 @@ use crate::{launcher, scanner};
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 /// État partagé du backend.
 pub struct Ctx {
@@ -25,6 +25,7 @@ pub struct Ctx {
     pub sizes: Arc<Sizes>,
     pub xbox_busy: Arc<AtomicBool>,
     pub accounts: Arc<Accounts>,
+    pub cloud: Arc<crate::cloud::Cloud>,
     pub presence: Arc<crate::presence::Presence>,
     /// Fichiers et dossiers choisis par l'utilisateur (voir `state::Granted`).
     pub granted: state::Granted,
@@ -169,6 +170,52 @@ pub async fn disconnect_account(app: AppHandle, ctx: Ctxs<'_>, store: String) ->
     blocking(move || acc.disconnect(&store)).await?;
     let _ = app.emit("accounts://synced", ());
     Ok(())
+}
+
+// ─────────────────────────── Compte Hangar ───────────────────────────
+
+#[tauri::command]
+pub async fn cloud_status(ctx: Ctxs<'_>) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.status()).await
+}
+
+/// Connexion dans le navigateur ; Hangar revient devant une fois le compte relié.
+#[tauri::command]
+pub async fn cloud_login(app: AppHandle, ctx: Ctxs<'_>, device_id: String) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    let res = blocking(move || cloud.login(&device_id)).await?;
+    if res.is_ok() {
+        if let Some(w) = app.get_webview_window("main") {
+            let _ = w.unminimize();
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+    }
+    res
+}
+
+#[tauri::command]
+pub fn cloud_cancel_login() {
+    crate::cloud::Cloud::cancel_login();
+}
+
+#[tauri::command]
+pub async fn cloud_logout(ctx: Ctxs<'_>) -> Result<(), String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.logout()).await
+}
+
+#[tauri::command]
+pub async fn cloud_rename_device(ctx: Ctxs<'_>, id: String, name: String) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.rename_device(&id, &name)).await?
+}
+
+#[tauri::command]
+pub async fn cloud_forget_device(ctx: Ctxs<'_>, id: String) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.forget_device(&id)).await?
 }
 
 /// Ouvre une page d'aide connue dans le navigateur (liste fermée, pas d'URL libre).

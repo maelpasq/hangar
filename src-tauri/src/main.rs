@@ -5,6 +5,7 @@
 mod accounts;
 mod art;
 mod artwork;
+mod cloud;
 mod commands;
 mod desktop;
 mod guide;
@@ -89,6 +90,8 @@ fn main() {
     let builder = if test_env { builder } else { builder.plugin(tauri_plugin_updater::Builder::new().build()) };
     builder
         .setup(move |app| {
+            // Compte Hangar : Hangar Test parle à son propre serveur.
+            cloud::set_test_env(test_env);
             veil::init(app.handle().clone());
             accounts::set_vault(if test_env { "Hangar Test" } else { "Hangar" });
             if test_env {
@@ -145,6 +148,7 @@ fn main() {
                 known: state::Known::default(),
                 xbox_busy: Arc::new(AtomicBool::new(false)),
                 accounts: Arc::new(accounts::Accounts::new(&paths.config)),
+                cloud: Arc::new(cloud::Cloud::new(&paths.config)),
                 presence: Arc::default(),
                 granted: state::Granted::default(),
                 paths,
@@ -166,6 +170,12 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::cloud_status,
+            commands::cloud_login,
+            commands::cloud_cancel_login,
+            commands::cloud_logout,
+            commands::cloud_rename_device,
+            commands::cloud_forget_device,
             commands::scan_games,
             commands::open_game_link,
             commands::load_state,

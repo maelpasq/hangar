@@ -10,6 +10,9 @@
   import Icon, { type IconName } from './Icon.svelte';
   import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
+  import { cloud } from '../stores/cloud.svelte';
+
+  cloud.load();
 
   let { rail = false }: { rail?: boolean } = $props();
 
@@ -166,6 +169,31 @@
     <Icon name="plus" size={16} stroke={2} />
     {#if !rail}Ajouter un jeu{/if}
   </button>
+  {#if cloud.status.connected}
+    {@const label = `Compte de ${cloud.name}${cloud.status.offline ? ' (hors ligne)' : ''}`}
+    <button
+      class="navb me"
+      onclick={() => ui.settings('account')}
+      aria-label={rail ? label : undefined}
+      title={rail ? label : undefined}
+    >
+      <span class="avatar" aria-hidden="true">
+        {cloud.initial}<span class="dot" class:offline={cloud.status.offline}></span>
+      </span>
+      {#if !rail}<span class="ell">{cloud.name}</span>{/if}
+    </button>
+  {:else}
+    {@const label = cloud.busy ? 'Connexion en cours' : 'Se connecter'}
+    <button
+      class="navb me"
+      onclick={() => (cloud.busy ? ui.settings('account') : cloud.login())}
+      aria-label={rail ? label : undefined}
+      title={rail ? label : undefined}
+    >
+      <span class="ic"><Icon name="user" size={17} /></span>
+      {#if !rail}{cloud.busy ? 'Connexion en cours...' : 'Se connecter'}{/if}
+    </button>
+  {/if}
 </aside>
 
 <style>
@@ -391,5 +419,47 @@
     border: 1px dashed var(--border-3);
     justify-content: center;
     color: var(--text-3);
+  }
+
+  /* Compte Hangar, sous « Ajouter un jeu ». */
+  .me {
+    margin-top: 6px;
+  }
+
+  .me .ell {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .avatar {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* Pastille d'état : connecté (vert) ou hors ligne (gris). */
+  .dot {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--success);
+    border: 2px solid var(--bg);
+  }
+
+  .dot.offline {
+    background: var(--muted);
   }
 </style>

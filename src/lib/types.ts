@@ -224,6 +224,29 @@ export interface AccountStatus {
   updates: number;
 }
 
+/** Poste relié au compte Hangar. */
+export interface CloudDevice {
+  id: string;
+  name: string;
+  createdAt: number;
+  lastSeen: number;
+  /** Faux : poste déconnecté (ses données restent sur le compte). */
+  connected: boolean;
+  /** Ce poste-ci. */
+  current: boolean;
+}
+
+/** Compte Hangar (facultatif). Le jeton reste dans le coffre du système, jamais ici. */
+export interface CloudStatus {
+  connected: boolean;
+  /** Connecté, mais le serveur ne répond pas : dernier état connu. */
+  offline: boolean;
+  /** Le poste vient d'être déconnecté à distance. */
+  revoked: boolean;
+  user: { name: string; email: string } | null;
+  devices: CloudDevice[];
+}
+
 /** Succès Steam d'un jeu (compte Steam connecté). */
 export interface Achievements {
   unlocked: number;

@@ -142,7 +142,11 @@ class Ui {
     this.go({ screen: 'library', store });
   }
 
-  settings(): void {
+  /** Section des Paramètres à ouvrir (lue puis remise à null par l'écran Paramètres). */
+  settingsSection = $state<string | null>(null);
+
+  settings(section?: string): void {
+    this.settingsSection = section ?? null;
     this.go({ screen: 'settings' });
   }
 

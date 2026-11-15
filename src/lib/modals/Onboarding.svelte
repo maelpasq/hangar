@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Configuration en six étapes courtes (launchers, jeux locaux, jaquettes, couleur, jeux web, onglet de départ), montrée une fois
+  // Configuration en sept étapes courtes (launchers, jeux locaux, jaquettes, couleur, jeux web, onglet de départ, compte), montrée une fois
   // à l'installation comme à qui avait déjà Hangar : les réglages affichés sont les siens.
   // Chaque choix s'applique tout de suite. « Tout passer » ou fermer garde les choix déjà faits
   // et laisse le reste tel quel (jeux web désactivés s'ils n'avaient jamais été proposés).
@@ -14,13 +14,22 @@
   import { openStartPage } from '../start-page';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
   import { accounts } from '../stores/accounts.svelte';
+  import { cloud } from '../stores/cloud.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { StoreId, Theme } from '../types';
   import { plural } from '../util/format';
   import games from '../web-games.json';
 
-  const TITLES = ['Tes launchers', 'Tes jeux hors launcher', 'Tes jaquettes', 'Ta couleur', 'Les jeux web', 'Ton onglet de départ'];
+  const TITLES = [
+    'Tes launchers',
+    'Tes jeux hors launcher',
+    'Tes jaquettes',
+    'Ta couleur',
+    'Les jeux web',
+    'Ton onglet de départ',
+    'Ton compte Hangar'
+  ];
   const PREVIEW = ['openfront', 'krunker', 'slither', 'skribbl'];
   const covers = import.meta.glob<string>('../../assets/web-games/*.webp', { eager: true, import: 'default' });
   const preview = PREVIEW.map((id) => covers[`../../assets/web-games/${id}.webp`]).filter(Boolean);
@@ -36,7 +45,10 @@
   const webIsNew = !library.fresh && library.state.prefs.webGames === null;
   const startIsNew = !library.fresh && library.state.prefs.startPage === null;
   const isNew = (i: number) =>
-    (i === 2 && !library.fresh && !library.state.prefs.steamGridDb) || (i === 4 && webIsNew) || (i === 5 && startIsNew);
+    (i === 2 && !library.fresh && !library.state.prefs.steamGridDb) ||
+    (i === 4 && webIsNew) ||
+    (i === 5 && startIsNew) ||
+    (i === 6 && !library.fresh);
   void accounts.refresh();
 
   // Launchers trouvés sur l'appareil en premier.
@@ -162,6 +174,23 @@
       {:else if step === 5}
         <p class="txt">L'onglet sur lequel Hangar s'ouvre à chaque démarrage.</p>
         <StartPagePicker webGames={web} />
+      {:else if step === 6}
+        <p class="txt">
+          Facultatif : un compte gardera tes favoris, collections et réglages, et les retrouvera sur tes autres PC. Ton
+          navigateur s'ouvre pour te connecter par e-mail, Discord ou Google. Sans compte, Hangar reste complet.
+        </p>
+        <div class="opt">
+          <Icon name="user" size={18} />
+          {#if cloud.status.connected}
+            <span class="name">Connecté : {cloud.name}</span>
+          {:else if cloud.busy}
+            <span class="name">Termine la connexion dans ton navigateur...</span>
+            <button class="btn" onclick={() => cloud.cancel()}>Annuler</button>
+          {:else}
+            <span class="name">Compte Hangar</span>
+            <button class="btn primary" onclick={() => cloud.login()}>Se connecter</button>
+          {/if}
+        </div>
       {:else}
         <div class="strip" aria-hidden="true">
           {#each preview as src (src)}<img {src} alt="" />{/each}

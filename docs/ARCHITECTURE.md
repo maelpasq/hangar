@@ -126,6 +126,10 @@ interface PersistedState {
 | `connect_steam(key) -> number` | Vérifie la clé d'API Web Steam (32 hex) par un appel réel, la range dans le coffre du système |
 | `connect_account(store) -> number` | GOG / Epic : fenêtre de connexion officielle, échange du code contre un jeton de rafraîchissement (coffre du système) |
 | `disconnect_account(store)` | Efface le jeton et la liste en cache |
+| `cloud_status() -> CloudStatus` | Compte Hangar (`src-tauri/src/cloud/`) : sans jeton, aucun appel ; sinon `GET /me` (compte, postes), dernier état connu hors ligne (`compte.json`), retour en anonyme si le jeton est refusé (`revoked`). Jamais de jeton |
+| `cloud_login(deviceId) -> CloudStatus` / `cloud_cancel_login()` | Ouvre `/login` dans le navigateur, attend le retour sur `127.0.0.1:<port>` (PKCE + `state`, 10 min), échange le code contre le jeton du poste (coffre du système) |
+| `cloud_logout()` | `POST /logout` au mieux, puis oubli du jeton ; les données restent sur le poste |
+| `cloud_rename_device(id, name)` / `cloud_forget_device(id)` | Renomme un poste, en déconnecte un autre à distance |
 | `open_link(id)` | Ouvre une page d'aide d'une liste fermée (pas d'URL libre) |
 | `open_game_link(url)` | Ouvre le lien d'installation d'un jeu hors store dans le navigateur (`https://` validé, rien d'autre) |
 | événement `accounts://synced` | Les comptes ont changé : le frontend rafraîchit l'état et rescanne |
