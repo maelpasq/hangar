@@ -1,7 +1,9 @@
 // Actions qui touchent à la fois la bibliothèque et l'interface.
 
+import { hideElsewhere } from './ghosts';
 import { api } from './api';
 import { accounts } from './stores/accounts.svelte';
+import { cloud } from './stores/cloud.svelte';
 import { library } from './stores/library.svelte';
 import { updater } from './stores/update.svelte';
 import { runner } from './stores/runner.svelte';
@@ -11,6 +13,8 @@ import { plural } from './util/format';
 export function hideGame(id: string): void {
   const g = library.get(id);
   if (!g) return;
+  // Jeu du compte absent d'ici : masqué sur ce PC seulement.
+  if (g.elsewhere) return hideElsewhere(id);
   library.hide(id);
   if (ui.screen === 'game' && ui.gameId === id) ui.back();
   ui.toast(`${library.name(g)} masqué`, {
@@ -96,6 +100,8 @@ export async function refreshAll(): Promise<void> {
   lastUpdateCheck = Date.now();
   const before = new Set(library.updates.map((g) => g.id));
   void accounts.refresh();
+  // Compte Hangar : état (postes, retour du réseau) puis synchro.
+  void cloud.refresh().then(() => cloud.sync());
   void updater.check(true);
   await rescan(true);
   announceUpdates(before);

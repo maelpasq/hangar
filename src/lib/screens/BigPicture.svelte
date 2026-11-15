@@ -220,7 +220,7 @@
       <h1>{library.name(focused)}</h1>
       <p>
         {#if runner.isRunning(focused.id)}<span class="live">En cours</span> ·{/if}
-        {#if focused.notInstalled}À installer via {focused.launcherName}
+        {#if focused.elsewhere}Sur un autre PC{:else if focused.notInstalled}À installer via {focused.launcherName}
         {:else}
           {hoursLabel(library.totals(focused.id).playMs)} de jeu
           {#if library.totals(focused.id).lastPlayed}· {relativeDay(library.totals(focused.id).lastPlayed).toLowerCase()}{/if}

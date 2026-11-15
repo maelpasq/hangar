@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { CloudStatus } from './types';
+import type { CloudChange, CloudStatus } from './types';
 import { displayVersion } from './util/release-notes';
 import type { AccountStatus, Achievements, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
@@ -121,6 +121,12 @@ export interface Api {
   cloudRenameDevice(id: string, name: string): Promise<CloudStatus>;
   /** Déconnecte un autre poste à distance. */
   cloudForgetDevice(id: string): Promise<CloudStatus>;
+  /** Synchro : changements du compte depuis le curseur (une page). */
+  cloudPull(since: number): Promise<{ cursor: number; more: boolean; changes: CloudChange[] }>;
+  /** Synchro : envoi groupé (1000 changements au plus). */
+  cloudPush(changes: CloudChange[]): Promise<void>;
+  /** Clé SteamGridDB du compte (chiffrée côté serveur) ; rend vrai si ce poste a une clé. */
+  cloudSyncSteamGridDb(first: boolean): Promise<boolean>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
   /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
@@ -248,6 +254,9 @@ async function tauriApi(): Promise<Api> {
     cloudLogout: () => invoke('cloud_logout'),
     cloudRenameDevice: (id, name) => invoke('cloud_rename_device', { id, name }),
     cloudForgetDevice: (id) => invoke('cloud_forget_device', { id }),
+    cloudPull: (since) => invoke('cloud_pull', { since }),
+    cloudPush: (changes) => invoke('cloud_push', { changes }),
+    cloudSyncSteamGridDb: (first) => invoke('cloud_sync_steamgriddb', { first }),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),

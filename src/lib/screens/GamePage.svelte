@@ -1,6 +1,7 @@
 <script lang="ts">
   // Fiche d'un jeu : bannière, jaquette, Jouer, activité, informations, jeux similaires.
   import { hideGame, openFolder, uninstallGame, updateGame } from '../actions';
+  import { attachElsewhere } from '../ghosts';
   import { api } from '../api';
   import { art } from '../art.svelte';
   import ActivityChart from '../components/ActivityChart.svelte';
@@ -33,11 +34,13 @@
   const sessions = $derived(library.state.sessions.filter((s) => s.gameId === game.id));
   const added = $derived(library.addedAt(game));
   const genre = $derived(library.genre(game));
-  const location = $derived(game.notInstalled ? 'Non installé' : game.installDir || game.launch.target);
+  const location = $derived(
+    game.elsewhere ? 'Sur un autre PC' : game.notInstalled ? 'Non installé' : game.installDir || game.launch.target
+  );
   /** Jeu hors store : page où le retrouver (lien d'installation), modifiable. */
   const offStore = $derived(game.store === 'local' || game.store === 'manual');
   const link = $derived(library.installLink(game));
-  const via = $derived(game.notInstalled ? "S'installe via" : 'Se lance via');
+  const via = $derived(game.elsewhere ? 'Sur un autre PC, se lance via' : game.notInstalled ? "S'installe via" : 'Se lance via');
 
   const similar = $derived(
     library.installed
@@ -241,8 +244,13 @@
           ><Icon name="package" size={17} />Désinstaller</button
         >
       {/if}
+      {#if game.elsewhere && game.installUrl}
+        <button class="act" onclick={() => attachElsewhere(game.id)}
+          ><Icon name="folder" size={17} />J'ai déjà ce jeu : choisir l'exécutable</button
+        >
+      {/if}
       <button class="act red" onclick={() => hideGame(game.id)}
-        ><Icon name="eyeOff" size={17} />Masquer de la bibliothèque</button
+        ><Icon name="eyeOff" size={17} />{game.elsewhere ? 'Masquer sur ce PC' : 'Masquer de la bibliothèque'}</button
       >
     </section>
   </div>

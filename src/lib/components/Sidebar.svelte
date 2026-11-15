@@ -170,7 +170,7 @@
     {#if !rail}Ajouter un jeu{/if}
   </button>
   {#if cloud.status.connected}
-    {@const label = `Compte de ${cloud.name}${cloud.status.offline ? ' (hors ligne)' : ''}`}
+    {@const label = `Compte de ${cloud.name}${cloud.syncState === 'offline' ? ' (hors ligne)' : cloud.syncState === 'syncing' ? ' (synchronisation)' : ''}`}
     <button
       class="navb me"
       onclick={() => ui.settings('account')}
@@ -178,7 +178,11 @@
       title={rail ? label : undefined}
     >
       <span class="avatar" aria-hidden="true">
-        {cloud.initial}<span class="dot" class:offline={cloud.status.offline}></span>
+        {cloud.initial}<span
+          class="dot"
+          class:offline={cloud.syncState === 'offline'}
+          class:syncing={cloud.syncState === 'syncing'}
+        ></span>
       </span>
       {#if !rail}<span class="ell">{cloud.name}</span>{/if}
     </button>
@@ -461,5 +465,23 @@
 
   .dot.offline {
     background: var(--muted);
+  }
+
+  /* Synchro en cours : la pastille prend l'accent et respire. */
+  .dot.syncing {
+    background: var(--accent);
+    animation: sync-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes sync-pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dot.syncing {
+      animation: none;
+    }
   }
 </style>

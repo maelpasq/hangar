@@ -21,6 +21,23 @@ export function dedupe(games: Game[]): Game[] {
   return out;
 }
 
+/** Jeu ajouté à la main depuis un exécutable (ou raccourci) choisi par l'utilisateur. */
+export function manualGameFrom(path: string, name: string, args = ''): Game {
+  const dir = parentDir(path);
+  return {
+    id: `manual:${path.toLowerCase()}`,
+    name: name.trim(),
+    store: 'manual',
+    installDir: dir,
+    launch: { kind: 'exe', target: path, args: args.trim(), cwd: dir },
+    launcherName: "l'exécutable du jeu",
+    steamAppId: null,
+    exePath: path.toLowerCase().endsWith('.exe') ? path : null,
+    processNames: [],
+    genre: null
+  };
+}
+
 /** Dossier parent d'un chemin Windows. */
 export function parentDir(path: string): string {
   const i = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'));

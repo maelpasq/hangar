@@ -218,6 +218,24 @@ pub async fn cloud_forget_device(ctx: Ctxs<'_>, id: String) -> Result<crate::clo
     blocking(move || cloud.forget_device(&id)).await?
 }
 
+#[tauri::command]
+pub async fn cloud_pull(ctx: Ctxs<'_>, since: u64) -> Result<crate::cloud::Page, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.pull(since)).await?
+}
+
+#[tauri::command]
+pub async fn cloud_push(ctx: Ctxs<'_>, changes: Vec<crate::cloud::Change>) -> Result<(), String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.push(changes)).await?
+}
+
+#[tauri::command]
+pub async fn cloud_sync_steamgriddb(ctx: Ctxs<'_>, first: bool) -> Result<bool, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.sync_steamgriddb(first)).await?
+}
+
 /// Ouvre une page d'aide connue dans le navigateur (liste fermée, pas d'URL libre).
 #[tauri::command]
 pub async fn open_link(link: String) -> Result<(), String> {
@@ -608,6 +626,7 @@ pub async fn find_artwork(ctx: Ctxs<'_>, game_id: String, refresh: bool) -> Resu
 #[tauri::command]
 pub async fn set_steamgriddb_key(ctx: Ctxs<'_>, key: String) -> Result<(), String> {
     let art = ctx.art.clone();
+    let cloud = ctx.cloud.clone();
     blocking(move || {
         let k = key.trim();
         if !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric()) {
@@ -616,7 +635,10 @@ pub async fn set_steamgriddb_key(ctx: Ctxs<'_>, key: String) -> Result<(), Strin
                 return Err("SteamGridDB ne reconnaît pas cette clé. Recopie-la en entier depuis la page API.".into());
             }
         }
-        crate::accounts::set_steamgriddb_key(k)
+        crate::accounts::set_steamgriddb_key(k)?;
+        // Compte Hangar connecté : la clé le suit (chiffrée sur le serveur).
+        cloud.share_steamgriddb(k);
+        Ok(())
     })
     .await?
 }

@@ -5,7 +5,8 @@ import { STORE_ORDER } from '../stores-meta';
 import type { Collection, Game, PersistedState, Session, StoreId, Totals } from '../types';
 import { dedupe } from '../util/games';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
-import { installLink, portableOf, stampChanges } from '../util/sync';
+import { adoptGhosts, ghostGames } from '../util/cloud-sync';
+import { installLink, isGhostId, portableOf, stampChanges, syncEntries } from '../util/sync';
 
 const EMPTY_TOTALS: Totals = { playMs: 0, launches: 0, lastPlayed: 0 };
 
@@ -21,8 +22,12 @@ class Library {
   /** Vrai dès que la bibliothèque (cache ou scan) est affichable. */
   ready = $state(false);
 
-  /** Tous les jeux connus, masqués compris. */
-  all = $derived(dedupe([...this.scanned, ...this.state.manualGames]));
+  /** Jeux du compte Hangar introuvables sur ce poste (« Sur un autre PC »), masqués ici compris. */
+  ghosts = $derived(ghostGames(this.state));
+  /** Tous les jeux connus, masqués compris (sauf les jeux du compte masqués sur ce poste). */
+  all = $derived(
+    dedupe([...this.scanned, ...this.state.manualGames, ...this.ghosts.filter((g) => !this.state.cloud.hiddenHere.includes(g.id))])
+  );
   byId = $derived(new Map(this.all.map((g) => [g.id, g])));
   /** Jeux affichés : ni masqués, ni d'un store désactivé, ni non installés si l'option est coupée. */
   visible = $derived(
@@ -90,6 +95,7 @@ class Library {
   /** Genre : donné par le scan, sinon cherché une fois sur Steam (game_info). */
   genre(g: Game): string | null {
     if (g.genre) return g.genre;
+    if (g.elsewhere) return null;
     if (g.id in this.genres) return this.genres[g.id];
     if (!this.genreAsked.has(g.id)) {
       this.genreAsked.add(g.id);
@@ -119,6 +125,20 @@ class Library {
   private loaded = false;
   /** Éléments synchronisables au dernier enregistrement, pour dater ceux qui changent. */
   private entries: Map<string, string> | null = null;
+  /** Appelé quand des éléments attendent d'être envoyés au compte (envoi groupé). */
+  onDirty: (() => void) | null = null;
+
+  /** Date tout de suite les changements en attente d'enregistrement (avant une synchro). */
+  flushStamps(): void {
+    if (this.loaded) this.entries = stampChanges(this.state, this.entries);
+  }
+
+  /** L'état vient du compte : enregistré tel quel, sans dater ces éléments comme des changements d'ici. */
+  remoteApplied(): void {
+    if (!this.loaded) return;
+    this.entries = syncEntries(this.state);
+    this.save();
+  }
 
   /** Enregistre l'état (regroupe les écritures rapprochées). */
   save(): void {
@@ -126,6 +146,7 @@ class Library {
     clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       this.entries = stampChanges(this.state, this.entries);
+      if (this.state.cloud.dirty.length) this.onDirty?.();
       api.saveState($state.snapshot(this.state)).catch((e) => console.error('save_state', e));
     }, 250);
   }
@@ -222,6 +243,7 @@ class Library {
       }
       if (this.refreshPortable(g)) changed = true;
     }
+    if (adoptGhosts(this.state)) changed = true;
     if (changed) this.save();
   }
 
@@ -240,6 +262,14 @@ class Library {
 
   /** Lien choisi par l'utilisateur ; "" : aucun lien, null : retour au lien trouvé automatiquement. */
   setInstallLink(id: string, url: string | null): void {
+    // Jeu du compte absent d'ici : le lien est celui de sa fiche, synchronisée.
+    const fiche = isGhostId(id) ? this.state.portable[id] : undefined;
+    if (fiche) {
+      if (url) fiche.installUrl = url;
+      else delete fiche.installUrl;
+      this.save();
+      return;
+    }
     if (url === null) delete this.state.installLinks[id];
     else this.state.installLinks[id] = url;
     const g = this.get(id);
@@ -268,6 +298,29 @@ class Library {
 
   unhide(id: string): void {
     this.state.hidden = this.state.hidden.filter((x) => x !== id);
+    this.state.cloud.hiddenHere = this.state.cloud.hiddenHere.filter((x) => x !== id);
+    this.save();
+  }
+
+  /** Masque un jeu du compte sur ce poste seulement : il reste sur le compte et les autres PC. */
+  hideHere(id: string): void {
+    if (!this.state.cloud.hiddenHere.includes(id)) this.state.cloud.hiddenHere = [...this.state.cloud.hiddenHere, id];
+    this.save();
+  }
+
+  /**
+   * « J'ai déjà ce jeu » : l'exécutable choisi devient un jeu manuel qui reprend la signature du
+   * jeu du compte, donc ses personnalisations, ici et sur les autres postes.
+   */
+  attachGhost(pid: string, g: Game): void {
+    const fiche = this.state.portable[pid];
+    if (!fiche || !isGhostId(pid)) return;
+    this.state.cloud.aliases[g.id] = { exe: fiche.exe, dir: fiche.dir };
+    if (fiche.installUrl && !(g.id in this.state.installLinks)) this.state.installLinks[g.id] = fiche.installUrl;
+    // Même jaquette que sur l'autre PC.
+    if (fiche.steamAppId) this.state.steamIdCache[g.id] = fiche.steamAppId;
+    this.addManual(g);
+    adoptGhosts(this.state);
     this.save();
   }
 
@@ -290,6 +343,7 @@ class Library {
     this.state.favorites = this.state.favorites.filter((x) => x !== id);
     delete this.state.portable[id];
     delete this.state.installLinks[id];
+    delete this.state.cloud.aliases[id];
     this.save();
   }
 

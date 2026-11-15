@@ -1,4 +1,4 @@
-import type { Collection, Game, PersistedState, PortableGame, SortKey, StoreId } from '../types';
+import type { CloudSync, Collection, Game, PersistedState, PortableGame, SortKey, StoreId } from '../types';
 import { httpsLink } from './sync';
 import { STORE_ORDER } from '../stores-meta';
 
@@ -42,8 +42,13 @@ export function defaultState(): PersistedState {
       padButton: false,
       padAtLogin: false,
       startPage: null
-    }
+    },
+    cloud: defaultCloud()
   };
+}
+
+export function defaultCloud(): CloudSync {
+  return { cursor: 0, dirty: [], merged: false, hiddenHere: [], aliases: {} };
 }
 
 /** Identifiant d'installation : aléatoire, sans rapport avec la machine ni la personne. */
@@ -148,6 +153,19 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
       .filter((x) => typeof x.gameId === 'string' && typeof x.start === 'number' && typeof x.end === 'number')
       .map((x) => ({ gameId: x.gameId as string, start: x.start as number, end: x.end as number }))
       .filter((x) => x.end >= min && x.end >= x.start);
+  }
+
+  if (isObj(raw.cloud)) {
+    const c = raw.cloud;
+    if (typeof c.cursor === 'number' && Number.isSafeInteger(c.cursor) && c.cursor >= 0) s.cloud.cursor = c.cursor;
+    s.cloud.dirty = [...new Set(strArr(c.dirty))];
+    s.cloud.merged = c.merged === true;
+    s.cloud.hiddenHere = strArr(c.hiddenHere);
+    if (isObj(c.aliases)) {
+      for (const [id, a] of Object.entries(c.aliases)) {
+        if (isObj(a) && typeof a.exe === 'string' && a.exe && typeof a.dir === 'string') s.cloud.aliases[id] = { exe: a.exe, dir: a.dir };
+      }
+    }
   }
 
   // Migration depuis la v1 (pas de `version`) : recents, launches, coverCache.

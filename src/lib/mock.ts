@@ -4,7 +4,7 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { AccountStatus, CloudStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, CloudChange, CloudStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
 import { RELEASES } from './util/release-notes';
 import { defaultState } from './util/state';
 
@@ -173,6 +173,18 @@ export function mockApi(): Api {
   let xboxWaiting = false;
   let cloud: CloudStatus = { connected: false, offline: false, revoked: false, user: null, devices: [] };
   let cloudCancelled = false;
+  // Serveur de démo : un jeu manuel d'un autre PC (carte « Sur un autre PC ») et une collection.
+  const day = 864e5;
+  const remote = new Map<string, CloudChange>(
+    [
+      { key: 'game:@hollow_knight.exe|hollow knight', value: JSON.stringify({ name: 'Hollow Knight', steamAppId: 367520, installUrl: 'https://www.hollowknight.com/' }), updatedAt: Date.now() - 3 * day },
+      { key: 'game:@outer.exe|outer wilds', value: JSON.stringify({ name: 'Outer Wilds', steamAppId: null, installUrl: null }), updatedAt: Date.now() - 3 * day },
+      { key: 'fav:@hollow_knight.exe|hollow knight', value: 'true', updatedAt: Date.now() - 2 * day },
+      { key: 'collection:cdemo', value: JSON.stringify({ name: 'Sur le portable', games: ['@hollow_knight.exe|hollow knight', '@outer.exe|outer wilds'] }), updatedAt: Date.now() - 2 * day }
+    ].map((c) => [c.key, { ...c, deviceId: 'b'.repeat(32) }])
+  );
+  let remoteCursor = 1;
+  const remoteSeq = new Map<string, number>([...remote.keys()].map((k) => [k, 1]));
   const synced = new Set<() => void>();
   const syncedNow = () => synced.forEach((cb) => cb());
   const link = (store: StoreId, user: string | null, games: number) => {
@@ -397,6 +409,24 @@ export function mockApi(): Api {
       cloud.devices = cloud.devices.map((d) => (d.id === id ? { ...d, connected: false } : d));
       return structuredClone(cloud);
     },
+    cloudPull: async (since) => {
+      await wait(400);
+      if (!cloud.connected) throw "Ce poste n'est pas connecté au compte.";
+      const changes = [...remote.values()].filter((c) => (remoteSeq.get(c.key) ?? 0) > since);
+      return { cursor: remoteCursor, more: false, changes: structuredClone(changes) };
+    },
+    cloudPush: async (changes) => {
+      await wait(300);
+      if (!cloud.connected) throw "Ce poste n'est pas connecté au compte.";
+      remoteCursor++;
+      for (const c of changes) {
+        const prev = remote.get(c.key);
+        if (prev && prev.updatedAt >= c.updatedAt) continue;
+        remote.set(c.key, { ...c, deviceId: 'a'.repeat(32) });
+        remoteSeq.set(c.key, remoteCursor);
+      }
+    },
+    cloudSyncSteamGridDb: async () => false,
     openLink: async () => {},
     openGameLink: async () => {},
     reportBug: async () => { await wait(800); },

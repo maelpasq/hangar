@@ -1,6 +1,6 @@
 # Compte Hangar (facultatif) - plan
 
-Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/`. Phase 2 (connexion dans l'app) faite : `src-tauri/src/cloud/`, `src/lib/stores/cloud.svelte.ts` ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
+Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/`. Phase 2 (connexion dans l'app) faite : `src-tauri/src/cloud/`, `src/lib/stores/cloud.svelte.ts`. Phase 3 (synchro) faite : `src/lib/util/cloud-sync.ts` ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
 
 ## 1. Objectif et principes
 
@@ -158,7 +158,7 @@ Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui ser
 
 ## 12. Questions ouvertes
 
-- Les jeux « Sur un autre PC » s'affichent-ils quand « jeux non installés » est désactivé ?
+- ~~Les jeux « Sur un autre PC » s'affichent-ils quand « jeux non installés » est désactivé ?~~ Non : ils suivent la même règle que les jeux non installés des launchers (DECISIONS.md).
 - Les jaquettes en fichiers locaux sont-elles envoyées sur le compte (R2) dans une version suivante ?
 - Le temps de jeu passé avant la création du compte est-il envoyé à la première connexion ? (Proposition : oui, rattaché au poste.)
 - Durée de conservation d'un compte inactif.

@@ -42,6 +42,15 @@ fn main() {
     // démarrage avec le système à part, sans mise à jour automatique (elle installerait la
     // vraie version par-dessus l'app de l'utilisateur).
     let test_env = context.config().identifier.ends_with(".test");
+    // Nom de l'environnement de test (« Hangar Test », ou « Hangar Test 2 » pour essayer la
+    // synchro du compte entre deux postes) : titre de la fenêtre et coffre à part.
+    let env_name: &'static str = if test_env {
+        Box::leak(context.config().product_name.clone().unwrap_or_else(|| "Hangar Test".into()).into_boxed_str())
+    } else {
+        "Hangar"
+    };
+    // Le coffre est fixé une seule fois (le premier nom gagne) : ici, avant le setup.
+    accounts::set_vault(env_name);
     let builder = tauri::Builder::default()
         // Doit être enregistré en premier : une 2e instance ramène la fenêtre existante.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -96,7 +105,7 @@ fn main() {
             accounts::set_vault(if test_env { "Hangar Test" } else { "Hangar" });
             if test_env {
                 if let Some(w) = app.get_webview_window("main") {
-                    let _ = w.set_title("Hangar Test");
+                    let _ = w.set_title(env_name);
                 }
                 log::info!("environnement de test : données à part, mises à jour désactivées");
             }
@@ -176,6 +185,9 @@ fn main() {
             commands::cloud_logout,
             commands::cloud_rename_device,
             commands::cloud_forget_device,
+            commands::cloud_pull,
+            commands::cloud_push,
+            commands::cloud_sync_steamgriddb,
             commands::scan_games,
             commands::open_game_link,
             commands::load_state,

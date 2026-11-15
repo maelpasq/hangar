@@ -3,6 +3,7 @@
   // Jeu non installé : jaquette atténuée, bouton « Installer ».
   import { STORES } from '../stores-meta';
   import { updateGame } from '../actions';
+  import { elsewhereLabel } from '../ghosts';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -35,12 +36,19 @@
   const name = $derived(library.name(game));
   const t = $derived(library.totals(game.id));
   const toInstall = $derived(!!game.notInstalled);
+  /** Jeu du compte Hangar introuvable sur ce PC. */
+  const elsewhere = $derived(!!game.elsewhere);
   // Onglet « Mises à jour » : l'action principale de la jaquette met le jeu à jour.
   const toUpdate = $derived(ui.updates && !toInstall && !!game.updatePending);
+  const playLabel = $derived(
+    elsewhere ? (game.installUrl ? 'Installer' : 'Choisir') : toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer'
+  );
   const busy = $derived(runner.busyLabel(game.id));
   const primary = () => (toUpdate ? updateGame(game.id) : runner.play(game.id));
   const metaText = $derived(
-    toInstall && meta !== 'last'
+    elsewhere
+      ? 'Sur un autre PC'
+      : toInstall && meta !== 'last'
       ? `${store.label} · Non installé`
       : game.updatePending && meta !== 'last'
         ? `${store.label} · Mise à jour`
@@ -94,7 +102,7 @@
     <button
       class="cover"
       class:dim={toInstall && !ui.toInstall}
-      aria-label={toInstall ? `${name}, non installé` : name}
+      aria-label={elsewhere ? `${name}, sur un autre PC` : toInstall ? `${name}, non installé` : name}
       title={name}
       {onclick}
       {ondblclick}
@@ -104,12 +112,12 @@
       <Cover {game} fontSize={gen.f} padding={gen.p} />
       <span class="ov"></span>
     </button>
-    <button class="play" aria-label="{busy ?? (toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer')} {name}" onclick={primary}
+    <button class="play" aria-label="{busy ?? (elsewhere ? elsewhereLabel(game.id) : playLabel)} {name}" onclick={primary}
       >{#if variant !== 'small'}<Icon
-          name={busy || toInstall || toUpdate ? 'download' : 'play'}
+          name={elsewhere && !game.installUrl ? 'folder' : busy || toInstall || toUpdate ? 'download' : 'play'}
           size={busy || toInstall || toUpdate ? 14 : 12}
           stroke={2.2}
-        />{/if}{busy ?? (toUpdate ? 'Mettre à jour' : toInstall ? 'Installer' : 'Lancer')}</button
+        />{/if}{busy ?? playLabel}</button
     >
   </div>
   {#if fav}<FavButton gameId={game.id} />{/if}
@@ -119,7 +127,11 @@
     <div class="info" class:inrow={variant === 'row'}>
       <div class="name">{name}</div>
       {#if meta !== 'none'}
-        <div class="meta"><StoreLogo store={game.store} size={12} /><span class="mt">{metaText}</span></div>
+        <div class="meta">
+          {#if elsewhere}<Icon name="monitor" size={12} />{:else}<StoreLogo store={game.store} size={12} />{/if}<span class="mt"
+            >{metaText}</span
+          >
+        </div>
       {/if}
     </div>
   {/if}

@@ -79,6 +79,31 @@ pub struct Status {
     pub devices: Vec<Device>,
 }
 
+/// Un élément synchronisé (`value` absente : supprimé). Contenu vérifié par le frontend et l'API.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Change {
+    pub key: String,
+    pub value: Option<String>,
+    pub updated_at: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device_id: Option<String>,
+}
+
+/// Une page de changements reçus du compte.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Page {
+    pub cursor: u64,
+    #[serde(default)]
+    pub more: bool,
+    #[serde(default)]
+    pub changes: Vec<Change>,
+}
+
+/// Changements par envoi (limite de l'API).
+const MAX_CHANGES: usize = 1000;
+
 // ─────────────────────────── HTTP ───────────────────────────
 
 #[derive(Debug, PartialEq)]
@@ -125,7 +150,9 @@ fn call(method: &str, path: &str, token: Option<&str>, body: Option<&Value>) -> 
         Ok(r) => r.into_json().map_err(|_| CallError::Offline),
         Err(ureq::Error::Status(401, _)) => Err(CallError::Unauthorized),
         Err(ureq::Error::Status(c, _)) => {
-            log::warn!("compte Hangar : réponse {c} sur {path}");
+            if c != 404 {
+                log::warn!("compte Hangar : réponse {c} sur {path}");
+            }
             Err(CallError::Status(c))
         }
         Err(ureq::Error::Transport(t)) => {
@@ -393,6 +420,78 @@ impl Cloud {
         }
     }
 
+    /// Appel avec le jeton du poste ; jeton refusé : retour en anonyme.
+    fn authed(&self, f: impl FnOnce(&str) -> Result<Value, CallError>) -> Result<Value, String> {
+        let token = crate::accounts::secret(VAULT_KEY).ok_or("Ce poste n'est pas connecté au compte.")?;
+        f(&token).map_err(|e| {
+            if e == CallError::Unauthorized {
+                log::info!("compte Hangar : jeton refusé, retour en anonyme");
+                self.forget();
+            }
+            e.message()
+        })
+    }
+
+    /// Changements du compte depuis le curseur `since` (une page).
+    pub fn pull(&self, since: u64) -> Result<Page, String> {
+        let v = self.authed(|t| call("GET", &format!("/sync?since={since}"), Some(t), None))?;
+        serde_json::from_value(v).map_err(|_| "Réponse illisible du serveur du compte.".into())
+    }
+
+    /// Envoi groupé des changements de ce poste.
+    pub fn push(&self, changes: Vec<Change>) -> Result<(), String> {
+        if changes.len() > MAX_CHANGES {
+            return Err("Trop de changements d'un coup.".into());
+        }
+        let list: Vec<Value> = changes
+            .into_iter()
+            .map(|c| json!({ "key": c.key, "value": c.value, "updatedAt": c.updated_at }))
+            .collect();
+        self.authed(|t| call("POST", "/sync", Some(t), Some(&json!({ "changes": list }))))?;
+        Ok(())
+    }
+
+    /// Clé SteamGridDB : récupérée du compte (nouveau poste, ou changée ailleurs). À la première
+    /// synchro, celle de ce poste est envoyée si le compte n'en a pas. Rend vrai si ce poste a une clé.
+    pub fn sync_steamgriddb(&self, first: bool) -> Result<bool, String> {
+        let local = crate::accounts::steamgriddb_key();
+        let token = crate::accounts::secret(VAULT_KEY).ok_or("Ce poste n'est pas connecté au compte.")?;
+        match call("GET", "/secrets/steamgriddb", Some(&token), None) {
+            Ok(v) => {
+                let remote = v["value"].as_str().unwrap_or("").trim();
+                if !remote.is_empty() && local.as_deref() != Some(remote) && crate::accounts::set_steamgriddb_key(remote).is_ok() {
+                    log::info!("compte Hangar : clé SteamGridDB récupérée du compte");
+                    return Ok(true);
+                }
+                Ok(local.is_some())
+            }
+            Err(CallError::Status(404)) => {
+                if let (true, Some(k)) = (first, &local) {
+                    let _ = call("PUT", "/secrets/steamgriddb", Some(&token), Some(&json!({ "value": k })));
+                }
+                Ok(local.is_some())
+            }
+            Err(CallError::Unauthorized) => {
+                self.forget();
+                Err(CallError::Unauthorized.message())
+            }
+            Err(e) => Err(e.message()),
+        }
+    }
+
+    /// Clé SteamGridDB saisie, changée ou retirée ici : le compte suit (au mieux ; hors ligne, rien).
+    pub fn share_steamgriddb(&self, key: &str) {
+        let Some(token) = crate::accounts::secret(VAULT_KEY) else { return };
+        let res = if key.is_empty() {
+            call("DELETE", "/secrets/steamgriddb", Some(&token), None)
+        } else {
+            call("PUT", "/secrets/steamgriddb", Some(&token), Some(&json!({ "value": key })))
+        };
+        if res.is_err() {
+            log::warn!("compte Hangar : clé SteamGridDB pas envoyée au compte");
+        }
+    }
+
     pub fn rename_device(&self, id: &str, name: &str) -> Result<Status, String> {
         let name = name.trim();
         if !is_hex32(id) || name.is_empty() || name.chars().count() > 60 {
@@ -455,6 +554,21 @@ mod tests {
         let vers = |end: &str| format!("Location: {}/login/{end}\r\n", api());
         assert!(mauvais.starts_with("HTTP/1.1 302") && mauvais.contains(&vers("refused")));
         assert!(bon.starts_with("HTTP/1.1 302") && bon.contains(&vers("done")));
+    }
+
+    #[test]
+    fn page_recue() {
+        let v = json!({ "cursor": 7, "more": false, "changes": [
+            { "key": "fav:steam:1", "value": "true", "updatedAt": 5, "deviceId": "d" },
+            { "key": "rename:steam:2", "value": null, "updatedAt": 6, "deviceId": "d" }
+        ]});
+        let p: Page = serde_json::from_value(v).unwrap();
+        assert_eq!(p.cursor, 7);
+        assert_eq!(p.changes[0].value.as_deref(), Some("true"));
+        assert_eq!(p.changes[1].value, None);
+        let back = serde_json::to_value(&p.changes[1]).unwrap();
+        assert_eq!(back["updatedAt"], 6);
+        assert!(back["value"].is_null());
     }
 
     #[test]

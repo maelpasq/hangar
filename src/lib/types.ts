@@ -56,6 +56,9 @@ export interface Game {
   updateBytes?: number | null;
   /** Page où retrouver le jeu, trouvée au scan (jeux hors store, `https://` seulement). */
   installUrl?: string;
+  /** Jeu local ou manuel du compte Hangar, introuvable sur ce PC (carte en gris « Sur un autre PC »).
+   * Créé par le frontend seulement, jamais envoyé au backend. */
+  elsewhere?: boolean;
 }
 
 /**
@@ -198,6 +201,30 @@ export interface PersistedState {
   /** Version de Hangar dont les notes ont été vues (null : inconnue, avant la 1.2.24). */
   lastVersion: string | null;
   prefs: Prefs;
+  /** Synchro avec le compte Hangar (propre à ce poste, jamais synchronisé). */
+  cloud: CloudSync;
+}
+
+/** État de la synchro sur ce poste (docs/COMPTE.md, section 6). */
+export interface CloudSync {
+  /** Curseur du serveur : changements déjà récupérés. */
+  cursor: number;
+  /** Éléments modifiés ici et pas encore envoyés (file hors ligne). */
+  dirty: string[];
+  /** Première synchro faite avec le compte connecté (sinon : fusion à proposer). */
+  merged: boolean;
+  /** Jeux « Sur un autre PC » masqués sur ce poste seulement. */
+  hiddenHere: string[];
+  /** Jeu ajouté ici à la place d'un jeu du compte (« J'ai déjà ce jeu ») -> signature de ce jeu. */
+  aliases: Record<string, { exe: string; dir: string }>;
+}
+
+/** Un élément synchronisé, tel que l'API le donne et le reçoit (value null : supprimé). */
+export interface CloudChange {
+  key: string;
+  value: string | null;
+  updatedAt: number;
+  deviceId?: string;
 }
 
 /** Images trouvées automatiquement par le backend (sources multiples). */

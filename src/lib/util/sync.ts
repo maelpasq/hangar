@@ -35,6 +35,8 @@ export function linkDomain(url: string): string {
 }
 
 const isPathId = (id: string) => id.startsWith('local:') || id.startsWith('manual:');
+/** Jeu du compte introuvable sur ce poste : son identifiant est sa signature (« @celeste.exe|celeste »). */
+export const isGhostId = (id: string) => id.startsWith('@');
 const base = (p: string) => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop()!.toLowerCase();
 
 /** Signature portable d'un jeu local ou manuel : nom de l'exécutable et nom de son dossier. */
@@ -50,6 +52,7 @@ export function signature(g: Game): { exe: string; dir: string } | null {
  * scan (registre, raccourci Internet), sinon la page Steam si le jeu y a été reconnu.
  */
 export function installLink(s: PersistedState, g: Game): string | null {
+  if (isGhostId(g.id)) return s.portable[g.id]?.installUrl ?? null;
   if (!isPathId(g.id)) return null;
   const own = s.installLinks[g.id];
   if (own !== undefined) return own ? httpsLink(own) : null;
@@ -60,7 +63,9 @@ export function installLink(s: PersistedState, g: Game): string | null {
 
 /** Fiche portable à jour d'un jeu local ou manuel (null : pas de signature possible). */
 export function portableOf(s: PersistedState, g: Game): PortableGame | null {
-  const sig = signature(g);
+  // Rattaché à la main à un jeu du compte (« J'ai déjà ce jeu ») : il en garde la signature.
+  const alias = isPathId(g.id) ? s.cloud.aliases[g.id] : undefined;
+  const sig = alias ? { ...alias } : signature(g);
   if (!sig) return null;
   const fiche: PortableGame = { name: g.name, ...sig };
   const appid = g.steamAppId || s.steamIdCache[g.id];
@@ -120,9 +125,14 @@ export function syncEntries(s: PersistedState): Map<string, string> {
  */
 export function stampChanges(s: PersistedState, prev: Map<string, string> | null, now = Date.now()): Map<string, string> {
   const cur = syncEntries(s);
+  const changed: string[] = [];
   for (const [key, value] of cur) {
-    if (prev ? prev.get(key) !== value : s.stamps[key] === undefined) s.stamps[key] = now;
+    if (prev ? prev.get(key) !== value : s.stamps[key] === undefined) changed.push(key);
   }
-  if (prev) for (const key of prev.keys()) if (!cur.has(key)) s.stamps[key] = now;
+  if (prev) for (const key of prev.keys()) if (!cur.has(key)) changed.push(key);
+  for (const key of changed) s.stamps[key] = now;
+  // File d'envoi vers le compte, gardée hors ligne. Sans compte synchronisé, rien : la première
+  // synchro prend de toute façon tout.
+  if (changed.length && s.cloud.merged) s.cloud.dirty = [...new Set([...s.cloud.dirty, ...changed])];
   return cur;
 }

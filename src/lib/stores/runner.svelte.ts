@@ -2,6 +2,7 @@
 
 import { rescan, showLauncher } from '../actions';
 import { api } from '../api';
+import { playElsewhere } from '../ghosts';
 import type { LaunchEvent, LauncherPrompt } from '../types';
 import { elapsed } from '../util/format';
 import { isLinux, isMac } from '../util/platform';
@@ -79,6 +80,7 @@ class Runner {
   async play(gameId: string): Promise<void> {
     const g = library.get(gameId);
     if (!g) return;
+    if (g.elsewhere) return playElsewhere(gameId);
     if (g.notInstalled) return this.install(gameId);
     if (this.isRunning(gameId)) {
       // Mode manette : on revient sur le jeu. Ailleurs : sa fiche (état et bouton Arrêter).

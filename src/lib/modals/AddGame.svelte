@@ -6,8 +6,7 @@
   import Modal from '../components/Modal.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
-  import type { Game } from '../types';
-  import { nameFromPath, parentDir } from '../util/games';
+  import { manualGameFrom, nameFromPath } from '../util/games';
 
   let path = $state('');
   let name = $state('');
@@ -26,19 +25,7 @@
   function add(e: SubmitEvent) {
     e.preventDefault();
     if (!path || !name.trim()) return;
-    const dir = parentDir(path);
-    const g: Game = {
-      id: `manual:${path.toLowerCase()}`,
-      name: name.trim(),
-      store: 'manual',
-      installDir: dir,
-      launch: { kind: 'exe', target: path, args: args.trim(), cwd: dir },
-      launcherName: "l'exécutable du jeu",
-      steamAppId: null,
-      exePath: path.toLowerCase().endsWith('.exe') ? path : null,
-      processNames: [],
-      genre: null
-    };
+    const g = manualGameFrom(path, name, args);
     library.addManual(g);
     close();
     ui.toast(`${g.name} ajouté à ta bibliothèque`, { gameId: g.id });

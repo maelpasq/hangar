@@ -196,6 +196,7 @@ impl Http {
 /// comptes de l'app installée).
 static VAULT: std::sync::OnceLock<&'static str> = std::sync::OnceLock::new();
 
+/// Le premier nom donné gagne (main.rs le fixe avant le setup).
 pub fn set_vault(name: &'static str) {
     let _ = VAULT.set(name);
 }

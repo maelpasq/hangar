@@ -2,6 +2,7 @@
   // Menu contextuel d'un jeu (clic droit).
   import { onMount } from 'svelte';
   import { hideGame, openFolder, uninstallGame, updateGame } from '../actions';
+  import { attachElsewhere, elsewhereLabel, hideElsewhere } from '../ghosts';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -27,7 +28,25 @@
   const game = $derived(library.get(gameId));
   const fav = $derived(library.isFav(gameId));
 
-  const items = $derived<{ label: string; icon: IconName; run: () => void; danger?: boolean; disabled?: boolean }[]>([
+  type Item = { label: string; icon: IconName; run: () => void; danger?: boolean; disabled?: boolean };
+  /** Jeu du compte Hangar introuvable sur ce PC : l'installer, le rattacher, le masquer ici. */
+  const elsewhereItems = $derived<Item[]>(
+    game?.elsewhere
+      ? [
+          { label: elsewhereLabel(gameId), icon: game.installUrl ? 'globe' : 'folder', run: () => runner.play(gameId) },
+          ...(game.installUrl
+            ? [{ label: "J'ai déjà ce jeu : choisir l'exécutable", icon: 'folder' as const, run: () => attachElsewhere(gameId) }]
+            : []),
+          { label: fav ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: 'star', run: () => library.toggleFav(gameId) },
+          { label: 'Collections', icon: 'layers', run: () => { ui.modal = { kind: 'collections', gameId }; } },
+          { label: 'Renommer', icon: 'edit', run: () => { ui.modal = { kind: 'rename', gameId }; } },
+          { label: 'Changer la jaquette', icon: 'image', run: () => { ui.modal = { kind: 'cover', gameId }; } },
+          { label: 'Masquer sur ce PC', icon: 'eyeOff', run: () => hideElsewhere(gameId), danger: true }
+        ]
+      : []
+  );
+
+  const items = $derived<Item[]>(game?.elsewhere ? elsewhereItems : [
     game?.notInstalled
       ? { label: 'Installer', icon: 'download', run: () => runner.play(gameId) }
       : { label: runner.isRunning(gameId) ? 'En cours' : 'Jouer', icon: 'play', run: () => runner.play(gameId) },

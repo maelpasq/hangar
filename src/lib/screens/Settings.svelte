@@ -55,7 +55,22 @@
   void accounts.refresh();
 
   const connectedCount = $derived(accounts.list.filter((a) => a.connected).length);
-  const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
+  const hidden = $derived([
+    ...library.all.filter((g) => library.state.hidden.includes(g.id)),
+    // Jeux du compte masqués sur ce PC seulement.
+    ...library.ghosts.filter((g) => library.state.cloud.hiddenHere.includes(g.id) && !library.state.hidden.includes(g.id))
+  ]);
+  const syncHint = $derived(
+    cloud.syncState === 'syncing'
+      ? 'Synchronisation en cours...'
+      : cloud.syncState === 'offline'
+        ? 'Hors ligne : tes changements partiront au retour du réseau.'
+        : cloud.syncState === 'error'
+          ? 'Le serveur du compte a refusé, nouvel essai dans quelques minutes.'
+          : cloud.lastSync
+            ? `À jour (${new Date(cloud.lastSync).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})`
+            : 'À jour'
+  );
   // Les launchers où l'on peut relier un compte en premier, puis l'ordre habituel (tri stable).
   const stores = $derived(
     STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0).sort(
@@ -294,9 +309,19 @@
                   {#if s.offline}<span class="tag off">Hors ligne</span>{:else}<span class="tag ok">Connecté</span>{/if}
                   <button class="btn-s" onclick={() => cloud.logout()}>Se déconnecter</button>
                 </div>
+                <div class="srow">
+                  <span class="ico"><Icon name="refresh" size={18} /></span>
+                  <span class="txt">
+                    <span class="lbl">Synchronisation</span>
+                    <span class="hint" aria-live="polite">{syncHint}</span>
+                  </span>
+                  <button class="btn-s" disabled={cloud.syncState === 'syncing'} onclick={() => cloud.sync()}
+                    >Synchroniser maintenant</button
+                  >
+                </div>
                 <p class="gdesc">
-                  La synchronisation de tes favoris, collections et réglages entre tes PC arrive dans une prochaine
-                  version. Se déconnecter garde tout sur ce PC.
+                  Tes favoris, collections, renommages, jaquettes Steam, jeux ajoutés à la main et réglages
+                  d'apparence suivent ton compte sur tous tes PC. Se déconnecter garde tout sur ce PC.
                 </p>
               </section>
 

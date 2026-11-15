@@ -25,6 +25,8 @@
   import Rename from './lib/modals/Rename.svelte';
   import BugReport from './lib/modals/BugReport.svelte';
   import CloseAsk from './lib/modals/CloseAsk.svelte';
+  import CloudMerge from './lib/modals/CloudMerge.svelte';
+  import { cloud } from './lib/stores/cloud.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import StartPage from './lib/modals/StartPage.svelte';
@@ -186,6 +188,8 @@
         if (!ui.modal && library.state.prefs.padAtLogin && (await api.padAtLogin().catch(() => false))) ui.big = true;
         else await whatsNew();
       }
+      // Compte Hangar : synchro une fois la bibliothèque chargée.
+      if (!library.loadError) offs.push(cloud.start());
       await rescan();
       void updater.check(true);
     })();
@@ -308,6 +312,8 @@
     <WhatsNew version={ui.modal.version} since={ui.modal.since} manual={ui.modal.manual === true} />
   {:else if ui.modal?.kind === 'closeAsk'}
     <CloseAsk />
+  {:else if ui.modal?.kind === 'cloudMerge'}
+    <CloudMerge resolve={ui.modal.resolve} />
   {:else if ui.modal?.kind === 'padSetup'}
     <PadSetup />
   {:else if ui.modal?.kind === 'collections' && modalGame}
