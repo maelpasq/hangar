@@ -22,7 +22,7 @@
   import type { AccountStatus, CloseAction, Prefs, StartPage, StoreId, Theme } from '../types';
   import { plural, relativeDay } from '../util/format';
   import { isLinux, isMac } from '../util/platform';
-  import { RELEASES } from '../util/release-notes';
+  import { RELEASES, notesBetween } from '../util/release-notes';
 
   type SectionId = 'general' | 'appearance' | 'pad' | 'launchers' | 'library' | 'covers';
 
@@ -321,7 +321,7 @@
                   <span class="lbl">Hangar {version}</span>
                   <span class="hint" aria-live="polite">{updater.label}</span>
                 </span>
-                {#if version && RELEASES.some((r) => r.version === version)}
+                {#if version && notesBetween(RELEASES, null, version).length}
                   <button class="btn-s" onclick={() => (ui.modal = { kind: 'whatsNew', version, since: null, manual: true })}
                     >Nouveautés</button
                   >
