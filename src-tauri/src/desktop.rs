@@ -2,7 +2,7 @@
 //! natif au clic droit), fermeture dans la zone plutôt que quitter, raccourci global.
 
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -10,8 +10,27 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-/// Fermer la fenêtre la cache dans la zone de notification (réglage, vrai par défaut).
-pub static CLOSE_TO_TRAY: AtomicBool = AtomicBool::new(true);
+/// Fermeture de la fenêtre : demander, cacher dans la zone de notification ou quitter.
+/// Quitter tant que le frontend n'a pas donné le réglage (sinon fermer ne ferait rien).
+static CLOSE_MODE: AtomicU8 = AtomicU8::new(CloseMode::Quit as u8);
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CloseMode {
+    Ask = 0,
+    Tray = 1,
+    Quit = 2,
+}
+
+impl CloseMode {
+    /// Réglage du frontend : `ask`, `tray` ou `quit` (inconnu : demander).
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "tray" => Self::Tray,
+            "quit" => Self::Quit,
+            _ => Self::Ask,
+        }
+    }
+}
 /// Dernière fois que le menu s'est caché en perdant le focus (ms) : un clic sur l'icône
 /// juste après sert à le fermer, pas à le rouvrir.
 static MENU_BLUR_MS: AtomicU64 = AtomicU64::new(0);
@@ -97,19 +116,22 @@ pub fn quit(app: &AppHandle) {
     });
 }
 
-/// Fermeture de la fenêtre principale : cachée dans la zone de notification si le réglage
-/// est actif, sinon vraie fermeture (après la sortie du plein écran, même raison que `quit`).
+/// Fermeture de la fenêtre principale selon le réglage : question posée par le frontend
+/// (`main://close-ask`), cachée dans la zone de notification, ou vraie fermeture par `quit`
+/// (sortie du plein écran, et l'app quitte même si la fenêtre du menu de l'icône existe).
 pub fn on_close_requested(w: &tauri::Window, api: &tauri::CloseRequestApi) {
     if w.label() != "main" {
         return;
     }
     let app = w.app_handle();
-    if close_to_tray() {
-        api.prevent_close();
-        hide_main(app);
-    } else if main_window(app).is_some_and(|m| m.is_fullscreen().unwrap_or(false)) {
-        api.prevent_close();
-        quit(app);
+    api.prevent_close();
+    match close_mode() {
+        CloseMode::Ask => {
+            show_main(app);
+            let _ = app.emit_to("main", "main://close-ask", ());
+        }
+        CloseMode::Tray => hide_main(app),
+        CloseMode::Quit => quit(app),
     }
 }
 
@@ -358,17 +380,29 @@ pub fn set_shortcut(app: &AppHandle, on: bool) -> bool {
     }
 }
 
-pub fn set_close_to_tray(on: bool) {
-    CLOSE_TO_TRAY.store(on, Ordering::Relaxed);
+pub fn set_close_mode(mode: CloseMode) {
+    CLOSE_MODE.store(mode as u8, Ordering::Relaxed);
 }
 
-pub fn close_to_tray() -> bool {
-    CLOSE_TO_TRAY.load(Ordering::Relaxed)
+pub fn close_mode() -> CloseMode {
+    match CLOSE_MODE.load(Ordering::Relaxed) {
+        0 => CloseMode::Ask,
+        1 => CloseMode::Tray,
+        _ => CloseMode::Quit,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mode_de_fermeture() {
+        assert_eq!(CloseMode::parse("tray"), CloseMode::Tray);
+        assert_eq!(CloseMode::parse("quit"), CloseMode::Quit);
+        assert_eq!(CloseMode::parse("ask"), CloseMode::Ask);
+        assert_eq!(CloseMode::parse("?"), CloseMode::Ask);
+    }
 
     #[test]
     fn position_du_menu() {

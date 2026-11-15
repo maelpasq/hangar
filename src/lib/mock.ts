@@ -250,6 +250,8 @@ export function mockApi(): Api {
     }),
     trayAction: async () => {},
     onMainHidden: async () => () => {},
+    onCloseAsk: async () => () => {},
+    closeMain: async () => {},
     setPresence: async () => {},
     onTrayLaunch: async () => () => {},
     onPadGuide: async () => () => {},

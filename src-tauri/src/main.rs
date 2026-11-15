@@ -79,7 +79,7 @@ fn main() {
         )
         .plugin(tauri_plugin_process::init())
         .plugin(desktop::shortcut_plugin())
-        // Fermer la fenêtre principale la cache dans la zone de notification (si activé).
+        // Fermer la fenêtre principale : question, zone de notification ou quitter (réglage).
         .on_window_event(|w, e| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = e {
                 desktop::on_close_requested(w, api);
@@ -106,7 +106,7 @@ fn main() {
                 if let Err(e) = app.autolaunch().disable() {
                     log::warn!("démarrage automatique : {e}");
                 }
-                desktop::set_close_to_tray(false);
+                desktop::set_close_mode(desktop::CloseMode::Quit);
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.unminimize();
                     let _ = w.show();
@@ -204,6 +204,7 @@ fn main() {
             commands::uninstall_game,
             commands::update_game,
             commands::set_desktop,
+            commands::close_main,
             commands::pad_back,
             commands::game_bar_on_button,
             commands::set_tray_recents,

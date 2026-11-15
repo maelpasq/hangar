@@ -74,9 +74,14 @@ describe('état persistant', () => {
     expect(normalizeState({ version: 1, prefs: { showUninstalled: false } }).prefs.showUninstalled).toBe(false);
   });
 
-  it('bureau : zone de notification et raccourci par défaut, Discord coupé', () => {
+  it('bureau : fermeture demandée et raccourci par défaut, Discord coupé', () => {
     const p = normalizeState({ version: 1, prefs: {} }).prefs;
-    expect([p.closeToTray, p.globalShortcut, p.discordPresence]).toEqual([true, true, false]);
+    expect([p.closeAction, p.globalShortcut, p.discordPresence]).toEqual(['ask', true, false]);
+    // Ancien réglage : activé d'office, il ne compte pas ; désactivé, il veut dire quitter.
+    expect(normalizeState({ version: 1, prefs: { closeToTray: true } }).prefs.closeAction).toBe('ask');
+    expect(normalizeState({ version: 1, prefs: { closeToTray: false } }).prefs.closeAction).toBe('quit');
+    expect(normalizeState({ version: 1, prefs: { closeAction: 'tray' } }).prefs.closeAction).toBe('tray');
+    expect(normalizeState({ version: 1, prefs: { closeAction: 'x' } }).prefs.closeAction).toBe('ask');
     expect(normalizeState({ version: 1, prefs: { discordPresence: true } }).prefs.discordPresence).toBe(true);
   });
 

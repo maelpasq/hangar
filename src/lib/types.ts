@@ -79,8 +79,8 @@ export interface Prefs {
   steamGridDb: boolean;
   /** Onglet Jeux web. null : pas encore demandé (première ouverture ou mise à jour). */
   webGames: boolean | null;
-  /** Fermer la fenêtre la cache dans la zone de notification au lieu de quitter. */
-  closeToTray: boolean;
+  /** Fermer la fenêtre : demander (par défaut), la cacher dans la zone de notification, ou quitter. */
+  closeAction: CloseAction;
   /** Raccourci global (Ctrl+Alt+H) pour afficher ou cacher Hangar. */
   globalShortcut: boolean;
   /** « Joue à ... » sur Discord pendant une partie (désactivé par défaut : visible des amis). */
@@ -90,6 +90,9 @@ export interface Prefs {
   /** Onglet ouvert au démarrage. null : pas encore demandé (première ouverture ou mise à jour). */
   startPage: StartPage | null;
 }
+
+/** Ce que fait la fermeture de la fenêtre principale. */
+export type CloseAction = 'ask' | 'tray' | 'quit';
 
 /** Liste de jeux faite par l'utilisateur (« Avec les potes », « À finir »...). */
 export interface Collection {

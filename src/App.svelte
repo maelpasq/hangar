@@ -23,6 +23,7 @@
   import InstallDir from './lib/modals/InstallDir.svelte';
   import Rename from './lib/modals/Rename.svelte';
   import BugReport from './lib/modals/BugReport.svelte';
+  import CloseAsk from './lib/modals/CloseAsk.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import StartPage from './lib/modals/StartPage.svelte';
@@ -87,9 +88,9 @@
 
   // Bureau : fermeture dans la zone de notification et raccourci global.
   $effect(() => {
-    const { closeToTray, globalShortcut, padButton } = library.state.prefs;
+    const { closeAction, globalShortcut, padButton } = library.state.prefs;
     api
-      .setDesktop(closeToTray, globalShortcut, padButton)
+      .setDesktop(closeAction, globalShortcut, padButton)
       .then((d) => {
         ui.desktop = d;
       })
@@ -164,6 +165,7 @@
         }),
         // Fenêtre cachée (fermeture, raccourci) : le backend a quitté le plein écran.
         api.onMainHidden(() => (ui.big = false)),
+        api.onCloseAsk(() => (ui.modal = { kind: 'closeAsk' })),
         api.onWebClosed((id) => runner.webClosed(id))
       ]);
       for (const l of listeners) {
@@ -299,6 +301,8 @@
     <StartPage />
   {:else if ui.modal?.kind === 'whatsNew'}
     <WhatsNew version={ui.modal.version} since={ui.modal.since} manual={ui.modal.manual === true} />
+  {:else if ui.modal?.kind === 'closeAsk'}
+    <CloseAsk />
   {:else if ui.modal?.kind === 'padSetup'}
     <PadSetup />
   {:else if ui.modal?.kind === 'collections' && modalGame}

@@ -197,16 +197,27 @@ pub struct DesktopInfo {
     shortcut_ok: bool,
 }
 
-/// Réglages du bureau : fermeture dans la zone de notification, raccourci global, bouton
-/// de la manette (mode manette activé).
+/// Réglages du bureau : fermeture de la fenêtre (`ask`, `tray`, `quit`), raccourci global,
+/// bouton de la manette (mode manette activé).
 #[tauri::command]
-pub fn set_desktop(app: AppHandle, close_to_tray: bool, global_shortcut: bool, pad_button: bool) -> DesktopInfo {
-    crate::desktop::set_close_to_tray(close_to_tray);
+pub fn set_desktop(app: AppHandle, close_action: String, global_shortcut: bool, pad_button: bool) -> DesktopInfo {
+    crate::desktop::set_close_mode(crate::desktop::CloseMode::parse(&close_action));
     crate::guide::set_enabled(pad_button);
     DesktopInfo {
         presence_available: !crate::presence::CLIENT_ID.is_empty(),
         shortcut: crate::desktop::SHORTCUT_LABEL,
         shortcut_ok: crate::desktop::set_shortcut(&app, global_shortcut),
+    }
+}
+
+/// Réponse à la question posée en fermant la fenêtre : quitter Hangar, ou le garder en
+/// arrière-plan (fenêtre cachée, icône dans la zone de notification).
+#[tauri::command]
+pub fn close_main(app: AppHandle, quit: bool) {
+    if quit {
+        crate::desktop::quit(&app);
+    } else {
+        crate::desktop::hide_main(&app);
     }
 }
 

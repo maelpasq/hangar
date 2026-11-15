@@ -19,7 +19,7 @@
   import { updater } from '../stores/update.svelte';
   import { runner } from '../stores/runner.svelte';
   import { startPages } from '../start-page';
-  import type { AccountStatus, Prefs, StartPage, StoreId, Theme } from '../types';
+  import type { AccountStatus, CloseAction, Prefs, StartPage, StoreId, Theme } from '../types';
   import { plural, relativeDay } from '../util/format';
   import { isLinux, isMac } from '../util/platform';
   import { RELEASES } from '../util/release-notes';
@@ -73,7 +73,7 @@
 
   // ─── Réglages simples ───
 
-  type BoolPref = Exclude<keyof Prefs, 'steamGridDb' | 'webGames' | 'startPage'>;
+  type BoolPref = Exclude<keyof Prefs, 'steamGridDb' | 'webGames' | 'startPage' | 'closeAction'>;
 
   async function setPref(key: BoolPref, on: boolean) {
     library.state.prefs[key] = on;
@@ -104,6 +104,17 @@
 
   function setStartPage(p: StartPage) {
     library.state.prefs.startPage = p;
+    library.save();
+  }
+
+  const closeOptions: { value: CloseAction; label: string }[] = [
+    { value: 'ask', label: 'Demander' },
+    { value: 'tray', label: 'Garder en arrière-plan' },
+    { value: 'quit', label: 'Quitter Hangar' }
+  ];
+
+  function setCloseAction(a: CloseAction) {
+    library.state.prefs.closeAction = a;
     library.save();
   }
 
@@ -252,11 +263,14 @@
 
             <section class="group" aria-label="Bureau">
               <h3>Bureau</h3>
-              {@render toggleRow(
-                'closeToTray',
-                `Garder Hangar dans ${tray}`,
-                `Fermer la fenêtre la cache ; ses jeux récents restent dans ${tray}. « Quitter Hangar » dans son menu ferme vraiment l'app.`
-              )}
+              <div class="srow">
+                <span class="txt"
+                  ><span class="lbl">En fermant la fenêtre</span><span class="hint"
+                    >En arrière-plan, Hangar reste dans {tray} avec tes jeux récents ; « Quitter Hangar » dans son menu ferme vraiment l'app.</span
+                  ></span
+                >
+                <Dropdown label="En fermant la fenêtre" bind:value={() => library.state.prefs.closeAction, setCloseAction} options={closeOptions} />
+              </div>
               {@render toggleRow(
                 'globalShortcut',
                 `Raccourci ${ui.desktop?.shortcut ?? 'Ctrl+Alt+H'}`,

@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -39,8 +39,8 @@ export interface Api {
   uninstallGame(gameId: string): Promise<string>;
   /** Ouvre les mises à jour d'un jeu dans son launcher ; renvoie le message à afficher. */
   updateGame(gameId: string): Promise<string>;
-  /** Fermeture dans la zone de notification et raccourci global. */
-  setDesktop(closeToTray: boolean, globalShortcut: boolean, padButton: boolean): Promise<DesktopInfo>;
+  /** Fermeture de la fenêtre (demander, zone de notification, quitter) et raccourci global. */
+  setDesktop(closeAction: CloseAction, globalShortcut: boolean, padButton: boolean): Promise<DesktopInfo>;
   /** Mode manette fermé : Hangar retourne là où il était si le bouton Xbox l'avait ramené (`restore`). */
   padBack(restore: boolean): Promise<void>;
   /** La Game Bar de Windows s'ouvre avec le bouton Xbox (faux hors Windows). */
@@ -53,6 +53,10 @@ export interface Api {
   trayAction(action: string): Promise<void>;
   /** La fenêtre principale a été cachée (fermeture, raccourci) : le mode manette se ferme. */
   onMainHidden(cb: () => void): Promise<() => void>;
+  /** Fenêtre fermée alors que le réglage est « Demander » : Hangar pose la question. */
+  onCloseAsk(cb: () => void): Promise<() => void>;
+  /** Réponse à la question : quitter Hangar, ou cacher la fenêtre (arrière-plan). */
+  closeMain(quit: boolean): Promise<void>;
   /** Discord : jeu en cours (début en ms) ou null pour effacer. */
   setPresence(gameId: string | null, start: number): Promise<void>;
   /** Un jeu a été choisi dans le menu de l'icône. */
@@ -145,13 +149,15 @@ async function tauriApi(): Promise<Api> {
     showLaunchers: () => invoke('show_launchers'),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
     updateGame: (gameId) => invoke('update_game', { gameId }),
-    setDesktop: (closeToTray, globalShortcut, padButton) => invoke('set_desktop', { closeToTray, globalShortcut, padButton }),
+    setDesktop: (closeAction, globalShortcut, padButton) => invoke('set_desktop', { closeAction, globalShortcut, padButton }),
     padBack: (restore) => invoke('pad_back', { restore }),
     gameBarOnButton: () => invoke('game_bar_on_button'),
     setTrayRecents: (games, theme, accent) => invoke('set_tray_recents', { games, theme, accent }),
     trayState: () => invoke('tray_state'),
     trayAction: (action) => invoke('tray_action', { action }),
     onMainHidden: (cb) => on<null>('main://hidden', () => cb()),
+    onCloseAsk: (cb) => on<null>('main://close-ask', () => cb()),
+    closeMain: (quit) => invoke('close_main', { quit }),
     setPresence: (gameId, start) => invoke('set_presence', { gameId, start: Math.max(0, Math.round(start)) }),
     onTrayLaunch: (cb) => on<string>('tray://launch', cb),
     onPadGuide: (cb) => on<string>('pad://guide', (w) => cb(w === 'close' ? 'close' : 'open')),
