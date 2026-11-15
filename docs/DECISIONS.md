@@ -301,3 +301,7 @@ Connexion avec l'application Microsoft de Hangar (`XboxLive.signin offline_acces
 ## Correctifs au 4e chiffre (15 nov. 2026)
 
 Demande de l'utilisateur : une correction de bug sans patch note prend un 4e chiffre (1.2.27.1) au lieu du `patch` suivant, et l'app montre les notes de sa version de base. Semver (Tauri, Cargo, la mise à jour) n'a que trois nombres : le numéro technique est `1.2.27+1`, classé au-dessus de 1.2.27 par la comparaison du crate semver (métadonnée de build comprise), donc reçu aussi par les versions déjà installées. Le frontend l'affiche `1.2.27.1` (`displayVersion` dans `api.appVersion` et `checkUpdate`), ce qui suffit à `notesBetween` et à la fenêtre de notes. tauri-action ne renomme pas le « + » des noms de fichiers. Une version prérelease (`1.2.27-1`) aurait été classée sous 1.2.27 : écartée.
+
+## Mode manette : revenir sur un jeu en cours
+
+Un jeu en cours porte une pastille « En jeu · mm:ss » et un liseré vert sur sa jaquette ; le bas de l'écran affiche « Revenir au jeu ». A (ou un clic) appelle `focus_game` : parmi les fenêtres visibles des processus suivis du jeu, la plus grande fenêtre titrée (surface d'avant réduction si elle est réduite) est restaurée et passée au premier plan, ce que Windows permet puisque Hangar est devant. Fenêtre introuvable : message qui renvoie à Alt+Tab. Hors Windows, pas encore de retour au jeu (seulement le message). Hors mode manette, un jeu en cours ouvre toujours sa fiche.

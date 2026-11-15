@@ -246,6 +246,7 @@ export function mockApi(): Api {
       const session: Session | null = r.start ? { gameId, start: r.start, end: Date.now() } : null;
       emit({ type: 'ended', gameId, session });
     },
+    focusGame: async (gameId) => running.has(gameId),
     showLaunchers: async () => false,
     openFolder: async () => {},
     uninstallGame: async (id) => `Démo : désinstallation de ${id} en cours…`,

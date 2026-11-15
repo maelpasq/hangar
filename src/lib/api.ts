@@ -34,6 +34,8 @@ export interface Api {
   /** Affiche la page des téléchargements de Steam. */
   showSteamDownloads(): Promise<void>;
   stopGame(gameId: string): Promise<void>;
+  /** Ramène la fenêtre d'un jeu en cours au premier plan ; faux si elle est introuvable. */
+  focusGame(gameId: string): Promise<boolean>;
   /** Réaffiche les fenêtres de launcher cachées par Hangar ; faux s'il n'y en avait aucune. */
   showLaunchers(): Promise<boolean>;
   /** Ouvre la désinstallation d'un jeu dans son launcher ; renvoie le message à afficher. */
@@ -154,6 +156,7 @@ async function tauriApi(): Promise<Api> {
     steamDownloads: () => invoke('steam_downloads'),
     showSteamDownloads: () => invoke('show_steam_downloads'),
     stopGame: (gameId) => invoke('stop_game', { gameId }),
+    focusGame: (gameId) => invoke('focus_game', { gameId }),
     showLaunchers: () => invoke('show_launchers'),
     uninstallGame: (gameId) => invoke('uninstall_game', { gameId }),
     updateGame: (gameId) => invoke('update_game', { gameId }),

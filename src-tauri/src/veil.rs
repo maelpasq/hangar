@@ -114,6 +114,22 @@ pub fn lift() -> bool {
     !hidden.is_empty() || !prompts.is_empty()
 }
 
+/// Ramène au premier plan la fenêtre d'un jeu en cours : la plus grande fenêtre titrée de ses
+/// processus, restaurée si elle est réduite. Faux si aucune n'est trouvée.
+pub fn bring_front(pids: &[u32]) -> bool {
+    let best = win::visible_windows()
+        .into_iter()
+        .filter(|&(h, pid)| pids.contains(&pid) && !win::title(h).is_empty())
+        .max_by_key(|&(h, _)| win::area(h));
+    match best {
+        Some((h, _)) => {
+            win::restore_front(h);
+            true
+        }
+        None => false,
+    }
+}
+
 /// Réponse à une question posée dans Hangar : `show` montre la boîte du launcher au-dessus de
 /// Hangar (le choix se fait dedans), sinon elle est fermée, ce qui l'annule.
 pub fn answer(hwnd: i64, show: bool) -> Result<(), String> {
@@ -218,9 +234,10 @@ fn check_hidden(
 mod win {
     use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, RECT};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        EnumWindows, GetForegroundWindow, GetSystemMetrics, GetWindowRect, GetWindowThreadProcessId,
-        InternalGetWindowText, IsWindow, IsWindowVisible, PostMessageW, SetForegroundWindow, SetWindowPos, ShowWindow,
-        SM_CXSCREEN, SM_CYSCREEN, SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE, SW_SHOW, WM_CLOSE,
+        EnumWindows, GetForegroundWindow, GetSystemMetrics, GetWindowPlacement, GetWindowRect,
+        GetWindowThreadProcessId, InternalGetWindowText, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
+        SetForegroundWindow, SetWindowPos, ShowWindow, SM_CXSCREEN, SM_CYSCREEN, SWP_NOACTIVATE, SWP_NOSIZE,
+        SWP_NOZORDER, SW_HIDE, SW_RESTORE, SW_SHOW, WINDOWPLACEMENT, WM_CLOSE,
     };
 
     /// Fenêtres de premier niveau visibles : (HWND, pid).
@@ -277,6 +294,38 @@ mod win {
         unsafe { SetForegroundWindow(h as HWND) };
     }
 
+    /// Surface de la fenêtre ; celle d'avant la réduction pour une fenêtre réduite.
+    pub fn area(h: isize) -> i64 {
+        // SAFETY : la structure vit pendant l'appel, sa taille est renseignée.
+        let r = unsafe {
+            if IsIconic(h as HWND) != 0 {
+                let mut p: WINDOWPLACEMENT = std::mem::zeroed();
+                p.length = std::mem::size_of::<WINDOWPLACEMENT>() as u32;
+                if GetWindowPlacement(h as HWND, &mut p) == 0 {
+                    return 0;
+                }
+                p.rcNormalPosition
+            } else {
+                match rect(h) {
+                    Some(r) => r,
+                    None => return 0,
+                }
+            }
+        };
+        i64::from(r.right - r.left) * i64::from(r.bottom - r.top)
+    }
+
+    /// Restaure la fenêtre si elle est réduite et la passe au premier plan.
+    pub fn restore_front(h: isize) {
+        // SAFETY : un HWND fermé est refusé par Windows sans effet.
+        unsafe {
+            if IsIconic(h as HWND) != 0 {
+                ShowWindow(h as HWND, SW_RESTORE);
+            }
+            SetForegroundWindow(h as HWND);
+        }
+    }
+
     /// Titre de la fenêtre, sans lui envoyer de message (un launcher figé ne bloque pas le voile).
     pub fn title(h: isize) -> String {
         let mut buf = [0u16; 256];
@@ -329,6 +378,10 @@ mod win {
         false
     }
     pub fn reveal(_: isize) {}
+    pub fn area(_: isize) -> i64 {
+        0
+    }
+    pub fn restore_front(_: isize) {}
     pub fn title(_: isize) -> String {
         String::new()
     }

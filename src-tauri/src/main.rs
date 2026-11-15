@@ -175,6 +175,7 @@ fn main() {
             commands::answer_launcher_prompt,
             commands::install_game,
             commands::stop_game,
+            commands::focus_game,
             commands::show_launchers,
             commands::install_progress,
             commands::steam_downloads,

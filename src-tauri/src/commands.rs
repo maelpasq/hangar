@@ -458,6 +458,12 @@ pub fn stop_game(ctx: Ctxs<'_>, game_id: String) -> Result<(), String> {
     ctx.tracker.stop(&game_id)
 }
 
+/// Revient sur un jeu en cours (mode manette) : sa fenêtre passe au premier plan.
+#[tauri::command]
+pub fn focus_game(ctx: Ctxs<'_>, game_id: String) -> Result<bool, String> {
+    ctx.tracker.focus(&game_id)
+}
+
 /// Chemin reçu du frontend : seulement ceux des jeux connus.
 fn known_path(ctx: &Ctx, path: &str) -> Result<(), String> {
     if ctx.known.knows_path(path) {

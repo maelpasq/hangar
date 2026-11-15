@@ -27,6 +27,7 @@
     "allow-answer-launcher-prompt",
     "allow-install-game",
     "allow-stop-game",
+    "allow-focus-game",
     "allow-show-launchers",
     "allow-install-progress",
     "allow-steam-downloads",

@@ -81,6 +81,8 @@ class Runner {
     if (!g) return;
     if (g.notInstalled) return this.install(gameId);
     if (this.isRunning(gameId)) {
+      // Mode manette : on revient sur le jeu. Ailleurs : sa fiche (état et bouton Arrêter).
+      if (ui.big) return this.resume(gameId);
       ui.open(gameId);
       return;
     }
@@ -97,6 +99,17 @@ class Runner {
     } catch (e) {
       this.fail(gameId, String(e));
     }
+  }
+
+  /** Revient sur un jeu en cours : sa fenêtre passe au premier plan. */
+  async resume(gameId: string): Promise<void> {
+    const g = library.get(gameId);
+    const ok = await api.focusGame(gameId).catch((e) => {
+      ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true, gameId });
+      return null;
+    });
+    if (ok === false && g)
+      ui.toast(`Fenêtre de ${library.name(g)} introuvable${isMac || isLinux ? '' : ' : reviens-y avec Alt+Tab'}`, { error: true, gameId });
   }
 
   /** Installe le jeu : demande d'abord le dossier quand le launcher en a plusieurs à proposer. */

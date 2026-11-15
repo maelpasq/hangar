@@ -1,6 +1,6 @@
 <script lang="ts">
   // Mode manette : plein écran, grandes jaquettes, navigation à la croix ou au stick.
-  // A : jouer · Y : favori · X : fiche du jeu · LB / RB : onglet · B, Start ou Xbox : quitter.
+  // A : jouer (ou revenir sur un jeu en cours) · Y : favori · X : fiche du jeu · LB / RB : onglet · B, Start ou Xbox : quitter.
   // Le clavier marche aussi (flèches, Entrée, Échap, Tab).
   import { onMount, tick } from 'svelte';
   import { api } from '../api';
@@ -234,11 +234,13 @@
 
   <div class="grid" bind:this={grid}>
     {#each games as g, i (g.id)}
+      {@const live = runner.isRunning(g.id)}
       <button
         class="tile"
         class:on={i === index}
         class:dim={g.notInstalled}
-        aria-label="{library.name(g)}{g.notInstalled ? ', à installer' : ''}"
+        class:playing={live}
+        aria-label="{library.name(g)}{g.notInstalled ? ', à installer' : ''}{live ? `, en jeu depuis ${runner.elapsed(g.id)}, A pour y revenir` : ''}"
         onfocus={() => (index = i)}
         onpointermove={() => {
           if (pointer && index !== i) index = i;
@@ -247,12 +249,13 @@
       >
         <Cover game={g} fontSize={20} eager={i < 18} />
         {#if library.isFav(g.id)}<span class="fav" aria-hidden="true"><Icon name="star" size={16} /></span>{/if}
+        {#if live}<span class="ingame num" aria-hidden="true"><span class="pulse dotg"></span>En jeu · {runner.elapsed(g.id)}</span>{/if}
       </button>
     {/each}
   </div>
 
   <footer aria-hidden="true">
-    <span><b class="btn-a">A</b>{focused?.notInstalled ? 'Installer' : 'Jouer'}</span>
+    <span><b class="btn-a">A</b>{focused?.notInstalled ? 'Installer' : focused && runner.isRunning(focused.id) ? 'Revenir au jeu' : 'Jouer'}</span>
     <span><b class="btn-y">Y</b>Favori</span>
     <span><b class="btn-x">X</b>Fiche du jeu</span>
     <span><b class="btn-b">B</b>Quitter</span>
@@ -454,6 +457,39 @@
     right: 10px;
     color: #ffd166;
     filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.6));
+  }
+
+  /* Jeu en cours : liseré vert et pastille « En jeu », A ramène sa fenêtre. */
+  .tile.playing::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 3px var(--success);
+    pointer-events: none;
+  }
+
+  .ingame {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.72);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .dotg {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
   }
 
   footer {

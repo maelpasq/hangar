@@ -309,6 +309,19 @@ impl Tracker {
         self.entries.lock().unwrap_or_else(|p| p.into_inner()).iter().any(|e| e.game_id == game_id)
     }
 
+    /// Ramène la fenêtre du jeu en cours au premier plan. Faux si elle est introuvable.
+    pub fn focus(&self, game_id: &str) -> Result<bool, String> {
+        let pids = {
+            let list = self.entries.lock().unwrap_or_else(|p| p.into_inner());
+            let e = list.iter().find(|e| e.game_id == game_id).ok_or("Ce jeu n'est pas en cours.")?;
+            match &e.phase {
+                Phase::Running { pids, .. } => pids.clone(),
+                Phase::Searching { .. } => return Err("Le jeu n'a pas encore démarré.".into()),
+            }
+        };
+        Ok(crate::veil::bring_front(&pids))
+    }
+
     /// Termine proprement le jeu : demande de fermeture, puis arrêt forcé après 4 s.
     pub fn stop(&self, game_id: &str) -> Result<(), String> {
         let (pids, spec) = {
