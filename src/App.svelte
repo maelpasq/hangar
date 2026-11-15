@@ -37,7 +37,6 @@
   import WebGames from './lib/screens/WebGames.svelte';
   import { library } from './lib/stores/library.svelte';
   import { runner } from './lib/stores/runner.svelte';
-  import { accounts } from './lib/stores/accounts.svelte';
   import { ui } from './lib/stores/ui.svelte';
   import BlurImage from './lib/components/BlurImage.svelte';
 
@@ -146,7 +145,7 @@
           library.mergePartial(g);
         }),
         api.onAccountsSynced(() => {
-          void accounts.refresh();
+          // rescan relit aussi l'état des comptes, une fois le scan fini.
           void rescan();
         }),
         api.win.onFocusChange((f) => {

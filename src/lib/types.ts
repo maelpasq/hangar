@@ -182,6 +182,17 @@ export interface AccountStatus {
   games: number;
   syncedAt?: number | null;
   error?: string | null;
+  /** Ce que le compte apporte au dernier scan : jeux que seul le compte montre, temps de jeu
+   *  venu du compte, mises à jour trouvées grâce à lui (Epic). */
+  added: number;
+  playTime: number;
+  updates: number;
+}
+
+/** Succès Steam d'un jeu (compte Steam connecté). */
+export interface Achievements {
+  unlocked: number;
+  total: number;
 }
 
 export interface SteamHit {

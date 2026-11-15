@@ -42,7 +42,7 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
     // Seuls les dossiers que l'utilisateur a choisis lui-même.
     let local_folders: Vec<String> = local_folders.into_iter().filter(|f| ctx.granted.has(f)).collect();
     let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
-    accounts::merge(&mut games, ctx.accounts.games());
+    ctx.accounts.merge_into(&mut games);
     if cfg!(target_os = "linux") {
         games = blocking(move || {
             scanner::steam::mark_linux(&mut games);
@@ -542,6 +542,14 @@ pub async fn game_info(ctx: Ctxs<'_>, game_id: String) -> Result<GameInfo, Strin
     let Some(game) = ctx.known.get(&game_id) else { return Ok(GameInfo::default()) };
     let info = ctx.info.clone();
     blocking(move || info.get(&game)).await
+}
+
+/// Succès Steam d'un jeu (compte Steam connecté seulement, en cache 1 h). Jamais d'erreur.
+#[tauri::command]
+pub async fn steam_achievements(ctx: Ctxs<'_>, game_id: String) -> Result<Option<accounts::Achievements>, String> {
+    let Some(app_id) = ctx.known.get(&game_id).and_then(|g| g.steam_app_id) else { return Ok(None) };
+    let acc = ctx.accounts.clone();
+    blocking(move || acc.achievements(app_id)).await
 }
 
 #[tauri::command]

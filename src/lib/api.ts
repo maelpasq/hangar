@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { AccountStatus, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
+import type { AccountStatus, Achievements, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
   minimize(): Promise<void>;
@@ -78,6 +78,8 @@ export interface Api {
   folderSize(path: string): Promise<number | null>;
   /** Genre en français (Steam), en cache côté backend. */
   gameInfo(gameId: string): Promise<{ genre: string | null }>;
+  /** Succès Steam d'un jeu, seulement avec le compte Steam relié (null sinon). */
+  steamAchievements(gameId: string): Promise<Achievements | null>;
   setAutostart(on: boolean): Promise<void>;
   /** Copie une image locale dans le dossier des jaquettes et renvoie son chemin. */
   importCover(gameId: string, path: string): Promise<string>;
@@ -187,6 +189,7 @@ async function tauriApi(): Promise<Api> {
     },
     folderSize: (path) => invoke('folder_size', { path }),
     gameInfo: (gameId) => invoke('game_info', { gameId }),
+    steamAchievements: (gameId) => invoke('steam_achievements', { gameId }),
     setAutostart: (on) => invoke('set_autostart', { on }),
     importCover: (gameId, path) => invoke('import_cover', { gameId, path }),
     localSrc: (path) => convertFileSrc(path),

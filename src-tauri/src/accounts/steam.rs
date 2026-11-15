@@ -26,6 +26,27 @@ pub fn fetch(http: &Http, key: &str) -> Result<Fetched, String> {
     Ok(Fetched { user: None, games: parse_owned(&v), secret: None, ..Default::default() })
 }
 
+/// Succès d'un jeu Steam : (débloqués, total). `None` si le jeu n'a pas de succès.
+pub fn achievements(http: &Http, key: &str, app_id: u32) -> Result<Option<(u32, u32)>, String> {
+    let id = steam_id64().ok_or("Ouvre Steam une fois sur cet appareil avec ton compte, puis réessaie.")?;
+    let url = format!(
+        "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={key}&steamid={id}&appid={app_id}&format=json"
+    );
+    match http.get(&url, None) {
+        Ok(v) => Ok(parse_achievements(&v)),
+        // Steam répond 400 pour un jeu sans succès ni statistiques.
+        Err(e) if e.contains(" 400") => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn parse_achievements(v: &Value) -> Option<(u32, u32)> {
+    let list = v.pointer("/playerstats/achievements")?.as_array()?;
+    let total = u32::try_from(list.len()).ok().filter(|n| *n > 0)?;
+    let done = list.iter().filter(|a| a.get("achieved").and_then(|x| x.as_u64()) == Some(1)).count();
+    Some((u32::try_from(done).unwrap_or(0), total))
+}
+
 pub fn parse_owned(v: &Value) -> Vec<Game> {
     let games = v.pointer("/response/games").and_then(|g| g.as_array()).cloned().unwrap_or_default();
     games
@@ -77,5 +98,17 @@ mod tests {
         assert_eq!(g[0].store_last_played, Some(1_788_704_306_000));
         assert_eq!(g[1].store_play_ms, None);
         assert!(parse_owned(&serde_json::json!({ "response": {} })).is_empty());
+    }
+
+    #[test]
+    fn succes() {
+        let v = serde_json::json!({ "playerstats": { "success": true, "achievements": [
+            { "apiname": "A", "achieved": 1, "unlocktime": 1 },
+            { "apiname": "B", "achieved": 0, "unlocktime": 0 },
+            { "apiname": "C", "achieved": 1, "unlocktime": 2 }
+        ] } });
+        assert_eq!(parse_achievements(&v), Some((2, 3)));
+        assert_eq!(parse_achievements(&serde_json::json!({ "playerstats": { "success": true } })), None);
+        assert_eq!(parse_achievements(&serde_json::json!({ "playerstats": { "achievements": [] } })), None);
     }
 }

@@ -47,6 +47,7 @@
     "allow-set-autostart",
     "allow-import-cover",
     "allow-accounts-status",
+    "allow-steam-achievements",
     "allow-connect-steam",
     "allow-connect-account",
     "allow-disconnect-account",

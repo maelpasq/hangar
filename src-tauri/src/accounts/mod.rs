@@ -223,6 +223,21 @@ pub struct Status {
     pub games: usize,
     pub synced_at: Option<u64>,
     pub error: Option<String>,
+    /// Ce que le compte apporte au dernier scan (voir `Gain`).
+    pub added: usize,
+    pub play_time: usize,
+    pub updates: usize,
+}
+
+/// Ce qu'un compte apporte de plus que les fichiers de l'appareil, au dernier scan.
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
+pub struct Gain {
+    /// Jeux que seul le compte montre.
+    pub added: usize,
+    /// Jeux dont le temps de jeu vient du compte (plus grand que celui de l'appareil).
+    pub play_time: usize,
+    /// Mises à jour trouvées grâce au compte (Epic).
+    pub updates: usize,
 }
 
 pub struct Accounts {
@@ -233,7 +248,22 @@ pub struct Accounts {
     gog_file: PathBuf,
     gog: Mutex<GogChecked>,
     gog_busy: AtomicBool,
+    gains: Mutex<HashMap<String, Gain>>,
+    /// Succès Steam déjà demandés : AppID -> (heure, succès).
+    achievements: Mutex<HashMap<u32, CachedAchievements>>,
 }
+
+/// Succès d'un jeu, envoyés à la fiche.
+#[derive(Serialize, Clone, Copy, Debug)]
+pub struct Achievements {
+    pub unlocked: u32,
+    pub total: u32,
+}
+
+type CachedAchievements = (u64, Option<Achievements>);
+
+/// Les succès d'un jeu sont redemandés au plus une fois par heure.
+const ACHIEVEMENTS_EVERY_MS: u64 = 3_600_000;
 
 impl Accounts {
     pub fn new(config_dir: &Path) -> Self {
@@ -249,13 +279,51 @@ impl Accounts {
             gog_file,
             gog: Mutex::new(gog),
             gog_busy: AtomicBool::new(false),
+            gains: Mutex::new(HashMap::new()),
+            achievements: Mutex::new(HashMap::new()),
         }
     }
 
     /// Marque les jeux qui ont une mise à jour (versions Epic du compte, vérification GOG).
     pub fn apply_updates(&self, games: &mut [Game]) {
         let epic = lock(&self.data).get("epic").map(|s| s.latest.clone()).unwrap_or_default();
+        let epic_pending = |games: &[Game]| games.iter().filter(|g| g.store == "epic" && g.update_pending).count();
+        let before = epic_pending(games);
         updates::apply(games, &epic, &lock(&self.gog).pending);
+        let found = epic_pending(games) - before;
+        lock(&self.gains).entry("epic".into()).or_default().updates = found;
+    }
+
+    /// Succès Steam d'un jeu, seulement avec le compte Steam connecté. `None` : pas de compte,
+    /// pas de succès ou service injoignable (rien à afficher).
+    pub fn achievements(&self, app_id: u32) -> Option<Achievements> {
+        if !lock(&self.data).contains_key("steam") {
+            return None;
+        }
+        let now = now_ms();
+        if let Some((at, v)) = lock(&self.achievements).get(&app_id) {
+            if now.saturating_sub(*at) < ACHIEVEMENTS_EVERY_MS {
+                return *v;
+            }
+        }
+        let key = secret("steam")?;
+        match steam::achievements(&self.http, &key, app_id) {
+            Ok(v) => {
+                let v = v.map(|(unlocked, total)| Achievements { unlocked, total });
+                lock(&self.achievements).insert(app_id, (now, v));
+                v
+            }
+            Err(e) => {
+                log::warn!("succès Steam {app_id} : {e}");
+                None
+            }
+        }
+    }
+
+    /// Ajoute aux jeux du scan ceux des comptes connectés et retient ce que chaque compte apporte.
+    pub fn merge_into(&self, games: &mut Vec<Game>) {
+        let gains = merge(games, self.games());
+        *lock(&self.gains) = gains;
     }
 
     /// Vrai si des jeux GOG installés n'ont pas été vérifiés depuis 6 h.
@@ -297,10 +365,12 @@ impl Accounts {
 
     pub fn status(&self) -> Vec<Status> {
         let data = lock(&self.data);
+        let gains = lock(&self.gains);
         ALL_STORES
             .iter()
             .map(|&s| {
                 let d = data.get(s);
+                let gain = d.and_then(|_| gains.get(s).copied()).unwrap_or_default();
                 Status {
                     store: s.to_string(),
                     detected: crate::scanner::launcher_present(s),
@@ -310,6 +380,9 @@ impl Accounts {
                     games: d.map(|d| d.games.len()).unwrap_or(0),
                     synced_at: d.map(|d| d.synced_at).filter(|t| *t > 0),
                     error: d.and_then(|d| d.error.clone()),
+                    added: gain.added,
+                    play_time: gain.play_time,
+                    updates: gain.updates,
                 }
             })
             .collect()
@@ -410,14 +483,18 @@ impl Accounts {
     pub fn disconnect(&self, store: &str) {
         delete_secret(store);
         lock(&self.data).remove(store);
+        if store == "steam" {
+            lock(&self.achievements).clear();
+        }
         self.save();
         log::info!("compte {store} déconnecté");
     }
 }
 
 /// Ajoute aux jeux du scan ceux des comptes qui manquent (même id = même jeu), et complète
-/// le temps de jeu inconnu. Trie par nom.
-pub fn merge(games: &mut Vec<Game>, extra: Vec<Game>) {
+/// le temps de jeu inconnu. Trie par nom. Renvoie ce que chaque store y a gagné.
+pub fn merge(games: &mut Vec<Game>, extra: Vec<Game>) -> HashMap<String, Gain> {
+    let mut gains: HashMap<String, Gain> = HashMap::new();
     let mut index: HashMap<String, usize> = games.iter().enumerate().map(|(i, g)| (g.id.clone(), i)).collect();
     let mut seen = HashSet::new();
     for g in extra {
@@ -427,16 +504,25 @@ pub fn merge(games: &mut Vec<Game>, extra: Vec<Game>) {
         match index.get(&g.id) {
             Some(&i) => {
                 let cur = &mut games[i];
+                if g.store_play_ms > cur.store_play_ms {
+                    gains.entry(g.store.clone()).or_default().play_time += 1;
+                }
                 cur.store_play_ms = cur.store_play_ms.max(g.store_play_ms);
                 cur.store_last_played = cur.store_last_played.max(g.store_last_played);
             }
             None => {
+                let gain = gains.entry(g.store.clone()).or_default();
+                gain.added += 1;
+                if g.store_play_ms.is_some() {
+                    gain.play_time += 1;
+                }
                 index.insert(g.id.clone(), games.len());
                 games.push(g);
             }
         }
     }
     games.sort_by_key(|g| g.name.to_lowercase());
+    gains
 }
 
 // ─────────────────────────── Fenêtre de connexion ───────────────────────────
@@ -538,7 +624,9 @@ mod tests {
         let mut b = Game::new("steam:1".into(), "B (API)".into(), "steam", uri("y"));
         b.store_play_ms = Some(99);
         let c = Game::new("gog:2".into(), "A".into(), "gog", uri("z"));
-        merge(&mut games, vec![b, c.clone(), c]);
+        let gains = merge(&mut games, vec![b, c.clone(), c]);
+        assert_eq!(gains["steam"], Gain { added: 0, play_time: 1, updates: 0 });
+        assert_eq!(gains["gog"], Gain { added: 1, play_time: 0, updates: 0 });
         assert_eq!(games.len(), 2);
         assert_eq!(games[0].id, "gog:2", "trié par nom");
         assert_eq!(games[1].name, "B");

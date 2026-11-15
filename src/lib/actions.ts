@@ -121,6 +121,8 @@ function announceUpdates(before: Set<string>): void {
 export async function rescan(announce = false): Promise<void> {
   try {
     const n = await library.scan();
+    // Ce que chaque compte apporte est calculé pendant le scan.
+    void accounts.refresh();
     void runner.resumeDownloads();
     if (announce) ui.toast(`${plural(n, 'jeu', 'jeux')} dans ta bibliothèque`);
   } catch (e) {

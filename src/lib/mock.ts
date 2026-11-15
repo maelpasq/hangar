@@ -172,7 +172,20 @@ export function mockApi(): Api {
   const synced = new Set<() => void>();
   const syncedNow = () => synced.forEach((cb) => cb());
   const link = (store: StoreId, user: string | null, games: number) => {
-    connected.set(store, { store, detected: true, connectable: true, connected: true, user, games, syncedAt: Date.now() });
+    const gain = { steam: [37, 52, 0], epic: [6, 0, 2], gog: [0, 0, 0] }[store as 'steam'] ?? [0, 0, 0];
+    const [added, playTime, updates] = gain;
+    connected.set(store, {
+      store,
+      detected: true,
+      connectable: true,
+      connected: true,
+      user,
+      games,
+      syncedAt: Date.now(),
+      added,
+      playTime,
+      updates
+    });
     syncedNow();
     return games;
   };
@@ -282,6 +295,8 @@ export function mockApi(): Api {
     },
     exeIcon: async () => null,
     gameInfo: async () => ({ genre: null }),
+    steamAchievements: async (gameId) =>
+      connected.has('steam') && gameId.startsWith('steam:') ? { unlocked: 34, total: 50 } : null,
     folderSize: async (path) => {
       const g = games.find((d) => (PATHS[d.store] ?? PATHS.local)(d.name) === path);
       return g ? g.sizeGb * 1_000_000_000 : null;
@@ -310,7 +325,10 @@ export function mockApi(): Api {
             detected: store !== 'battlenet',
             connectable: ['steam', 'gog', 'epic'].includes(store),
             connected: false,
-            games: 0
+            games: 0,
+            added: 0,
+            playTime: 0,
+            updates: 0
           }
       ),
     connectSteam: async (key) => {

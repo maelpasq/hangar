@@ -195,6 +195,7 @@ fn main() {
             commands::set_autostart,
             commands::import_cover,
             commands::accounts_status,
+            commands::steam_achievements,
             commands::connect_steam,
             commands::connect_account,
             commands::disconnect_account,

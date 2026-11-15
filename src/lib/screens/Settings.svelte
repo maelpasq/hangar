@@ -172,6 +172,19 @@
     return `${here} · ${plural(a.games, 'jeu', 'jeux')} sur le compte${synced}`;
   }
 
+  /** Ce que le compte relié apporte de plus que les fichiers de l'appareil. */
+  function gainHint(s: StoreId, a: AccountStatus): string {
+    const parts: string[] = [];
+    if (a.added) parts.push(`+${plural(a.added, 'jeu', 'jeux')} à installer`);
+    if (a.playTime) parts.push(`temps de jeu de ${plural(a.playTime, 'jeu', 'jeux')}`);
+    if (s === 'epic')
+      parts.push(a.updates ? plural(a.updates, 'mise à jour trouvée', 'mises à jour trouvées') : 'suivi des mises à jour');
+    if (s === 'steam') parts.push('succès sur la fiche des jeux');
+    return parts.length
+      ? `Grâce au compte : ${parts.join(', ')}`
+      : "Grâce au compte : rien de plus que ce que l'appareil montre déjà";
+  }
+
   // ─── Bibliothèque ───
 
   function folderCount(dir: string): number {
@@ -411,6 +424,7 @@
                       <span class="hint err">{a.error}</span>
                     {:else}
                       <span class="hint">{storeHint(s, a)}</span>
+                      {#if a?.connected}<span class="hint gain">{gainHint(s, a)}</span>{/if}
                     {/if}
                   </span>
                   {#if t}<span class="tag {t.kind}">{t.label}</span>{/if}

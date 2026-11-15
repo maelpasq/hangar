@@ -15,7 +15,7 @@
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
-  import type { Game } from '../types';
+  import type { Achievements, Game } from '../types';
   import { generatedBackground } from '../util/color';
   import { dateLabel, formatNumber, hoursLabel, relativeDay, sizeLabel } from '../util/format';
   import BlurImage from '../components/BlurImage.svelte';
@@ -66,6 +66,22 @@
 
   $effect(() => {
     ui.ambient = hero ?? cover?.src ?? null;
+  });
+
+  // Succès Steam : seulement avec le compte Steam relié (le backend répond null sinon).
+  let achievements = $state<Achievements | null>(null);
+  $effect(() => {
+    const id = game.id;
+    achievements = null;
+    if (!game.steamAppId) return;
+    let alive = true;
+    api
+      .steamAchievements(id)
+      .then((a) => alive && (achievements = a))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   });
 </script>
 
@@ -139,6 +155,21 @@
         <dd>{#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</dd>
         <dt>Ajouté</dt>
         <dd>{added ? dateLabel(added) : '-'}</dd>
+        {#if achievements}
+          {@const pct = Math.round((achievements.unlocked / achievements.total) * 100)}
+          <dt>Succès</dt>
+          <dd class="ach">
+            <span class="num">{formatNumber(achievements.unlocked)} sur {formatNumber(achievements.total)} · {pct} %</span>
+            <span
+              class="ach-bar"
+              role="progressbar"
+              aria-label="Succès débloqués"
+              aria-valuemin={0}
+              aria-valuemax={achievements.total}
+              aria-valuenow={achievements.unlocked}><span style:width="{pct}%"></span></span
+            >
+          </dd>
+        {/if}
         {#if game.updatePending}
           <dt>Mise à jour</dt>
           <dd>En attente{game.updateBytes ? ` · ${sizeLabel(game.updateBytes)}` : ''}</dd>
@@ -405,6 +436,22 @@
 
   .path {
     word-break: break-all;
+  }
+
+  .ach-bar {
+    display: block;
+    height: 4px;
+    margin-top: 7px;
+    border-radius: 999px;
+    background: rgb(var(--ink) / 0.1);
+    overflow: hidden;
+  }
+
+  .ach-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
   }
 
   .sep {

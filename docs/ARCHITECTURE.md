@@ -116,7 +116,8 @@ interface PersistedState {
 | `answer_launcher_prompt(hwnd, show)` | Réponse à `launch://prompt` : `show` montre la boîte du launcher au-dessus de Hangar, sinon elle est fermée (annulée) |
 | `install_game(gameId)` | Jeu non installé : ouvre son installation dans le launcher (pas de suivi de processus) |
 | `stop_game(gameId)` | Termine proprement les processus du jeu |
-| `accounts_status() -> AccountStatus[]` | Par store : détecté, connectable, connecté, pseudo, nombre de jeux, date de synchro, erreur. Jamais de jeton |
+| `accounts_status() -> AccountStatus[]` | Par store : détecté, connectable, connecté, pseudo, nombre de jeux, date de synchro, erreur, et ce que le compte apporte au dernier scan (`added`, `playTime`, `updates`). Jamais de jeton |
+| `steam_achievements(gameId) -> {unlocked,total} \| null` | Succès Steam d'un jeu (`ISteamUserStats/GetPlayerAchievements`), compte Steam connecté seulement, en cache mémoire 1 h. Jamais d'erreur |
 | `connect_steam(key) -> number` | Vérifie la clé d'API Web Steam (32 hex) par un appel réel, la range dans le coffre du système |
 | `connect_account(store) -> number` | GOG / Epic : fenêtre de connexion officielle, échange du code contre un jeton de rafraîchissement (coffre du système) |
 | `disconnect_account(store)` | Efface le jeton et la liste en cache |
