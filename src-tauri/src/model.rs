@@ -75,6 +75,9 @@ pub struct Game {
     /// Succès donnés avec la liste du compte (Xbox) ; ceux de Steam sont demandés à la fiche.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub achievements: Option<Achievements>,
+    /// Page où retrouver le jeu (jeux hors store) : registre ou raccourci Internet, `https://` seulement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_url: Option<String>,
 }
 
 /// Succès d'un jeu. `total` à 0 : nombre total inconnu (Xbox le tait pour certains jeux) ;

@@ -12,6 +12,7 @@ pub mod epic;
 pub mod exe;
 pub mod gog;
 pub mod installed;
+pub mod links;
 pub mod local;
 pub mod macapps;
 pub mod registry;
@@ -179,6 +180,10 @@ pub fn scan_fast(local_folders: &[String]) -> Vec<Game> {
     games = games.into_iter().map(finalize).collect();
     let mut games = dedupe(installed::drop_nested(games));
     stats::enrich(&mut games);
+    // Jeux hors store sans lien d'installation : raccourci Internet posé dans leur dossier.
+    for g in games.iter_mut().filter(|g| g.store == "local" && g.install_url.is_none()) {
+        g.install_url = g.install_dir.as_deref().and_then(|d| links::in_dir(Path::new(d)));
+    }
     games
 }
 

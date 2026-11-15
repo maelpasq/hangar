@@ -312,3 +312,14 @@ Réglage « Ouvrir au démarrage du PC » dans Paramètres > Mode manette. Il ac
 ## Compte Hangar facultatif (15 nov. 2026)
 
 Demande de l'utilisateur : un compte facultatif pour que la personnalisation suive la personne, le mode anonyme restant le fonctionnement par défaut. Choix : Turso pour la base (choix de l'utilisateur), un Cloudflare Worker avec Better Auth devant (Turso n'a pas d'authentification et son jeton ne peut pas être dans l'app), connexion par code e-mail, Discord ou Google. Les jeux locaux suivent le compte : sur un autre PC ils apparaissent en gris avec un lien d'installation trouvé automatiquement (registre, raccourcis `.url`, page Steam ou GOG). Plan complet dans `docs/COMPTE.md`.
+
+## Compte Hangar, phase 0 : socle local (15 nov. 2026)
+
+Aucun réseau, aucun changement visible hors du lien d'installation. Choix :
+
+- **État version 2, sans déplacer les champs.** `PersistedState` garde sa forme ; la partie synchronisable est définie par `syncEntries` (`src/lib/util/sync.ts`), un élément par clé (`fav:<jeu>`, `rename:<jeu>`, `collection:<id>`, `set:accent`, `pref:startPage`...). Plus simple et moins risqué que de couper l'état en deux objets, que tout le frontend lit. Les préférences sont rangées en `SYNC_PREFS` ou `LOCAL_PREFS`, et une clé oubliée ne compile pas.
+- **Dates par élément** dans `stamps` (clé -> ms), posées à l'enregistrement en comparant avec l'enregistrement d'avant. Une clé datée sans élément est une suppression. Migration depuis la version 1 : tout ce qui existe est daté au premier chargement.
+- **`deviceId`** : 16 octets aléatoires, créés à la première lecture, sans rien qui vienne de la machine.
+- **Fiche portable** (`portable`) des jeux locaux et manuels : nom, exécutable, dossier, appid Steam, lien d'installation. Mise à jour à chaque scan, gardée si le jeu disparaît du scan (disque débranché), retirée seulement quand on retire un jeu manuel. Dans les éléments synchronisables, ces jeux portent l'identifiant `@<exe>|<dossier>` au lieu de leur chemin.
+- **Lien d'installation** : choix de l'utilisateur, sinon registre (`URLInfoAbout`, `URLUpdateInfo`, `HelpLink`), sinon raccourci `.url` du sous-dossier du menu Démarrer ou du dossier du jeu, sinon page Steam (appid déjà connu). Visible dans la fiche des jeux hors store (« Page du jeu », avec le domaine) et modifiable. `https://` seulement, validé des deux côtés, ouvert dans le navigateur par `open_game_link`.
+- **Reporté** : la source GOG du lien (Hangar ne connaît pas d'id GOG pour un jeu local aujourd'hui), le `.url` du dossier d'un jeu ajouté à la main (pas de scan pour eux), et la synchro des sessions et du temps de jeu (phase 4, ajout seulement).

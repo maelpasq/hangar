@@ -5,6 +5,7 @@ import { STORE_ORDER } from '../stores-meta';
 import type { Collection, Game, PersistedState, Session, StoreId, Totals } from '../types';
 import { dedupe } from '../util/games';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
+import { installLink, portableOf, stampChanges } from '../util/sync';
 
 const EMPTY_TOTALS: Totals = { playMs: 0, launches: 0, lastPlayed: 0 };
 
@@ -116,12 +117,15 @@ class Library {
   /** L'état enregistré a été lu : avant (ou si la lecture a échoué), enregistrer écraserait
    * les vraies données avec l'état par défaut. */
   private loaded = false;
+  /** Éléments synchronisables au dernier enregistrement, pour dater ceux qui changent. */
+  private entries: Map<string, string> | null = null;
 
   /** Enregistre l'état (regroupe les écritures rapprochées). */
   save(): void {
     if (!this.loaded) return;
     clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
+      this.entries = stampChanges(this.state, this.entries);
       api.saveState($state.snapshot(this.state)).catch((e) => console.error('save_state', e));
     }, 250);
   }
@@ -133,6 +137,9 @@ class Library {
       this.fresh = !raw || typeof raw !== 'object' || !Object.keys(raw).length;
       this.state = normalizeState(raw);
       this.loaded = true;
+      this.entries = stampChanges(this.state, null);
+      // État d'avant la version 2 : enregistré tout de suite avec son identifiant et ses dates.
+      if (!this.fresh && (raw as { version?: unknown }).version !== 2) this.save();
     } catch (e) {
       // Fichier bloqué par un autre programme : on garde l'état par défaut en mémoire sans
       // jamais l'enregistrer, pour ne pas écraser les vraies données.
@@ -213,8 +220,31 @@ class Library {
         this.state.firstSeen[g.id] = now;
         changed = true;
       }
+      if (this.refreshPortable(g)) changed = true;
     }
     if (changed) this.save();
+  }
+
+  /** Met à jour la fiche portable d'un jeu local ou manuel ; vrai si elle a changé. */
+  private refreshPortable(g: Game): boolean {
+    const fiche = portableOf(this.state, g);
+    if (!fiche || JSON.stringify(fiche) === JSON.stringify(this.state.portable[g.id])) return false;
+    this.state.portable[g.id] = fiche;
+    return true;
+  }
+
+  /** Lien d'installation d'un jeu hors store (null : aucun). */
+  installLink(g: Game): string | null {
+    return installLink(this.state, g);
+  }
+
+  /** Lien choisi par l'utilisateur ; "" : aucun lien, null : retour au lien trouvé automatiquement. */
+  setInstallLink(id: string, url: string | null): void {
+    if (url === null) delete this.state.installLinks[id];
+    else this.state.installLinks[id] = url;
+    const g = this.get(id);
+    if (g) this.refreshPortable(g);
+    this.save();
   }
 
   toggleFav(id: string): void {
@@ -251,12 +281,15 @@ class Library {
     this.state.manualGames = [...this.state.manualGames.filter((x) => x.id !== g.id), g];
     this.state.hidden = this.state.hidden.filter((x) => x !== g.id);
     this.state.firstSeen[g.id] ??= Date.now();
+    this.refreshPortable(g);
     this.save();
   }
 
   removeManual(id: string): void {
     this.state.manualGames = this.state.manualGames.filter((x) => x.id !== id);
     this.state.favorites = this.state.favorites.filter((x) => x !== id);
+    delete this.state.portable[id];
+    delete this.state.installLinks[id];
     this.save();
   }
 

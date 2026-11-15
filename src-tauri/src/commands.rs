@@ -184,6 +184,13 @@ pub async fn open_link(link: String) -> Result<(), String> {
     blocking(move || launcher::shell_open(url, "", None, "open")).await?
 }
 
+/// Ouvre le lien d'installation d'un jeu dans le navigateur de la personne (`https://` seulement).
+#[tauri::command]
+pub async fn open_game_link(url: String) -> Result<(), String> {
+    let url = crate::scanner::links::https(&url).ok_or("Ce lien n'est pas une adresse https valide.")?;
+    blocking(move || launcher::shell_open(&url, "", None, "open")).await?
+}
+
 /// Le mode manette vient de se fermer : Hangar retourne là où il était si le bouton Xbox
 /// l'avait ramené devant (`restore` : fermé par B, Start, Xbox ou Échap).
 #[tauri::command]

@@ -88,7 +88,11 @@ interface Game {
 interface Session { gameId: string; start: number; end: number }   // ms epoch
 
 interface PersistedState {
-  version: 1;
+  version: 2;
+  deviceId: string;                           // identifiant aléatoire de l'installation
+  stamps: Record<string, number>;             // élément synchronisable -> dernière modification (util/sync.ts)
+  portable: Record<string, PortableGame>;     // jeu local ou manuel -> fiche portable (nom, exe, dossier)
+  installLinks: Record<string, string>;       // gameId -> lien d'installation choisi ("" = aucun)
   favorites: string[];
   hidden: string[];
   renames: Record<string, string>;
@@ -122,6 +126,7 @@ interface PersistedState {
 | `connect_account(store) -> number` | GOG / Epic : fenêtre de connexion officielle, échange du code contre un jeton de rafraîchissement (coffre du système) |
 | `disconnect_account(store)` | Efface le jeton et la liste en cache |
 | `open_link(id)` | Ouvre une page d'aide d'une liste fermée (pas d'URL libre) |
+| `open_game_link(url)` | Ouvre le lien d'installation d'un jeu hors store dans le navigateur (`https://` validé, rien d'autre) |
 | événement `accounts://synced` | Les comptes ont changé : le frontend rafraîchit l'état et rescanne |
 | `open_folder(path)` | Explorateur Windows. Comme `exe_icon` et `folder_size`, refusé si le chemin n'appartient à aucun jeu connu |
 | `uninstall_game(gameId) -> string` | Ouvre la désinstallation dans le launcher du jeu (ou les Applications de Windows), renvoie le message à afficher |

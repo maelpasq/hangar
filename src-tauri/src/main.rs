@@ -167,6 +167,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::scan_games,
+            commands::open_game_link,
             commands::load_state,
             commands::save_state,
             commands::load_library,

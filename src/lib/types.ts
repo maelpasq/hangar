@@ -54,6 +54,21 @@ export interface Game {
   updatePending?: boolean;
   /** Reste à télécharger pour cette mise à jour, en octets. */
   updateBytes?: number | null;
+  /** Page où retrouver le jeu, trouvée au scan (jeux hors store, `https://` seulement). */
+  installUrl?: string;
+}
+
+/**
+ * Fiche portable d'un jeu local ou manuel : de quoi le reconnaître sur un autre poste, où son
+ * identifiant (un chemin) n'est pas le même.
+ */
+export interface PortableGame {
+  name: string;
+  /** Signature : nom de l'exécutable et nom du dossier du jeu, en minuscules. */
+  exe: string;
+  dir: string;
+  steamAppId?: number;
+  installUrl?: string;
 }
 
 export interface Session {
@@ -144,8 +159,21 @@ export interface DesktopInfo {
 /** « system » suit le réglage clair / sombre de l'appareil. */
 export type Theme = 'dark' | 'light' | 'system';
 
+/**
+ * État enregistré sur le poste. Ce qui pourra suivre un compte Hangar (favoris, renommages,
+ * collections, apparence...) est défini dans `util/sync.ts` ; le reste est propre à ce poste.
+ */
 export interface PersistedState {
-  version: 1;
+  version: 2;
+  /** Identifiant aléatoire de cette installation (rien qui vienne de la machine). */
+  deviceId: string;
+  /** Élément synchronisable (clé de `syncEntries`) -> dernière modification, ms epoch.
+   * Une clé sans élément correspondant est une suppression. */
+  stamps: Record<string, number>;
+  /** Jeu local ou manuel (gameId) -> fiche portable, gardée même si le jeu n'est plus trouvé. */
+  portable: Record<string, PortableGame>;
+  /** gameId -> lien d'installation choisi par l'utilisateur ("" : aucun lien voulu). */
+  installLinks: Record<string, string>;
   favorites: string[];
   hidden: string[];
   renames: Record<string, string>;

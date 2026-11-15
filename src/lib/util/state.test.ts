@@ -3,8 +3,8 @@ import { defaultState, normalizeState } from './state';
 
 describe('état persistant', () => {
   it('valeurs par défaut sur entrée invalide', () => {
-    expect(normalizeState(null)).toEqual(defaultState());
-    expect(normalizeState('x')).toEqual(defaultState());
+    expect(normalizeState(null)).toEqual({ ...defaultState(), deviceId: expect.any(String) });
+    expect(normalizeState('x')).toEqual({ ...defaultState(), deviceId: expect.any(String) });
   });
 
   it('jeux web : null tant que non demandé, puis le choix est gardé', () => {
@@ -31,7 +31,7 @@ describe('état persistant', () => {
       coverCache: { 'epic:fn': 0, 'gog:1': 292030 },
       sort: 'az'
     });
-    expect(s.version).toBe(1);
+    expect(s.version).toBe(2);
     expect(s.favorites).toEqual(['steam:1']);
     expect(s.totals['steam:1']).toEqual({ playMs: 0, launches: 4, lastPlayed: 1000 });
     expect(s.steamIdCache).toEqual({ 'epic:fn': 0, 'gog:1': 292030 });

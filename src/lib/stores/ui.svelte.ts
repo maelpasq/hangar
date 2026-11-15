@@ -8,6 +8,7 @@ export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
 export type Modal =
   | { kind: 'add' }
   | { kind: 'rename'; gameId: string }
+  | { kind: 'installLink'; gameId: string }
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
   | { kind: 'uninstall'; gameId: string }

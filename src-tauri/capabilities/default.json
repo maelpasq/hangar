@@ -56,6 +56,7 @@
     "allow-xbox-login-code",
     "allow-xbox-login-cancel",
     "allow-open-link",
+    "allow-open-game-link",
     "allow-report-bug",
     "allow-open-web-game",
     "allow-uninstall-game",

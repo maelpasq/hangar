@@ -17,6 +17,7 @@
   import { ui } from '../stores/ui.svelte';
   import type { Achievements, Game } from '../types';
   import { generatedBackground } from '../util/color';
+  import { linkDomain } from '../util/sync';
   import { dateLabel, formatNumber, hoursLabel, relativeDay, sizeLabel } from '../util/format';
   import BlurImage from '../components/BlurImage.svelte';
 
@@ -33,6 +34,9 @@
   const added = $derived(library.addedAt(game));
   const genre = $derived(library.genre(game));
   const location = $derived(game.notInstalled ? 'Non installé' : game.installDir || game.launch.target);
+  /** Jeu hors store : page où le retrouver (lien d'installation), modifiable. */
+  const offStore = $derived(game.store === 'local' || game.store === 'manual');
+  const link = $derived(library.installLink(game));
   const via = $derived(game.notInstalled ? "S'installe via" : 'Se lance via');
 
   const similar = $derived(
@@ -164,6 +168,17 @@
         <dd>{#if STORE_LOGOS[game.store]}<StoreLogo store={game.store} size={14} />{/if} {game.launcherName}</dd>
         <dt>Ajouté</dt>
         <dd>{added ? dateLabel(added) : '-'}</dd>
+        {#if link}
+          <dt>Page du jeu</dt>
+          <dd>
+            <button
+              class="link"
+              title="Ouvrir {link} dans le navigateur"
+              onclick={() => api.openGameLink(link).catch((e) => ui.toast(String(e), { error: true }))}
+              ><Icon name="globe" size={14} />{linkDomain(link)}</button
+            >
+          </dd>
+        {/if}
         {#if game.developer}
           <dt>Développeur</dt>
           <dd>{game.developer}</dd>
@@ -213,6 +228,11 @@
       <button class="act" onclick={() => { ui.modal = { kind: 'cover', gameId: game.id }; }}
         ><Icon name="image" size={17} />Changer la jaquette</button
       >
+      {#if offStore}
+        <button class="act" onclick={() => { ui.modal = { kind: 'installLink', gameId: game.id }; }}
+          ><Icon name="globe" size={17} />{link ? "Modifier le lien d'installation" : "Ajouter un lien d'installation"}</button
+        >
+      {/if}
       {#if !game.notInstalled}
         <button class="act" onclick={() => updateGame(game.id)}
           ><Icon name="refresh" size={17} />{game.updatePending ? 'Mettre à jour' : 'Rechercher des mises à jour'}</button
@@ -461,6 +481,20 @@
 
   .path {
     word-break: break-all;
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-text, var(--accent));
+    font-size: 13px;
+    text-align: left;
+    word-break: break-all;
+  }
+
+  .link:hover {
+    text-decoration: underline;
   }
 
   .ach-bar {

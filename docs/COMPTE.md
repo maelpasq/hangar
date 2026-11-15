@@ -1,6 +1,6 @@
 # Compte Hangar (facultatif) - plan
 
-Statut : plan validé dans ses grandes lignes, rien n'est implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
+Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
 
 ## 1. Objectif et principes
 

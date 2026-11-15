@@ -1,11 +1,16 @@
-import type { Collection, Game, PersistedState, SortKey, StoreId } from '../types';
+import type { Collection, Game, PersistedState, PortableGame, SortKey, StoreId } from '../types';
+import { httpsLink } from './sync';
 import { STORE_ORDER } from '../stores-meta';
 
 export const SESSION_DAYS = 90;
 
 export function defaultState(): PersistedState {
   return {
-    version: 1,
+    version: 2,
+    deviceId: newDeviceId(),
+    stamps: {},
+    portable: {},
+    installLinks: {},
     favorites: [],
     hidden: [],
     renames: {},
@@ -41,6 +46,12 @@ export function defaultState(): PersistedState {
   };
 }
 
+/** Identifiant d'installation : aléatoire, sans rapport avec la machine ni la personne. */
+function newDeviceId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 type Raw = Record<string, unknown>;
 
 const isObj = (v: unknown): v is Raw => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -64,6 +75,19 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   const s = defaultState();
   if (!isObj(raw)) return s;
 
+  // Version 2 (socle du compte Hangar) : un état d'avant n'a aucun de ces champs. L'identifiant
+  // est créé ici et les dates de modification au premier enregistrement (`stampChanges`).
+  if (typeof raw.deviceId === 'string' && /^[0-9a-f]{32}$/.test(raw.deviceId)) s.deviceId = raw.deviceId;
+  s.stamps = numMap(raw.stamps);
+  if (isObj(raw.portable)) {
+    for (const [id, f] of Object.entries(raw.portable)) {
+      const fiche = isObj(f) ? portableGame(f) : null;
+      if (fiche) s.portable[id] = fiche;
+    }
+  }
+  for (const [id, url] of Object.entries(strMap(raw.installLinks))) {
+    if (url === '' || httpsLink(url)) s.installLinks[id] = url;
+  }
   s.favorites = strArr(raw.favorites);
   s.hidden = strArr(raw.hidden);
   s.renames = strMap(raw.renames);
@@ -138,6 +162,15 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     Object.assign(s.steamIdCache, numMap(raw.coverCache));
   }
   return s;
+}
+
+function portableGame(f: Raw): PortableGame | null {
+  if (typeof f.name !== 'string' || typeof f.exe !== 'string' || typeof f.dir !== 'string' || !f.exe) return null;
+  const out: PortableGame = { name: f.name, exe: f.exe.toLowerCase(), dir: f.dir.toLowerCase() };
+  if (typeof f.steamAppId === 'number' && f.steamAppId > 0) out.steamAppId = f.steamAppId;
+  const url = typeof f.installUrl === 'string' ? httpsLink(f.installUrl) : null;
+  if (url) out.installUrl = url;
+  return out;
 }
 
 function manualGame(g: Game): Game | null {

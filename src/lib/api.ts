@@ -112,6 +112,8 @@ export interface Api {
   disconnectAccount(store: StoreId): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
+  /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
+  openGameLink(url: string): Promise<void>;
   /** Envoie un signalement de bug au développeur (capture : chemin d'une image, facultatif). */
   reportBug(title: string, description: string, screenshot: string | null): Promise<void>;
   /** Ouvre un jeu du catalogue web-games.json dans sa propre fenêtre Hangar. */
@@ -230,6 +232,7 @@ async function tauriApi(): Promise<Api> {
     xboxLoginCancel: () => invoke('xbox_login_cancel'),
     disconnectAccount: (store) => invoke('disconnect_account', { store }),
     openLink: (link) => invoke('open_link', { link }),
+    openGameLink: (url) => invoke('open_game_link', { url }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),
     openWebGame: (id) => invoke('open_web_game', { id }),
     onWebClosed: (cb) => on<string>('web://closed', cb),

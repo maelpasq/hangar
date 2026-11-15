@@ -26,6 +26,8 @@ pub struct Candidate {
     pub in_games_folder: bool,
     /// Le nom vient d'une clé de désinstallation (plus propre qu'un nom de raccourci).
     pub from_registry: bool,
+    /// Page du jeu (registre, ou raccourci Internet à côté du raccourci), `https://` seulement.
+    pub url: Option<String>,
 }
 
 /// Exécutables des launchers de stores déjà couverts par leur propre détecteur.
@@ -312,6 +314,8 @@ pub fn to_games(cands: Vec<Candidate>) -> Vec<Game> {
         }
         g.install_dir = Some(dir.to_string_lossy().into_owned());
         g.exe_path = Some(launch_from.exe.to_string_lossy().into_owned());
+        // Lien d'installation : le registre d'abord, puis un raccourci Internet du menu Démarrer.
+        g.install_url = list.iter().filter(|c| c.from_registry).chain(&list).find_map(|c| c.url.clone());
         for c in &list {
             let f = c.exe.file_name().unwrap_or_default().to_string_lossy().into_owned();
             if !g.process_names.iter().any(|p| p.eq_ignore_ascii_case(&f)) {
@@ -426,9 +430,11 @@ mod win {
 
     pub fn shortcuts() -> Vec<Candidate> {
         let mut links = vec![];
+        let mut roots = vec![];
         for id in [&FOLDERID_CommonPrograms, &FOLDERID_Programs, &FOLDERID_Desktop, &FOLDERID_PublicDesktop] {
             if let Some(root) = known_folder(id) {
                 walk(&root, 0, false, &mut links);
+                roots.push(root);
             }
         }
         let inited = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED).is_ok() };
@@ -437,7 +443,10 @@ mod win {
             .filter_map(|(link, in_games)| {
                 let (exe, args, cwd) = resolve(&link)?;
                 let name = link.file_stem()?.to_string_lossy().into_owned();
-                Some(Candidate { name, exe, args, cwd, in_games_folder: in_games, ..Default::default() })
+                // Raccourci Internet rangé dans le même sous-dossier du menu Démarrer (jamais à la racine,
+                // partagée par tous les programmes).
+                let url = link.parent().filter(|d| !roots.iter().any(|r| r == d)).and_then(crate::scanner::links::in_dir);
+                Some(Candidate { name, exe, args, cwd, in_games_folder: in_games, url, ..Default::default() })
             })
             .collect();
         if inited {
@@ -481,6 +490,9 @@ mod win {
                 install_dir,
                 publisher: val(&k, "Publisher"),
                 from_registry: true,
+                url: ["URLInfoAbout", "URLUpdateInfo", "HelpLink"]
+                    .iter()
+                    .find_map(|v| val(&k, v).and_then(|u| crate::scanner::links::https(&u))),
                 ..Default::default()
             });
         }
