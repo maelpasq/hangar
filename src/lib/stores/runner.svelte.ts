@@ -347,7 +347,11 @@ class Runner {
       case 'ended': {
         const { [e.gameId]: _gone, ...rest } = this.running;
         this.running = rest;
-        if (e.session) library.recordSession(e.session);
+        if (e.session) {
+          library.recordSession(e.session, true);
+          // Partie finie : son temps et sa session partent sur le compte Hangar.
+          library.onDirty?.();
+        }
         this.syncPresence();
         if (mine) this.cancel();
         if (this.minimizedByUs && !Object.keys(rest).length) {

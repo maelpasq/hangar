@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import type { CloudChange, Game } from '../types';
-import { ackPushed, adoptGhosts, applyRemote, ghostGames, hasMeaningful, markAllDirty, pendingChanges, replaceWithRemote } from './cloud-sync';
+import {
+  ackPushed,
+  ackSessions,
+  ackTimes,
+  adoptGhosts,
+  applyRemote,
+  applyRemoteSessions,
+  ghostGames,
+  hasMeaningful,
+  markAllDirty,
+  pendingChanges,
+  pendingSessions,
+  remoteTimes,
+  replaceWithRemote,
+  resetCloud,
+  sessionId,
+  timeChanges
+} from './cloud-sync';
 import { defaultState } from './state';
 import { portableOf, stampChanges, syncEntries } from './sync';
 
@@ -206,5 +223,92 @@ describe('envoi et première connexion', () => {
   it('bibliothèque personnalisée ou non', () => {
     expect(hasMeaningful(['seen:steam:1', 'set:accent', 'pref:autoCovers'])).toBe(false);
     expect(hasMeaningful(['seen:steam:1', 'collection:c1'])).toBe(true);
+  });
+});
+
+describe('temps de jeu cumulé', () => {
+  const OTHER = 'b'.repeat(32);
+
+  it("garde le temps des autres postes, jamais le sien ni dans la file d'envoi", () => {
+    const s = defaultState();
+    s.cloud.merged = true;
+    const changed = applyRemote(s, [
+      ch(`time:${OTHER}:epic:fortnite`, { ms: 3_600_000, n: 4, last: 50 }, 100),
+      ch(`time:${s.deviceId}:epic:fortnite`, { ms: 99, n: 1, last: 1 }, 100),
+      ch('time:pas-un-poste:epic:fortnite', { ms: 99, n: 1, last: 1 }, 100)
+    ]);
+    expect(changed).toBe(true);
+    expect(s.cloud.times).toEqual({
+      [OTHER]: { 'epic:fortnite': { playMs: 3_600_000, launches: 4, lastPlayed: 50, store: false, at: 100 } }
+    });
+    expect(remoteTimes(s, 'epic:fortnite')).toHaveLength(1);
+    expect(Object.keys(s.stamps).some((k) => k.startsWith('time:'))).toBe(false);
+    markAllDirty(s);
+    expect(pendingChanges(s).some((c) => c.key.startsWith('time:'))).toBe(false);
+    // Plus ancien : ignoré ; supprimé : retiré.
+    applyRemote(s, [ch(`time:${OTHER}:epic:fortnite`, { ms: 1, n: 1, last: 1 }, 50)]);
+    expect(s.cloud.times[OTHER]['epic:fortnite'].playMs).toBe(3_600_000);
+    applyRemote(s, [ch(`time:${OTHER}:epic:fortnite`, null, 200)]);
+    expect(s.cloud.times[OTHER]['epic:fortnite']).toBeUndefined();
+  });
+
+  it('« Utiliser le compte » garde aussi le temps des autres postes', () => {
+    const s = defaultState();
+    replaceWithRemote(s, [ch(`time:${OTHER}:epic:fortnite`, { ms: 10, n: 1, last: 5, s: 1 }, 100)]);
+    expect(s.cloud.times[OTHER]['epic:fortnite'].store).toBe(true);
+    expect(s.stamps[`time:${OTHER}:epic:fortnite`]).toBeUndefined();
+  });
+
+  it("n'envoie que les temps de ce poste qui ont changé", () => {
+    const s = defaultState();
+    s.totals['epic:fortnite'] = { playMs: 7_200_000, launches: 3, lastPlayed: 10 };
+    s.totals['steam:620'] = { playMs: 0, launches: 0, lastPlayed: 0 };
+    const first = timeChanges(s, () => false, 500);
+    expect(first).toEqual([
+      { key: `time:${s.deviceId}:epic:fortnite`, value: JSON.stringify({ ms: 7_200_000, n: 3, last: 10 }), updatedAt: 500 }
+    ]);
+    ackTimes(s, first);
+    expect(timeChanges(s, () => false)).toEqual([]);
+    s.totals['epic:fortnite'].playMs += 60_000;
+    expect(timeChanges(s, () => true)[0].value).toContain('"s":1');
+  });
+
+  it('les sessions finies partent une fois, avec un identifiant stable', () => {
+    const s = defaultState();
+    const now = 10_000_000;
+    s.sessions = [
+      { gameId: 'epic:fortnite', start: 1000, end: 2000 },
+      { gameId: 'epic:fortnite', start: now - 60_000, end: now },
+      { gameId: 'epic:fortnite', start: now - 30_000, end: now - 1000, done: true },
+      { gameId: 'riot:valorant', start: 10, end: 20, deviceId: OTHER, id: 'x' }
+    ];
+    const list = pendingSessions(s, now);
+    expect(list.map((x) => x.start)).toEqual([1000, now - 30_000]);
+    expect(list[0].id).toBe(sessionId(s.deviceId, 'epic:fortnite', 1000));
+    expect(list[0].id.length).toBeLessThanOrEqual(64);
+    ackSessions(s, list);
+    expect(pendingSessions(s, now)).toEqual([]);
+    resetCloud(s);
+    expect(pendingSessions(s, now)).toHaveLength(2);
+  });
+
+  it('reprend les sessions des autres postes, sans doublon', () => {
+    const s = defaultState();
+    const now = Date.now();
+    const list = [
+      { id: 'a1', gameId: PID, start: now - 7_200_000, end: now - 3_600_000, deviceId: OTHER },
+      { id: 'a1', gameId: PID, start: now - 7_200_000, end: now - 3_600_000, deviceId: OTHER },
+      { id: 'mine', gameId: PID, start: now - 7_200_000, end: now, deviceId: s.deviceId },
+      { id: 'old', gameId: PID, start: 0, end: 1, deviceId: OTHER }
+    ];
+    expect(applyRemoteSessions(s, list, now)).toBe(true);
+    expect(applyRemoteSessions(s, list, now)).toBe(false);
+    expect(s.sessions).toEqual([{ gameId: PID, start: now - 7_200_000, end: now - 3_600_000, deviceId: OTHER, id: 'a1' }]);
+    // Le jeu est retrouvé sur ce poste : ses sessions le suivent.
+    const g = celeste();
+    s.portable[g.id] = portableOf(s, g)!;
+    s.portable[PID] = { name: 'Celeste', exe: 'celeste.exe', dir: 'celeste' };
+    adoptGhosts(s);
+    expect(s.sessions[0].gameId).toBe(g.id);
   });
 });

@@ -5,7 +5,7 @@ import { STORE_ORDER } from '../stores-meta';
 import type { Collection, Game, PersistedState, Session, StoreId, Totals } from '../types';
 import { dedupe } from '../util/games';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
-import { adoptGhosts, ghostGames } from '../util/cloud-sync';
+import { adoptGhosts, ghostGames, remoteTimes } from '../util/cloud-sync';
 import { installLink, isGhostId, portableOf, stampChanges, syncEntries } from '../util/sync';
 
 const EMPTY_TOTALS: Totals = { playMs: 0, launches: 0, lastPlayed: 0 };
@@ -76,7 +76,7 @@ class Library {
    * mesuré et ce que le store sait (Steam, GOG Galaxy). Les nouvelles sessions s'ajoutent
    * à cette valeur, ce qui reste juste puisque le store les comptera aussi.
    */
-  totals(id: string): Totals {
+  ownTotals(id: string): Totals {
     const own = this.state.totals[id] ?? EMPTY_TOTALS;
     const g = this.byId.get(id);
     if (!g || (!g.storePlayMs && !g.storeLastPlayed)) return own;
@@ -85,6 +85,52 @@ class Library {
       launches: own.launches,
       lastPlayed: Math.max(own.lastPlayed, g.storeLastPlayed ?? 0)
     };
+  }
+
+  /** Le store compte déjà ce jeu sur tous les postes (Steam, GOG Galaxy). */
+  storeCounted(id: string): boolean {
+    const g = this.byId.get(id);
+    return !!g && (!!g.storePlayMs || !!g.storeLastPlayed);
+  }
+
+  /**
+   * Temps de jeu tous postes du compte Hangar compris : celui de ce poste plus celui des autres.
+   * Quand le store compte déjà tous les postes, le plus élevé (sinon il serait compté deux fois).
+   */
+  totals(id: string): Totals {
+    const own = this.ownTotals(id);
+    const others = remoteTimes(this.state, id);
+    if (!others.length) return own;
+    const counted = this.storeCounted(id) || others.some(([, t]) => t.store);
+    let playMs = own.playMs;
+    let launches = own.launches;
+    let lastPlayed = own.lastPlayed;
+    for (const [, t] of others) {
+      playMs = counted ? Math.max(playMs, t.playMs) : playMs + t.playMs;
+      launches += t.launches;
+      lastPlayed = Math.max(lastPlayed, t.lastPlayed);
+    }
+    return { playMs, launches, lastPlayed };
+  }
+
+  /**
+   * Temps de jeu par poste (ce poste en premier), seulement quand d'autres postes y ont joué
+   * et que le store ne compte pas déjà tous les postes (le détail serait faux).
+   */
+  deviceTimes(id: string): { deviceId: string; playMs: number; lastPlayed: number }[] {
+    const others = remoteTimes(this.state, id);
+    if (!others.length || this.storeCounted(id) || others.some(([, t]) => t.store)) return [];
+    const own = this.state.totals[id] ?? EMPTY_TOTALS;
+    return [
+      { deviceId: this.state.deviceId, playMs: own.playMs, lastPlayed: own.lastPlayed },
+      ...others.map(([deviceId, t]) => ({ deviceId, playMs: t.playMs, lastPlayed: t.lastPlayed })).sort((a, b) => b.playMs - a.playMs)
+    ];
+  }
+
+  /** Temps de jeu mesuré sur un poste, tous jeux confondus (Paramètres > Compte). */
+  deviceTotal(deviceId: string): number {
+    const list = deviceId === this.state.deviceId ? Object.values(this.state.totals) : Object.values(this.state.cloud.times[deviceId] ?? {});
+    return list.reduce((sum, t) => sum + t.playMs, 0);
   }
 
   /** Date d'ajout : installation connue, sinon première détection par Hangar. */
@@ -407,7 +453,7 @@ class Library {
   }
 
   recordLaunch(id: string): void {
-    const t = { ...this.totals(id) };
+    const t = { ...this.ownTotals(id) };
     t.launches += 1;
     t.lastPlayed = Date.now();
     this.state.totals[id] = t;
@@ -415,15 +461,18 @@ class Library {
   }
 
   /**
-   * Ajoute une session, ou prolonge celle qui a le même jeu et le même début (points
+   * Ajoute une session de ce poste, ou prolonge celle qui a le même jeu et le même début (points
    * d'étape envoyés chaque minute pendant la partie) : seul le temps en plus est compté.
+   * `ended` : la partie est finie, la session peut partir sur le compte tout de suite.
    */
-  recordSession(s: Session): void {
-    const prev = this.state.sessions.find((x) => x.gameId === s.gameId && x.start === s.start);
+  recordSession(s: Session, ended = false): void {
+    const prev = this.state.sessions.find((x) => !x.deviceId && x.gameId === s.gameId && x.start === s.start);
     const from = prev ? Math.max(prev.end, s.start) : s.start;
     const ms = Math.max(0, s.end - from);
-    const session = prev && prev.end > s.end ? prev : s;
-    const t = { ...this.totals(s.gameId) };
+    const session: Session = { gameId: s.gameId, start: s.start, end: Math.max(s.end, prev?.end ?? 0) };
+    if (ended || prev?.done) session.done = true;
+    if (prev?.sent) session.sent = true;
+    const t = { ...this.ownTotals(s.gameId) };
     t.playMs += ms;
     t.lastPlayed = Math.max(t.lastPlayed, session.end);
     this.state.totals[s.gameId] = t;

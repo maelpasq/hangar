@@ -78,6 +78,25 @@ export interface Session {
   gameId: string;
   start: number;
   end: number;
+  /** Session d'un autre poste du compte Hangar (absent : ce poste). */
+  deviceId?: string;
+  /** Identifiant sur le compte (sessions des autres postes). */
+  id?: string;
+  /** Partie terminée (plus de point d'étape à venir). */
+  done?: boolean;
+  /** Déjà envoyée au compte. */
+  sent?: boolean;
+}
+
+/** Temps de jeu d'un jeu sur un autre poste du compte Hangar. */
+export interface DeviceTime {
+  playMs: number;
+  launches: number;
+  lastPlayed: number;
+  /** Ce temps comprend celui que le store compte déjà sur tous les postes (Steam, GOG Galaxy). */
+  store: boolean;
+  /** Date de la valeur sur le compte. */
+  at: number;
 }
 
 export interface Totals {
@@ -217,6 +236,12 @@ export interface CloudSync {
   hiddenHere: string[];
   /** Jeu ajouté ici à la place d'un jeu du compte (« J'ai déjà ce jeu ») -> signature de ce jeu. */
   aliases: Record<string, { exe: string; dir: string }>;
+  /** Temps de jeu des autres postes : deviceId -> identifiant portable du jeu -> temps. */
+  times: Record<string, Record<string, DeviceTime>>;
+  /** Temps de jeu de ce poste déjà envoyés (clé « time:... » -> valeur envoyée). */
+  timeSent: Record<string, string>;
+  /** Curseur du serveur pour les sessions de jeu. */
+  sessionCursor: number;
 }
 
 /** Un élément synchronisé, tel que l'API le donne et le reçoit (value null : supprimé). */
@@ -249,6 +274,16 @@ export interface AccountStatus {
   added: number;
   playTime: number;
   updates: number;
+}
+
+/** Une session de jeu telle que l'API la donne et la reçoit (gameId : identifiant portable). */
+export interface CloudSession {
+  id: string;
+  gameId: string;
+  start: number;
+  end: number;
+  /** Poste qui l'a enregistrée (donné par le serveur). */
+  deviceId?: string;
 }
 
 /** Poste relié au compte Hangar. */

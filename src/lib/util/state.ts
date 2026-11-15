@@ -1,8 +1,10 @@
-import type { CloudSync, Collection, Game, PersistedState, PortableGame, SortKey, StoreId } from '../types';
+import type { CloudSync, Collection, DeviceTime, Game, PersistedState, PortableGame, Session, SortKey, StoreId } from '../types';
 import { httpsLink } from './sync';
 import { STORE_ORDER } from '../stores-meta';
 
 export const SESSION_DAYS = 90;
+/** Identifiant d'installation (32 caractères hexadécimaux). */
+export const DEVICE_ID = /^[0-9a-f]{32}$/;
 
 export function defaultState(): PersistedState {
   return {
@@ -48,7 +50,7 @@ export function defaultState(): PersistedState {
 }
 
 export function defaultCloud(): CloudSync {
-  return { cursor: 0, dirty: [], merged: false, hiddenHere: [], aliases: {} };
+  return { cursor: 0, dirty: [], merged: false, hiddenHere: [], aliases: {}, times: {}, timeSent: {}, sessionCursor: 0 };
 }
 
 /** Identifiant d'installation : aléatoire, sans rapport avec la machine ni la personne. */
@@ -151,7 +153,18 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     s.sessions = raw.sessions
       .filter(isObj)
       .filter((x) => typeof x.gameId === 'string' && typeof x.start === 'number' && typeof x.end === 'number')
-      .map((x) => ({ gameId: x.gameId as string, start: x.start as number, end: x.end as number }))
+      .map((x): Session => {
+        const out: Session = { gameId: x.gameId as string, start: x.start as number, end: x.end as number };
+        // Session d'un autre poste du compte : son identifiant sert à ne pas la reprendre deux fois.
+        if (typeof x.deviceId === 'string' && DEVICE_ID.test(x.deviceId) && typeof x.id === 'string' && x.id) {
+          out.deviceId = x.deviceId;
+          out.id = x.id;
+        } else {
+          if (x.done === true) out.done = true;
+          if (x.sent === true) out.sent = true;
+        }
+        return out;
+      })
       .filter((x) => x.end >= min && x.end >= x.start);
   }
 
@@ -165,6 +178,19 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
       for (const [id, a] of Object.entries(c.aliases)) {
         if (isObj(a) && typeof a.exe === 'string' && a.exe && typeof a.dir === 'string') s.cloud.aliases[id] = { exe: a.exe, dir: a.dir };
       }
+    }
+    if (isObj(c.times)) {
+      for (const [dev, games] of Object.entries(c.times)) {
+        if (!DEVICE_ID.test(dev) || !isObj(games)) continue;
+        for (const [pid, t] of Object.entries(games)) {
+          const time = isObj(t) ? deviceTime(t) : null;
+          if (time) (s.cloud.times[dev] ??= {})[pid] = time;
+        }
+      }
+    }
+    s.cloud.timeSent = strMap(c.timeSent);
+    if (typeof c.sessionCursor === 'number' && Number.isSafeInteger(c.sessionCursor) && c.sessionCursor >= 0) {
+      s.cloud.sessionCursor = c.sessionCursor;
     }
   }
 
@@ -180,6 +206,13 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     Object.assign(s.steamIdCache, numMap(raw.coverCache));
   }
   return s;
+}
+
+function deviceTime(t: Raw): DeviceTime | null {
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null);
+  const [playMs, launches, lastPlayed, at] = [n(t.playMs), n(t.launches), n(t.lastPlayed), n(t.at)];
+  if (playMs === null || launches === null || lastPlayed === null || at === null) return null;
+  return { playMs, launches, lastPlayed, store: t.store === true, at };
 }
 
 function portableGame(f: Raw): PortableGame | null {

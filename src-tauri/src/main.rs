@@ -187,6 +187,8 @@ fn main() {
             commands::cloud_forget_device,
             commands::cloud_pull,
             commands::cloud_push,
+            commands::cloud_pull_sessions,
+            commands::cloud_push_sessions,
             commands::cloud_sync_steamgriddb,
             commands::scan_games,
             commands::open_game_link,

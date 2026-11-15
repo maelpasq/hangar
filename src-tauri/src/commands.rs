@@ -231,6 +231,18 @@ pub async fn cloud_push(ctx: Ctxs<'_>, changes: Vec<crate::cloud::Change>) -> Re
 }
 
 #[tauri::command]
+pub async fn cloud_pull_sessions(ctx: Ctxs<'_>, since: u64) -> Result<crate::cloud::SessionPage, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.pull_sessions(since)).await?
+}
+
+#[tauri::command]
+pub async fn cloud_push_sessions(ctx: Ctxs<'_>, sessions: Vec<crate::cloud::PlaySession>) -> Result<(), String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.push_sessions(sessions)).await?
+}
+
+#[tauri::command]
 pub async fn cloud_sync_steamgriddb(ctx: Ctxs<'_>, first: bool) -> Result<bool, String> {
     let cloud = ctx.cloud.clone();
     blocking(move || cloud.sync_steamgriddb(first)).await?

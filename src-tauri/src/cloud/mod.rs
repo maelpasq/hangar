@@ -101,6 +101,29 @@ pub struct Page {
     pub changes: Vec<Change>,
 }
 
+/// Une session de jeu du compte (identifiant de jeu portable, dates en ms).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaySession {
+    pub id: String,
+    pub game_id: String,
+    pub start: u64,
+    pub end: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device_id: Option<String>,
+}
+
+/// Une page de sessions reçues du compte.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionPage {
+    pub cursor: u64,
+    #[serde(default)]
+    pub more: bool,
+    #[serde(default)]
+    pub sessions: Vec<PlaySession>,
+}
+
 /// Changements par envoi (limite de l'API).
 const MAX_CHANGES: usize = 1000;
 
@@ -448,6 +471,25 @@ impl Cloud {
             .map(|c| json!({ "key": c.key, "value": c.value, "updatedAt": c.updated_at }))
             .collect();
         self.authed(|t| call("POST", "/sync", Some(t), Some(&json!({ "changes": list }))))?;
+        Ok(())
+    }
+
+    /// Sessions de jeu de tous les postes depuis le curseur `since` (une page).
+    pub fn pull_sessions(&self, since: u64) -> Result<SessionPage, String> {
+        let v = self.authed(|t| call("GET", &format!("/sessions?since={since}"), Some(t), None))?;
+        serde_json::from_value(v).map_err(|_| "Réponse illisible du serveur du compte.".into())
+    }
+
+    /// Envoi des sessions finies de ce poste (ajout seulement ; le serveur ignore celles qu'il a).
+    pub fn push_sessions(&self, sessions: Vec<PlaySession>) -> Result<(), String> {
+        if sessions.len() > MAX_CHANGES {
+            return Err("Trop de sessions d'un coup.".into());
+        }
+        let list: Vec<Value> = sessions
+            .into_iter()
+            .map(|s| json!({ "id": s.id, "gameId": s.game_id, "start": s.start, "end": s.end }))
+            .collect();
+        self.authed(|t| call("POST", "/sessions", Some(t), Some(&json!({ "sessions": list }))))?;
         Ok(())
     }
 

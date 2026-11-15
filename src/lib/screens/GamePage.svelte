@@ -13,6 +13,7 @@
   import StoreLogo from '../components/StoreLogo.svelte';
   import { STORE_LOGOS } from '../store-logos';
   import { STORES } from '../stores-meta';
+  import { cloud } from '../stores/cloud.svelte';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -32,6 +33,16 @@
   const banner = $derived(hero || cover?.src || null);
   const running = $derived(runner.isRunning(game.id));
   const sessions = $derived(library.state.sessions.filter((s) => s.gameId === game.id));
+  /** Sessions d'autres PC du compte Hangar dans l'histogramme. */
+  const allDevices = $derived(sessions.some((s) => s.deviceId));
+  /** Temps de jeu par PC du compte Hangar (vide : un seul PC, ou temps compté par le store). */
+  const perDevice = $derived(
+    library.deviceTimes(game.id).map((d) => {
+      const here = d.deviceId === library.state.deviceId;
+      const known = cloud.status.devices.find((x) => (here ? x.current : x.id === d.deviceId));
+      return { ...d, here, name: known?.name ?? (here ? 'Ce PC' : 'Autre PC') };
+    })
+  );
   const added = $derived(library.addedAt(game));
   const genre = $derived(library.genre(game));
   const location = $derived(
@@ -159,7 +170,21 @@
           <div class="v num">{size === undefined ? '…' : sizeLabel(size)}</div>
         </div>
       </div>
-      <div class="chart-head"><span>14 derniers jours</span><span class="unit">heures par jour</span></div>
+      {#if perDevice.length}
+        <ul class="per-device" aria-label="Temps de jeu par PC">
+          {#each perDevice as d (d.deviceId)}
+            <li>
+              <Icon name="monitor" size={15} />
+              <span class="pd-name">{d.name}{#if d.here}<span class="pd-here"> · ce PC</span>{/if}</span>
+              <span class="pd-last">{d.lastPlayed ? relativeDay(d.lastPlayed) : 'Jamais'}</span>
+              <span class="pd-time num">{hoursLabel(d.playMs)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <div class="chart-head">
+        <span>14 derniers jours</span><span class="unit">heures par jour{allDevices ? ', tous tes PC' : ''}</span>
+      </div>
       <ActivityChart {sessions} now={runner.now} />
     </section>
     <section class="card-section info">
@@ -451,6 +476,49 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .per-device {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 4px 14px;
+    border-radius: 14px;
+    background: rgb(var(--ink) / 0.04);
+  }
+
+  .per-device li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .per-device li + li {
+    border-top: 1px solid rgb(var(--ink) / 0.06);
+  }
+
+  .pd-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pd-here {
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .pd-time {
+    min-width: 64px;
+    text-align: right;
+    color: var(--text);
+    font-weight: 700;
   }
 
   .chart-head {

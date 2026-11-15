@@ -4,7 +4,20 @@
 
 import { api } from '../api';
 import type { CloudChange, CloudStatus } from '../types';
-import { ackPushed, applyRemote, hasMeaningful, markAllDirty, pendingChanges, replaceWithRemote } from '../util/cloud-sync';
+import {
+  ackPushed,
+  ackSessions,
+  ackTimes,
+  applyRemote,
+  applyRemoteSessions,
+  hasMeaningful,
+  markAllDirty,
+  pendingChanges,
+  pendingSessions,
+  replaceWithRemote,
+  resetCloud,
+  timeChanges
+} from '../util/cloud-sync';
 import { syncEntries } from '../util/sync';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
@@ -145,6 +158,7 @@ class Cloud {
         await api.cloudPush(batch);
         ackPushed(s, batch);
       }
+      await this.syncPlayTime();
       library.save();
 
       const key = await api.cloudSyncSteamGridDb(first).catch(() => null);
@@ -158,6 +172,34 @@ class Cloud {
     } catch (e) {
       console.error('cloud_sync', message(e));
       await this.failed();
+    }
+  }
+
+  /**
+   * Temps de jeu (docs/COMPTE.md, phase 4) : sessions des autres postes récupérées, temps et
+   * sessions finies de ce poste envoyés. Chaque poste n'écrit que les siens.
+   */
+  private async syncPlayTime(): Promise<void> {
+    const s = library.state;
+    let cursor = s.cloud.sessionCursor;
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const page = await api.cloudPullSessions(cursor);
+      applyRemoteSessions(s, page.sessions);
+      cursor = page.cursor;
+      if (!page.more) break;
+    }
+    s.cloud.sessionCursor = cursor;
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const times = timeChanges(s, (id) => library.storeCounted(id));
+      if (!times.length) break;
+      await api.cloudPush(times);
+      ackTimes(s, times);
+    }
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const sessions = pendingSessions(s);
+      if (!sessions.length) break;
+      await api.cloudPushSessions(sessions);
+      ackSessions(s, sessions);
     }
   }
 
@@ -182,10 +224,7 @@ class Cloud {
   private resetSync(): void {
     this.phase = 'idle';
     this.lastSync = 0;
-    const c = library.state.cloud;
-    c.cursor = 0;
-    c.merged = false;
-    c.dirty = [];
+    resetCloud(library.state);
     library.save();
   }
 

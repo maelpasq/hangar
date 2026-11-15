@@ -2,8 +2,9 @@
 // reçus, file d'envoi, fusion à la première connexion, jeux « Sur un autre PC ». Fonctions pures
 // sur l'état ; le réseau passe par le backend (`stores/cloud.svelte.ts`).
 
-import type { CloudChange, Collection, Game, PersistedState, PortableGame, Prefs } from '../types';
-import { httpsLink, isGhostId, SYNC_PREFS, syncEntries } from './sync';
+import type { CloudChange, CloudSession, Collection, DeviceTime, Game, PersistedState, PortableGame, Prefs } from '../types';
+import { DEVICE_ID, SESSION_DAYS } from './state';
+import { httpsLink, isGhostId, portableId, SYNC_PREFS, syncEntries } from './sync';
 
 /** Limites de l'API (server/src/app.ts) : un élément plus gros bloquerait tout l'envoi. */
 export const MAX_CHANGES = 1000;
@@ -170,6 +171,11 @@ export function applyRemote(s: PersistedState, changes: CloudChange[], now = Dat
   const reassert: string[] = [];
   let changed = false;
   for (const ch of changes) {
+    // Temps de jeu d'un poste : à part, jamais daté ni renvoyé comme les autres éléments.
+    if (kindOf(ch.key) === 'time') {
+      if (applyTime(s, ch)) changed = true;
+      continue;
+    }
     const local = s.stamps[ch.key];
     if (local !== undefined && local >= ch.updatedAt) continue;
     s.stamps[ch.key] = ch.updatedAt;
@@ -193,7 +199,10 @@ export function applyRemote(s: PersistedState, changes: CloudChange[], now = Dat
  */
 export function replaceWithRemote(s: PersistedState, changes: CloudChange[], now = Date.now()): void {
   const alive = new Map<string, CloudChange>();
-  for (const ch of changes) if (ch.value !== null) alive.set(ch.key, ch);
+  for (const ch of changes) {
+    if (kindOf(ch.key) === 'time') applyTime(s, ch);
+    else if (ch.value !== null) alive.set(ch.key, ch);
+  }
   const real = realIds(s);
   for (const key of syncEntries(s).keys()) {
     const kind = kindOf(key);
@@ -261,6 +270,9 @@ function moveId(s: PersistedState, from: string, to: string): void {
   s.favorites = swap(s.favorites);
   s.hidden = swap(s.hidden);
   s.collections = s.collections.map((c) => (c.games.includes(from) ? { ...c, games: swap(c.games) } : c));
+  if (s.sessions.some((x) => x.gameId === from)) {
+    s.sessions = s.sessions.map((x) => (x.gameId === from ? { ...x, gameId: to } : x));
+  }
   for (const map of [s.renames, s.customCovers, s.totals, s.installLinks] as Record<string, unknown>[]) {
     if (from in map) {
       if (!(to in map)) map[to] = map[from];
@@ -314,4 +326,151 @@ export function ghostGames(s: PersistedState): Game[] {
     });
   }
   return out;
+}
+
+// --- Temps de jeu cumulé (docs/COMPTE.md, phase 4) ---
+// Chaque poste publie ses propres totaux, un élément par jeu (« time:<poste>:<jeu> ») ; le
+// temps affiché additionne les postes. Les sessions (ajout seulement) font l'historique.
+
+/** Une partie finie depuis ce délai sans point d'étape (un par minute) ne bougera plus. */
+const SETTLED = 3 * 60_000;
+
+const timeKey = (deviceId: string, pid: string) => `time:${deviceId}:${pid}`;
+
+/** Temps de jeu d'un autre poste reçu du compte. Rend vrai s'il a changé. */
+function applyTime(s: PersistedState, ch: CloudChange): boolean {
+  const rest = restOf(ch.key);
+  const colon = rest.indexOf(':');
+  const dev = rest.slice(0, colon);
+  const pid = rest.slice(colon + 1);
+  // Les temps de ce poste viennent de lui : jamais remplacés par leur copie du compte.
+  if (colon < 0 || !pid || !DEVICE_ID.test(dev) || dev === s.deviceId) return false;
+  const games = s.cloud.times[dev] ?? {};
+  const cur = games[pid];
+  if (cur && cur.at >= ch.updatedAt) return false;
+  if (ch.value === null) {
+    if (!cur) return false;
+    delete games[pid];
+  } else {
+    const t = wireTime(parse(ch.value), ch.updatedAt);
+    if (!t) return false;
+    games[pid] = t;
+  }
+  s.cloud.times[dev] = games;
+  return true;
+}
+
+function wireTime(v: unknown, at: number): DeviceTime | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null;
+  const t = v as { ms?: unknown; n?: unknown; last?: unknown; s?: unknown };
+  if (!isTime(t.ms) || !isTime(t.n) || !isTime(t.last)) return null;
+  return { playMs: t.ms, launches: t.n, lastPlayed: t.last, store: t.s === 1, at };
+}
+
+/**
+ * Temps de jeu de ce poste qui ont changé depuis le dernier envoi (au plus `MAX_CHANGES`).
+ * `storeCounted` : le store compte déjà ce jeu sur tous les postes (Steam, GOG Galaxy).
+ */
+export function timeChanges(s: PersistedState, storeCounted: (id: string) => boolean, now = Date.now()): CloudChange[] {
+  const out: CloudChange[] = [];
+  for (const [id, t] of Object.entries(s.totals)) {
+    if ((!t.playMs && !t.launches) || isGhostId(id)) continue;
+    const pid = portableId(s, id);
+    if (pid === null) continue;
+    const key = timeKey(s.deviceId, pid);
+    const value = JSON.stringify({
+      ms: Math.round(t.playMs),
+      n: Math.round(t.launches),
+      last: Math.round(t.lastPlayed),
+      ...(storeCounted(id) ? { s: 1 } : {})
+    });
+    if (key.length > MAX_KEY || s.cloud.timeSent[key] === value) continue;
+    out.push({ key, value, updatedAt: now });
+    if (out.length >= MAX_CHANGES) break;
+  }
+  return out;
+}
+
+/** Envoi des temps de jeu réussi. */
+export function ackTimes(s: PersistedState, sent: CloudChange[]): void {
+  for (const ch of sent) if (ch.value !== null) s.cloud.timeSent[ch.key] = ch.value;
+}
+
+/** Temps de jeu d'un jeu sur les autres postes, par poste. */
+export function remoteTimes(s: PersistedState, gameId: string): [string, DeviceTime][] {
+  const pid = portableId(s, gameId);
+  if (pid === null) return [];
+  const out: [string, DeviceTime][] = [];
+  for (const [dev, games] of Object.entries(s.cloud.times)) {
+    const t = games[pid];
+    if (t) out.push([dev, t]);
+  }
+  return out;
+}
+
+/** FNV-1a 32 bits, en hexadécimal. */
+function hash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+/** Identifiant sur le compte d'une session de ce poste : toujours le même (un renvoi est ignoré). */
+export function sessionId(deviceId: string, pid: string, start: number): string {
+  return `${deviceId}-${Math.round(start).toString(36)}-${hash(pid)}`;
+}
+
+/** Sessions finies de ce poste pas encore envoyées (au plus `MAX_CHANGES`). */
+export function pendingSessions(s: PersistedState, now = Date.now()): CloudSession[] {
+  const out: CloudSession[] = [];
+  for (const x of s.sessions) {
+    if (x.deviceId || x.sent || (!x.done && x.end > now - SETTLED)) continue;
+    const pid = portableId(s, x.gameId);
+    if (pid === null || pid.length > MAX_KEY) continue;
+    const start = Math.round(x.start);
+    out.push({ id: sessionId(s.deviceId, pid, start), gameId: pid, start, end: Math.max(start, Math.round(x.end)) });
+    if (out.length >= MAX_CHANGES) break;
+  }
+  return out;
+}
+
+/** Envoi des sessions réussi. */
+export function ackSessions(s: PersistedState, sent: CloudSession[]): void {
+  const ids = new Set(sent.map((x) => x.id));
+  for (const x of s.sessions) {
+    if (x.deviceId || x.sent) continue;
+    const pid = portableId(s, x.gameId);
+    if (pid !== null && ids.has(sessionId(s.deviceId, pid, x.start))) x.sent = true;
+  }
+}
+
+/** Sessions des autres postes reçues du compte (90 derniers jours). Rend vrai si l'état a changé. */
+export function applyRemoteSessions(s: PersistedState, list: CloudSession[], now = Date.now()): boolean {
+  const real = realIds(s);
+  const known = new Set(s.sessions.map((x) => x.id).filter((x) => x !== undefined));
+  const min = now - SESSION_DAYS * 86_400_000;
+  const added: PersistedState['sessions'] = [];
+  for (const r of list) {
+    const dev = r.deviceId;
+    if (!dev || dev === s.deviceId || !DEVICE_ID.test(dev) || known.has(r.id)) continue;
+    if (!r.gameId || !isTime(r.start) || !isTime(r.end) || r.end < r.start || r.end < min) continue;
+    known.add(r.id);
+    added.push({ gameId: localId(r.gameId, real), start: r.start, end: r.end, deviceId: dev, id: r.id });
+  }
+  if (added.length) s.sessions = [...s.sessions, ...added];
+  return added.length > 0;
+}
+
+/**
+ * Poste détaché du compte (déconnexion) : la prochaine connexion renverra tout. Les temps et
+ * sessions des autres postes restent sur le poste, comme le reste.
+ */
+export function resetCloud(s: PersistedState): void {
+  const c = s.cloud;
+  c.cursor = 0;
+  c.merged = false;
+  c.dirty = [];
+  c.timeSent = {};
+  c.sessionCursor = 0;
+  for (const x of s.sessions) if (!x.deviceId) delete x.sent;
 }

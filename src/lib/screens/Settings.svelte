@@ -21,7 +21,7 @@
   import { runner } from '../stores/runner.svelte';
   import { startPages } from '../start-page';
   import type { AccountStatus, CloseAction, Prefs, StartPage, StoreId, Theme } from '../types';
-  import { plural, relativeDay } from '../util/format';
+  import { hoursLabel, plural, relativeDay } from '../util/format';
   import { isLinux, isMac } from '../util/platform';
   import { RELEASES, notesBetween } from '../util/release-notes';
 
@@ -320,8 +320,9 @@
                   >
                 </div>
                 <p class="gdesc">
-                  Tes favoris, collections, renommages, jaquettes Steam, jeux ajoutés à la main et réglages
-                  d'apparence suivent ton compte sur tous tes PC. Se déconnecter garde tout sur ce PC.
+                  Tes favoris, collections, renommages, jaquettes Steam, jeux ajoutés à la main, réglages
+                  d'apparence et ton temps de jeu suivent ton compte sur tous tes PC. Se déconnecter garde tout sur ce
+                  PC.
                 </p>
               </section>
 
@@ -338,10 +339,13 @@
                         <button type="submit" class="btn-s primary" disabled={!newName.trim()}>Enregistrer</button>
                       </form>
                     {:else}
+                      {@const played = library.deviceTotal(d.current ? library.state.deviceId : d.id)}
                       <span class="txt">
                         <span class="lbl ell">{d.name}</span>
                         <span class="hint"
-                          >{d.connected ? `Vu : ${relativeDay(d.lastSeen).toLowerCase()}` : 'Déconnecté'}</span
+                          >{d.connected ? `Vu : ${relativeDay(d.lastSeen).toLowerCase()}` : 'Déconnecté'}{played > 0
+                            ? ` · ${hoursLabel(played)} de jeu`
+                            : ''}</span
                         >
                       </span>
                       {#if d.current}<span class="tag conn">Ce PC</span>{/if}

@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { CloudChange, CloudStatus } from './types';
+import type { CloudChange, CloudSession, CloudStatus } from './types';
 import { displayVersion } from './util/release-notes';
 import type { AccountStatus, Achievements, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
@@ -125,6 +125,10 @@ export interface Api {
   cloudPull(since: number): Promise<{ cursor: number; more: boolean; changes: CloudChange[] }>;
   /** Synchro : envoi groupé (1000 changements au plus). */
   cloudPush(changes: CloudChange[]): Promise<void>;
+  /** Sessions de jeu de tous les postes depuis le curseur (une page). */
+  cloudPullSessions(since: number): Promise<{ cursor: number; more: boolean; sessions: CloudSession[] }>;
+  /** Envoi des sessions finies de ce poste (1000 au plus ; ajout seulement). */
+  cloudPushSessions(sessions: CloudSession[]): Promise<void>;
   /** Clé SteamGridDB du compte (chiffrée côté serveur) ; rend vrai si ce poste a une clé. */
   cloudSyncSteamGridDb(first: boolean): Promise<boolean>;
   /** Page d'aide connue (liste fermée côté backend). */
@@ -256,6 +260,8 @@ async function tauriApi(): Promise<Api> {
     cloudForgetDevice: (id) => invoke('cloud_forget_device', { id }),
     cloudPull: (since) => invoke('cloud_pull', { since }),
     cloudPush: (changes) => invoke('cloud_push', { changes }),
+    cloudPullSessions: (since) => invoke('cloud_pull_sessions', { since }),
+    cloudPushSessions: (sessions) => invoke('cloud_push_sessions', { sessions }),
     cloudSyncSteamGridDb: (first) => invoke('cloud_sync_steamgriddb', { first }),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),

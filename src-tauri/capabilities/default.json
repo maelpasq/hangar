@@ -60,6 +60,8 @@
     "allow-cloud-forget-device",
     "allow-cloud-pull",
     "allow-cloud-push",
+    "allow-cloud-pull-sessions",
+    "allow-cloud-push-sessions",
     "allow-cloud-sync-steamgriddb",
     "allow-disconnect-account",
     "allow-xbox-login-code",

@@ -4,7 +4,7 @@
 import demo from '../../design/reference/demo-games.json';
 import type { Api } from './api';
 import { STORES } from './stores-meta';
-import type { AccountStatus, CloudChange, CloudStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
+import type { AccountStatus, CloudChange, CloudSession, CloudStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
 import { RELEASES } from './util/release-notes';
 import { defaultState } from './util/state';
 
@@ -180,9 +180,23 @@ export function mockApi(): Api {
       { key: 'game:@hollow_knight.exe|hollow knight', value: JSON.stringify({ name: 'Hollow Knight', steamAppId: 367520, installUrl: 'https://www.hollowknight.com/' }), updatedAt: Date.now() - 3 * day },
       { key: 'game:@outer.exe|outer wilds', value: JSON.stringify({ name: 'Outer Wilds', steamAppId: null, installUrl: null }), updatedAt: Date.now() - 3 * day },
       { key: 'fav:@hollow_knight.exe|hollow knight', value: 'true', updatedAt: Date.now() - 2 * day },
-      { key: 'collection:cdemo', value: JSON.stringify({ name: 'Sur le portable', games: ['@hollow_knight.exe|hollow knight', '@outer.exe|outer wilds'] }), updatedAt: Date.now() - 2 * day }
+      { key: 'collection:cdemo', value: JSON.stringify({ name: 'Sur le portable', games: ['@hollow_knight.exe|hollow knight', '@outer.exe|outer wilds'] }), updatedAt: Date.now() - 2 * day },
+      // Temps de jeu du portable (temps cumulé et détail par PC).
+      { key: `time:${'b'.repeat(32)}:epic:fortnite`, value: JSON.stringify({ ms: 31 * 36e5, n: 40, last: Date.now() - 2 * day }), updatedAt: Date.now() - 2 * day },
+      { key: `time:${'b'.repeat(32)}:riot:valorant`, value: JSON.stringify({ ms: 12 * 36e5, n: 18, last: Date.now() - 4 * day }), updatedAt: Date.now() - 4 * day },
+      { key: `time:${'b'.repeat(32)}:@hollow_knight.exe|hollow knight`, value: JSON.stringify({ ms: 23 * 36e5, n: 15, last: Date.now() - 2 * day }), updatedAt: Date.now() - 2 * day }
     ].map((c) => [c.key, { ...c, deviceId: 'b'.repeat(32) }])
   );
+  const remoteSessions: CloudSession[] = [
+    [2, 'epic:fortnite', 2.5],
+    [3, 'epic:fortnite', 1.2],
+    [6, 'epic:fortnite', 3],
+    [4, 'riot:valorant', 1.5],
+    [2, '@hollow_knight.exe|hollow knight', 2]
+  ].map(([days, gameId, hours], i) => {
+    const end = Date.now() - (days as number) * day;
+    return { id: `demo-${i}`, gameId: gameId as string, start: end - (hours as number) * 36e5, end, deviceId: 'b'.repeat(32) };
+  });
   let remoteCursor = 1;
   const remoteSeq = new Map<string, number>([...remote.keys()].map((k) => [k, 1]));
   const synced = new Set<() => void>();
@@ -425,6 +439,17 @@ export function mockApi(): Api {
         remote.set(c.key, { ...c, deviceId: 'a'.repeat(32) });
         remoteSeq.set(c.key, remoteCursor);
       }
+    },
+    cloudPullSessions: async (since) => {
+      await wait(200);
+      if (!cloud.connected) throw "Ce poste n'est pas connecté au compte.";
+      return { cursor: remoteCursor, more: false, sessions: since ? [] : structuredClone(remoteSessions) };
+    },
+    cloudPushSessions: async (sessions) => {
+      await wait(200);
+      if (!cloud.connected) throw "Ce poste n'est pas connecté au compte.";
+      remoteCursor++;
+      for (const s of sessions) if (!remoteSessions.some((x) => x.id === s.id)) remoteSessions.push({ ...s, deviceId: 'a'.repeat(32) });
     },
     cloudSyncSteamGridDb: async () => false,
     openLink: async () => {},
