@@ -199,30 +199,19 @@ fn parse_callback(request: &str) -> Option<(String, String)> {
     Some((get("code")?, get("state")?))
 }
 
-fn page(ok: bool) -> String {
-    let (title, text) = if ok {
-        ("Connexion réussie", "Tu peux fermer cet onglet et revenir dans Hangar.")
-    } else {
-        ("Connexion refusée", "Cette page ne correspond pas à la connexion en cours. Recommence depuis Hangar.")
+/// Répond au navigateur. Avec `end`, le renvoie vers la page de fin de l'API (« done » ou
+/// « refused »), qui a la même présentation que la page de connexion ; l'adresse locale et son
+/// code quittent ainsi la barre d'adresse.
+fn respond(stream: &mut TcpStream, end: Option<&str>) {
+    let head = match end {
+        Some(end) => format!(
+            "HTTP/1.1 302 Found\r\nLocation: {}/login/{end}\r\nContent-Length: 0\r\n\
+Cache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nConnection: close\r\n\r\n",
+            api()
+        ),
+        None => "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(),
     };
-    format!(
-        "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>{title}</title>\
-<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>\
-body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0d0f14;color:#eef0f6;\
-font:15px/1.5 system-ui,sans-serif}}main{{text-align:center;padding:24px}}h1{{font-size:20px;margin:0 0 8px}}\
-p{{margin:0;color:#9aa0ae}}</style></head><body><main><h1>{title}</h1><p>{text}</p></main></body></html>"
-    )
-}
-
-fn respond(stream: &mut TcpStream, status: &str, body: &str) {
-    let head = format!(
-        "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\
-Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\nCache-Control: no-store\r\n\
-Referrer-Policy: no-referrer\r\nConnection: close\r\n\r\n",
-        body.len()
-    );
     let _ = stream.write_all(head.as_bytes());
-    let _ = stream.write_all(body.as_bytes());
     let _ = stream.flush();
 }
 
@@ -260,11 +249,11 @@ fn wait_code(listener: &TcpListener, state: &str) -> Result<String, String> {
                 let req = read_request(&mut stream);
                 match parse_callback(&req) {
                     Some((code, st)) if st == state && safe_token(&code) => {
-                        respond(&mut stream, "200 OK", &page(true));
+                        respond(&mut stream, Some("done"));
                         return Ok(code);
                     }
-                    Some(_) => respond(&mut stream, "400 Bad Request", &page(false)),
-                    None => respond(&mut stream, "404 Not Found", ""),
+                    Some(_) => respond(&mut stream, Some("refused")),
+                    None => respond(&mut stream, None),
                 }
             }
             Err(e) if e.kind() == ErrorKind::WouldBlock => std::thread::sleep(Duration::from_millis(150)),
@@ -462,8 +451,10 @@ mod tests {
         });
         assert_eq!(wait_code(&listener, "attendu").unwrap(), "abc");
         let (mauvais, bon) = t.join().unwrap();
-        assert!(mauvais.starts_with("HTTP/1.1 400"));
-        assert!(bon.starts_with("HTTP/1.1 200") && bon.contains("Connexion réussie"));
+        // Le navigateur est renvoyé vers la page de fin de l'API, jamais ailleurs.
+        let vers = |end: &str| format!("Location: {}/login/{end}\r\n", api());
+        assert!(mauvais.starts_with("HTTP/1.1 302") && mauvais.contains(&vers("refused")));
+        assert!(bon.starts_with("HTTP/1.1 302") && bon.contains(&vers("done")));
     }
 
     #[test]

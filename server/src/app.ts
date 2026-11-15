@@ -6,7 +6,9 @@ import { bodyLimit } from 'hono/body-limit';
 import { createAuth, providers, resendMailer } from './auth';
 import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
-import { loginPage, pageHeaders } from './login-page';
+import { GEIST_WOFF2 } from './font';
+import { loginPage, pageHeaders, statusPage } from './login-page';
+import { LOGO_PNG } from './logo';
 import { account, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user, verification } from './schema';
 
 /** Changements par envoi ; une page de lecture en contient au plus le double (voir `page`). */
@@ -22,6 +24,9 @@ const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 const STATE = /^[A-Za-z0-9_-]{8,128}$/;
 const KEY = /^[a-z]+:.+$/s;
 const SECRET_NAMES = ['steamgriddb'];
+const bytes = (b64: string) => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+const FONT = bytes(GEIST_WOFF2);
+const LOGO = bytes(LOGO_PNG);
 
 type Device = typeof devices.$inferSelect;
 type Vars = { Variables: { device: Device } };
@@ -72,11 +77,25 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
   app.get('/login', (c) => {
     const nonce = randomToken();
     const ok = loopback(new URL(c.req.url).searchParams);
-    const html = ok
-      ? loginPage(nonce, providers(env))
-      : loginPage(nonce, [], 'Ce lien de connexion est incomplet. Relancez la connexion depuis Hangar.');
+    const html = ok ? loginPage(nonce, providers(env)) : statusPage(nonce, 'invalid');
     return c.body(html, ok ? 200 : 400, pageHeaders(nonce));
   });
+
+  /** Fin de la connexion : l'app y renvoie le navigateur une fois le code reçu sur son adresse locale. */
+  for (const end of ['done', 'refused'] as const) {
+    app.get(`/login/${end}`, (c) => {
+      const nonce = randomToken();
+      return c.body(statusPage(nonce, end), 200, pageHeaders(nonce));
+    });
+  }
+
+  app.get('/login/logo.png', (c) =>
+    c.body(LOGO, 200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=31536000, immutable' })
+  );
+
+  app.get('/login/geist.woff2', (c) =>
+    c.body(FONT, 200, { 'content-type': 'font/woff2', 'cache-control': 'public, max-age=31536000, immutable' })
+  );
 
   /** Connectée dans le navigateur : rend un code à usage unique à l'app, sur son adresse locale. */
   app.get('/desktop/finish', async (c) => {

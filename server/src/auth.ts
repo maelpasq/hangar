@@ -3,6 +3,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins/email-otp';
 import type { Db, Env, Mailer } from './env';
+import { mailHtml, mailSubject, mailText } from './mail';
 import * as schema from './schema';
 
 export type Provider = 'discord' | 'google';
@@ -28,10 +29,9 @@ export function resendMailer(env: Env): Mailer {
       body: JSON.stringify({
         from: env.MAIL_FROM,
         to: [to],
-        subject: `${code} : votre code de connexion Hangar`,
-        text:
-          `Votre code de connexion à Hangar : ${code}\n\n` +
-          `Il est valable 10 minutes. Si vous n'avez pas demandé ce code, ignorez ce message.`
+        subject: mailSubject(code),
+        text: mailText(code),
+        html: mailHtml(code, env.BASE_URL)
       })
     });
     if (!res.ok) throw new Error(`Envoi de l'e-mail refusé (${res.status})`);

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --env test",
+    "preview": "node scripts/preview.mjs",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "verify": "tsc --noEmit && vitest run",

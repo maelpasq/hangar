@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { b64url, pkceChallenge, randomToken } from '../src/crypto';
 import type { Env } from '../src/env';
+import { mailHtml } from '../src/mail';
 import * as schema from '../src/schema';
 
 const BASE = 'http://127.0.0.1:8787';
@@ -93,6 +94,25 @@ describe('connexion', () => {
     const html = await res.text();
     expect(html).toContain('Connexion à Hangar');
     expect(html).not.toContain('Continuer avec');
+  });
+
+  it('sert les pages de fin, la police et un e-mail sans rien charger d\'ailleurs', async () => {
+    for (const [path, title] of [['/login/done', 'Connexion réussie'], ['/login/refused', 'Connexion refusée']]) {
+      const res = await call(path);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-security-policy')).toContain("default-src 'none'");
+      expect(await res.text()).toContain(title);
+    }
+    const font = await call('/login/geist.woff2');
+    expect(font.headers.get('content-type')).toBe('font/woff2');
+    expect(new TextDecoder().decode((await font.arrayBuffer()).slice(0, 4))).toBe('wOF2');
+    const logo = await call('/login/logo.png');
+    expect(logo.headers.get('content-type')).toBe('image/png');
+    expect(new Uint8Array(await logo.arrayBuffer())[1]).toBe(0x50);
+    // Le code se copie d'un bloc, et la seule adresse du message est le logo servi par l'API.
+    const mail = mailHtml('482913', 'https://api.test');
+    expect(mail).toContain('>482913<');
+    expect(mail.match(/https?:\/\/[^"' )]+/g)).toEqual(['https://api.test/login/logo.png']);
   });
 
   it('refuse un retour qui ne vise pas un port local valide', async () => {
