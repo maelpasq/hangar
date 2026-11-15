@@ -38,7 +38,12 @@
 
   const connectedCount = $derived(accounts.list.filter((a) => a.connected).length);
   const hidden = $derived(library.all.filter((g) => library.state.hidden.includes(g.id)));
-  const stores = $derived(STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0));
+  // Les launchers où l'on peut relier un compte en premier, puis l'ordre habituel (tri stable).
+  const stores = $derived(
+    STORE_ORDER.filter((s) => s !== 'manual' || (library.countsAll.manual ?? 0) > 0).sort(
+      (a, b) => Number(!!accounts.byStore.get(b)?.connectable) - Number(!!accounts.byStore.get(a)?.connectable),
+    ),
+  );
 
   const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number; alert?: boolean }[]>([
     { id: 'general', label: 'Général', icon: 'sliders' },
