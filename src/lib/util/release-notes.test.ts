@@ -57,7 +57,11 @@ describe('notes de version', () => {
     expect(notesBetween(all, null, '1.2.10').map((r) => r.version)).toEqual(['1.2.10']);
     expect(notesBetween(all, '1.2.2', '1.2.10').map((r) => r.version)).toEqual(['1.2.10', '1.2.9']);
     expect(notesBetween(all, '1.2.9', '1.2.9')).toEqual([]);
-    expect(notesBetween(all, null, '9.9.9')).toEqual([]);
+    // Correction silencieuse (pas d'entrée) : les Paramètres montrent les dernières notes publiées.
+    expect(notesBetween(all, null, '9.9.9').map((r) => r.version)).toEqual(['1.2.10']);
+    expect(notesBetween(all, '1.2.9', '1.2.11').map((r) => r.version)).toEqual(['1.2.10']);
+    expect(notesBetween(all, '1.2.10', '1.2.11')).toEqual([]);
+    expect(notesBetween(all, null, '0.0.1')).toEqual([]);
   });
 
   it('découpe le gras sans HTML', () => {

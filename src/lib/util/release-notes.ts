@@ -71,8 +71,11 @@ export const MAX_NOTES = 5;
  */
 export function notesBetween(all: ReleaseNotes[], since: string | null, current: string): ReleaseNotes[] {
   const upTo = all.filter((r) => compareVersions(r.version, current) <= 0);
-  const list = since ? upTo.filter((r) => compareVersions(r.version, since) > 0) : upTo.filter((r) => r.version === current);
-  return list.slice(0, MAX_NOTES);
+  if (since) return upTo.filter((r) => compareVersions(r.version, since) > 0).slice(0, MAX_NOTES);
+  // Sans version de départ (bouton des Paramètres) : les dernières notes publiées, même si la
+  // version actuelle est une correction silencieuse sans entrée dans l'historique.
+  const latest = upTo.reduce<ReleaseNotes | null>((best, r) => (!best || compareVersions(r.version, best.version) > 0 ? r : best), null);
+  return latest ? [latest] : [];
 }
 
 /** Découpe un texte en morceaux normaux et en gras (`**...**`), sans HTML. */
