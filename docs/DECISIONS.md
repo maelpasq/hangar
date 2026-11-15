@@ -309,3 +309,6 @@ Un jeu en cours porte une pastille « En jeu · mm:ss » et un liseré vert sur 
 ## Mode manette au démarrage du PC
 
 Réglage « Ouvrir au démarrage du PC » dans Paramètres > Mode manette. Il active aussi « Démarrer avec Windows » (même entrée de démarrage, argument `--hidden`), et désactiver ce dernier le coupe. Au lancement avec le système, le frontend appelle `pad_at_login` (vrai une seule fois par lancement) qui remet la fenêtre devant, puis ouvre le mode manette. Les notes de version attendent alors le démarrage suivant. Indépendant de « Activer le mode manette » (boutons de la manette).
+## Compte Hangar facultatif (15 nov. 2026)
+
+Demande de l'utilisateur : un compte facultatif pour que la personnalisation suive la personne, le mode anonyme restant le fonctionnement par défaut. Choix : Turso pour la base (choix de l'utilisateur), un Cloudflare Worker avec Better Auth devant (Turso n'a pas d'authentification et son jeton ne peut pas être dans l'app), connexion par code e-mail, Discord ou Google. Les jeux locaux suivent le compte : sur un autre PC ils apparaissent en gris avec un lien d'installation trouvé automatiquement (registre, raccourcis `.url`, page Steam ou GOG). Plan complet dans `docs/COMPTE.md`.
