@@ -48,6 +48,14 @@ de connexion est écrit dans le journal du Worker.
 
 ## Mettre en ligne (à faire une fois par environnement : `prod` et `test`)
 
+Adresses : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test),
+domaines personnalisés Cloudflare déclarés dans `wrangler.toml`. En local, `npm run dev` garde
+`http://127.0.0.1:8787` en le mettant dans `.dev.vars` (`BASE_URL=http://127.0.0.1:8787`).
+
+Raccourci sans afficher les secrets : `node scripts/secrets.mjs init` crée `.secrets/prod.json` et
+`.secrets/test.json` (non commités, `AUTH_SECRET` et `SECRETS_KEY` déjà générés), à remplir à la main ;
+puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` ensuite.
+
 1. Turso : créer une base en région UE, noter son adresse (`libsql://...`) et un jeton.
 2. Appliquer le schéma : `TURSO_URL=... TURSO_TOKEN=... npm run db:migrate`.
 3. Renseigner `BASE_URL` et `MAIL_FROM` dans `wrangler.toml`.

@@ -12,9 +12,13 @@ send_metrics = false
 
 [env.prod]
 name = "hangar-api"
-# BASE_URL : adresse publique de l'API (domaine à choisir), sans barre finale.
-vars = { BASE_URL = "https://api.exemple.invalid", MAIL_FROM = "Hangar <connexion@exemple.invalid>" }
+workers_dev = false
+routes = [{ pattern = "hangar-api.pamalstudio.fr", custom_domain = true }]
+vars = { BASE_URL = "https://hangar-api.pamalstudio.fr", MAIL_FROM = "Hangar <connexion@pamalstudio.fr>" }
 
+# En local (npm run dev), .dev.vars remplace BASE_URL par http://127.0.0.1:8787.
 [env.test]
 name = "hangar-api-test"
-vars = { BASE_URL = "http://127.0.0.1:8787", MAIL_FROM = "" }
+workers_dev = false
+routes = [{ pattern = "hangar-api-test.pamalstudio.fr", custom_domain = true }]
+vars = { BASE_URL = "https://hangar-api-test.pamalstudio.fr", MAIL_FROM = "Hangar Test <connexion@pamalstudio.fr>" }

@@ -1,6 +1,6 @@
 # Compte Hangar (facultatif) - plan
 
-Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) écrite et testée en local dans `server/`, pas encore mise en ligne (comptes et secrets de la section 11, marche à suivre dans `server/README.md`) ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
+Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/` ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
 
 ## 1. Objectif et principes
 
@@ -149,7 +149,7 @@ Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui ser
 5. **Profil** : pseudo, avatar (R2), visibilité publique ou privée. Le social vient après.
 6. **Cadre et publication** : politique de confidentialité, export et suppression, docs et liste réseau, version.
 
-## 11. À faire par le développeur (hors code)
+## 11. À faire par le développeur (hors code) - fait le 15 nov. 2026
 
 - Créer les comptes Turso, Cloudflare et Resend.
 - Créer les applications OAuth Discord et Google.
