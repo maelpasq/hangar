@@ -451,8 +451,27 @@
                   <form class="sub" id="steam-form" onsubmit={connectSteam}>
                     <label class="lbl" for="steam-key">Clé d'API Web Steam</label>
                     <span class="hint"
-                      >Pour tous tes jeux Steam et ton temps de jeu. Crée ta clé personnelle (nom de domaine :
-                      « localhost »), puis colle-la ici.</span
+                      >Pour tous tes jeux Steam et ton temps de jeu. Steam ne propose pas de connexion pour les apps : il
+                      faut une clé personnelle, gratuite, qui se crée en une minute.</span
+                    >
+                    <ol class="steps">
+                      <li>
+                        Clique sur <strong>Créer ma clé</strong> : la page Steam s'ouvre dans ton navigateur. Connecte-toi
+                        avec ton compte Steam si elle le demande.
+                      </li>
+                      <li>
+                        Dans <strong>Nom de domaine</strong>, écris <strong>localhost</strong>, accepte les conditions
+                        d'utilisation, puis clique sur <strong>Enregistrer</strong>.
+                      </li>
+                      <li>
+                        Copie la clé affichée (32 lettres et chiffres), colle-la ci-dessous et clique sur
+                        <strong>Connecter</strong>.
+                      </li>
+                    </ol>
+                    <span class="hint"
+                      >Hangar l'associe au compte Steam ouvert en dernier sur cet appareil. Steam refuse de créer une clé
+                      aux comptes limités (aucun achat de 5 $ ou plus) : dans ce cas, Hangar affiche quand même les jeux
+                      installés.</span
                     >
                     <div class="sfield">
                     <input
@@ -1007,6 +1026,23 @@
 
   .sub .sfield {
     margin-top: 6px;
+  }
+
+  /* Étapes de création de la clé Steam. */
+  .steps {
+    margin: 2px 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .steps strong {
+    color: var(--strong);
+    font-weight: 600;
   }
 
   /* ─── Encadré de confiance (Comptes) ─── */
