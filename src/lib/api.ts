@@ -1,6 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
+import { displayVersion } from './util/release-notes';
 import type { AccountStatus, Achievements, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
 export interface WindowApi {
@@ -227,11 +228,11 @@ async function tauriApi(): Promise<Api> {
     openWebGame: (id) => invoke('open_web_game', { id }),
     onWebClosed: (cb) => on<string>('web://closed', cb),
     onAccountsSynced: (cb) => on<null>('accounts://synced', () => cb()),
-    appVersion: () => getVersion(),
+    appVersion: async () => displayVersion(await getVersion()),
     checkUpdate: async () => {
       if ((await getIdentifier()).endsWith('.test')) throw new Error("Mises à jour désactivées dans l'environnement de test.");
       pending = await updater.check();
-      return pending ? { version: pending.version } : null;
+      return pending ? { version: displayVersion(pending.version) } : null;
     },
     installUpdate: async (onProgress) => {
       if (!pending) throw new Error('Aucune mise à jour à installer.');

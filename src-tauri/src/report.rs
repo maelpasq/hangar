@@ -27,7 +27,7 @@ fn embed(title: &str, description: &str, image: Option<&str>) -> serde_json::Val
         "description": if desc.is_empty() { "*Pas de description.*".to_string() } else { desc },
         "color": 0x7c6cff,
         "fields": [
-            { "name": "Version", "value": format!("Hangar {}", env!("CARGO_PKG_VERSION")), "inline": true },
+            { "name": "Version", "value": format!("Hangar {}", env!("CARGO_PKG_VERSION").replace('+', ".")), "inline": true },
             { "name": "Système", "value": os, "inline": true },
         ],
     });
@@ -107,7 +107,7 @@ mod tests {
         let e = embed(&"t".repeat(300), &"d".repeat(5000), Some("capture.png"));
         assert!(e["title"].as_str().unwrap().chars().count() <= 256);
         assert!(e["description"].as_str().unwrap().chars().count() <= 4096);
-        assert!(e["fields"][0]["value"].as_str().unwrap().contains(env!("CARGO_PKG_VERSION")));
+        assert!(e["fields"][0]["value"].as_str().unwrap().contains(&env!("CARGO_PKG_VERSION").replace('+', ".")));
         assert_eq!(e["image"]["url"], "attachment://capture.png");
         assert!(embed("t", " ", None)["image"].is_null());
     }

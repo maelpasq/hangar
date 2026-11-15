@@ -1,9 +1,9 @@
 // Recopie la version de package.json dans les paquets Rust (app et installeur) et leurs
-// Cargo.lock. Lancé par `npm version` (script « version »), avant le commit de version.
+// Cargo.lock. Lancé par `npm version` (script « version ») et `npm run correctif`, avant le commit de version.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
-if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`version invalide : ${version}`);
+if (!/^\d+\.\d+\.\d+(\+\d+)?$/.test(version)) throw new Error(`version invalide : ${version}`);
 
 const crates = [
   ['src-tauri/Cargo.toml', 'src-tauri/Cargo.lock', 'hangar'],

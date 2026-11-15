@@ -1,4 +1,4 @@
-# Publie une version : `npm version patch` puis `git push --follow-tags` (voir docs/RELEASES.md).
+# Publie une version : `npm version patch` (ou `npm run correctif`) puis `git push --follow-tags` (voir docs/RELEASES.md).
 # Construit Windows (installeur NSIS), macOS (dmg universel Intel + Apple Silicon) et Linux (AppImage),
 # les attache à la release GitHub et génère latest.json, lu par le bouton « Mettre à jour ».
 # Actions épinglées par commit (pas par tag déplaçable) : elles voient la clé de signature.
@@ -78,16 +78,20 @@ jobs:
       # signature des mises à jour. tauri-action ne le recompile pas (tauri.prebuilt.conf.json).
       - name: frontend (sans secrets)
         run: npm run build:web
-      # Notes de la release : la section de cette version dans docs/RELEASES.md.
+      # Notes de la release : la section de cette version dans docs/RELEASES.md. Un correctif
+      # (tag v1.2.27+1, montré « 1.2.27.1 ») n'a pas de notes : une ligne renvoie à sa version.
       - name: notes de version
         id: notes
         shell: bash
         run: |
           v="${GITHUB_REF_NAME#v}"
+          base="${v%%+*}"
+          echo "name=Hangar v${v/+/.}" >> "$GITHUB_OUTPUT"
           notes=$(awk -v h="### $v " 'index($0, h) == 1 { f = 1; next } /^### / { f = 0 } f' docs/RELEASES.md | sed '/^$/d')
           {
             echo 'body<<FIN_DES_NOTES'
             if [ -n "$notes" ]; then printf '%s\n\n' "$notes"; fi
+            if [ "$v" != "$base" ]; then printf 'Correctif de la version %s, sans nouveauté.\n\n' "$base"; fi
             echo 'Télécharge **Hangar-Setup.exe** (Windows), ou le **.dmg** (macOS) ci-dessous. La version Linux est en pause (en cours de refonte). Les versions déjà installées se mettent à jour depuis Hangar.'
             echo 'FIN_DES_NOTES'
           } >> "$GITHUB_OUTPUT"
@@ -109,7 +113,7 @@ jobs:
           HANGAR_MS_CLIENT_ID: ${{ secrets.HANGAR_MS_CLIENT_ID }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: Hangar ${{ github.ref_name }}
+          releaseName: ${{ steps.notes.outputs.name }}
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json --config src-tauri/tauri.prebuilt.conf.json
@@ -125,7 +129,7 @@ jobs:
           HANGAR_MS_CLIENT_ID: ${{ secrets.HANGAR_MS_CLIENT_ID }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: Hangar ${{ github.ref_name }}
+          releaseName: ${{ steps.notes.outputs.name }}
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json --config src-tauri/tauri.prebuilt.conf.json

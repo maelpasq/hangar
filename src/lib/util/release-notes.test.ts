@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RELEASES, boldParts, compareVersions, notesBetween, parseReleases } from './release-notes';
+import { RELEASES, boldParts, compareVersions, displayVersion, notesBetween, parseReleases } from './release-notes';
 
 const MD = `# Versions
 
@@ -62,6 +62,11 @@ describe('notes de version', () => {
     expect(notesBetween(all, '1.2.9', '1.2.11').map((r) => r.version)).toEqual(['1.2.10']);
     expect(notesBetween(all, '1.2.10', '1.2.11')).toEqual([]);
     expect(notesBetween(all, null, '0.0.1')).toEqual([]);
+    // Correctif 1.2.10.1 : les notes de la 1.2.10, sans fenêtre pour qui les a déjà vues.
+    expect(notesBetween(all, null, '1.2.10.1').map((r) => r.version)).toEqual(['1.2.10']);
+    expect(notesBetween(all, '1.2.9', '1.2.10.1').map((r) => r.version)).toEqual(['1.2.10']);
+    expect(notesBetween(all, '1.2.10', '1.2.10.1')).toEqual([]);
+    expect(notesBetween(all, '1.2.10.1', '1.2.10.2')).toEqual([]);
   });
 
   it('découpe le gras sans HTML', () => {
@@ -74,5 +79,12 @@ describe('notes de version', () => {
   it('lit le vrai docs/RELEASES.md', () => {
     expect(RELEASES.length).toBeGreaterThan(10);
     expect(RELEASES[0].intro).not.toBe('');
+  });
+
+  it('montre un correctif avec un 4e chiffre', () => {
+    expect(displayVersion('1.2.27+1')).toBe('1.2.27.1');
+    expect(displayVersion('1.2.27')).toBe('1.2.27');
+    expect(compareVersions('1.2.27.1', '1.2.27')).toBeGreaterThan(0);
+    expect(compareVersions('1.2.28', '1.2.27.3')).toBeGreaterThan(0);
   });
 });

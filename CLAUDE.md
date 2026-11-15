@@ -58,4 +58,4 @@ Hors de Windows, `npm run dev:web` lance le frontend seul dans un navigateur ave
 
 ## Publier une version
 
-Seulement sur demande (ou mot-clé « PUSH RELEASE ») : lis la procédure en tête de `docs/RELEASES.md` (jusqu'à « ## Historique », plus la dernière entrée pour le ton). Version toujours `patch`. **Chaque version ajoute son entrée en haut de l'historique, avant `npm version`.**
+Seulement sur demande (ou mot-clé « PUSH RELEASE ») : lis la procédure en tête de `docs/RELEASES.md` (jusqu'à « ## Historique », plus la dernière entrée pour le ton). Version toujours `patch`. **Chaque version ajoute son entrée en haut de l'historique, avant `npm version`.** Exception : un correctif sans patch note prend un 4e chiffre (1.2.27.1, `npm run correctif`), sans entrée (section « Correctif sans patch note »).

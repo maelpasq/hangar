@@ -46,6 +46,18 @@ Fichiers de la release :
 - `.sig` : signatures vérifiées par la mise à jour (clé privée dans les secrets GitHub `TAURI_SIGNING_PRIVATE_KEY` et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`).
 - `latest.json` : la fiche lue par Hangar pour savoir s'il existe une nouvelle version.
 
+### Correctif sans patch note (1.2.27.1)
+
+Une simple correction de bug, sans nouveauté à annoncer, ne prend pas le `patch` suivant : elle ajoute un 4e chiffre à la version actuelle (1.2.27 -> 1.2.27.1 -> 1.2.27.2), règle fixée par l'utilisateur. Semver n'accepte que trois nombres : le numéro technique est `1.2.27+1` (métadonnée de build, que la mise à jour de Tauri classe au-dessus de 1.2.27, y compris dans les versions déjà installées), et Hangar l'affiche « 1.2.27.1 » (`displayVersion`).
+
+- **Pas d'entrée** dans l'historique : la fenêtre de notes ne s'ouvre pas pour qui a déjà vu celles de la 1.2.27, et le bouton Nouveautés montre toujours les notes de la 1.2.27. Qui vient d'une version plus ancienne voit les notes de la 1.2.27.
+- Étapes 1 et 2 comme ci-dessus, puis à la place des étapes 3 et 4 (avec l'outil Bash) :
+  ```bash
+  npm run correctif -- "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+  ```
+  Le script monte le numéro partout, crée le commit « Version 1.2.27.1 » et le tag annoté `v1.2.27+1`. Puis étapes 5 à 7. La release s'appelle « Hangar v1.2.27.1 », son texte dit « Correctif de la version 1.2.27, sans nouveauté ».
+- La version suivante avec patch note reprend `npm version patch` : 1.2.27+2 -> 1.2.28.
+
 Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne déplace jamais un tag déjà poussé, des utilisateurs ont peut-être déjà la version.
 
 ## Historique

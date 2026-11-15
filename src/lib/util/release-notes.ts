@@ -16,7 +16,13 @@ export interface ReleaseNotes {
   sections: NotesSection[];
 }
 
-/** Compare deux numéros de version x.y.z (négatif si a < b). */
+/** Numéro de version montré aux gens : un correctif `1.2.27+1` (semver, seule forme acceptée par
+ * Tauri et sa mise à jour) devient `1.2.27.1`. */
+export function displayVersion(v: string): string {
+  return v.replace('+', '.');
+}
+
+/** Compare deux numéros de version x.y.z ou x.y.z.n (négatif si a < b). */
 export function compareVersions(a: string, b: string): number {
   const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
   const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
