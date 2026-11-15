@@ -278,6 +278,7 @@ Au premier démarrage après une mise à jour, Hangar montre une fois « Hangar 
 - Game Bar : lue dans `HKCU\Software\Microsoft\GameBar`, valeur `UseNexusForGameBarEnabled` (absente = active). Bouton « Ouvrir les réglages de la Game Bar » : `ms-settings:gaming-gamebar` via `open_link`.
 - Quand le bouton Xbox ramène Hangar depuis une autre app, l'état d'avant (caché, réduit, derrière) est gardé ; quitter le mode manette par B, Start, Xbox, Échap ou la croix y renvoie Hangar (caché, ou réduit pour rendre la main à l'app d'avant). Ouvrir la fiche d'un jeu (X) ou lancer un jeu oublie cet état.
 - Mode manette en plein écran mais sans le focus, Game Bar active sur le bouton : le bouton Xbox le ferme (la Game Bar a pris le focus au même appui).
+- Temps de jeu Epic : avec le compte Epic connecté, la synchro lit `library/api/public/playtime/account/{id}/all` (même hôte que la bibliothèque, aucun domaine en plus). Epic ne donne que le total (secondes, par AppName), pas la dernière session ; on garde le plus élevé avec la mesure de Hangar, comme pour Steam et GOG.
 
 ## Rockstar Games Launcher (15 nov. 2026)
 

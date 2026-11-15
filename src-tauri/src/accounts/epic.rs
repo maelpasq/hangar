@@ -2,6 +2,7 @@
 //! Epic, comme Legendary et Heroic), puis la bibliothèque du compte et son catalogue.
 
 use super::{enc, safe_id, Fetched, Http};
+use crate::model::Game;
 use crate::scanner::epic::{games_from_items, CatItem};
 use base64::Engine;
 use serde_json::Value;
@@ -48,13 +49,14 @@ struct Tokens {
     access: String,
     refresh: String,
     user: Option<String>,
+    account: Option<String>,
 }
 
 fn tokens(http: &Http, form: &[(&str, &str)]) -> Result<Tokens, String> {
     let v = http.post_form(TOKEN_URL, Some(&basic()), form)?;
     let s = |k: &str| v.get(k).and_then(|x| x.as_str()).map(String::from);
     match (s("access_token"), s("refresh_token")) {
-        (Some(access), Some(refresh)) => Ok(Tokens { access, refresh, user: s("displayName") }),
+        (Some(access), Some(refresh)) => Ok(Tokens { access, refresh, user: s("displayName"), account: s("account_id") }),
         _ => Err("Epic n'a pas accepté la connexion, réessaie.".into()),
     }
 }
@@ -102,7 +104,40 @@ pub fn fetch(http: &Http, refresh: &str) -> Result<Fetched, String> {
             HashMap::new()
         }
     };
-    Ok(Fetched { user: t.user, games: games_from_items(items), secret: Some(t.refresh), latest })
+    // 4. Temps de jeu enregistré par Epic, par AppName (en secondes).
+    let mut games = games_from_items(items);
+    if let Some(acc) = t.account.as_deref().filter(|a| safe_id(a, 64)) {
+        let url = format!("https://library-service.live.use1a.on.epicgames.com/library/api/public/playtime/account/{acc}/all");
+        match http.get(&url, Some(&t.access)) {
+            Ok(v) => apply_playtime(&mut games, &playtimes(&v)),
+            Err(e) => log::debug!("Epic : temps de jeu indisponible ({e})"),
+        }
+    }
+    Ok(Fetched { user: t.user, games, secret: Some(t.refresh), latest })
+}
+
+/// Temps de jeu par AppName (`artifactId`), en ms.
+fn playtimes(v: &Value) -> HashMap<String, u64> {
+    let mut out = HashMap::new();
+    for p in v.as_array().into_iter().flatten() {
+        let (Some(app), Some(s)) = (p.get("artifactId").and_then(|x| x.as_str()), p.get("totalTime").and_then(|x| x.as_u64()))
+        else {
+            continue;
+        };
+        if s > 0 {
+            *out.entry(app.to_string()).or_insert(0) += s * 1000;
+        }
+    }
+    out
+}
+
+/// Reporte le temps de jeu Epic sur les jeux du compte (id `epic:<AppName>`).
+fn apply_playtime(games: &mut [Game], times: &HashMap<String, u64>) {
+    for g in games {
+        if let Some(ms) = g.id.strip_prefix("epic:").and_then(|app| times.get(app)) {
+            g.store_play_ms = Some(*ms);
+        }
+    }
 }
 
 /// Entrées de la bibliothèque : on ignore les contenus Unreal Engine (`ue`) et tout identifiant
@@ -158,5 +193,25 @@ mod tests {
         collect_records(&v, &mut m);
         assert_eq!(m.len(), 2);
         assert_eq!(m["calluna"], vec!["cid1".to_string()]);
+    }
+
+    #[test]
+    fn temps_de_jeu() {
+        let v: Value = serde_json::from_str(
+            r#"[
+                { "accountId": "a", "artifactId": "Calluna", "totalTime": 5400 },
+                { "accountId": "a", "artifactId": "Fortnite", "totalTime": 0 },
+                { "accountId": "a", "totalTime": 60 }
+            ]"#,
+        )
+        .unwrap();
+        let t = playtimes(&v);
+        assert_eq!(t.len(), 1);
+        let g = |id: &str| Game::new(format!("epic:{id}"), id.into(), "epic", crate::model::uri("x"));
+        let mut games = vec![g("Calluna"), g("Fortnite")];
+        apply_playtime(&mut games, &t);
+        assert_eq!(games[0].store_play_ms, Some(5_400_000));
+        assert_eq!(games[1].store_play_ms, None);
+        assert!(playtimes(&serde_json::json!({ "erreur": 1 })).is_empty());
     }
 }
