@@ -14,6 +14,19 @@ const PROVIDER_HOSTS = ['cdn.discordapp.com', 'lh3.googleusercontent.com'];
 const USER_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
 export const avatarKey = (userId: string) => `avatars/${userId}`;
+/** Jaquettes : même bucket que les avatars, sous `covers/`. */
+export const coverKey = (userId: string, hash: string) => `covers/${userId}/${hash}`;
+/** Taille maximale d'une jaquette (comme l'app). */
+export const COVER_MAX = 4 * 1024 * 1024;
+/** Jaquettes par compte : garde-fou, très au-dessus d'une vraie bibliothèque. */
+export const MAX_COVERS = 2000;
+export const COVER_HASH = /^[0-9a-f]{64}$/;
+
+/** Empreinte SHA-256 en hexadécimal (celle que l'app calcule). */
+export async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>));
+  return [...d].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 export const isUserId = (id: string) => USER_ID.test(id);
 
 /** Type d'une image d'après ses premiers octets (jamais d'après ce qu'annonce l'envoi). */

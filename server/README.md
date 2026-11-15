@@ -23,6 +23,7 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `POST /sync` | `{ changes: [{ key, value, updatedAt }] }`, `value: null` pour une suppression |
 | `GET /sessions?since=<curseur>`, `POST /sessions` | sessions de jeu, ajout seulement |
 | `GET`, `PUT`, `DELETE /secrets/steamgriddb` | clé SteamGridDB, chiffrée en base |
+| `PUT /covers/:hash`, `GET /covers/:hash` | jaquette en fichier local (PNG, JPEG ou WebP, 4 Mo au plus), nommée par son empreinte SHA-256, rangée dans R2 |
 | `GET /export` | toutes les données du compte (JSON) |
 | `DELETE /me` | supprime le compte et toutes ses données |
 
@@ -32,6 +33,11 @@ Connexion d'un poste : l'app tire un vérifieur PKCE, ouvre une adresse locale, 
 sur `/login`. Après la connexion, le navigateur revient sur l'adresse locale avec un code (valable
 2 minutes, une seule fois), que l'app échange avec son vérifieur contre un jeton. Le serveur ne
 garde que l'empreinte du jeton.
+
+Ménage quotidien (`src/lifecycle.ts`, déclencheur `crons` de `wrangler.toml`) : traces de connexion
+effacées un jour après leur fin, jaquettes plus désignées par aucun élément, comptes sans connexion
+depuis 2 ans supprimés après un e-mail de rappel 30 jours avant. Essai local : `npx wrangler dev
+--env test --test-scheduled`, puis `curl "http://127.0.0.1:8787/__scheduled"`.
 
 Synchro : un élément par clé (celles de `src/lib/util/sync.ts`), la modification la plus récente
 gagne. Le curseur est un compteur par compte, pas une date : deux horloges décalées ne font rien
@@ -60,8 +66,8 @@ Raccourci sans afficher les secrets : `node scripts/secrets.mjs init` crée `.se
 puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` ensuite.
 
 1. Turso : créer une base en région UE, noter son adresse (`libsql://...`) et un jeton.
-   R2 : créer le bucket des avatars (`npx wrangler r2 bucket create hangar-avatars` ou `hangar-avatars-test`).
-2. Appliquer le schéma : `TURSO_URL=... TURSO_TOKEN=... npm run db:migrate`.
+   R2 : créer le bucket des avatars et des jaquettes (`npx wrangler r2 bucket create hangar-avatars` ou `hangar-avatars-test`).
+2. Appliquer le schéma : `TURSO_URL=... TURSO_TOKEN=... npm run db:migrate` (à refaire après chaque nouvelle migration de `drizzle/`).
 3. Renseigner `BASE_URL` et `MAIL_FROM` dans `wrangler.toml`.
 4. Enregistrer les secrets, un par un : `npx wrangler secret put <NOM> --env <prod|test>`.
 5. `npm run deploy:test` ou `npm run deploy:prod`.

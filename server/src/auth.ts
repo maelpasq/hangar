@@ -2,8 +2,8 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins/email-otp';
-import type { Db, Env, Mailer } from './env';
-import { mailHtml, mailSubject, mailText } from './mail';
+import type { Db, Env, Mailer, Notice } from './env';
+import { NOTICE_SUBJECT, mailHtml, mailSubject, mailText, noticeHtml, noticeText } from './mail';
 import * as schema from './schema';
 
 export type Provider = 'discord' | 'google';
@@ -23,19 +23,28 @@ export function resendMailer(env: Env): Mailer {
       console.log(`[hangar] code de connexion pour ${to} : ${code}`);
       return;
     }
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        from: env.MAIL_FROM,
-        to: [to],
-        subject: mailSubject(code),
-        text: mailText(code),
-        html: mailHtml(code, env.BASE_URL)
-      })
-    });
-    if (!res.ok) throw new Error(`Envoi de l'e-mail refusé (${res.status})`);
+    await send(env, to, mailSubject(code), mailText(code), mailHtml(code, env.BASE_URL));
   };
+}
+
+/** Rappel avant la suppression d'un compte inactif. Sans clé (développement local) : journal. */
+export function noticeMailer(env: Env): Notice {
+  return async (to) => {
+    if (!env.RESEND_API_KEY || !env.MAIL_FROM) {
+      console.log(`[hangar] rappel de compte inactif pour ${to}`);
+      return;
+    }
+    await send(env, to, NOTICE_SUBJECT, noticeText(), noticeHtml(env.BASE_URL));
+  };
+}
+
+async function send(env: Env, to: string, subject: string, text: string, html: string): Promise<void> {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text, html })
+  });
+  if (!res.ok) throw new Error(`Envoi de l'e-mail refusé (${res.status})`);
 }
 
 export function createAuth(db: Db, env: Env, sendMail: Mailer) {

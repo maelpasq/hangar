@@ -27,10 +27,14 @@ export interface Env {
 export interface AvatarStore {
   get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer>; httpMetadata?: { contentType?: string } } | null>;
   put(key: string, value: Uint8Array, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
-  delete(key: string): Promise<void>;
+  /** Une clé ou plusieurs (1000 au plus par appel, comme R2). */
+  delete(key: string | string[]): Promise<void>;
 }
 
 export type Db = LibSQLDatabase<typeof schema>;
 
 /** Envoi du code de connexion. Remplacé dans les tests. */
 export type Mailer = (to: string, code: string) => Promise<void>;
+
+/** Envoi du rappel avant la suppression d'un compte inactif. Remplacé dans les tests. */
+export type Notice = (to: string) => Promise<void>;

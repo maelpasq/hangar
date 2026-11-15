@@ -26,6 +26,7 @@
   import BugReport from './lib/modals/BugReport.svelte';
   import CloseAsk from './lib/modals/CloseAsk.svelte';
   import CloudMerge from './lib/modals/CloudMerge.svelte';
+  import ConfirmCloudDelete from './lib/modals/ConfirmCloudDelete.svelte';
   import { cloud } from './lib/stores/cloud.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
@@ -314,6 +315,8 @@
     <CloseAsk />
   {:else if ui.modal?.kind === 'cloudMerge'}
     <CloudMerge resolve={ui.modal.resolve} />
+  {:else if ui.modal?.kind === 'cloudDelete'}
+    <ConfirmCloudDelete />
   {:else if ui.modal?.kind === 'padSetup'}
     <PadSetup />
   {:else if ui.modal?.kind === 'collections' && modalGame}

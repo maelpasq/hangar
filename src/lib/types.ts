@@ -247,6 +247,12 @@ export interface CloudSync {
   timeSent: Record<string, string>;
   /** Curseur du serveur pour les sessions de jeu. */
   sessionCursor: number;
+  /** Jaquettes en fichier local : chemin -> empreinte SHA-256 du contenu ('' : image non envoyable). */
+  coverHash: Record<string, string>;
+  /** Empreintes des jaquettes déjà envoyées au compte connecté. */
+  coversSent: string[];
+  /** Jaquettes du compte à télécharger sur ce poste : id du jeu -> empreinte. */
+  coverWanted: Record<string, string>;
 }
 
 /** Un élément synchronisé, tel que l'API le donne et le reçoit (value null : supprimé). */

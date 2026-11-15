@@ -475,6 +475,40 @@
                   <p class="sempty">Liste indisponible hors ligne.</p>
                 {/each}
               </section>
+
+              <section class="group" aria-label="Tes données">
+                <h3>Tes données</h3>
+                <div class="srow">
+                  <span class="ico"><Icon name="download" size={18} /></span>
+                  <span class="txt">
+                    <span class="lbl">Exporter mes données</span>
+                    <span class="hint">Tout ce que le compte garde, dans un fichier JSON.</span>
+                  </span>
+                  <button class="btn-s" disabled={s.offline} onclick={() => cloud.exportData()}>Exporter</button>
+                </div>
+                <div class="srow">
+                  <span class="ico"><Icon name="trash" size={18} /></span>
+                  <span class="txt">
+                    <span class="lbl">Supprimer mon compte</span>
+                    <span class="hint">Efface le compte et tout son contenu. Ce PC garde ses jeux et réglages.</span>
+                  </span>
+                  <button class="btn-s danger" disabled={s.offline} onclick={() => (ui.modal = { kind: 'cloudDelete' })}
+                    >Supprimer</button
+                  >
+                </div>
+                <div class="srow">
+                  <span class="ico"><Icon name="globe" size={18} /></span>
+                  <span class="txt">
+                    <span class="lbl">Politique de confidentialité</span>
+                    <span class="hint">Ce que le compte garde, où, combien de temps, et tes droits.</span>
+                  </span>
+                  <button class="btn-s" onclick={() => api.openLink('privacy').catch(() => {})}>Lire</button>
+                </div>
+                <p class="gdesc">
+                  Un compte sans aucune connexion pendant 2 ans est supprimé, après un e-mail de rappel un mois
+                  avant.
+                </p>
+              </section>
             {:else}
               <section class="group" aria-label="Compte Hangar">
                 <h3>Se connecter</h3>

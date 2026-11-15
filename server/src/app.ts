@@ -9,20 +9,26 @@ import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
 import { GEIST_WOFF2 } from './font';
 import { loginPage, pageHeaders, profilePage, statusPage } from './login-page';
+import { deleteAccount } from './lifecycle';
 import { LOGO_PNG } from './logo';
 import {
   AVATAR_MAX,
+  COVER_HASH,
+  COVER_MAX,
+  MAX_COVERS,
   PUBLIC_KEY,
   avatarKey,
+  coverKey,
   avatarVersion,
   cleanName,
   dataUrl,
   imageType,
   isUserId,
   providerAvatar,
+  sha256Hex,
   totalPlay
 } from './profile';
-import { account, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user, verification } from './schema';
+import { covers, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user } from './schema';
 
 /** Changements par envoi ; une page de lecture en contient au plus le double (voir `page`). */
 const MAX_CHANGES = 1000;
@@ -80,7 +86,9 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     return c.json({ error: 'erreur' }, 500);
   });
   app.notFound((c) => c.json({ error: 'introuvable' }, 404));
-  app.use('*', bodyLimit({ maxSize: 2 * 1024 * 1024, onError: (c) => c.json({ error: 'trop_gros' }, 413) }));
+  // Les jaquettes ont leur propre limite (route `PUT /covers/:hash`).
+  const limit = bodyLimit({ maxSize: 2 * 1024 * 1024, onError: (c) => c.json({ error: 'trop_gros' }, 413) });
+  app.use('*', (c, next) => (c.req.path.startsWith('/covers/') ? next() : limit(c, next)));
 
   app.get('/', (c) => c.json({ name: 'Hangar', ok: true }));
 
@@ -556,6 +564,51 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     return c.json({ ok: true });
   });
 
+  // --- Jaquettes en fichier local (docs/COMPTE.md, section 3) ---
+  // L'app envoie l'image puis l'élément `cover:<jeu>` = `file:<empreinte>` ; les autres postes la
+  // téléchargent. Les images plus désignées par aucun élément partent au ménage quotidien.
+
+  const coverOf = async (userId: string, hash: string) =>
+    (await db.select().from(covers).where(and(eq(covers.userId, userId), eq(covers.hash, hash))))[0];
+
+  api.put(
+    '/covers/:hash',
+    bodyLimit({ maxSize: COVER_MAX, onError: (c) => c.json({ error: 'trop_gros' }, 413) }),
+    async (c) => {
+      const me = c.get('device');
+      const hash = c.req.param('hash');
+      if (!bucket) return c.json({ error: 'indisponible' }, 503);
+      if (!COVER_HASH.test(hash)) return c.json({ error: 'requete' }, 400);
+      if (await coverOf(me.userId, hash)) return c.json({ ok: true });
+      const bytes = new Uint8Array(await c.req.arrayBuffer());
+      const type = imageType(bytes);
+      if (!type || type === 'image/gif' || (await sha256Hex(bytes)) !== hash) return c.json({ error: 'image' }, 400);
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(covers)
+        .where(eq(covers.userId, me.userId));
+      if (count >= MAX_COVERS) return c.json({ error: 'plein' }, 413);
+      await bucket.put(coverKey(me.userId, hash), bytes, { httpMetadata: { contentType: type } });
+      await db
+        .insert(covers)
+        .values({ userId: me.userId, hash, size: bytes.length, type, createdAt: Date.now() })
+        .onConflictDoNothing();
+      return c.json({ ok: true });
+    }
+  );
+
+  api.get('/covers/:hash', async (c) => {
+    const me = c.get('device');
+    const hash = c.req.param('hash');
+    const row = COVER_HASH.test(hash) ? await coverOf(me.userId, hash) : undefined;
+    const obj = row && bucket ? await bucket.get(coverKey(me.userId, hash)) : null;
+    if (!row || !obj) return c.json({ error: 'introuvable' }, 404);
+    return c.body(new Uint8Array(await obj.arrayBuffer()), 200, {
+      'content-type': row.type,
+      'cache-control': 'private, no-store'
+    });
+  });
+
   // --- Export et suppression (RGPD) ---
 
   api.get('/export', async (c) => {
@@ -563,10 +616,24 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     const [u] = await db.select().from(user).where(eq(user.id, me.userId));
     const all = await db.select().from(entries).where(eq(entries.userId, me.userId)).orderBy(asc(entries.key));
     const played = await db.select().from(gameSessions).where(eq(gameSessions.userId, me.userId)).orderBy(asc(gameSessions.start));
+    const pics = await db.select().from(covers).where(eq(covers.userId, me.userId)).orderBy(asc(covers.createdAt));
+    const kept = await db.select({ name: secrets.name, updatedAt: secrets.updatedAt }).from(secrets).where(eq(secrets.userId, me.userId));
     return c.json({
       exportedAt: Date.now(),
-      user: u ? { email: u.email, name: u.name, image: u.image, createdAt: u.createdAt.getTime() } : null,
+      user: u
+        ? {
+            email: u.email,
+            name: u.name,
+            avatar: u.image ? (u.image.startsWith('r2:') ? 'image envoyée' : u.image) : null,
+            public: await isPublic(me.userId),
+            createdAt: u.createdAt.getTime()
+          }
+        : null,
       devices: await deviceList(me),
+      // Les images elles-mêmes restent sur tes PC (dossier des jaquettes de Hangar).
+      covers: pics.map((r) => ({ hash: r.hash, type: r.type, size: r.size, createdAt: r.createdAt })),
+      // Valeurs chiffrées, jamais exportées : elles sont aussi dans le coffre de tes PC.
+      secrets: kept,
       entries: all.filter((r) => !r.deleted).map((r) => ({ key: r.key, value: r.value, updatedAt: r.updatedAt, deviceId: r.deviceId })),
       sessions: played.map((r) => ({ id: r.id, gameId: r.gameId, start: r.start, end: r.end, deviceId: r.deviceId }))
     });
@@ -574,21 +641,7 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
 
   /** Supprime le compte et tout ce qui lui est rattaché. Rien n'est gardé. */
   api.delete('/me', async (c) => {
-    const id = c.get('device').userId;
-    const [u] = await db.select({ email: user.email }).from(user).where(eq(user.id, id));
-    await bucket?.delete(avatarKey(id));
-    await db.batch([
-      db.delete(entries).where(eq(entries.userId, id)),
-      db.delete(gameSessions).where(eq(gameSessions.userId, id)),
-      db.delete(secrets).where(eq(secrets.userId, id)),
-      db.delete(devices).where(eq(devices.userId, id)),
-      db.delete(loginCodes).where(eq(loginCodes.userId, id)),
-      db.delete(profiles).where(eq(profiles.userId, id)),
-      db.delete(session).where(eq(session.userId, id)),
-      db.delete(account).where(eq(account.userId, id)),
-      db.delete(verification).where(like(verification.identifier, `%${u?.email ?? id}`)),
-      db.delete(user).where(eq(user.id, id))
-    ]);
+    await deleteAccount(db, bucket, c.get('device').userId);
     return c.json({ ok: true });
   });
 

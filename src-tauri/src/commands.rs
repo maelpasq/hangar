@@ -268,6 +268,58 @@ pub async fn cloud_remove_avatar(ctx: Ctxs<'_>) -> Result<crate::cloud::Status, 
     blocking(move || cloud.remove_avatar()).await?
 }
 
+/// Empreinte d'une jaquette en fichier local (aucun réseau). None : elle reste sur ce poste.
+#[tauri::command]
+pub async fn cloud_cover_hash(ctx: Ctxs<'_>, path: String) -> Result<Option<String>, String> {
+    let covers = ctx.paths.covers.clone();
+    blocking(move || crate::cloud::Cloud::cover_hash(&covers, &path)).await
+}
+
+#[tauri::command]
+pub async fn cloud_upload_cover(ctx: Ctxs<'_>, path: String, hash: String) -> Result<bool, String> {
+    let (cloud, covers) = (ctx.cloud.clone(), ctx.paths.covers.clone());
+    blocking(move || cloud.upload_cover(&covers, &path, &hash)).await?
+}
+
+#[tauri::command]
+pub async fn cloud_fetch_cover(ctx: Ctxs<'_>, hash: String) -> Result<Option<String>, String> {
+    let (cloud, covers) = (ctx.cloud.clone(), ctx.paths.covers.clone());
+    blocking(move || cloud.fetch_cover(&covers, &hash)).await?
+}
+
+/// Export des données du compte dans un fichier choisi par une boîte d'enregistrement du backend.
+/// None : boîte fermée sans choisir.
+#[tauri::command]
+pub async fn cloud_export(app: AppHandle, ctx: Ctxs<'_>) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let path = blocking(move || {
+        let mut d = app
+            .dialog()
+            .file()
+            .set_title("Exporter les données du compte")
+            .set_file_name("compte-hangar.json")
+            .add_filter("JSON", &["json"]);
+        if let Some(w) = app.get_webview_window("main") {
+            d = d.set_parent(&w);
+        }
+        d.blocking_save_file().and_then(|p| p.into_path().ok())
+    })
+    .await?;
+    let Some(path) = path else { return Ok(None) };
+    let cloud = ctx.cloud.clone();
+    let data = blocking(move || cloud.export()).await??;
+    std::fs::write(&path, data).map_err(|_| "Impossible d'écrire le fichier d'export.".to_string())?;
+    log::info!("compte Hangar : données exportées");
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
+/// Supprime le compte Hangar et tout ce qu'il contient sur le serveur.
+#[tauri::command]
+pub async fn cloud_delete_account(ctx: Ctxs<'_>) -> Result<(), String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.delete_account()).await?
+}
+
 /// Ouvre le profil public du compte dans le navigateur.
 #[tauri::command]
 pub async fn cloud_open_profile(ctx: Ctxs<'_>) -> Result<(), String> {
@@ -282,6 +334,7 @@ pub async fn open_link(link: String) -> Result<(), String> {
         "steam-api-key" => "https://steamcommunity.com/dev/apikey",
         "microsoft-link" => "https://www.microsoft.com/link",
         "steamgriddb-api" => "https://www.steamgriddb.com/profile/preferences/api",
+        "privacy" => "https://hangar.pamalstudio.fr/confidentialite.html",
         "gamebar-settings" if cfg!(windows) => "ms-settings:gaming-gamebar",
         _ => return Err("Lien inconnu.".into()),
     };

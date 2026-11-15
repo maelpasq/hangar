@@ -50,7 +50,7 @@ export function defaultState(): PersistedState {
 }
 
 export function defaultCloud(): CloudSync {
-  return { cursor: 0, dirty: [], merged: false, hiddenHere: [], aliases: {}, times: {}, timeSent: {}, sessionCursor: 0 };
+  return { cursor: 0, dirty: [], merged: false, hiddenHere: [], aliases: {}, times: {}, timeSent: {}, sessionCursor: 0, coverHash: {}, coversSent: [], coverWanted: {} };
 }
 
 /** Identifiant d'installation : aléatoire, sans rapport avec la machine ni la personne. */
@@ -68,6 +68,9 @@ const numMap = (v: unknown): Record<string, number> => {
   if (isObj(v)) for (const [k, x] of Object.entries(v)) if (typeof x === 'number' && isFinite(x)) out[k] = x;
   return out;
 };
+/** Empreinte SHA-256 d'une jaquette envoyée au compte (hexadécimal). */
+export const COVER_HASH = /^[0-9a-f]{64}$/;
+
 const strMap = (v: unknown): Record<string, string> => {
   const out: Record<string, string> = {};
   if (isObj(v)) for (const [k, x] of Object.entries(v)) if (typeof x === 'string') out[k] = x;
@@ -193,6 +196,11 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (typeof c.sessionCursor === 'number' && Number.isSafeInteger(c.sessionCursor) && c.sessionCursor >= 0) {
       s.cloud.sessionCursor = c.sessionCursor;
     }
+    for (const [path, h] of Object.entries(strMap(c.coverHash))) if (h === '' || COVER_HASH.test(h)) s.cloud.coverHash[path] = h;
+    if (Array.isArray(c.coversSent)) {
+      s.cloud.coversSent = [...new Set(c.coversSent.filter((h): h is string => typeof h === 'string' && COVER_HASH.test(h)))];
+    }
+    for (const [id, h] of Object.entries(strMap(c.coverWanted))) if (COVER_HASH.test(h)) s.cloud.coverWanted[id] = h;
   }
 
   // Migration depuis la v1 (pas de `version`) : recents, launches, coverCache.

@@ -138,8 +138,18 @@ export interface Api {
   cloudRemoveAvatar(): Promise<CloudStatus>;
   /** Ouvre le profil public dans le navigateur. */
   cloudOpenProfile(): Promise<void>;
+  /** Empreinte d'une jaquette en fichier local (null : elle reste sur ce poste). */
+  cloudCoverHash(path: string): Promise<string | null>;
+  /** Envoie une jaquette au compte (faux : refusée par le serveur). */
+  cloudUploadCover(path: string, hash: string): Promise<boolean>;
+  /** Télécharge une jaquette du compte : chemin local, ou null si elle n'y est plus. */
+  cloudFetchCover(hash: string): Promise<string | null>;
+  /** Exporte les données du compte dans un fichier choisi (null : annulé). */
+  cloudExport(): Promise<string | null>;
+  /** Supprime le compte et toutes ses données sur le serveur. */
+  cloudDeleteAccount(): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
-  openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
+  openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings' | 'privacy'): Promise<void>;
   /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
   openGameLink(url: string): Promise<void>;
   /** Envoie un signalement de bug au développeur (capture : chemin d'une image, facultatif). */
@@ -274,6 +284,11 @@ async function tauriApi(): Promise<Api> {
     cloudSetAvatar: (bytes) => invoke('cloud_set_avatar', { bytes: Array.from(bytes) }),
     cloudRemoveAvatar: () => invoke('cloud_remove_avatar'),
     cloudOpenProfile: () => invoke('cloud_open_profile'),
+    cloudCoverHash: (path) => invoke('cloud_cover_hash', { path }),
+    cloudUploadCover: (path, hash) => invoke('cloud_upload_cover', { path, hash }),
+    cloudFetchCover: (hash) => invoke('cloud_fetch_cover', { hash }),
+    cloudExport: () => invoke('cloud_export'),
+    cloudDeleteAccount: () => invoke('cloud_delete_account'),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),

@@ -74,11 +74,15 @@ export const rateLimit = sqliteTable('rate_limit', {
   lastRequest: integer('last_request').notNull()
 });
 
-/** Un compte Hangar. `cursor` : compteur des changements, il sert de curseur de synchro. */
+/**
+ * Un compte Hangar. `cursor` : compteur des changements, il sert de curseur de synchro.
+ * `warnedAt` : e-mail de rappel avant la suppression d'un compte inactif (docs/COMPTE.md, section 9).
+ */
 export const profiles = sqliteTable('profiles', {
   userId: text('user_id').primaryKey(),
   cursor: integer('cursor').notNull().default(0),
-  createdAt: integer('created_at').notNull()
+  createdAt: integer('created_at').notNull(),
+  warnedAt: integer('warned_at')
 });
 
 /** Un poste connecté. `tokenHash` vide : poste déconnecté, gardé pour le détail du temps de jeu. */
@@ -131,6 +135,19 @@ export const gameSessions = sqliteTable(
     seq: integer('seq').notNull()
   },
   (t) => [primaryKey({ columns: [t.userId, t.id] }), index('game_sessions_seq').on(t.userId, t.seq)]
+);
+
+/** Jaquettes en fichier local envoyées par l'app : l'image est dans R2 (`covers/<compte>/<empreinte>`). */
+export const covers = sqliteTable(
+  'covers',
+  {
+    userId: text('user_id').notNull(),
+    hash: text('hash').notNull(),
+    size: integer('size').notNull(),
+    type: text('type').notNull(),
+    createdAt: integer('created_at').notNull()
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.hash] })]
 );
 
 /** Secrets chiffrés (clé SteamGridDB) : la clé de chiffrement n'est pas dans la base. */

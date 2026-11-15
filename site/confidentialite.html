@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confidentialité - Hangar</title>
+<meta name="description" content="Ce que Hangar et le compte Hangar facultatif gardent, où, combien de temps, et tes droits.">
+<meta name="theme-color" content="#0a0b0f">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<style>
+  .legal { max-width: 760px; padding-top: clamp(4rem, 9vw, 7rem); }
+  .legal h1 { font-size: clamp(2.5rem, 6vw, 4rem); }
+  .legal .lead { margin-top: 1.25rem; }
+  .legal h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 3.25rem 0 1rem; }
+  .legal h3 { font-size: 1.125rem; font-weight: 650; margin: 1.75rem 0 .5rem; }
+  .legal p, .legal li { color: var(--text-3); line-height: 1.65; text-wrap: pretty; }
+  .legal p + p { margin-top: .85rem; }
+  .legal ul { margin: .75rem 0 0; padding-left: 1.25rem; display: grid; gap: .5rem; }
+  .legal strong { color: var(--text); font-weight: 600; }
+  .legal a { color: var(--text); text-underline-offset: 3px; }
+  .legal .updated { margin-top: 1rem; font-size: .875rem; color: var(--muted); }
+  .legal .toc { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .9375rem; }
+</style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="ha" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#dcd8e3"/><stop offset=".42" stop-color="#d4cfde"/><stop offset="1" stop-color="#6f6683"/></linearGradient>
+      <radialGradient id="hg" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6e3bf6"/><stop offset=".5" stop-color="#7a52f0" stop-opacity=".75"/><stop offset="1" stop-color="#8a6ff0" stop-opacity="0"/></radialGradient>
+      <linearGradient id="hs" x1="0" y1="345" x2="0" y2="575" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8a5cff"/><stop offset="1" stop-color="#652cee"/></linearGradient>
+      <path id="hp" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
+      <symbol id="mark" viewBox="0 0 930 720">
+        <use href="#hp" fill="url(#ha)"/><use href="#hp" fill="url(#hg)"/>
+        <path d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hs)"/>
+      </symbol>
+      <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="Hangar, accueil">
+        <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
+        <img class="wordmark" src="wordmark.png" alt="" width="91" height="20">
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="index.html#fonctions">Fonctions</a>
+        <a href="index.html#apercu">Aperçu</a>
+        <a href="index.html#installer">Installer</a>
+        <a class="ext" href="https://github.com/maelpasq/hangar" rel="noopener" aria-label="GitHub (site externe)">GitHub<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
+      </nav>
+      <a class="btn small nav-dl" href="index.html#installer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="wrap legal" aria-labelledby="t-conf">
+      <h1 id="t-conf">Confidentialité</h1>
+      <p class="lead">Hangar fonctionne entièrement sur ton ordinateur, sans télémétrie. Le compte Hangar est facultatif : il ne sert qu'à retrouver tes favoris, collections, jaquettes et ton temps de jeu sur tes autres PC.</p>
+      <p class="updated">Mise à jour : 15 novembre 2026</p>
+      <nav class="toc" aria-label="Sur cette page">
+        <a href="#sans-compte">Sans compte</a>
+        <a href="#compte">Le compte Hangar</a>
+        <a href="#hebergeurs">Où sont les données</a>
+        <a href="#duree">Combien de temps</a>
+        <a href="#droits">Tes droits</a>
+      </nav>
+
+      <h2 id="sans-compte">Sans compte</h2>
+      <p>Hangar ne collecte aucune donnée personnelle. Ta bibliothèque, tes réglages et ton temps de jeu restent sur ton ordinateur. Tes clés et jetons (SteamGridDB, comptes de launchers reliés) sont rangés dans le coffre du système, jamais dans un fichier.</p>
+      <p>Hangar ne contacte d'autres services que pour ce que tu lui demandes : les images et infos des jeux (Steam, Epic Games, GOG, Microsoft Store, SteamGridDB si tu as saisi ta clé), les comptes de launchers que tu relies toi-même, les mises à jour de tes jeux et de Hangar (GitHub), les jeux web que tu lances, Discord si tu l'actives, et le bouton « Signaler un bug » quand tu envoies un message. La liste complète est dans le <a href="https://github.com/maelpasq/hangar#confidentialit%C3%A9" rel="noopener">README du projet</a>, et le code est public.</p>
+
+      <h2 id="compte">Le compte Hangar</h2>
+      <p>Tu crées un compte seulement si tu cliques sur « Se connecter » dans Hangar. Il est géré par pamal Studio, le développeur de Hangar.</p>
+
+      <h3>Ce que le compte garde</h3>
+      <ul>
+        <li><strong>Ton identité de connexion</strong> : ton adresse e-mail et, si tu te connectes avec Discord ou Google, l'identifiant de ton compte chez eux (jamais ton mot de passe : Hangar n'en a pas).</li>
+        <li><strong>Ton profil</strong> : ton pseudo, ton avatar si tu en choisis un, et s'il est public ou privé.</li>
+        <li><strong>Tes PC reliés</strong> : le nom que tu leur donnes, leur date de connexion et leur dernier passage.</li>
+        <li><strong>Ta bibliothèque synchronisée</strong> : favoris, jeux masqués, renommages, collections, jaquettes choisies (y compris les images que tu as importées), jeux ajoutés à la main (nom, lien d'installation), dates d'ajout et réglages d'apparence. Les jeux sont désignés par leur identifiant de launcher, ou, pour un jeu local, par le nom de son exécutable et de son dossier.</li>
+        <li><strong>Ton temps de jeu</strong> : le total par jeu et par PC, et les sessions de jeu (début, fin, jeu, PC).</li>
+        <li><strong>Ta clé SteamGridDB</strong>, si tu en as une, chiffrée : la clé de chiffrement n'est pas dans la base.</li>
+        <li><strong>Pendant la connexion dans le navigateur</strong> : une session de 15 minutes avec ton adresse IP et ton navigateur, et un compteur par adresse IP contre les abus.</li>
+      </ul>
+      <p>Le compte ne reçoit rien d'autre : pas la liste de tes jeux installés en dehors de ce qui précède, pas de statistiques d'usage, pas de télémétrie.</p>
+
+      <h3>Ton profil public</h3>
+      <p>Ton profil est privé par défaut. Si tu le rends public (Paramètres &gt; Compte), sa page montre ton pseudo, ton avatar, ton mois d'arrivée, ton temps de jeu total et ton nombre de jeux joués. Rien d'autre.</p>
+
+      <h3>Pourquoi</h3>
+      <p>Ces données servent uniquement à faire marcher le compte que tu as demandé : te connecter et retrouver ta bibliothèque sur tes PC. Elles ne sont ni vendues, ni partagées, ni utilisées pour de la publicité.</p>
+
+      <h2 id="hebergeurs">Où sont les données</h2>
+      <ul>
+        <li><strong>Turso</strong> : la base de données du compte, en Europe.</li>
+        <li><strong>Cloudflare</strong> : l'API du compte (hangar-api.pamalstudio.fr) et le stockage des avatars et des jaquettes importées.</li>
+        <li><strong>Resend</strong> : l'envoi des e-mails (code de connexion, rappel avant suppression).</li>
+        <li><strong>Discord ou Google</strong> : seulement si tu choisis de te connecter avec eux.</li>
+      </ul>
+      <p>Certains de ces prestataires sont des entreprises américaines ; leurs transferts de données hors de l'Union européenne sont encadrés par leurs clauses contractuelles et le cadre de protection des données UE-États-Unis.</p>
+
+      <h2 id="duree">Combien de temps</h2>
+      <ul>
+        <li><strong>Tant que ton compte existe</strong>, et tu peux le supprimer à tout moment depuis Hangar : tout part immédiatement.</li>
+        <li><strong>Compte inactif</strong> : sans aucune connexion d'un de tes PC pendant 2 ans, le compte est supprimé. Un e-mail te prévient 30 jours avant ; ouvrir Hangar sur un PC connecté suffit pour le garder.</li>
+        <li><strong>Traces de connexion</strong> (session du navigateur, codes, compteur anti-abus) : effacées un jour après leur fin.</li>
+        <li><strong>Jaquettes importées</strong> que plus aucun jeu n'utilise : effacées sous un jour ou deux.</li>
+      </ul>
+      <p>Les copies de sauvegarde automatiques de la base expirent d'elles-mêmes chez l'hébergeur.</p>
+
+      <h2 id="droits">Tes droits</h2>
+      <p>Tu as un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition sur tes données. La plupart se font directement dans Hangar, Paramètres &gt; Compte :</p>
+      <ul>
+        <li><strong>Exporter mes données</strong> : tout ce que le compte garde, dans un fichier JSON.</li>
+        <li><strong>Supprimer mon compte</strong> : efface le compte et tout son contenu. Tes PC gardent leurs jeux et leurs réglages.</li>
+        <li>Le pseudo, l'avatar, la visibilité du profil et le nom de tes PC se changent au même endroit ; tout le reste se modifie en utilisant Hangar.</li>
+      </ul>
+      <p>Pour toute autre demande, écris au développeur avec le bouton « Signaler un bug » de Hangar (message privé). Tu peux aussi adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>.</p>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Hangar, par pamal Studio · <span class="tag"></span>Licence MIT</span>
+      <nav aria-label="Liens">
+        <a href="https://github.com/maelpasq/hangar" rel="noopener">Code source</a>
+        <a href="https://github.com/maelpasq/hangar/releases" rel="noopener">Versions</a>
+        <a href="https://github.com/maelpasq/hangar/issues/new/choose" rel="noopener">Signaler un bug</a>
+        <a href="confidentialite.html" aria-current="page">Confidentialité</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

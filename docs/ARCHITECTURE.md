@@ -132,6 +132,8 @@ interface PersistedState {
 | `cloud_rename_device(id, name)` / `cloud_forget_device(id)` | Renomme un poste, en déconnecte un autre à distance |
 | `cloud_pull(since) -> { cursor, more, changes }` / `cloud_push(changes)` | Synchro : `GET /sync` (une page) et `POST /sync` (1000 changements au plus). La logique (le plus récent gagne, file hors ligne, fusion, jeux « Sur un autre PC ») est côté frontend : `util/cloud-sync.ts`, `stores/cloud.svelte.ts` ; état local dans `PersistedState.cloud` |
 | `cloud_sync_steamgriddb(first) -> bool` | Clé SteamGridDB du compte (`/secrets/steamgriddb`) rangée dans le coffre si elle manque ou a changé ; à la première synchro, celle du poste est envoyée si le compte n'en a pas. `set_steamgriddb_key` envoie aussi la clé au compte (au mieux). La clé ne passe jamais par le frontend |
+| `cloud_cover_hash(path) -> string?` / `cloud_upload_cover(path, hash) -> bool` / `cloud_fetch_cover(hash) -> string?` | Jaquettes en fichier local : empreinte SHA-256 (fichier du dossier des jaquettes seulement, 4 Mo au plus), envoi `PUT /covers/:hash` (faux : refusée par le serveur), téléchargement vérifié par l'empreinte dans `covers/compte-<empreinte>.<ext>` |
+| `cloud_export() -> string?` / `cloud_delete_account()` | Export `GET /export` dans un fichier choisi par une boîte d'enregistrement du backend ; suppression `DELETE /me` puis oubli du jeton (le poste garde tout) |
 | `open_link(id)` | Ouvre une page d'aide d'une liste fermée (pas d'URL libre) |
 | `open_game_link(url)` | Ouvre le lien d'installation d'un jeu hors store dans le navigateur (`https://` validé, rien d'autre) |
 | événement `accounts://synced` | Les comptes ont changé : le frontend rafraîchit l'état et rescanne |

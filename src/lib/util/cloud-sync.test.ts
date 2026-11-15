@@ -7,6 +7,9 @@ import {
   adoptGhosts,
   applyRemote,
   applyRemoteSessions,
+  coverReceived,
+  coversToHash,
+  coversToSend,
   ghostGames,
   hasMeaningful,
   markAllDirty,
@@ -64,7 +67,7 @@ describe('changements reçus', () => {
     expect(s.stamps['fav:steam:1']).toBe(200);
   });
 
-  it('refuse les valeurs invalides et garde les jaquettes en fichier local', () => {
+  it('refuse les valeurs invalides ; une jaquette du compte plus récente remplace un fichier local', () => {
     const s = defaultState();
     s.cloud.merged = true;
     s.customCovers['steam:3'] = 'C:\\images\\a.png';
@@ -79,8 +82,53 @@ describe('changements reçus', () => {
     expect(s.accent).toBe('#7c6cff');
     expect(s.theme).toBe('dark');
     expect(s.prefs.autoCovers).toBe(true);
-    expect(s.customCovers['steam:3']).toBe('C:\\images\\a.png');
+    expect(s.customCovers['steam:3']).toBe('steam:42');
+    // Un chemin d'un autre PC n'a pas de sens ici.
     expect(s.customCovers['steam:4']).toBeUndefined();
+  });
+
+  it('jaquettes en fichier local : envoyées par empreinte, téléchargées sur les autres postes', () => {
+    const H = 'a'.repeat(64);
+    const pc1 = defaultState();
+    pc1.cloud.merged = true;
+    pc1.customCovers['steam:3'] = 'C:\\covers\\x-1.png';
+    // Pas encore d'empreinte : rien à envoyer pour elle.
+    expect(syncEntries(pc1).has('cover:steam:3')).toBe(false);
+    expect(coversToHash(pc1)).toEqual(['C:\\covers\\x-1.png']);
+    pc1.cloud.coverHash['C:\\covers\\x-1.png'] = H;
+    expect(coversToHash(pc1)).toEqual([]);
+    expect(coversToSend(pc1)).toEqual([{ path: 'C:\\covers\\x-1.png', hash: H }]);
+    expect(syncEntries(pc1).get('cover:steam:3')).toBe(JSON.stringify(`file:${H}`));
+    pc1.cloud.coversSent.push(H);
+    expect(coversToSend(pc1)).toEqual([]);
+    // Image non envoyable (trop lourde) : elle reste sur ce poste.
+    pc1.customCovers['steam:5'] = 'C:\\covers\\gros.png';
+    pc1.cloud.coverHash['C:\\covers\\gros.png'] = '';
+    expect(syncEntries(pc1).has('cover:steam:5')).toBe(false);
+
+    // Autre poste : la jaquette actuelle reste jusqu'au téléchargement.
+    const pc2 = defaultState();
+    pc2.cloud.merged = true;
+    pc2.customCovers['steam:3'] = 'steam:42';
+    applyRemote(pc2, [ch('cover:steam:3', `file:${H}`, 10), ch('cover:steam:6', 'file:pas-une-empreinte', 10)]);
+    expect(pc2.customCovers['steam:3']).toBe('steam:42');
+    expect(pc2.cloud.coverWanted).toEqual({ 'steam:3': H });
+    coverReceived(pc2, 'steam:3', H, 'C:\\covers\\compte-a.png');
+    expect(pc2.customCovers['steam:3']).toBe('C:\\covers\\compte-a.png');
+    expect(pc2.cloud.coverWanted).toEqual({});
+    // Déjà là : ni nouveau téléchargement, ni renvoi.
+    expect(coversToSend(pc2)).toEqual([]);
+    expect(syncEntries(pc2).get('cover:steam:3')).toBe(JSON.stringify(`file:${H}`));
+    applyRemote(pc2, [ch('cover:steam:3', `file:${H}`, 20)]);
+    expect(pc2.cloud.coverWanted).toEqual({});
+    // Remplacée ensuite par une jaquette Steam : le téléchargement en attente est oublié.
+    applyRemote(pc2, [ch('cover:steam:7', `file:${H}`, 30), ch('cover:steam:7', 'steam:8', 40)]);
+    expect(pc2.cloud.coverWanted).toEqual({});
+    expect(pc2.customCovers['steam:7']).toBe('steam:8');
+
+    // Déconnexion : tout sera renvoyé au prochain compte.
+    resetCloud(pc1);
+    expect(coversToSend(pc1)).toEqual([{ path: 'C:\\covers\\x-1.png', hash: H }]);
   });
 
   it('date d\'ajout : la plus ancienne gagne et repart vers le compte', () => {

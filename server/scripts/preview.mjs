@@ -5,7 +5,7 @@ import { BACKGROUND_WEBP } from '../src/background.ts';
 import { GEIST_WOFF2 } from '../src/font.ts';
 import { loginPage, pageHeaders, profilePage, statusPage } from '../src/login-page.ts';
 import { LOGO_PNG } from '../src/logo.ts';
-import { mailHtml } from '../src/mail.ts';
+import { mailHtml, noticeHtml } from '../src/mail.ts';
 
 const PORT = 8788;
 const LOGIN = `/login?port=45123&challenge=${'c'.repeat(43)}&state=apercu-local`;
@@ -17,6 +17,7 @@ const INDEX = [
   ['/login/done', 'Connexion réussie'],
   ['/login/refused', 'Connexion refusée'],
   ['/mail', 'E-mail du code'],
+  ['/rappel', 'E-mail de rappel avant suppression'],
   ['/u/apercu', 'Profil public'],
   ['/u/prive', 'Profil privé ou introuvable']
 ];
@@ -52,6 +53,8 @@ createServer(async (req, res) => {
       return res.writeHead(302, { location: '/login/done' }).end();
     case '/mail':
       return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(mailHtml('482913', ''));
+    case '/rappel':
+      return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(noticeHtml(''));
     case '/u/apercu':
       return html(profilePage(nonce, { name: 'Pilote du dimanche', avatar: null, since: Date.UTC(2026, 10, 15), playMs: 1_234 * 3_600_000, games: 87 }));
     case '/u/prive':

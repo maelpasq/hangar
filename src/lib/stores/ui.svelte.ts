@@ -20,6 +20,7 @@ export type Modal =
   | { kind: 'closeAsk' }
   /** Compte Hangar, première synchro : fusionner ou utiliser le compte. */
   | { kind: 'cloudMerge'; resolve: (choice: 'merge' | 'account') => void }
+  | { kind: 'cloudDelete' }
   /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
   | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
   | { kind: 'bug' }

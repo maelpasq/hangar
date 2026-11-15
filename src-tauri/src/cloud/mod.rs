@@ -211,6 +211,36 @@ fn call(method: &str, path: &str, token: Option<&str>, body: Option<&Value>) -> 
 
 /// Taille maximale d'un avatar (limite de l'API).
 const AVATAR_MAX: usize = 512 * 1024;
+/// Jaquette envoyée au compte : au plus 4 Mo (même limite que l'API).
+const COVER_MAX: usize = 4 * 1024 * 1024;
+
+fn sha_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn is_hex64(s: &str) -> bool {
+    s.len() == 64 && s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// Jaquette copiée par Hangar dans son dossier : contenu et type, si elle peut aller sur le compte.
+fn read_cover(covers: &Path, path: &str) -> Option<(Vec<u8>, &'static str)> {
+    let dir = std::fs::canonicalize(covers).ok()?;
+    let file = std::fs::canonicalize(path).ok()?;
+    if !file.starts_with(&dir) || std::fs::metadata(&file).ok()?.len() > COVER_MAX as u64 {
+        return None;
+    }
+    let bytes = std::fs::read(&file).ok()?;
+    let kind = image_type(&bytes).filter(|k| *k != "image/gif")?;
+    Some((bytes, kind))
+}
+
+fn cover_ext(kind: &str) -> &'static str {
+    match kind {
+        "image/png" => "png",
+        "image/webp" => "webp",
+        _ => "jpg",
+    }
+}
 
 /// Type d'une image d'après ses premiers octets (comme l'API).
 fn image_type(b: &[u8]) -> Option<&'static str> {
@@ -674,6 +704,84 @@ impl Cloud {
 
     pub fn remove_avatar(&self) -> Result<Status, String> {
         self.with_token(|t| call("DELETE", "/me/avatar", Some(t), None))
+    }
+
+    // --- Jaquettes en fichier local (docs/COMPTE.md, section 3) ---
+
+    /// Empreinte d'une jaquette du dossier de Hangar ; None : absente, trop lourde ou illisible.
+    pub fn cover_hash(covers: &Path, path: &str) -> Option<String> {
+        read_cover(covers, path).map(|(bytes, _)| sha_hex(&bytes))
+    }
+
+    /// Envoie une jaquette au compte. Faux : refusée par le serveur (compte plein, image refusée).
+    pub fn upload_cover(&self, covers: &Path, path: &str, hash: &str) -> Result<bool, String> {
+        let (bytes, kind) = read_cover(covers, path).ok_or("Jaquette introuvable.")?;
+        if !is_hex64(hash) || sha_hex(&bytes) != hash {
+            return Err("La jaquette a changé, nouvel essai à la prochaine synchro.".into());
+        }
+        let route = format!("/covers/{hash}");
+        let sent = self.authed(|t| match request("PUT", &route, Some(t)).set("Content-Type", kind).send_bytes(&bytes) {
+            Ok(_) => Ok(Value::Bool(true)),
+            Err(e) => match call_error(&route, e) {
+                CallError::Status(400 | 413) => Ok(Value::Bool(false)),
+                e => Err(e),
+            },
+        })?;
+        Ok(sent == Value::Bool(true))
+    }
+
+    /// Télécharge une jaquette du compte dans le dossier de Hangar. None : plus sur le compte.
+    pub fn fetch_cover(&self, covers: &Path, hash: &str) -> Result<Option<String>, String> {
+        if !is_hex64(hash) {
+            return Ok(None);
+        }
+        for ext in ["png", "jpg", "webp"] {
+            let p = covers.join(format!("compte-{hash}.{ext}"));
+            if p.is_file() {
+                return Ok(Some(p.to_string_lossy().into_owned()));
+            }
+        }
+        let route = format!("/covers/{hash}");
+        let token = crate::accounts::secret(VAULT_KEY).ok_or("Ce poste n'est pas connecté au compte.")?;
+        let res = match request("GET", &route, Some(&token)).call() {
+            Ok(r) => r,
+            Err(e) => {
+                return match call_error(&route, e) {
+                    CallError::Status(404) => Ok(None),
+                    CallError::Unauthorized => {
+                        self.forget();
+                        Err(CallError::Unauthorized.message())
+                    }
+                    e => Err(e.message()),
+                }
+            }
+        };
+        let mut bytes = Vec::new();
+        res.into_reader().take(COVER_MAX as u64 + 1).read_to_end(&mut bytes).map_err(|_| OFFLINE.to_string())?;
+        let kind = image_type(&bytes).filter(|k| *k != "image/gif");
+        let (Some(kind), true) = (kind, bytes.len() <= COVER_MAX && sha_hex(&bytes) == hash) else {
+            return Ok(None);
+        };
+        std::fs::create_dir_all(covers).map_err(|_| "Dossier des jaquettes inaccessible.".to_string())?;
+        let dest = covers.join(format!("compte-{hash}.{}", cover_ext(kind)));
+        std::fs::write(&dest, &bytes).map_err(|_| "Impossible d'enregistrer la jaquette.".to_string())?;
+        Ok(Some(dest.to_string_lossy().into_owned()))
+    }
+
+    // --- Export et suppression (RGPD) ---
+
+    /// Toutes les données du compte, en JSON lisible.
+    pub fn export(&self) -> Result<String, String> {
+        let v = self.authed(|t| call("GET", "/export", Some(t), None))?;
+        serde_json::to_string_pretty(&v).map_err(|_| "Réponse illisible du serveur du compte.".into())
+    }
+
+    /// Supprime le compte et toutes ses données sur le serveur. Ce poste garde les siennes.
+    pub fn delete_account(&self) -> Result<(), String> {
+        self.authed(|t| call("DELETE", "/me", Some(t), None))?;
+        self.forget();
+        log::info!("compte Hangar : compte supprimé");
+        Ok(())
     }
 
     /// Ouvre le profil public dans le navigateur.

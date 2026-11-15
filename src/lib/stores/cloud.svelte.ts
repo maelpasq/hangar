@@ -10,6 +10,9 @@ import {
   ackTimes,
   applyRemote,
   applyRemoteSessions,
+  coverReceived,
+  coversToHash,
+  coversToSend,
   hasMeaningful,
   markAllDirty,
   pendingChanges,
@@ -152,7 +155,10 @@ class Cloud {
         applyRemote(s, changes);
       }
       s.cloud.cursor = cursor;
+      await this.fetchCovers();
       library.remoteApplied();
+
+      await this.sendCovers();
 
       for (let i = 0; i < MAX_PAGES; i++) {
         library.flushStamps();
@@ -203,6 +209,42 @@ class Cloud {
       if (!sessions.length) break;
       await api.cloudPushSessions(sessions);
       ackSessions(s, sessions);
+    }
+  }
+
+  /** Jaquettes du compte pas encore sur ce poste : téléchargées, puis appliquées. */
+  private async fetchCovers(): Promise<void> {
+    const s = library.state;
+    for (const [id, hash] of Object.entries(s.cloud.coverWanted)) {
+      // Échec (réseau) : nouvel essai à la prochaine synchro, sans bloquer le reste.
+      const path = await api.cloudFetchCover(hash).catch(() => undefined);
+      if (path) coverReceived(s, id, hash, path);
+      // Plus sur le compte : la jaquette actuelle reste.
+      else if (path === null) delete s.cloud.coverWanted[id];
+    }
+  }
+
+  /**
+   * Jaquettes en fichier local : empreinte calculée une fois, image envoyée une fois par compte,
+   * avant l'élément `cover:` qui la désigne (les autres postes la trouvent ainsi toujours).
+   */
+  private async sendCovers(): Promise<void> {
+    const s = library.state;
+    const used = new Set(Object.values(s.customCovers));
+    for (const path of Object.keys(s.cloud.coverHash)) if (!used.has(path)) delete s.cloud.coverHash[path];
+    for (const path of coversToHash(s)) s.cloud.coverHash[path] = (await api.cloudCoverHash(path)) ?? '';
+    // Une image plus utilisée part au ménage du serveur : si elle revient, elle est renvoyée.
+    const live = new Set([...used].map((p) => s.cloud.coverHash[p]).filter(Boolean));
+    s.cloud.coversSent = s.cloud.coversSent.filter((h) => live.has(h));
+    for (const { path, hash } of coversToSend(s)) {
+      try {
+        // Refusée (compte plein) : pas de nouvel essai, les autres postes gardent leur jaquette.
+        await api.cloudUploadCover(path, hash);
+        s.cloud.coversSent.push(hash);
+      } catch (e) {
+        // Réseau ou serveur : nouvel essai à la prochaine synchro, le reste part quand même.
+        console.error('cloud_upload_cover', message(e));
+      }
     }
   }
 
@@ -330,6 +372,32 @@ class Cloud {
 
   removeAvatar(): Promise<boolean> {
     return this.apply(() => api.cloudRemoveAvatar());
+  }
+
+  // ─── Données du compte (RGPD) ───
+
+  async exportData(): Promise<void> {
+    try {
+      const path = await api.cloudExport();
+      if (path) ui.toast(`Données du compte exportées : ${path}`);
+    } catch (e) {
+      ui.toast(message(e), { error: true });
+    }
+  }
+
+  /** Supprime le compte. Les jeux et réglages restent sur ce PC, comme après une déconnexion. */
+  async deleteAccount(): Promise<boolean> {
+    try {
+      await api.cloudDeleteAccount();
+    } catch (e) {
+      ui.toast(message(e), { error: true });
+      await this.refresh();
+      return false;
+    }
+    this.status = ANON;
+    this.resetSync();
+    ui.toast('Compte Hangar supprimé. Tes jeux et réglages restent sur ce PC.');
+    return true;
   }
 
   openProfile(): void {

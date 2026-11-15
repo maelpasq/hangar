@@ -102,6 +102,7 @@ export function syncEntries(s: PersistedState): Map<string, string> {
   for (const [id, name] of Object.entries(s.renames)) put('rename', pid(id), name);
   for (const [id, cover] of Object.entries(s.customCovers)) {
     if (cover === 'none' || cover.startsWith('steam:')) put('cover', pid(id), cover);
+    else if (s.cloud.coverHash[cover]) put('cover', pid(id), `file:${s.cloud.coverHash[cover]}`);
   }
   for (const [id, at] of Object.entries(s.firstSeen)) put('seen', pid(id), at);
   for (const [id, at] of Object.entries(s.webPlayed)) put('web', id, at);

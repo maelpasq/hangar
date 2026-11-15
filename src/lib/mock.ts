@@ -472,6 +472,13 @@ export function mockApi(): Api {
       return structuredClone(cloud);
     },
     cloudOpenProfile: async () => {},
+    cloudCoverHash: async () => null,
+    cloudUploadCover: async () => true,
+    cloudFetchCover: async () => null,
+    cloudExport: async () => 'C:\\Users\\demo\\Downloads\\compte-hangar.json',
+    cloudDeleteAccount: async () => {
+      cloud = { connected: false, offline: false, revoked: false, user: null, devices: [] };
+    },
     openLink: async () => {},
     openGameLink: async () => {},
     reportBug: async () => { await wait(800); },

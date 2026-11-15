@@ -1,6 +1,6 @@
 # Compte Hangar (facultatif) - plan
 
-Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/`. Phase 2 (connexion dans l'app) faite : `src-tauri/src/cloud/`, `src/lib/stores/cloud.svelte.ts`. Phase 3 (synchro) faite : `src/lib/util/cloud-sync.ts`. Phase 4 (temps de jeu cumulé) faite : même fichier, fin. Phase 5 (profil) faite : `server/src/profile.ts`, Paramètres > Compte > Profil ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
+Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/`. Phase 2 (connexion dans l'app) faite : `src-tauri/src/cloud/`, `src/lib/stores/cloud.svelte.ts`. Phase 3 (synchro) faite : `src/lib/util/cloud-sync.ts`. Phase 4 (temps de jeu cumulé) faite : même fichier, fin. Phase 5 (profil) faite : `server/src/profile.ts`, Paramètres > Compte > Profil. Phase 6 (cadre) écrite : jaquettes en fichier local, export, suppression, comptes inactifs (`server/src/lifecycle.ts`), politique de confidentialité (`site/confidentialite.html`) ; le serveur de test et de prod doit recevoir la migration `0001` puis être redéployé. Phase 7 (amis, profil et chat dans l'app) : prévue, pas commencée. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
 
 ## 1. Objectif et principes
 
@@ -39,7 +39,7 @@ Base : `PersistedState` (`src/lib/types.ts`). Les identifiants `steam:`, `epic:`
 
 **Synchronisé**
 - `favorites`, `hidden`, `renames`, `collections`
-- `customCovers` de type `steam:<id>` ou `none` (pas les fichiers locaux en v1)
+- `customCovers` : `steam:<id>`, `none`, et les jaquettes en fichier local (phase 6) : l'image va dans R2 (`PUT /covers/<empreinte SHA-256>`, 4 Mo au plus), l'élément vaut `file:<empreinte>` et les autres postes la téléchargent dans leur dossier des jaquettes
 - `accent`, `theme`, `sort`
 - préférences « de goût » : `autoCovers`, `showUninstalled`, `webGames`, `discordPresence`, `startPage`
 - `sessions` et `totals` (section 6), `webPlayed`, `firstSeen`
@@ -48,7 +48,7 @@ Base : `PersistedState` (`src/lib/types.ts`). Les identifiants `steam:`, `epic:`
 
 **Reste sur le poste**
 - `localFolders`, `steamIdCache`, `disabledStores`, `onboarded`, `lastVersion`
-- jaquettes en fichiers locaux (v1)
+- jaquettes en fichier local de plus de 4 Mo
 - préférences liées à la machine : `startWithWindows`, `padAtLogin`, `padButton`, `closeAction`, `globalShortcut`, `minimizeOnLaunch`
 
 **Clé SteamGridDB** (choix de l'utilisateur : synchronisée, pour ne pas la ressaisir sur chaque PC)
@@ -122,13 +122,14 @@ Routes prévues :
 - `GET /export` : toutes les données (JSON)
 - `DELETE /me` : suppression du compte et de toutes ses données
 
-Routes ajoutées en l'écrivant : `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`, `PUT /me` (pseudo, visibilité), `GET`, `PUT`, `DELETE /me/avatar`, `GET /u/:id` (profil public).
+Routes ajoutées en l'écrivant : `PUT` et `GET /covers/:hash` (jaquettes en fichier local, phase 6), `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`, `PUT /me` (pseudo, visibilité), `GET`, `PUT`, `DELETE /me/avatar`, `GET /u/:id` (profil public).
 
-Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui sert de curseur), `devices` (poste, nom, empreinte de son jeton), `login_codes`, `entries` (user, key, value, updatedAt, deviceId, deleted, seq), `game_sessions`, `secrets` (user, nom, valeur chiffrée, nonce, updatedAt).
+Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui sert de curseur, date du rappel d'inactivité), `covers` (jaquettes envoyées : empreinte, type, taille), `devices` (poste, nom, empreinte de son jeton), `login_codes`, `entries` (user, key, value, updatedAt, deviceId, deleted, seq), `game_sessions`, `secrets` (user, nom, valeur chiffrée, nonce, updatedAt).
 
 ## 9. Vie privée, RGPD, règles du projet
 
-- Politique de confidentialité sur le site : données stockées, durée, hébergeurs, droits.
+- Politique de confidentialité sur le site (`site/confidentialite.html`, https://hangar.pamalstudio.fr/confidentialite.html) : données stockées, durée, hébergeurs, droits. Lien dans Paramètres > Compte et en pied de page du site.
+- **Durées** (`server/src/lifecycle.ts`, tâche planifiée quotidienne du Worker) : compte sans aucune connexion d'un poste pendant 2 ans supprimé, après un e-mail de rappel 30 jours avant (une connexion entre-temps remet tout à zéro) ; traces de connexion (session du navigateur avec IP, codes, limite de débit) effacées un jour après leur fin ; jaquettes qu'aucun élément ne désigne plus effacées après un jour de grâce.
 - Base Turso en région UE.
 - Export et suppression du compte depuis l'app.
 - Aucune télémétrie : le serveur ne reçoit que ce qui est synchronisé.
@@ -147,7 +148,14 @@ Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui ser
 3. **Synchro** : récupération, envoi, file hors ligne, fusion à la première connexion, indicateur d'état ; rattachement des jeux locaux et cartes en gris « Sur un autre PC ».
 4. **Temps de jeu cumulé** : historique et statistiques tous postes, détail par poste.
 5. **Profil** : pseudo, avatar (R2), visibilité publique ou privée. Le social vient après.
-6. **Cadre et publication** : politique de confidentialité, export et suppression, docs et liste réseau, version.
+6. **Cadre et publication** : politique de confidentialité, export et suppression, docs et liste réseau, version. Ajouté : jaquettes en fichier local synchronisées, suppression des comptes inactifs, ménage quotidien. La version se publie avec le reste du compte (dev vers main), sur demande.
+7. **Social, dans l'app** : tout se passe dans Hangar, la page web `/u/:id` reste un simple aperçu.
+   - **Profil dans l'app** : sa propre page (avatar, pseudo, bannière, temps de jeu total, jeux les plus joués, collections mises en avant, activité récente) et celle des autres, ouvertes sans navigateur.
+   - **Amis** : recherche par pseudo ou par code ami, demande, acceptation, refus, blocage ; liste des amis avec leur statut (en ligne, en jeu sur tel jeu, hors ligne) et leur jeu en cours.
+   - **Page Amis** dans la barre latérale : liste, demandes reçues et envoyées, activité des amis (jeux lancés, nouveaux jeux), jeux en commun.
+   - **Chat** : conversations privées entre amis, en temps réel (WebSocket, Durable Objects côté Cloudflare), historique, non-lus, notifications dans l'app et dans la zone de notification, inviter un ami sur un jeu.
+   - **Confidentialité** : chaque information partagée a son réglage (statut, jeu en cours, temps de jeu, bibliothèque), pour tout le monde, les amis seulement ou personne ; signaler un message ou un compte ; chiffrement au repos des messages ; export et suppression comprennent amis et messages. Politique de confidentialité mise à jour.
+   - **Réseau** : connexion temps réel à l'API du compte seulement quand l'utilisateur est connecté et a activé les amis ; liste réseau de `CLAUDE.md` mise à jour.
 
 ## 11. À faire par le développeur (hors code) - fait le 15 nov. 2026
 
@@ -159,6 +167,6 @@ Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui ser
 ## 12. Questions ouvertes
 
 - ~~Les jeux « Sur un autre PC » s'affichent-ils quand « jeux non installés » est désactivé ?~~ Non : ils suivent la même règle que les jeux non installés des launchers (DECISIONS.md).
-- Les jaquettes en fichiers locaux sont-elles envoyées sur le compte (R2) dans une version suivante ?
-- Le temps de jeu passé avant la création du compte est-il envoyé à la première connexion ? (Proposition : oui, rattaché au poste.)
-- Durée de conservation d'un compte inactif.
+- ~~Les jaquettes en fichiers locaux sont-elles envoyées sur le compte (R2) ?~~ Oui, depuis la phase 6 (section 3).
+- ~~Le temps de jeu passé avant la création du compte est-il envoyé à la première connexion ?~~ Oui, rattaché au poste : totaux et sessions non envoyées partent à la première synchro, et de nouveau vers un autre compte après une déconnexion.
+- ~~Durée de conservation d'un compte inactif.~~ 2 ans sans connexion, rappel par e-mail 30 jours avant (section 9).

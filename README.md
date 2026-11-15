@@ -118,7 +118,9 @@ Hangar ne collecte aucune donnée personnelle et n'a aucune télémétrie. Il ne
 - **Signaler un bug** (bouton insecte, seulement quand tu envoies) : ton titre, ta description, ta capture si tu en joins une, la version de Hangar et ton système partent vers le salon Discord privé du développeur.
 - **Mises à jour de Hangar** : Hangar lit le fichier des versions sur GitHub au démarrage, et télécharge la nouvelle version depuis GitHub quand tu cliques sur « Mettre à jour Hangar ».
 
-Ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Ta clé SteamGridDB et les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS, KWallet ou GNOME Keyring sous Linux), jamais dans un fichier.
+- **Compte Hangar** (facultatif, seulement si tu te connectes) : tes favoris, collections, renommages, jaquettes, réglages d'apparence, jeux ajoutés à la main, temps de jeu et profil sont synchronisés avec l'API du compte (`hangar-api.pamalstudio.fr`). Export et suppression dans Paramètres > Compte ; détails dans la [politique de confidentialité](https://hangar.pamalstudio.fr/confidentialite.html).
+
+Sans compte, ta bibliothèque et ton temps de jeu restent sur ton ordinateur. Ta clé SteamGridDB et les clés et jetons des comptes reliés sont rangés dans le coffre du système (Gestionnaire d'identification Windows, Trousseau macOS, KWallet ou GNOME Keyring sous Linux), jamais dans un fichier.
 
 ## Contribuer
 

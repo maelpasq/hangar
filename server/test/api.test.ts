@@ -10,7 +10,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { b64url, pkceChallenge, randomToken } from '../src/crypto';
 import type { Env } from '../src/env';
-import { mailHtml } from '../src/mail';
+import { DAY, INACTIVE_DAYS, WARN_DAYS, cleanCovers, cleanLogins, expireAccounts } from '../src/lifecycle';
+import { mailHtml, noticeHtml } from '../src/mail';
+import { sha256Hex } from '../src/profile';
 import * as schema from '../src/schema';
 
 const BASE = 'http://127.0.0.1:8787';
@@ -27,7 +29,9 @@ const env: Env = {
       return v ? { arrayBuffer: async () => v.slice().buffer } : null;
     },
     put: async (k, v) => void bucket.set(k, v.slice()),
-    delete: async (k) => void bucket.delete(k)
+    delete: async (k) => {
+      for (const key of Array.isArray(k) ? k : [k]) bucket.delete(key);
+    }
   }
 };
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
@@ -125,6 +129,7 @@ describe('connexion', () => {
     const mail = mailHtml('482913', 'https://api.test');
     expect(mail).toContain('>482913<');
     expect(mail.match(/https?:\/\/[^"' )]+/g)).toEqual(['https://api.test/login/logo.png']);
+    expect(noticeHtml('https://api.test').match(/https?:\/\/[^"' )]+/g)).toEqual(['https://api.test/login/logo.png']);
   });
 
   it('refuse un retour qui ne vise pas un port local valide', async () => {
@@ -363,6 +368,43 @@ describe('compte', () => {
     expect((await json(await call('/me', { token: other }))).user.avatar).not.toMatch(/^p/);
   });
 
+  it('garde les jaquettes envoyées, par compte, et fait le ménage des inutilisées', async () => {
+    const pic = new Uint8Array([...PNG, 9, 9, 9]);
+    const unused = new Uint8Array([...PNG, 8, 8, 8]);
+    const hash = await sha256Hex(pic);
+    const put = (token: string, h: string, bytes: Uint8Array) =>
+      app.request(`${BASE}/covers/${h}`, {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'image/png', 'cf-connecting-ip': ip },
+        body: bytes as Uint8Array<ArrayBuffer>
+      });
+    // Empreinte fausse, pas une image, empreinte mal formée : refusées.
+    expect((await put(a, 'f'.repeat(64), pic)).status).toBe(400);
+    expect((await put(a, await sha256Hex(new Uint8Array([1, 2, 3])), new Uint8Array([1, 2, 3]))).status).toBe(400);
+    expect((await put(a, 'abc', pic)).status).toBe(400);
+    expect((await put(a, hash, pic)).status).toBe(200);
+    expect((await put(a, hash, pic)).status).toBe(200);
+    expect((await put(a, await sha256Hex(unused), unused)).status).toBe(200);
+
+    const got = await call(`/covers/${hash}`, { token: b });
+    expect(got.status).toBe(200);
+    expect(got.headers.get('content-type')).toBe('image/png');
+    expect(new Uint8Array(await got.arrayBuffer())).toEqual(pic);
+    expect((await call(`/covers/${hash}`, { token: other })).status).toBe(404);
+
+    const t = Date.now();
+    await call('/sync', { token: a, body: { changes: [{ key: 'cover:steam:9', value: JSON.stringify(`file:${hash}`), updatedAt: t }] } });
+    const exported = await json(await call('/export', { token: a }));
+    expect(exported.covers.map((x: any) => x.hash).sort()).toEqual([hash, await sha256Hex(unused)].sort());
+    expect(exported.user.public).toBe(false);
+
+    // Trop récentes : gardées. Un jour plus tard : seule celle qu'aucun élément ne désigne part.
+    expect(await cleanCovers(db, env.AVATARS, t)).toBe(0);
+    expect(await cleanCovers(db, env.AVATARS, t + DAY + 60_000)).toBe(1);
+    expect((await call(`/covers/${hash}`, { token: a })).status).toBe(200);
+    expect((await call(`/covers/${await sha256Hex(unused)}`, { token: a })).status).toBe(404);
+  });
+
   it('sépare les comptes', async () => {
     expect((await json(await call('/sync?since=0', { token: other }))).changes).toEqual([]);
     expect((await json(await call('/sessions?since=0', { token: other }))).sessions).toEqual([]);
@@ -378,11 +420,12 @@ describe('compte', () => {
     expect((await call('/me', { method: 'DELETE', token: a })).status).toBe(200);
     expect((await call('/me', { token: a })).status).toBe(401);
     const id = me.user.id;
-    for (const table of [schema.entries, schema.gameSessions, schema.devices, schema.profiles, schema.secrets]) {
+    for (const table of [schema.entries, schema.gameSessions, schema.devices, schema.profiles, schema.secrets, schema.covers]) {
       const rows = await db.select().from(table);
       expect(rows.some((r) => r.userId === id)).toBe(false);
     }
     expect((await db.select().from(schema.user)).some((u) => u.id === id)).toBe(false);
+    expect([...bucket.keys()].some((k) => k.includes(id))).toBe(false);
     // L'autre compte est intact.
     expect((await call('/me', { token: other })).status).toBe(200);
   });
@@ -390,5 +433,59 @@ describe('compte', () => {
   it('se déconnecte', async () => {
     expect((await call('/logout', { method: 'POST', token: other })).status).toBe(200);
     expect((await call('/me', { token: other })).status).toBe(401);
+  });
+});
+
+describe('ménage', () => {
+  it('efface les traces de connexion un jour après leur fin', async () => {
+    const kept = (await db.select().from(schema.rateLimit)).length;
+    expect(kept).toBeGreaterThan(0);
+    await cleanLogins(db, Date.now());
+    expect(await db.select().from(schema.rateLimit)).toHaveLength(kept);
+    await cleanLogins(db, Date.now() + 2 * DAY);
+    expect(await db.select().from(schema.session)).toEqual([]);
+    expect(await db.select().from(schema.verification)).toEqual([]);
+    expect(await db.select().from(schema.rateLimit)).toEqual([]);
+  });
+});
+
+describe('comptes inactifs', () => {
+  it('prévient 30 jours avant, supprime après 2 ans sans connexion, et repart de zéro au retour', async () => {
+    const told: string[] = [];
+    const notice = async (to: string) => void told.push(to);
+    const token = await login('dormeur@exemple.fr', 'd'.repeat(32));
+    const id = (await json(await call('/me', { token }))).user.id;
+    const now = Date.now();
+    const back = (days: number) => now - days * DAY;
+    const lastSeen = async (at: number) => {
+      await db.update(schema.devices).set({ lastSeen: at }).where(eq(schema.devices.userId, id));
+      await db.update(schema.profiles).set({ createdAt: at }).where(eq(schema.profiles.userId, id));
+      await db.update(schema.user).set({ createdAt: new Date(at) }).where(eq(schema.user.id, id));
+    };
+
+    // Actif : rien.
+    expect(await expireAccounts(db, env.AVATARS, notice, now)).toEqual({ warned: 0, deleted: 0 });
+
+    // 23 mois sans connexion : un rappel, une seule fois.
+    await lastSeen(back(INACTIVE_DAYS - WARN_DAYS + 1));
+    expect(await expireAccounts(db, env.AVATARS, notice, now)).toEqual({ warned: 1, deleted: 0 });
+    expect(await expireAccounts(db, env.AVATARS, notice, now + DAY)).toEqual({ warned: 0, deleted: 0 });
+    expect(told).toEqual(['dormeur@exemple.fr']);
+
+    // Retour sur le compte après le rappel, puis de nouveau 23 mois d'absence : nouveau rappel.
+    // (Plus loin dans le temps, les comptes des autres tests deviennent inactifs eux aussi : on ne
+    // regarde que celui-ci.)
+    const exists = async () => (await db.select().from(schema.user)).some((u) => u.id === id);
+    await lastSeen(now + 2 * DAY);
+    const later = now + 2 * DAY + (INACTIVE_DAYS - WARN_DAYS + 1) * DAY;
+    await expireAccounts(db, env.AVATARS, notice, later);
+    expect(told.filter((t) => t === 'dormeur@exemple.fr')).toHaveLength(2);
+
+    // 30 jours après ce rappel, toujours rien : supprimé.
+    await expireAccounts(db, env.AVATARS, notice, later + 29 * DAY);
+    expect(await exists()).toBe(true);
+    await expireAccounts(db, env.AVATARS, notice, later + WARN_DAYS * DAY);
+    expect(await exists()).toBe(false);
+    expect((await call('/me', { token })).status).toBe(401);
   });
 });

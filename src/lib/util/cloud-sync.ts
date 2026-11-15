@@ -83,12 +83,20 @@ function applyEntry(s: PersistedState, key: string, value: string | null, real: 
       else if (typeof v === 'string' && v.trim() && v.length <= 200) s.renames[id] = v;
       break;
     case 'cover': {
-      const cur = s.customCovers[id];
-      // Une jaquette en fichier local n'est pas synchronisée : jamais remplacée ni retirée d'ici.
-      const synced = cur === undefined || cur === 'none' || cur.startsWith('steam:');
-      if (!synced) break;
+      // Image du compte (`file:<empreinte>`) : téléchargée ensuite par le store, la jaquette
+      // actuelle reste en place d'ici là. Déjà là (même empreinte) : rien à faire.
+      const file = typeof v === 'string' ? /^file:([0-9a-f]{64})$/.exec(v) : null;
+      if (file) {
+        const cur = s.customCovers[id];
+        if (cur && s.cloud.coverHash[cur] === file[1]) delete s.cloud.coverWanted[id];
+        else s.cloud.coverWanted[id] = file[1];
+        break;
+      }
+      if (v !== null && v !== 'none' && !(typeof v === 'string' && /^steam:\d{1,10}$/.test(v))) break;
+      delete s.cloud.coverWanted[id];
+      // Le fichier copié par Hangar reste dans son dossier : seul le choix de jaquette change.
       if (v === null) delete s.customCovers[id];
-      else if (v === 'none' || (typeof v === 'string' && /^steam:\d{1,10}$/.test(v))) s.customCovers[id] = v;
+      else s.customCovers[id] = v;
       break;
     }
     case 'seen': {
@@ -487,5 +495,36 @@ export function resetCloud(s: PersistedState): void {
   c.dirty = [];
   c.timeSent = {};
   c.sessionCursor = 0;
+  c.coversSent = [];
+  c.coverWanted = {};
   for (const x of s.sessions) if (!x.deviceId) delete x.sent;
+}
+
+/** Jaquettes en fichier local pas encore passées par l'empreinte (envoi au compte). */
+export function coversToHash(s: PersistedState): string[] {
+  const out = new Set<string>();
+  for (const cover of Object.values(s.customCovers)) {
+    if (cover !== 'none' && !cover.startsWith('steam:') && s.cloud.coverHash[cover] === undefined) out.add(cover);
+  }
+  return [...out];
+}
+
+/** Jaquettes à envoyer au compte : chemin et empreinte, une fois par image. */
+export function coversToSend(s: PersistedState): { path: string; hash: string }[] {
+  const sent = new Set(s.cloud.coversSent);
+  const out = new Map<string, string>();
+  for (const cover of Object.values(s.customCovers)) {
+    const hash = s.cloud.coverHash[cover];
+    if (hash && !sent.has(hash) && !out.has(hash)) out.set(hash, cover);
+  }
+  return [...out].map(([hash, path]) => ({ path, hash }));
+}
+
+/** Jaquette du compte téléchargée : elle devient celle du jeu sur ce poste. */
+export function coverReceived(s: PersistedState, gameId: string, hash: string, path: string): void {
+  if (s.cloud.coverWanted[gameId] !== hash) return;
+  delete s.cloud.coverWanted[gameId];
+  s.cloud.coverHash[path] = hash;
+  s.customCovers[gameId] = path;
+  if (!s.cloud.coversSent.includes(hash)) s.cloud.coversSent.push(hash);
 }
