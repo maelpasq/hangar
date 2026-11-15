@@ -1,0 +1,20 @@
+# Worker de l'API du compte Hangar. Deux environnements séparés, chacun avec sa base Turso :
+#   prod : l'app publiée        (npm run deploy:prod)
+#   test : Hangar Test          (npm run deploy:test, et npm run dev en local)
+# Les secrets (TURSO_URL, TURSO_TOKEN, AUTH_SECRET, SECRETS_KEY, clés OAuth, RESEND_API_KEY)
+# ne sont jamais ici : `wrangler secret put <NOM> --env <prod|test>` (voir README.md).
+name = "hangar-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+# Pas de télémétrie de l'outil.
+send_metrics = false
+
+[env.prod]
+name = "hangar-api"
+# BASE_URL : adresse publique de l'API (domaine à choisir), sans barre finale.
+vars = { BASE_URL = "https://api.exemple.invalid", MAIL_FROM = "Hangar <connexion@exemple.invalid>" }
+
+[env.test]
+name = "hangar-api-test"
+vars = { BASE_URL = "http://127.0.0.1:8787", MAIL_FROM = "" }

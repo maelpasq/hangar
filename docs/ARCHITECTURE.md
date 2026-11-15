@@ -22,6 +22,7 @@ hangar/
   CLAUDE.md
   docs/                      SPEC, DESIGN, ARCHITECTURE, PLAN, DECISIONS
   design/reference/          maquette validée (.dc.html)
+  server/                    API du compte facultatif (Worker Cloudflare, Turso) : voir server/README.md et COMPTE.md
   package.json  vite.config.ts  svelte.config.js  tsconfig.json
   index.html
   src/

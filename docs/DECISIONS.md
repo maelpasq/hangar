@@ -323,3 +323,16 @@ Aucun réseau, aucun changement visible hors du lien d'installation. Choix :
 - **Fiche portable** (`portable`) des jeux locaux et manuels : nom, exécutable, dossier, appid Steam, lien d'installation. Mise à jour à chaque scan, gardée si le jeu disparaît du scan (disque débranché), retirée seulement quand on retire un jeu manuel. Dans les éléments synchronisables, ces jeux portent l'identifiant `@<exe>|<dossier>` au lieu de leur chemin.
 - **Lien d'installation** : choix de l'utilisateur, sinon registre (`URLInfoAbout`, `URLUpdateInfo`, `HelpLink`), sinon raccourci `.url` du sous-dossier du menu Démarrer ou du dossier du jeu, sinon page Steam (appid déjà connu). Visible dans la fiche des jeux hors store (« Page du jeu », avec le domaine) et modifiable. `https://` seulement, validé des deux côtés, ouvert dans le navigateur par `open_game_link`.
 - **Reporté** : la source GOG du lien (Hangar ne connaît pas d'id GOG pour un jeu local aujourd'hui), le `.url` du dossier d'un jeu ajouté à la main (pas de scan pour eux), et la synchro des sessions et du temps de jeu (phase 4, ajout seulement).
+
+## Compte Hangar, phase 1 : serveur (15 nov. 2026)
+
+Le serveur est dans `server/` (son propre `package.json`, rien ne change dans l'app). Écrit et testé en local ; pas encore en ligne, il manque les comptes et les secrets. Choix :
+
+- **Hono** pour les routes, **Drizzle** pour le schéma et les migrations (`server/drizzle/`, commitées), **Better Auth** pour la connexion seulement.
+- **Jeton de poste à nous, pas la session de Better Auth.** Better Auth ne sert qu'au navigateur (code e-mail, Discord, Google) ; sa session est supprimée dès que le code est rendu à l'app. L'app reçoit un jeton aléatoire dont le serveur ne garde que l'empreinte, rattaché au poste (`devices`) : la liste des postes et la déconnexion à distance en découlent, et l'API ne dépend pas des détails internes de Better Auth.
+- **Retour vers l'app** : `/desktop/finish` ne redirige que vers `http://127.0.0.1:<port>` (port 1024 à 65535), avec un code valable 2 minutes et une fois, échangé avec le vérifieur PKCE.
+- **Curseur de synchro = compteur par compte** (`profiles.cursor`), pas une date : toutes les lignes d'un envoi portent le même numéro, et une page de lecture ne coupe jamais un envoi. `updatedAt` (horloge du poste) ne sert qu'à départager deux modifications du même élément, et il est ramené à l'heure du serveur s'il est dans le futur.
+- **Pas de colonne `kind`** dans `entries` : la clé de la phase 0 (`fav:<jeu>`, `set:accent`...) porte déjà le type.
+- **Clé SteamGridDB** : AES-GCM, clé de chiffrement dans les secrets du Worker (`SECRETS_KEY`), liée au compte et au nom du secret.
+- **Limite de débit** de Better Auth rangée en base (un Worker n'a pas de mémoire), par adresse (`cf-connecting-ip`) ; télémétrie de Better Auth et de wrangler coupée.
+- **Pas vérifié** : l'exécution dans un vrai Worker avec une vraie base Turso, l'envoi par Resend, Discord et Google (les tests couvrent tout le reste sur une base libSQL locale ; le Worker se compile avec `wrangler deploy --dry-run`).

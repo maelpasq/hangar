@@ -1,0 +1,69 @@
+# API du compte Hangar
+
+Worker Cloudflare devant une base Turso (libSQL). Le compte est facultatif : l'app ne parle à ce
+serveur que si la personne se connecte. Plan complet : `docs/COMPTE.md`.
+
+Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les secrets Cloudflare.
+
+## Routes
+
+| Route | Rôle |
+|---|---|
+| `GET /login?port&challenge&state` | page de connexion, ouverte dans le navigateur par l'app |
+| `/auth/*` | Better Auth : code par e-mail, Discord, Google |
+| `GET /desktop/finish?port&challenge&state` | connectée : renvoie un code à usage unique à `http://127.0.0.1:<port>` |
+| `POST /desktop/token` | `{ code, verifier, deviceId, deviceName }` : rend le jeton du poste |
+| `GET /me` | compte et liste des postes |
+| `POST /logout` | déconnecte ce poste |
+| `PUT /devices/:id`, `DELETE /devices/:id` | renommer un poste, le déconnecter à distance |
+| `GET /sync?since=<curseur>` | changements depuis le curseur (`more` : il en reste) |
+| `POST /sync` | `{ changes: [{ key, value, updatedAt }] }`, `value: null` pour une suppression |
+| `GET /sessions?since=<curseur>`, `POST /sessions` | sessions de jeu, ajout seulement |
+| `GET`, `PUT`, `DELETE /secrets/steamgriddb` | clé SteamGridDB, chiffrée en base |
+| `GET /export` | toutes les données du compte (JSON) |
+| `DELETE /me` | supprime le compte et toutes ses données |
+
+Hors `/login`, `/auth/*` et `/desktop/*`, tout demande `Authorization: Bearer <jeton du poste>`.
+
+Connexion d'un poste : l'app tire un vérifieur PKCE, ouvre une adresse locale, puis le navigateur
+sur `/login`. Après la connexion, le navigateur revient sur l'adresse locale avec un code (valable
+2 minutes, une seule fois), que l'app échange avec son vérifieur contre un jeton. Le serveur ne
+garde que l'empreinte du jeton.
+
+Synchro : un élément par clé (celles de `src/lib/util/sync.ts`), la modification la plus récente
+gagne. Le curseur est un compteur par compte, pas une date : deux horloges décalées ne font rien
+perdre.
+
+## Développer
+
+```bash
+npm install
+npm run verify      # types + tests (base libSQL locale, aucun réseau)
+npm run db:generate # après un changement de src/schema.ts : écrit la migration dans drizzle/
+```
+
+`npm run dev` lance le Worker en local (environnement `test`). Il lui faut une base Turso : ses
+secrets vont dans `.dev.vars` (jamais commité), voir la liste ci-dessous. Sans clé Resend, le code
+de connexion est écrit dans le journal du Worker.
+
+## Mettre en ligne (à faire une fois par environnement : `prod` et `test`)
+
+1. Turso : créer une base en région UE, noter son adresse (`libsql://...`) et un jeton.
+2. Appliquer le schéma : `TURSO_URL=... TURSO_TOKEN=... npm run db:migrate`.
+3. Renseigner `BASE_URL` et `MAIL_FROM` dans `wrangler.toml`.
+4. Enregistrer les secrets, un par un : `npx wrangler secret put <NOM> --env <prod|test>`.
+5. `npm run deploy:test` ou `npm run deploy:prod`.
+
+| Secret | Contenu |
+|---|---|
+| `TURSO_URL`, `TURSO_TOKEN` | base de l'environnement |
+| `AUTH_SECRET` | 32 octets aléatoires (signature des cookies de connexion) |
+| `SECRETS_KEY` | 32 octets aléatoires en base64 : chiffre la clé SteamGridDB. La perdre rend ces clés illisibles |
+| `RESEND_API_KEY` | envoi des codes par e-mail |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Discord |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Google |
+
+Adresses de retour à déclarer chez Discord et Google : `<BASE_URL>/auth/callback/discord` et
+`<BASE_URL>/auth/callback/google`.
+
+Un secret aléatoire : `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.

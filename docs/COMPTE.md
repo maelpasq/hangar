@@ -1,6 +1,6 @@
 # Compte Hangar (facultatif) - plan
 
-Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
+Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) écrite et testée en local dans `server/`, pas encore mise en ligne (comptes et secrets de la section 11, marche à suivre dans `server/README.md`) ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
 
 ## 1. Objectif et principes
 
@@ -122,7 +122,9 @@ Routes prévues :
 - `GET /export` : toutes les données (JSON)
 - `DELETE /me` : suppression du compte et de toutes ses données
 
-Tables (en plus de celles de Better Auth) : `profiles`, `devices`, `entries` (user, kind, key, value JSON, updatedAt, deviceId, deleted), `game_sessions`, `secrets` (user, nom, valeur chiffrée, nonce, updatedAt).
+Routes ajoutées en l'écrivant : `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`.
+
+Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui sert de curseur), `devices` (poste, nom, empreinte de son jeton), `login_codes`, `entries` (user, key, value, updatedAt, deviceId, deleted, seq), `game_sessions`, `secrets` (user, nom, valeur chiffrée, nonce, updatedAt).
 
 ## 9. Vie privée, RGPD, règles du projet
 

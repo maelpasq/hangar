@@ -1,0 +1,30 @@
+{
+  "name": "hangar-api",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env test",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "verify": "tsc --noEmit && vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "deploy:test": "wrangler deploy --env test",
+    "deploy:prod": "wrangler deploy --env prod"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "better-auth": "^1.7.25",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.18"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261115.1",
+    "@types/node": "^26.6.6",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.162.0"
+  }
+}

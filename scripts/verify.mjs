@@ -1,7 +1,7 @@
 // Toutes les vérifications avant un commit, avec une sortie courte :
 // une ligne par étape réussie, la fin du journal seulement en cas d'échec.
 import { spawnSync, execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 // Dans le dossier d'une branche de session (scripts/session.mjs), cargo réutilise le dossier de
 // compilation du dossier principal : les dépendances ne sont pas recompilées pour chaque session.
@@ -17,6 +17,8 @@ const steps = [
   ['cargo test', 'cargo test -q --manifest-path src-tauri/Cargo.toml'],
   ['clippy', 'cargo clippy -q --manifest-path src-tauri/Cargo.toml -- -D warnings'],
 ];
+// Le serveur du compte (server/) a ses propres dépendances : vérifié quand elles sont installées.
+if (existsSync('server/node_modules')) steps.push(['serveur', 'npm --prefix server run verify']);
 
 for (const [name, cmd] of steps) {
   const r = spawnSync(cmd, { shell: true, encoding: 'utf8', maxBuffer: 1 << 28 });
