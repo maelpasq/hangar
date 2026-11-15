@@ -401,7 +401,7 @@ export function mockApi(): Api {
         connected: true,
         offline: false,
         revoked: false,
-        user: { name: 'Alex', email: 'alex@exemple.fr' },
+        user: { id: 'demo-compte-0001', name: 'Alex', email: 'alex@exemple.fr', avatar: null, public: false },
         devices: [
           { id: 'a'.repeat(32), name: 'PC-SALON', createdAt: Date.now() - 864e5 * 30, lastSeen: Date.now(), connected: true, current: true },
           { id: 'b'.repeat(32), name: 'Portable', createdAt: Date.now() - 864e5 * 9, lastSeen: Date.now() - 864e5 * 2, connected: true, current: false }
@@ -452,6 +452,26 @@ export function mockApi(): Api {
       for (const s of sessions) if (!remoteSessions.some((x) => x.id === s.id)) remoteSessions.push({ ...s, deviceId: 'a'.repeat(32) });
     },
     cloudSyncSteamGridDb: async () => false,
+    cloudSetProfile: async (name, isPublic) => {
+      await wait(300);
+      if (!cloud.user) throw "Ce poste n'est pas connecté au compte.";
+      if (name !== null) cloud.user.name = name.replace(/\s+/g, ' ').trim();
+      if (isPublic !== null) cloud.user.public = isPublic;
+      return structuredClone(cloud);
+    },
+    cloudSetAvatar: async (bytes) => {
+      await wait(400);
+      if (!cloud.user) throw "Ce poste n'est pas connecté au compte.";
+      let s = '';
+      for (const b of bytes) s += String.fromCharCode(b);
+      cloud.user.avatar = `data:image/webp;base64,${btoa(s)}`;
+      return structuredClone(cloud);
+    },
+    cloudRemoveAvatar: async () => {
+      if (cloud.user) cloud.user.avatar = null;
+      return structuredClone(cloud);
+    },
+    cloudOpenProfile: async () => {},
     openLink: async () => {},
     openGameLink: async () => {},
     reportBug: async () => { await wait(800); },

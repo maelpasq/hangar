@@ -131,6 +131,13 @@ export interface Api {
   cloudPushSessions(sessions: CloudSession[]): Promise<void>;
   /** Clé SteamGridDB du compte (chiffrée côté serveur) ; rend vrai si ce poste a une clé. */
   cloudSyncSteamGridDb(first: boolean): Promise<boolean>;
+  /** Profil : pseudo et/ou visibilité (null : inchangé). */
+  cloudSetProfile(name: string | null, isPublic: boolean | null): Promise<CloudStatus>;
+  /** Nouvel avatar : image déjà réduite (PNG, JPEG ou WebP, 512 Ko au plus). */
+  cloudSetAvatar(bytes: Uint8Array): Promise<CloudStatus>;
+  cloudRemoveAvatar(): Promise<CloudStatus>;
+  /** Ouvre le profil public dans le navigateur. */
+  cloudOpenProfile(): Promise<void>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings'): Promise<void>;
   /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
@@ -263,6 +270,10 @@ async function tauriApi(): Promise<Api> {
     cloudPullSessions: (since) => invoke('cloud_pull_sessions', { since }),
     cloudPushSessions: (sessions) => invoke('cloud_push_sessions', { sessions }),
     cloudSyncSteamGridDb: (first) => invoke('cloud_sync_steamgriddb', { first }),
+    cloudSetProfile: (name, isPublic) => invoke('cloud_set_profile', { name, public: isPublic }),
+    cloudSetAvatar: (bytes) => invoke('cloud_set_avatar', { bytes: Array.from(bytes) }),
+    cloudRemoveAvatar: () => invoke('cloud_remove_avatar'),
+    cloudOpenProfile: () => invoke('cloud_open_profile'),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),

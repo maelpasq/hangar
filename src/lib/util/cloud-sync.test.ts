@@ -10,6 +10,7 @@ import {
   ghostGames,
   hasMeaningful,
   markAllDirty,
+  measuredMs,
   pendingChanges,
   pendingSessions,
   remoteTimes,
@@ -265,12 +266,30 @@ describe('temps de jeu cumulé', () => {
     s.totals['steam:620'] = { playMs: 0, launches: 0, lastPlayed: 0 };
     const first = timeChanges(s, () => false, 500);
     expect(first).toEqual([
-      { key: `time:${s.deviceId}:epic:fortnite`, value: JSON.stringify({ ms: 7_200_000, n: 3, last: 10 }), updatedAt: 500 }
+      { key: `time:${s.deviceId}:epic:fortnite`, value: JSON.stringify({ ms: 7_200_000, n: 3, last: 10, h: 7_200_000 }), updatedAt: 500 }
     ]);
     ackTimes(s, first);
     expect(timeChanges(s, () => false)).toEqual([]);
     s.totals['epic:fortnite'].playMs += 60_000;
     expect(timeChanges(s, () => true)[0].value).toContain('"s":1');
+  });
+
+  it('sépare le temps mesuré par Hangar des heures du store', () => {
+    const s = defaultState();
+    // Heures de Steam reprises : seul le temps des sessions de ce poste a été mesuré par Hangar.
+    s.totals['steam:620'] = { playMs: 100 * 3_600_000, launches: 2, lastPlayed: 10 };
+    s.sessions = [
+      { gameId: 'steam:620', start: 0, end: 1_800_000 },
+      { gameId: 'steam:620', start: 0, end: 9_000_000, deviceId: OTHER }
+    ];
+    expect(measuredMs(s, 'steam:620', true)).toBe(1_800_000);
+    // Jeu sans store : tout son temps vient de Hangar.
+    s.totals['manual:jeu'] = { playMs: 600_000, launches: 1, lastPlayed: 10 };
+    expect(measuredMs(s, 'manual:jeu', false)).toBe(600_000);
+    // Une fois suivi, le compteur fait foi.
+    s.totals['steam:620'].hangarMs = 42;
+    expect(measuredMs(s, 'steam:620', true)).toBe(42);
+    expect(JSON.parse(timeChanges(s, (id) => id === 'steam:620').find((c) => c.key.endsWith('steam:620'))?.value ?? '')).toMatchObject({ s: 1, h: 42 });
   });
 
   it('les sessions finies partent une fois, avec un identifiant stable', () => {

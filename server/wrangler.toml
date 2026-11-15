@@ -15,6 +15,8 @@ name = "hangar-api"
 workers_dev = false
 routes = [{ pattern = "hangar-api.pamalstudio.fr", custom_domain = true }]
 vars = { BASE_URL = "https://hangar-api.pamalstudio.fr", MAIL_FROM = "Hangar <connexion@pamalstudio.fr>" }
+# Avatars du profil (privés : servis seulement par l'API).
+r2_buckets = [{ binding = "AVATARS", bucket_name = "hangar-avatars" }]
 
 # En local (npm run dev), .dev.vars remplace BASE_URL par http://127.0.0.1:8787.
 [env.test]
@@ -22,3 +24,4 @@ name = "hangar-api-test"
 workers_dev = false
 routes = [{ pattern = "hangar-api-test.pamalstudio.fr", custom_domain = true }]
 vars = { BASE_URL = "https://hangar-api-test.pamalstudio.fr", MAIL_FROM = "Hangar Test <connexion@pamalstudio.fr>" }
+r2_buckets = [{ binding = "AVATARS", bucket_name = "hangar-avatars-test" }]

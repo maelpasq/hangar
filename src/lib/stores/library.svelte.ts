@@ -5,7 +5,7 @@ import { STORE_ORDER } from '../stores-meta';
 import type { Collection, Game, PersistedState, Session, StoreId, Totals } from '../types';
 import { dedupe } from '../util/games';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
-import { adoptGhosts, ghostGames, remoteTimes } from '../util/cloud-sync';
+import { adoptGhosts, ghostGames, measuredMs, remoteTimes } from '../util/cloud-sync';
 import { installLink, isGhostId, portableOf, stampChanges, syncEntries } from '../util/sync';
 
 const EMPTY_TOTALS: Totals = { playMs: 0, launches: 0, lastPlayed: 0 };
@@ -81,6 +81,7 @@ class Library {
     const g = this.byId.get(id);
     if (!g || (!g.storePlayMs && !g.storeLastPlayed)) return own;
     return {
+      ...own,
       playMs: Math.max(own.playMs, g.storePlayMs ?? 0),
       launches: own.launches,
       lastPlayed: Math.max(own.lastPlayed, g.storeLastPlayed ?? 0)
@@ -469,11 +470,14 @@ class Library {
     const prev = this.state.sessions.find((x) => !x.deviceId && x.gameId === s.gameId && x.start === s.start);
     const from = prev ? Math.max(prev.end, s.start) : s.start;
     const ms = Math.max(0, s.end - from);
+    // Temps mesuré par Hangar seul, avant d'ajouter cette session (estimé s'il n'est pas encore suivi).
+    const measured = measuredMs(this.state, s.gameId, this.storeCounted(s.gameId));
     const session: Session = { gameId: s.gameId, start: s.start, end: Math.max(s.end, prev?.end ?? 0) };
     if (ended || prev?.done) session.done = true;
     if (prev?.sent) session.sent = true;
     const t = { ...this.ownTotals(s.gameId) };
     t.playMs += ms;
+    t.hangarMs = measured + ms;
     t.lastPlayed = Math.max(t.lastPlayed, session.end);
     this.state.totals[s.gameId] = t;
     const min = Date.now() - SESSION_DAYS * 86_400_000;

@@ -4,11 +4,24 @@ import { and, asc, eq, gt, like, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createAuth, providers, resendMailer } from './auth';
+import { BACKGROUND_WEBP } from './background';
 import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
 import { GEIST_WOFF2 } from './font';
-import { loginPage, pageHeaders, statusPage } from './login-page';
+import { loginPage, pageHeaders, profilePage, statusPage } from './login-page';
 import { LOGO_PNG } from './logo';
+import {
+  AVATAR_MAX,
+  PUBLIC_KEY,
+  avatarKey,
+  avatarVersion,
+  cleanName,
+  dataUrl,
+  imageType,
+  isUserId,
+  providerAvatar,
+  totalPlay
+} from './profile';
 import { account, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user, verification } from './schema';
 
 /** Changements par envoi ; une page de lecture en contient au plus le double (voir `page`). */
@@ -27,6 +40,7 @@ const SECRET_NAMES = ['steamgriddb'];
 const bytes = (b64: string) => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
 const FONT = bytes(GEIST_WOFF2);
 const LOGO = bytes(LOGO_PNG);
+const BACKGROUND = bytes(BACKGROUND_WEBP);
 
 type Device = typeof devices.$inferSelect;
 type Vars = { Variables: { device: Device } };
@@ -70,6 +84,69 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
 
   app.get('/', (c) => c.json({ name: 'Hangar', ok: true }));
 
+  // --- Profil (pseudo, avatar, visibilité) ---
+
+  const bucket = env.AVATARS;
+
+  const isPublic = async (userId: string) => {
+    const [row] = await db
+      .select({ value: entries.value, deleted: entries.deleted })
+      .from(entries)
+      .where(and(eq(entries.userId, userId), eq(entries.key, PUBLIC_KEY)));
+    return !!row && !row.deleted && row.value === 'true';
+  };
+
+  /** Version de l'avatar d'un compte (l'app le retélécharge quand elle change), ou null. */
+  const avatarOf = async (image: string | null): Promise<string | null> => {
+    if (!bucket || !image) return null;
+    if (image.startsWith('r2:')) return image.slice(3);
+    const url = providerAvatar(image);
+    return url ? `p${(await hashToken(url)).slice(0, 12)}` : null;
+  };
+
+  /** Avatar d'un compte : celui de R2, ou celui du service de connexion, copié dans R2 au passage. */
+  const loadAvatar = async (u: { id: string; image: string | null }) => {
+    if (!bucket || !u.image) return null;
+    if (u.image.startsWith('r2:')) {
+      const obj = await bucket.get(avatarKey(u.id));
+      const bytes = obj ? new Uint8Array(await obj.arrayBuffer()) : null;
+      const type = bytes && imageType(bytes);
+      return bytes && type ? { type, bytes } : null;
+    }
+    const url = providerAvatar(u.image);
+    const res = url ? await fetch(url, { redirect: 'error' }).catch(() => null) : null;
+    if (!res?.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const type = imageType(bytes);
+    if (!type || bytes.length > AVATAR_MAX) return null;
+    await bucket.put(avatarKey(u.id), bytes, { httpMetadata: { contentType: type } });
+    await db
+      .update(user)
+      .set({ image: `r2:${avatarVersion()}`, updatedAt: new Date() })
+      .where(and(eq(user.id, u.id), eq(user.image, u.image)));
+    return { type, bytes };
+  };
+
+  /** Profil public : rien d'autre que le pseudo, l'avatar, la date d'arrivée et le temps de jeu. */
+  app.get('/u/:id', async (c) => {
+    const nonce = randomToken();
+    const id = c.req.param('id');
+    const [u] = isUserId(id) ? await db.select().from(user).where(eq(user.id, id)) : [];
+    if (!u || !(await isPublic(id))) return c.body(profilePage(nonce, null), 404, pageHeaders(nonce));
+    const times = await db
+      .select({ key: entries.key, value: entries.value })
+      .from(entries)
+      .where(and(eq(entries.userId, id), like(entries.key, 'time:%'), eq(entries.deleted, false)));
+    const pic = await loadAvatar(u).catch(() => null);
+    const html = profilePage(nonce, {
+      name: u.name.trim() || 'Profil Hangar',
+      avatar: pic ? dataUrl(pic.type, pic.bytes) : null,
+      since: u.createdAt.getTime(),
+      ...totalPlay(times)
+    });
+    return c.body(html, 200, pageHeaders(nonce));
+  });
+
   // --- Connexion (navigateur) ---
 
   app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw));
@@ -91,6 +168,10 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
 
   app.get('/login/logo.png', (c) =>
     c.body(LOGO, 200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=31536000, immutable' })
+  );
+
+  app.get('/login/fond.webp', (c) =>
+    c.body(BACKGROUND, 200, { 'content-type': 'image/webp', 'cache-control': 'public, max-age=31536000, immutable' })
   );
 
   app.get('/login/geist.woff2', (c) =>
@@ -189,9 +270,72 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     const [u] = await db.select().from(user).where(eq(user.id, me.userId));
     if (!u) return c.json({ error: 'non_connecte' }, 401);
     return c.json({
-      user: { id: u.id, email: u.email, name: u.name, image: u.image, createdAt: u.createdAt.getTime() },
+      user: {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        image: u.image,
+        avatar: await avatarOf(u.image),
+        public: await isPublic(u.id),
+        createdAt: u.createdAt.getTime()
+      },
       devices: await deviceList(me)
     });
+  });
+
+  /** Pseudo et visibilité du profil. La visibilité suit la synchro (élément `profile:public`). */
+  api.put('/me', async (c) => {
+    const me = c.get('device');
+    const body: unknown = await c.req.json().catch(() => null);
+    if (!isObject(body)) return c.json({ error: 'requete' }, 400);
+    const name = 'name' in body ? cleanName(body.name) : undefined;
+    if (name === null) return c.json({ error: 'pseudo' }, 400);
+    if ('public' in body && typeof body.public !== 'boolean') return c.json({ error: 'requete' }, 400);
+    if (name) await db.update(user).set({ name, updatedAt: new Date() }).where(eq(user.id, me.userId));
+    if (typeof body.public === 'boolean') {
+      const value = String(body.public);
+      const updatedAt = Date.now();
+      await db.batch([
+        bump(me.userId),
+        db
+          .insert(entries)
+          .values({ userId: me.userId, key: PUBLIC_KEY, value, updatedAt, deviceId: me.deviceId, deleted: false, seq: nextSeq(me.userId) })
+          .onConflictDoUpdate({
+            target: [entries.userId, entries.key],
+            set: { value, updatedAt, deviceId: me.deviceId, deleted: false, seq: sql`excluded.seq` }
+          })
+      ]);
+    }
+    return c.json({ ok: true });
+  });
+
+  api.get('/me/avatar', async (c) => {
+    const me = c.get('device');
+    const [u] = await db.select({ id: user.id, image: user.image }).from(user).where(eq(user.id, me.userId));
+    const pic = u ? await loadAvatar(u) : null;
+    if (!pic) return c.json({ error: 'introuvable' }, 404);
+    return c.body(pic.bytes, 200, { 'content-type': pic.type, 'cache-control': 'private, no-store' });
+  });
+
+  /** Avatar envoyé par l'app : un carré déjà réduit, PNG, JPEG ou WebP. */
+  api.put('/me/avatar', async (c) => {
+    const me = c.get('device');
+    if (!bucket) return c.json({ error: 'indisponible' }, 503);
+    const bytes = new Uint8Array(await c.req.arrayBuffer());
+    const type = imageType(bytes);
+    if (bytes.length > AVATAR_MAX) return c.json({ error: 'trop_gros' }, 413);
+    if (!type || type === 'image/gif') return c.json({ error: 'image' }, 400);
+    await bucket.put(avatarKey(me.userId), bytes, { httpMetadata: { contentType: type } });
+    const version = avatarVersion();
+    await db.update(user).set({ image: `r2:${version}`, updatedAt: new Date() }).where(eq(user.id, me.userId));
+    return c.json({ ok: true, avatar: version });
+  });
+
+  api.delete('/me/avatar', async (c) => {
+    const me = c.get('device');
+    await bucket?.delete(avatarKey(me.userId));
+    await db.update(user).set({ image: null, updatedAt: new Date() }).where(eq(user.id, me.userId));
+    return c.json({ ok: true });
   });
 
   /** Déconnecte ce poste. Ses données restent sur le compte et sur le poste. */
@@ -432,6 +576,7 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
   api.delete('/me', async (c) => {
     const id = c.get('device').userId;
     const [u] = await db.select({ email: user.email }).from(user).where(eq(user.id, id));
+    await bucket?.delete(avatarKey(id));
     await db.batch([
       db.delete(entries).where(eq(entries.userId, id)),
       db.delete(gameSessions).where(eq(gameSessions.userId, id)),

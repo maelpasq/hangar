@@ -13,7 +13,10 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `/auth/*` | Better Auth : code par e-mail, Discord, Google |
 | `GET /desktop/finish?port&challenge&state` | connectée : renvoie un code à usage unique à `http://127.0.0.1:<port>` |
 | `POST /desktop/token` | `{ code, verifier, deviceId, deviceName }` : rend le jeton du poste |
-| `GET /me` | compte et liste des postes |
+| `GET /me` | compte (pseudo, version de l'avatar, visibilité) et liste des postes |
+| `PUT /me` | `{ name?, public? }` : pseudo (2 à 32 caractères), profil public ou privé |
+| `GET`, `PUT`, `DELETE /me/avatar` | avatar (PNG, JPEG ou WebP, 512 Ko au plus), rangé dans R2 |
+| `GET /u/:id` | page publique du profil (404 s'il est privé) |
 | `POST /logout` | déconnecte ce poste |
 | `PUT /devices/:id`, `DELETE /devices/:id` | renommer un poste, le déconnecter à distance |
 | `GET /sync?since=<curseur>` | changements depuis le curseur (`more` : il en reste) |
@@ -23,7 +26,7 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `GET /export` | toutes les données du compte (JSON) |
 | `DELETE /me` | supprime le compte et toutes ses données |
 
-Hors `/login`, `/auth/*` et `/desktop/*`, tout demande `Authorization: Bearer <jeton du poste>`.
+Hors `/login`, `/auth/*`, `/desktop/*` et `/u/*`, tout demande `Authorization: Bearer <jeton du poste>`.
 
 Connexion d'un poste : l'app tire un vérifieur PKCE, ouvre une adresse locale, puis le navigateur
 sur `/login`. Après la connexion, le navigateur revient sur l'adresse locale avec un code (valable
@@ -57,6 +60,7 @@ Raccourci sans afficher les secrets : `node scripts/secrets.mjs init` crée `.se
 puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` ensuite.
 
 1. Turso : créer une base en région UE, noter son adresse (`libsql://...`) et un jeton.
+   R2 : créer le bucket des avatars (`npx wrangler r2 bucket create hangar-avatars` ou `hangar-avatars-test`).
 2. Appliquer le schéma : `TURSO_URL=... TURSO_TOKEN=... npm run db:migrate`.
 3. Renseigner `BASE_URL` et `MAIL_FROM` dans `wrangler.toml`.
 4. Enregistrer les secrets, un par un : `npx wrangler secret put <NOM> --env <prod|test>`.

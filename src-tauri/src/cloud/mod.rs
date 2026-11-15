@@ -44,9 +44,20 @@ fn api() -> &'static str {
 // ─────────────────────────── État envoyé au frontend ───────────────────────────
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
+    #[serde(default)]
+    pub id: String,
     pub name: String,
     pub email: String,
+    /// Avatar en `data:` (petite image carrée), gardé en cache tant que sa version ne change pas.
+    #[serde(default)]
+    pub avatar: Option<String>,
+    #[serde(default)]
+    pub avatar_version: Option<String>,
+    /// Profil visible de tous (`/u/<id>` sur l'API).
+    #[serde(default)]
+    pub public: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -160,29 +171,84 @@ fn agent() -> &'static ureq::Agent {
     })
 }
 
-fn call(method: &str, path: &str, token: Option<&str>, body: Option<&Value>) -> Result<Value, CallError> {
-    let mut req = agent().request(method, &format!("{}{path}", api())).set("Accept", "application/json");
-    if let Some(t) = token {
-        req = req.set("Authorization", &format!("Bearer {t}"));
+fn request(method: &str, path: &str, token: Option<&str>) -> ureq::Request {
+    let req = agent().request(method, &format!("{}{path}", api()));
+    match token {
+        Some(t) => req.set("Authorization", &format!("Bearer {t}")),
+        None => req,
     }
+}
+
+fn call_error(path: &str, e: ureq::Error) -> CallError {
+    match e {
+        ureq::Error::Status(401, _) => CallError::Unauthorized,
+        ureq::Error::Status(c, _) => {
+            if c != 404 {
+                log::warn!("compte Hangar : réponse {c} sur {path}");
+            }
+            CallError::Status(c)
+        }
+        ureq::Error::Transport(t) => {
+            log::warn!("compte Hangar : serveur injoignable ({})", t.kind());
+            CallError::Offline
+        }
+    }
+}
+
+fn call(method: &str, path: &str, token: Option<&str>, body: Option<&Value>) -> Result<Value, CallError> {
+    let req = request(method, path, token).set("Accept", "application/json");
     let res = match body {
         Some(b) => req.send_json(b),
         None => req.call(),
     };
     match res {
         Ok(r) => r.into_json().map_err(|_| CallError::Offline),
-        Err(ureq::Error::Status(401, _)) => Err(CallError::Unauthorized),
-        Err(ureq::Error::Status(c, _)) => {
-            if c != 404 {
-                log::warn!("compte Hangar : réponse {c} sur {path}");
-            }
-            Err(CallError::Status(c))
-        }
-        Err(ureq::Error::Transport(t)) => {
-            log::warn!("compte Hangar : serveur injoignable ({})", t.kind());
-            Err(CallError::Offline)
-        }
+        Err(e) => Err(call_error(path, e)),
     }
+}
+
+// ─────────────────────────── Avatar ───────────────────────────
+
+/// Taille maximale d'un avatar (limite de l'API).
+const AVATAR_MAX: usize = 512 * 1024;
+
+/// Type d'une image d'après ses premiers octets (comme l'API).
+fn image_type(b: &[u8]) -> Option<&'static str> {
+    if b.starts_with(&[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]) {
+        Some("image/png")
+    } else if b.starts_with(&[0xff, 0xd8, 0xff]) {
+        Some("image/jpeg")
+    } else if b.len() >= 12 && b.starts_with(b"RIFF") && &b[8..12] == b"WEBP" {
+        Some("image/webp")
+    } else if b.starts_with(b"GIF8") {
+        Some("image/gif")
+    } else {
+        None
+    }
+}
+
+/// Avatar du compte en `data:` (rien si le compte n'en a pas, ou s'il est illisible).
+fn fetch_avatar(token: &str) -> Option<String> {
+    let res = request("GET", "/me/avatar", Some(token)).call().map_err(|e| call_error("/me/avatar", e)).ok()?;
+    let mut bytes = Vec::new();
+    res.into_reader().take(AVATAR_MAX as u64 + 1).read_to_end(&mut bytes).ok()?;
+    if bytes.len() > AVATAR_MAX {
+        return None;
+    }
+    let kind = image_type(&bytes)?;
+    Some(format!("data:{kind};base64,{}", base64::engine::general_purpose::STANDARD.encode(&bytes)))
+}
+
+/// Pseudo nettoyé (espaces réduits), 2 à 32 caractères, sans caractère de contrôle (comme l'API).
+fn clean_name(name: &str) -> Option<String> {
+    let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    let n = name.chars().count();
+    ((2..=32).contains(&n) && !name.chars().any(|c| c.is_control())).then_some(name)
+}
+
+/// Identifiant de compte sûr dans une adresse (celui de Better Auth).
+fn safe_user_id(id: &str) -> bool {
+    (8..=64).contains(&id.len()) && safe_token(id)
 }
 
 // ─────────────────────────── PKCE ───────────────────────────
@@ -350,9 +416,32 @@ impl Cloud {
         let s = |v: &Value| v.as_str().unwrap_or("").to_string();
         Status {
             connected: true,
-            user: Some(User { name: s(&u["name"]), email: s(&u["email"]) }),
+            user: Some(User {
+                id: s(&u["id"]),
+                name: s(&u["name"]),
+                email: s(&u["email"]),
+                avatar: None,
+                avatar_version: u["avatar"].as_str().filter(|v| !v.is_empty()).map(String::from),
+                public: u["public"].as_bool().unwrap_or(false),
+            }),
             devices: serde_json::from_value(me["devices"].clone()).unwrap_or_default(),
             ..Status::default()
+        }
+    }
+
+    /// Avatar : celui du cache tant que sa version ne change pas, sinon téléchargé une fois.
+    fn fill_avatar(&self, s: &mut Status, token: &str) {
+        let Some(u) = s.user.as_mut() else { return };
+        let Some(version) = u.avatar_version.clone() else { return };
+        let cached = self
+            .read_cache()
+            .and_then(|c| c.user)
+            .filter(|c| c.avatar_version.as_deref() == Some(version.as_str()))
+            .and_then(|c| c.avatar);
+        u.avatar = cached.or_else(|| fetch_avatar(token));
+        if u.avatar.is_none() {
+            // Nouvel essai à la prochaine demande.
+            u.avatar_version = None;
         }
     }
 
@@ -364,7 +453,8 @@ impl Cloud {
         };
         match call("GET", "/me", Some(&token), None) {
             Ok(me) => {
-                let s = Self::from_me(&me);
+                let mut s = Self::from_me(&me);
+                self.fill_avatar(&mut s, &token);
                 self.write_cache(&s);
                 s
             }
@@ -432,6 +522,11 @@ impl Cloud {
     }
 
     fn with_token(&self, f: impl FnOnce(&str) -> Result<Value, CallError>) -> Result<Status, String> {
+        self.with_token_or("", f)
+    }
+
+    /// Comme `with_token`, avec le message à montrer si le serveur refuse la requête (400).
+    fn with_token_or(&self, refused: &str, f: impl FnOnce(&str) -> Result<Value, CallError>) -> Result<Status, String> {
         let token = crate::accounts::secret(VAULT_KEY).ok_or("Ce poste n'est pas connecté au compte.")?;
         match f(&token) {
             Ok(_) => Ok(self.status()),
@@ -439,6 +534,7 @@ impl Cloud {
                 self.forget();
                 Err(CallError::Unauthorized.message())
             }
+            Err(CallError::Status(400)) if !refused.is_empty() => Err(refused.into()),
             Err(e) => Err(e.message()),
         }
     }
@@ -549,6 +645,45 @@ impl Cloud {
         }
         self.with_token(|t| call("DELETE", &format!("/devices/{id}"), Some(t), None))
     }
+
+    /// Pseudo et visibilité du profil (l'un ou l'autre, ou les deux).
+    pub fn set_profile(&self, name: Option<String>, public: Option<bool>) -> Result<Status, String> {
+        let mut body = serde_json::Map::new();
+        if let Some(n) = name {
+            let n = clean_name(&n).ok_or("Pseudo invalide : entre 2 et 32 caractères.")?;
+            body.insert("name".into(), json!(n));
+        }
+        if let Some(p) = public {
+            body.insert("public".into(), json!(p));
+        }
+        let body = Value::Object(body);
+        self.with_token_or("Ce pseudo n'est pas accepté.", |t| call("PUT", "/me", Some(t), Some(&body)))
+    }
+
+    /// Nouvel avatar : image déjà réduite par l'app (carré de 256 px), PNG, JPEG ou WebP.
+    pub fn set_avatar(&self, bytes: Vec<u8>) -> Result<Status, String> {
+        if bytes.len() > AVATAR_MAX {
+            return Err("Image trop lourde (512 Ko au plus).".into());
+        }
+        let kind = image_type(&bytes).filter(|k| *k != "image/gif").ok_or("Image illisible : choisis un PNG, un JPEG ou un WebP.")?;
+        self.with_token_or("Image refusée : choisis un PNG, un JPEG ou un WebP.", |t| {
+            let res = request("PUT", "/me/avatar", Some(t)).set("Content-Type", kind).send_bytes(&bytes);
+            res.map_err(|e| call_error("/me/avatar", e))?.into_json().map_err(|_| CallError::Offline)
+        })
+    }
+
+    pub fn remove_avatar(&self) -> Result<Status, String> {
+        self.with_token(|t| call("DELETE", "/me/avatar", Some(t), None))
+    }
+
+    /// Ouvre le profil public dans le navigateur.
+    pub fn open_profile(&self) -> Result<(), String> {
+        let id = self.read_cache().and_then(|s| s.user).map(|u| u.id).unwrap_or_default();
+        if !safe_user_id(&id) {
+            return Err("Profil indisponible, réessaie une fois connecté.".into());
+        }
+        crate::launcher::shell_open(&format!("{}/u/{id}", api()), "", None, "open")
+    }
 }
 
 #[cfg(test)]
@@ -614,6 +749,21 @@ mod tests {
     }
 
     #[test]
+    fn profil() {
+        assert_eq!(clean_name("  Pilote   du\tdimanche "), Some("Pilote du dimanche".into()));
+        assert_eq!(clean_name("x"), None);
+        assert_eq!(clean_name(&"a".repeat(33)), None);
+        assert_eq!(clean_name("a\u{7}b"), None);
+        assert_eq!(image_type(&[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0]), Some("image/png"));
+        assert_eq!(image_type(b"RIFF\0\0\0\0WEBPVP8 "), Some("image/webp"));
+        assert_eq!(image_type(&[0xff, 0xd8, 0xff, 0xe0]), Some("image/jpeg"));
+        assert_eq!(image_type(b"<svg onload=x>"), None);
+        assert!(safe_user_id("AbC123_-xyz"));
+        assert!(!safe_user_id("../../x"));
+        assert!(!safe_user_id("court"));
+    }
+
+    #[test]
     fn controles() {
         assert!(is_hex32("0123456789abcdef0123456789abcdef"));
         assert!(!is_hex32("0123456789ABCDEF0123456789abcdef"));
@@ -630,7 +780,13 @@ mod tests {
         });
         let s = Cloud::from_me(&me);
         assert!(s.connected && !s.offline);
-        assert_eq!(s.user.unwrap().name, "Alex");
+        let u = s.user.clone().unwrap();
+        assert_eq!(u.name, "Alex");
+        assert_eq!(u.id, "u");
+        assert!(!u.public && u.avatar_version.is_none());
+        // Ancien cache (sans profil) : toujours lisible.
+        let old: Status = serde_json::from_value(json!({ "connected": true, "user": { "name": "A", "email": "a@b.c" } })).unwrap();
+        assert!(old.user.unwrap().avatar.is_none());
         assert_eq!(s.devices.len(), 1);
         assert!(s.devices[0].current);
     }

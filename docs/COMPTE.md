@@ -1,6 +1,6 @@
 # Compte Hangar (facultatif) - plan
 
-Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/`. Phase 2 (connexion dans l'app) faite : `src-tauri/src/cloud/`, `src/lib/stores/cloud.svelte.ts`. Phase 3 (synchro) faite : `src/lib/util/cloud-sync.ts`. Phase 4 (temps de jeu cumulé) faite : même fichier, fin ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
+Statut : plan validé dans ses grandes lignes. Phase 0 (socle local, sans réseau) faite. Phase 1 (serveur) en ligne depuis le 15 nov. 2026 : `https://hangar-api.pamalstudio.fr` (prod) et `https://hangar-api-test.pamalstudio.fr` (test), code dans `server/`. Phase 2 (connexion dans l'app) faite : `src-tauri/src/cloud/`, `src/lib/stores/cloud.svelte.ts`. Phase 3 (synchro) faite : `src/lib/util/cloud-sync.ts`. Phase 4 (temps de jeu cumulé) faite : même fichier, fin. Phase 5 (profil) faite : `server/src/profile.ts`, Paramètres > Compte > Profil ; le reste n'est pas implémenté. Ce document est la référence pendant la construction ; les choix tranchés en cours de route vont aussi dans `DECISIONS.md`.
 
 ## 1. Objectif et principes
 
@@ -122,7 +122,7 @@ Routes prévues :
 - `GET /export` : toutes les données (JSON)
 - `DELETE /me` : suppression du compte et de toutes ses données
 
-Routes ajoutées en l'écrivant : `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`.
+Routes ajoutées en l'écrivant : `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`, `PUT /me` (pseudo, visibilité), `GET`, `PUT`, `DELETE /me/avatar`, `GET /u/:id` (profil public).
 
 Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui sert de curseur), `devices` (poste, nom, empreinte de son jeton), `login_codes`, `entries` (user, key, value, updatedAt, deviceId, deleted, seq), `game_sessions`, `secrets` (user, nom, valeur chiffrée, nonce, updatedAt).
 

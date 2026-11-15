@@ -18,6 +18,7 @@ import {
   resetCloud,
   timeChanges
 } from '../util/cloud-sync';
+import { squareAvatar } from '../util/avatar';
 import { syncEntries } from '../util/sync';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
@@ -54,6 +55,8 @@ class Cloud {
   /** Pseudo affiché : nom du compte, sinon le début de l'adresse e-mail. */
   name = $derived(this.status.user?.name.trim() || this.status.user?.email.split('@')[0] || 'Compte');
   initial = $derived(this.name.charAt(0).toUpperCase());
+  /** Avatar en `data:`, ou null : initiale sur fond d'accent. */
+  avatar = $derived(this.status.user?.avatar ?? null);
   /** État de synchro affiché (pastille, Paramètres). */
   syncState = $derived<SyncState>(this.status.offline ? 'offline' : this.phase);
 
@@ -300,6 +303,37 @@ class Cloud {
 
   forgetDevice(id: string): Promise<boolean> {
     return this.apply(() => api.cloudForgetDevice(id));
+  }
+
+  // ─── Profil ───
+
+  setName(name: string): Promise<boolean> {
+    return this.apply(() => api.cloudSetProfile(name.trim(), null));
+  }
+
+  async setPublic(on: boolean): Promise<boolean> {
+    const ok = await this.apply(() => api.cloudSetProfile(null, on));
+    if (ok) ui.toast(on ? 'Ton profil est maintenant public.' : 'Ton profil est maintenant privé.');
+    return ok;
+  }
+
+  async setAvatar(file: File): Promise<boolean> {
+    let bytes: Uint8Array;
+    try {
+      bytes = await squareAvatar(file);
+    } catch {
+      ui.toast('Image illisible : choisis un PNG, un JPEG ou un WebP.', { error: true });
+      return false;
+    }
+    return this.apply(() => api.cloudSetAvatar(bytes));
+  }
+
+  removeAvatar(): Promise<boolean> {
+    return this.apply(() => api.cloudRemoveAvatar());
+  }
+
+  openProfile(): void {
+    api.cloudOpenProfile().catch((e) => ui.toast(message(e), { error: true }));
   }
 }
 

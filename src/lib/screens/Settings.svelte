@@ -47,6 +47,30 @@
     e.preventDefault();
     if (renaming && newName.trim() && (await cloud.renameDevice(renaming, newName))) renaming = null;
   }
+
+  // Compte Hangar : profil (pseudo, avatar, visibilité).
+  let editingPseudo = $state(false);
+  let pseudo = $state('');
+  let profileBusy = $state(false);
+  let avatarInput = $state<HTMLInputElement>();
+  async function profileTask(task: () => Promise<boolean>): Promise<boolean> {
+    profileBusy = true;
+    try {
+      return await task();
+    } finally {
+      profileBusy = false;
+    }
+  }
+  async function savePseudo(e: SubmitEvent) {
+    e.preventDefault();
+    if (pseudo.trim().length >= 2 && (await profileTask(() => cloud.setName(pseudo)))) editingPseudo = false;
+  }
+  function pickAvatar(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) void profileTask(() => cloud.setAvatar(file));
+  }
   let version = $state('');
   api.appVersion().then(
     (v) => (version = v),
@@ -301,7 +325,9 @@
               <section class="group" aria-label="Ton compte">
                 <h3>Ton compte</h3>
                 <div class="srow">
-                  <span class="avatar" aria-hidden="true">{cloud.initial}</span>
+                  <span class="avatar" aria-hidden="true"
+                    >{#if cloud.avatar}<img src={cloud.avatar} alt="" />{:else}{cloud.initial}{/if}</span
+                  >
                   <span class="txt">
                     <span class="lbl ell">{cloud.name}</span>
                     <span class="hint ell">{s.user?.email ?? ''}</span>
@@ -323,6 +349,86 @@
                   Tes favoris, collections, renommages, jaquettes Steam, jeux ajoutés à la main, réglages
                   d'apparence et ton temps de jeu suivent ton compte sur tous tes PC. Se déconnecter garde tout sur ce
                   PC.
+                </p>
+              </section>
+
+              <section class="group" aria-label="Profil" aria-busy={profileBusy}>
+                <h3>Profil</h3>
+                <div class="srow">
+                  <span class="ico"><Icon name="user" size={18} /></span>
+                  {#if editingPseudo}
+                    <form class="sfield grow" onsubmit={savePseudo}>
+                      <label class="sr-only" for="pseudo">Pseudo</label>
+                      <input id="pseudo" maxlength="32" autocomplete="nickname" bind:value={pseudo} />
+                      <button type="button" class="btn-s" onclick={() => (editingPseudo = false)}>Annuler</button>
+                      <button type="submit" class="btn-s primary" disabled={profileBusy || pseudo.trim().length < 2}
+                        >Enregistrer</button
+                      >
+                    </form>
+                  {:else}
+                    <span class="txt">
+                      <span class="lbl">Pseudo</span>
+                      <span class="hint ell">{cloud.name}</span>
+                    </span>
+                    <button
+                      class="btn-s"
+                      disabled={s.offline || profileBusy}
+                      onclick={() => {
+                        pseudo = s.user?.name ?? '';
+                        editingPseudo = true;
+                      }}><Icon name="edit" size={15} />Modifier</button
+                    >
+                  {/if}
+                </div>
+                <div class="srow">
+                  <span class="avatar" aria-hidden="true"
+                    >{#if cloud.avatar}<img src={cloud.avatar} alt="" />{:else}{cloud.initial}{/if}</span
+                  >
+                  <span class="txt">
+                    <span class="lbl">Avatar</span>
+                    <span class="hint">{cloud.avatar ? 'Visible sur tous tes PC.' : 'Une image carrée de préférence, recadrée au centre.'}</span>
+                  </span>
+                  <input
+                    bind:this={avatarInput}
+                    id="avatar-file"
+                    class="sr-only"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    tabindex="-1"
+                    aria-hidden="true"
+                    onchange={pickAvatar}
+                  />
+                  {#if cloud.avatar}
+                    <button class="btn-s" disabled={s.offline || profileBusy} onclick={() => profileTask(() => cloud.removeAvatar())}
+                      >Retirer</button
+                    >
+                  {/if}
+                  <button class="btn-s" disabled={s.offline || profileBusy} onclick={() => avatarInput?.click()}
+                    >{cloud.avatar ? "Changer l'avatar" : 'Choisir une image'}</button
+                  >
+                </div>
+                <div class="srow">
+                  <span class="ico"><Icon name="globe" size={18} /></span>
+                  <span class="txt">
+                    <span class="lbl">Profil public</span>
+                    <span class="hint"
+                      >{s.user?.public
+                        ? 'Ta page de profil est visible par toute personne qui a son lien.'
+                        : 'Privé : personne ne voit ton profil.'}</span
+                    >
+                  </span>
+                  {#if s.user?.public}
+                    <button class="btn-s" disabled={s.offline} onclick={() => cloud.openProfile()}>Voir ma page</button>
+                  {/if}
+                  <Toggle
+                    on={s.user?.public === true}
+                    label="Profil public"
+                    onchange={(v) => void profileTask(() => cloud.setPublic(v))}
+                  />
+                </div>
+                <p class="gdesc">
+                  Ta page publique montre ton pseudo, ton avatar et le temps passé dans les jeux lancés avec Hangar,
+                  jamais la liste de tes jeux ni ton adresse e-mail. Les amis et la vitrine arriveront plus tard.
                 </p>
               </section>
 
@@ -1138,6 +1244,13 @@
     color: #fff;
     font-size: 15px;
     font-weight: 700;
+    overflow: hidden;
+  }
+
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .sfield input {

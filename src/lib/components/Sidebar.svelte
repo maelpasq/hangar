@@ -178,7 +178,7 @@
       title={rail ? label : undefined}
     >
       <span class="avatar" aria-hidden="true">
-        {cloud.initial}<span
+        {#if cloud.avatar}<img src={cloud.avatar} alt="" />{:else}{cloud.initial}{/if}<span
           class="dot"
           class:offline={cloud.syncState === 'offline'}
           class:syncing={cloud.syncState === 'syncing'}
@@ -449,6 +449,14 @@
     color: #fff;
     font-size: 12px;
     font-weight: 700;
+  }
+
+  /* Avatar du compte : rond, la pastille déborde par-dessus. */
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
   }
 
   /* Pastille d'état : connecté (vert) ou hors ligne (gris). */

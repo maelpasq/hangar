@@ -248,6 +248,33 @@ pub async fn cloud_sync_steamgriddb(ctx: Ctxs<'_>, first: bool) -> Result<bool, 
     blocking(move || cloud.sync_steamgriddb(first)).await?
 }
 
+/// Profil du compte Hangar : pseudo et/ou visibilité.
+#[tauri::command]
+pub async fn cloud_set_profile(ctx: Ctxs<'_>, name: Option<String>, public: Option<bool>) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.set_profile(name, public)).await?
+}
+
+/// Nouvel avatar, déjà réduit par le frontend (carré de 256 px).
+#[tauri::command]
+pub async fn cloud_set_avatar(ctx: Ctxs<'_>, bytes: Vec<u8>) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.set_avatar(bytes)).await?
+}
+
+#[tauri::command]
+pub async fn cloud_remove_avatar(ctx: Ctxs<'_>) -> Result<crate::cloud::Status, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.remove_avatar()).await?
+}
+
+/// Ouvre le profil public du compte dans le navigateur.
+#[tauri::command]
+pub async fn cloud_open_profile(ctx: Ctxs<'_>) -> Result<(), String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.open_profile()).await?
+}
+
 /// Ouvre une page d'aide connue dans le navigateur (liste fermée, pas d'URL libre).
 #[tauri::command]
 pub async fn open_link(link: String) -> Result<(), String> {

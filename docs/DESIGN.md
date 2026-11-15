@@ -182,9 +182,10 @@ Source : la DA fournie par l'utilisateur, `design/brand/da-hangar.webp`.
 Page de connexion, ses états, page de fin et e-mail du code : `server/src/login-page.ts` et `server/src/mail.ts`. Aperçu : `npm --prefix server run preview`.
 
 - Mêmes tokens que l'app (fond `--bg-deep`, texte, accent violet, courbe par défaut), police Geist servie par l'API. Tutoiement.
-- Décor : l'arche du logo en très grand (1500 px), centrée, en dégradé à peine visible avec la lueur violette de sa jambe gauche ; la carte se tient dans son ouverture. Sur un écran étroit, seul le faîte reste visible en haut.
-- Carte : 420 px au plus, rayon 20 px, fond `rgba(20,22,29,.82)` flouté, contour `--border-2`. Logo 52 px avec halo (mouvement « Halo ») et étoile qui apparaît (courbe de l'« Apparition jaquette »). Titre 28 px / 800 / -0.6 px, aligné à gauche.
+- Décor (choix de l'utilisateur, 15 nov. 2026) : la bannière de la marque sans son logo (`design/brand/da-hangar-fond.webp`, tirée de `da-hangar.webp`), en `cover`, fixe, servie par `/login/fond.webp`. Carte centrée par-dessus.
+- Carte : 420 px au plus, rayon 20 px, fond `rgba(20,22,29,.82)` flouté, contour `--border-2`. Logo 52 px centré en haut de la carte, avec halo (mouvement « Halo ») et étoile qui apparaît (courbe de l'« Apparition jaquette »). Titre 28 px / 800 / -0.6 px, aligné à gauche.
 - Bouton principal : accent, 46 px, rayon 14 px, ombre dérivée de l'accent. Discord et Google : boutons secondaires avec un point de couleur, jamais de logo.
 - Code : six cases de 51 px (42 puis 34 px sur petit écran), un seul champ réel par-dessus ; la case active prend l'accent, envoi dès le sixième chiffre, secousse et cases rouges sur un code faux, « Renvoyer le code » bloqué 30 s.
+- Profil public (`/u/<id>`) : avatar 72 px rond (initiale sur fond d'accent sans avatar), pseudo en titre, « Sur Hangar depuis <mois année> », puis deux cases : temps de jeu avec Hangar et nombre de jeux joués.
 - Pages sans formulaire (réussie, refusée, lien incomplet) : même carte, titre, une phrase, puis une ligne d'état avec un point vert (pulsation « Point en jeu ») ou rouge.
 - E-mail : même carte en tableaux et styles en ligne, logo complet (arche et logotype, `/login/logo.png`, seule image), code en un seul bloc de chiffres espacés pour se copier d'un coup.

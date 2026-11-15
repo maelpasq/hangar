@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createClient } from '@libsql/client';
+import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/libsql';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -13,12 +14,23 @@ import { mailHtml } from '../src/mail';
 import * as schema from '../src/schema';
 
 const BASE = 'http://127.0.0.1:8787';
+/** Bucket R2 des avatars, en mémoire. */
+const bucket = new Map<string, Uint8Array>();
 const env: Env = {
   BASE_URL: BASE,
   TURSO_URL: '',
   AUTH_SECRET: 'secret-de-test-secret-de-test-secret-de-test',
-  SECRETS_KEY: b64url(new Uint8Array(32).fill(7))
+  SECRETS_KEY: b64url(new Uint8Array(32).fill(7)),
+  AVATARS: {
+    get: async (k) => {
+      const v = bucket.get(k);
+      return v ? { arrayBuffer: async () => v.slice().buffer } : null;
+    },
+    put: async (k, v) => void bucket.set(k, v.slice()),
+    delete: async (k) => void bucket.delete(k)
+  }
 };
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
 
 const dir = mkdtempSync(join(tmpdir(), 'hangar-api-'));
 const client = createClient({ url: `file:${join(dir, 'test.db')}` });
@@ -264,6 +276,91 @@ describe('compte', () => {
     expect(exported).toContain('rename:steam:620');
     expect((await call('/secrets/steamgriddb', { method: 'DELETE', token: b })).status).toBe(200);
     expect((await call('/secrets/steamgriddb', { token: a })).status).toBe(404);
+  });
+
+  it('gère le profil : pseudo, avatar et visibilité', async () => {
+    const me = await json(await call('/me', { token: a }));
+    const id = me.user.id;
+    expect(me.user.public).toBe(false);
+    expect(me.user.avatar).toBe(null);
+    // Privé par défaut : la page publique ne dit rien.
+    const hidden = await call(`/u/${id}`);
+    expect(hidden.status).toBe(404);
+    expect(await hidden.text()).not.toContain('moi@exemple.fr');
+
+    for (const name of ['x', ' ', 'a'.repeat(33), 'a\u0000b', 42]) {
+      expect((await call('/me', { method: 'PUT', token: a, body: { name } })).status).toBe(400);
+    }
+    expect((await call('/me', { method: 'PUT', token: a, body: { public: 'oui' } })).status).toBe(400);
+    expect((await call('/me', { method: 'PUT', token: a, body: { name: '  <Pilote>  du  dimanche ', public: true } })).status).toBe(200);
+
+    // L'avatar : une vraie image, pas trop grosse.
+    const put = (bytes: Uint8Array<ArrayBuffer>) =>
+      app.request(`${BASE}/me/avatar`, { method: 'PUT', headers: { authorization: `Bearer ${a}` }, body: bytes });
+    expect((await put(new TextEncoder().encode('<svg onload=x>'))).status).toBe(400);
+    expect((await put(new Uint8Array(600 * 1024).fill(0xff))).status).toBe(413);
+    const sent = await json(await put(PNG));
+    const after = await json(await call('/me', { token: b }));
+    expect(after.user).toMatchObject({ name: '<Pilote> du dimanche', public: true, avatar: sent.avatar });
+    const pic = await call('/me/avatar', { token: b });
+    expect(pic.headers.get('content-type')).toBe('image/png');
+    expect(new Uint8Array(await pic.arrayBuffer())).toEqual(PNG);
+
+    // La visibilité suit la synchro des autres postes.
+    const sync = await json(await call('/sync?since=0', { token: b }));
+    expect(sync.changes.find((ch: any) => ch.key === 'profile:public')?.value).toBe('true');
+
+    // Page publique : pseudo échappé, avatar inclus, temps de jeu de tous les postes, sans l'e-mail.
+    await call('/sync', {
+      token: b,
+      body: {
+        changes: [
+          { key: `time:${DEVICE_B}:manual:9`, value: JSON.stringify({ ms: 7_200_000, n: 1, last: 1, h: 7_200_000 }), updatedAt: 1 },
+          // Heures de Steam reprises : seul le temps mesuré par Hangar (h) compte.
+          { key: `time:${DEVICE_B}:steam:10`, value: JSON.stringify({ ms: 360_000_000, n: 1, last: 1, s: 1, h: 3_600_000 }), updatedAt: 1 },
+          // Ancienne version de l'app, sans h : tout le temps si le store ne compte rien, rien sinon.
+          { key: `time:${DEVICE_A}:manual:9`, value: JSON.stringify({ ms: 3_600_000, n: 1, last: 1 }), updatedAt: 1 },
+          { key: `time:${DEVICE_A}:steam:11`, value: JSON.stringify({ ms: 360_000_000, n: 1, last: 1, s: 1 }), updatedAt: 1 }
+        ]
+      }
+    });
+    const page = await call(`/u/${id}`);
+    expect(page.status).toBe(200);
+    const html = await page.text();
+    expect(html).toContain('&lt;Pilote&gt; du dimanche');
+    expect(html).not.toContain('<Pilote>');
+    expect(html).toContain('data:image/png;base64,');
+    expect(html).toContain('<b>4 h</b>');
+    expect(html).toContain('<b>2</b><span>jeux joués');
+    expect(html).not.toContain('moi@exemple.fr');
+
+    expect((await call('/me/avatar', { method: 'DELETE', token: a })).status).toBe(200);
+    expect(bucket.size).toBe(0);
+    expect((await call('/me/avatar', { token: a })).status).toBe(404);
+    expect((await call('/me', { method: 'PUT', token: a, body: { public: false } })).status).toBe(200);
+    expect((await call(`/u/${id}`)).status).toBe(404);
+  });
+
+  it('copie l\'avatar du service de connexion', async () => {
+    const me = await json(await call('/me', { token: other }));
+    const url = 'https://cdn.discordapp.com/avatars/1/abc.png';
+    await db.update(schema.user).set({ image: url }).where(eq(schema.user.id, me.user.id));
+    const real = globalThis.fetch;
+    const asked: string[] = [];
+    globalThis.fetch = (async (u: string) => {
+      asked.push(String(u));
+      return new Response(PNG);
+    }) as typeof fetch;
+    try {
+      expect((await json(await call('/me', { token: other }))).user.avatar).toMatch(/^p/);
+      expect((await call('/me/avatar', { token: other })).status).toBe(200);
+      expect((await call('/me/avatar', { token: other })).status).toBe(200);
+    } finally {
+      globalThis.fetch = real;
+    }
+    // Copiée une fois dans R2, puis servie de là.
+    expect(asked).toEqual([url]);
+    expect((await json(await call('/me', { token: other }))).user.avatar).not.toMatch(/^p/);
   });
 
   it('sépare les comptes', async () => {

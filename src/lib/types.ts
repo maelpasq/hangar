@@ -103,6 +103,11 @@ export interface Totals {
   playMs: number;
   launches: number;
   lastPlayed: number;
+  /**
+   * Temps mesuré par Hangar seul (parties lancées depuis Hangar sur ce poste), sans les heures du
+   * store. Absent : pas encore suivi, estimé (voir `measuredMs`).
+   */
+  hangarMs?: number;
 }
 
 export type SortKey = 'recent' | 'az' | 'hours';
@@ -305,8 +310,20 @@ export interface CloudStatus {
   offline: boolean;
   /** Le poste vient d'être déconnecté à distance. */
   revoked: boolean;
-  user: { name: string; email: string } | null;
+  user: CloudUser | null;
   devices: CloudDevice[];
+}
+
+/** Profil du compte Hangar. */
+export interface CloudUser {
+  id: string;
+  /** Pseudo (vide : le début de l'adresse e-mail est affiché). */
+  name: string;
+  email: string;
+  /** Avatar en `data:`, ou null : initiale sur fond d'accent. */
+  avatar: string | null;
+  /** Profil visible de tous (page publique sur le serveur du compte). */
+  public: boolean;
 }
 
 /** Succès Steam d'un jeu (compte Steam connecté). */

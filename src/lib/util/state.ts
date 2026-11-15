@@ -144,7 +144,8 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
       s.totals[id] = {
         playMs: typeof t.playMs === 'number' ? t.playMs : 0,
         launches: typeof t.launches === 'number' ? t.launches : 0,
-        lastPlayed: typeof t.lastPlayed === 'number' ? t.lastPlayed : 0
+        lastPlayed: typeof t.lastPlayed === 'number' ? t.lastPlayed : 0,
+        ...(typeof t.hangarMs === 'number' && t.hangarMs >= 0 ? { hangarMs: t.hangarMs } : {})
       };
     }
   }

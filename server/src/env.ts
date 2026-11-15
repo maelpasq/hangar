@@ -19,6 +19,15 @@ export interface Env {
   RESEND_API_KEY?: string;
   /** Expéditeur des e-mails, par exemple « Hangar <connexion@exemple.fr> ». */
   MAIL_FROM?: string;
+  /** Bucket R2 des avatars (`wrangler.toml`). Absent : pas d'avatar. */
+  AVATARS?: AvatarStore;
+}
+
+/** Ce que l'API utilise d'un bucket R2 (remplacé dans les tests). */
+export interface AvatarStore {
+  get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer>; httpMetadata?: { contentType?: string } } | null>;
+  put(key: string, value: Uint8Array, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+  delete(key: string): Promise<void>;
 }
 
 export type Db = LibSQLDatabase<typeof schema>;

@@ -1,8 +1,9 @@
 // Aperçu des pages du compte sans base ni secrets : `npm run preview`, puis http://127.0.0.1:8788.
 // La connexion y est simulée : n'importe quelle adresse, code 123456 (un autre code est refusé).
 import { createServer } from 'node:http';
+import { BACKGROUND_WEBP } from '../src/background.ts';
 import { GEIST_WOFF2 } from '../src/font.ts';
-import { loginPage, pageHeaders, statusPage } from '../src/login-page.ts';
+import { loginPage, pageHeaders, profilePage, statusPage } from '../src/login-page.ts';
 import { LOGO_PNG } from '../src/logo.ts';
 import { mailHtml } from '../src/mail.ts';
 
@@ -15,7 +16,9 @@ const INDEX = [
   ['/login', 'Lien de connexion incomplet'],
   ['/login/done', 'Connexion réussie'],
   ['/login/refused', 'Connexion refusée'],
-  ['/mail', 'E-mail du code']
+  ['/mail', 'E-mail du code'],
+  ['/u/apercu', 'Profil public'],
+  ['/u/prive', 'Profil privé ou introuvable']
 ];
 
 createServer(async (req, res) => {
@@ -49,6 +52,12 @@ createServer(async (req, res) => {
       return res.writeHead(302, { location: '/login/done' }).end();
     case '/mail':
       return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(mailHtml('482913', ''));
+    case '/u/apercu':
+      return html(profilePage(nonce, { name: 'Pilote du dimanche', avatar: null, since: Date.UTC(2026, 10, 15), playMs: 1_234 * 3_600_000, games: 87 }));
+    case '/u/prive':
+      return html(profilePage(nonce, null), 404);
+    case '/login/fond.webp':
+      return res.writeHead(200, { 'content-type': 'image/webp' }).end(Buffer.from(BACKGROUND_WEBP, 'base64'));
     case '/login/logo.png':
       return res.writeHead(200, { 'content-type': 'image/png' }).end(Buffer.from(LOGO_PNG, 'base64'));
     default:

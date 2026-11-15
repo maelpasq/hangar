@@ -368,8 +368,21 @@ function wireTime(v: unknown, at: number): DeviceTime | null {
 }
 
 /**
+ * Temps mesuré par Hangar seul sur ce poste (sans les heures du store). Avant son suivi
+ * (`hangarMs`), estimé : le temps du jeu quand le store ne compte rien (Hangar seul l'a mesuré),
+ * sinon les sessions gardées de ce poste (90 jours).
+ */
+export function measuredMs(s: PersistedState, id: string, storeCounted: boolean): number {
+  const t = s.totals[id];
+  if (t?.hangarMs !== undefined) return t.hangarMs;
+  if (!storeCounted) return t?.playMs ?? 0;
+  return s.sessions.reduce((sum, x) => (!x.deviceId && x.gameId === id ? sum + Math.max(0, x.end - x.start) : sum), 0);
+}
+
+/**
  * Temps de jeu de ce poste qui ont changé depuis le dernier envoi (au plus `MAX_CHANGES`).
  * `storeCounted` : le store compte déjà ce jeu sur tous les postes (Steam, GOG Galaxy).
+ * `h` : le temps mesuré par Hangar seul (profil public).
  */
 export function timeChanges(s: PersistedState, storeCounted: (id: string) => boolean, now = Date.now()): CloudChange[] {
   const out: CloudChange[] = [];
@@ -378,11 +391,13 @@ export function timeChanges(s: PersistedState, storeCounted: (id: string) => boo
     const pid = portableId(s, id);
     if (pid === null) continue;
     const key = timeKey(s.deviceId, pid);
+    const counted = storeCounted(id);
     const value = JSON.stringify({
       ms: Math.round(t.playMs),
       n: Math.round(t.launches),
       last: Math.round(t.lastPlayed),
-      ...(storeCounted(id) ? { s: 1 } : {})
+      ...(counted ? { s: 1 } : {}),
+      h: Math.round(measuredMs(s, id, counted))
     });
     if (key.length > MAX_KEY || s.cloud.timeSent[key] === value) continue;
     out.push({ key, value, updatedAt: now });
