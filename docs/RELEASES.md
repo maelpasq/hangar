@@ -52,6 +52,23 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.26 - 15 novembre 2026
+Tes comptes en font plus : relie Xbox, retrouve le temps de jeu d'Epic, GOG et Xbox et tes succès sur la fiche, et Rockstar rejoint les stores détectés.
+
+#### Nouveautés
+- **Compte Xbox** (Windows) : dans **Paramètres > Launchers**, « Relier » Xbox affiche un code à saisir sur microsoft.com/link. Tes jeux PC Xbox arrivent avec leur dernière session, leur temps de jeu, leur genre, leur studio, leur éditeur, leur date de sortie, tes succès et ton Gamerscore. Seuls les jeux déjà lancés au moins une fois apparaissent : Xbox ne donne pas la liste complète aux autres apps.
+- **Rockstar Games Launcher** : ses jeux sont reconnus comme des jeux Rockstar (et non plus comme des jeux locaux), se lancent par son launcher, et ceux de ton profil qui ne sont pas installés arrivent dans « À installer » (Windows).
+- **Temps de jeu Epic et GOG** : avec ton compte relié, Hangar reprend le temps de jeu enregistré par Epic et par GOG (même sans GOG Galaxy) et garde le plus élevé avec sa propre mesure.
+- **Succès Steam** : la fiche d'un jeu Steam montre tes succès débloqués, avec le pourcentage et une barre, quand ton compte Steam est relié.
+- **Ce qu'apporte chaque compte** : sous chaque compte relié, dans **Paramètres > Launchers**, une ligne « Grâce au compte » dit ce qu'il ajoute (jeux à installer, temps de jeu, mises à jour Epic, succès).
+- **Mode manette dans les Paramètres** : un onglet **Mode manette** pour l'activer (désactivé par défaut), l'ouvrir, et des conseils pour chaque manette (Xbox et Game Bar, PlayStation, Switch Pro, 8BitDo, PC portables, Mac).
+
+#### Améliorations
+- **Fermer la fenêtre** : Hangar ne reste plus en arrière-plan d'office. Il te demande s'il doit rester en arrière-plan ou quitter, avec une case « Ne plus afficher » ; le choix se change dans **Paramètres > Bureau**, « En fermant la fenêtre ».
+- **Retour à l'app d'avant** : quand le bouton Xbox a ouvert le mode manette depuis un jeu ou une autre app, le quitter renvoie Hangar là où il était (caché ou réduit) au lieu de le laisser par-dessus (Windows).
+- **Clé d'API Steam guidée** : le formulaire « Relier » de Steam explique en trois étapes comment créer ta clé.
+- **Launchers où relier un compte en premier** : dans **Paramètres > Launchers**, Steam, Epic, GOG et Xbox passent en haut de la liste.
+
 ### 1.2.25 - 15 novembre 2026
 Plus aucun jeu sans jaquette : Hangar te guide pour obtenir ta clé SteamGridDB, et le bouton Actualiser fait enfin tout d'un coup.
 
