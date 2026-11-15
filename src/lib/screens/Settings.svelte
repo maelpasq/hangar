@@ -81,13 +81,19 @@
   type BoolPref = Exclude<keyof Prefs, 'steamGridDb' | 'webGames' | 'startPage' | 'closeAction'>;
 
   async function setPref(key: BoolPref, on: boolean) {
-    library.state.prefs[key] = on;
+    const prefs = library.state.prefs;
+    const before = { startWithWindows: prefs.startWithWindows, padAtLogin: prefs.padAtLogin };
+    // Mode manette au démarrage : Hangar doit aussi démarrer avec le système (et sans lui, plus de mode manette au démarrage).
+    const autostart = key === 'startWithWindows' || (key === 'padAtLogin' && on && !prefs.startWithWindows);
+    prefs[key] = on;
+    if (key === 'padAtLogin' && on) prefs.startWithWindows = true;
+    if (key === 'startWithWindows' && !on) prefs.padAtLogin = false;
     library.save();
-    if (key === 'startWithWindows') {
+    if (autostart) {
       try {
         await api.setAutostart(on);
       } catch (e) {
-        library.state.prefs[key] = !on;
+        Object.assign(prefs, before);
         library.save();
         ui.toast(`Impossible de modifier le démarrage automatique : ${String(e)}`, { error: true });
       }
@@ -406,6 +412,11 @@
                 >
                 <button class="btn-s" onclick={() => (ui.big = true)}><Icon name="gamepad" size={15} />Ouvrir</button>
               </div>
+              {@render toggleRow(
+                'padAtLogin',
+                `Ouvrir au démarrage ${isMac ? 'du Mac' : 'du PC'}`,
+                `Hangar démarre avec ${os} directement en mode manette, en plein écran. Active aussi « Démarrer avec ${os} ».`
+              )}
             </section>
 
             <section class="group" aria-label="Selon ta manette">

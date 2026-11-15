@@ -35,6 +35,7 @@ export function defaultState(): PersistedState {
       globalShortcut: true,
       discordPresence: false,
       padButton: false,
+      padAtLogin: false,
       startPage: null
     }
   };
@@ -84,7 +85,7 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (typeof p.autoCovers === 'boolean') s.prefs.autoCovers = p.autoCovers;
     if (typeof p.showUninstalled === 'boolean') s.prefs.showUninstalled = p.showUninstalled;
     if (typeof p.webGames === 'boolean') s.prefs.webGames = p.webGames;
-    for (const k of ['globalShortcut', 'discordPresence', 'padButton'] as const) {
+    for (const k of ['globalShortcut', 'discordPresence', 'padButton', 'padAtLogin'] as const) {
       if (typeof p[k] === 'boolean') s.prefs[k] = p[k];
     }
     // Fermeture : l'ancien réglage était activé d'office (true enregistré pour tout le monde),

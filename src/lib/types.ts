@@ -92,6 +92,8 @@ export interface Prefs {
   discordPresence: boolean;
   /** Mode manette : Start et le bouton central (Xbox, PS, Home) l'ouvrent, même depuis une autre app (désactivé par défaut). */
   padButton: boolean;
+  /** Démarrage avec le système en mode manette (plein écran) plutôt que réduit. Active aussi `startWithWindows`. */
+  padAtLogin: boolean;
   /** Onglet ouvert au démarrage. null : pas encore demandé (première ouverture ou mise à jour). */
   startPage: StartPage | null;
 }

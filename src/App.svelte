@@ -180,7 +180,10 @@
         if (!ui.modal && !library.state.onboarded) ui.modal = { kind: 'onboarding' };
         // Onglet de départ : proposé une fois à qui avait fait la configuration avant son arrivée.
         else if (!ui.modal && library.state.prefs.startPage === null) ui.modal = { kind: 'startPage' };
-        await whatsNew();
+        // Lancé avec le système et réglé pour : la fenêtre revient devant, en mode manette.
+        // Les notes de version attendent alors le prochain démarrage.
+        if (!ui.modal && library.state.prefs.padAtLogin && (await api.padAtLogin().catch(() => false))) ui.big = true;
+        else await whatsNew();
       }
       await rescan();
       void updater.check(true);

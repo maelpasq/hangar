@@ -305,6 +305,7 @@ export function mockApi(): Api {
       return g ? g.sizeGb * 1_000_000_000 : null;
     },
     setAutostart: async () => {},
+    padAtLogin: async () => false,
     importCover: async (_id, path) => path,
     localSrc: (path) => path,
     pickExe: async () => 'D:\\Jeux\\Mon jeu\\MonJeu.exe',

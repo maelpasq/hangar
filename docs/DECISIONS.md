@@ -305,3 +305,7 @@ Demande de l'utilisateur : une correction de bug sans patch note prend un 4e chi
 ## Mode manette : revenir sur un jeu en cours
 
 Un jeu en cours porte une pastille « En jeu · mm:ss » et un liseré vert sur sa jaquette ; le bas de l'écran affiche « Revenir au jeu ». A (ou un clic) appelle `focus_game` : parmi les fenêtres visibles des processus suivis du jeu, la plus grande fenêtre titrée (surface d'avant réduction si elle est réduite) est restaurée et passée au premier plan, ce que Windows permet puisque Hangar est devant. Fenêtre introuvable : message qui renvoie à Alt+Tab. Hors Windows, pas encore de retour au jeu (seulement le message). Hors mode manette, un jeu en cours ouvre toujours sa fiche.
+
+## Mode manette au démarrage du PC
+
+Réglage « Ouvrir au démarrage du PC » dans Paramètres > Mode manette. Il active aussi « Démarrer avec Windows » (même entrée de démarrage, argument `--hidden`), et désactiver ce dernier le coupe. Au lancement avec le système, le frontend appelle `pad_at_login` (vrai une seule fois par lancement) qui remet la fenêtre devant, puis ouvre le mode manette. Les notes de version attendent alors le démarrage suivant. Indépendant de « Activer le mode manette » (boutons de la manette).

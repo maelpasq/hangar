@@ -84,6 +84,8 @@ export interface Api {
   /** Succès Steam d'un jeu, seulement avec le compte Steam relié (null sinon). */
   steamAchievements(gameId: string): Promise<Achievements | null>;
   setAutostart(on: boolean): Promise<void>;
+  /** Lancé avec le système : remet la fenêtre devant et répond vrai (une fois par lancement). */
+  padAtLogin(): Promise<boolean>;
   /** Copie une image locale dans le dossier des jaquettes et renvoie son chemin. */
   importCover(gameId: string, path: string): Promise<string>;
   /** Chemin local vers URL affichable. */
@@ -200,6 +202,7 @@ async function tauriApi(): Promise<Api> {
     gameInfo: (gameId) => invoke('game_info', { gameId }),
     steamAchievements: (gameId) => invoke('steam_achievements', { gameId }),
     setAutostart: (on) => invoke('set_autostart', { on }),
+    padAtLogin: () => invoke('pad_at_login'),
     importCover: (gameId, path) => invoke('import_cover', { gameId, path }),
     localSrc: (path) => convertFileSrc(path),
     // Boîtes de choix ouvertes par le backend : lui seul sait quels fichiers l'utilisateur a

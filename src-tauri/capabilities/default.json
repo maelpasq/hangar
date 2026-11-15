@@ -46,6 +46,7 @@
     "allow-exe-icon",
     "allow-folder-size",
     "allow-set-autostart",
+    "allow-pad-at-login",
     "allow-import-cover",
     "allow-accounts-status",
     "allow-steam-achievements",

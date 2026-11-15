@@ -609,6 +609,21 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
     r.map_err(|e| format!("Impossible de modifier le démarrage automatique : {e}"))
 }
 
+/// Mode manette au démarrage du PC : si Hangar vient d'être lancé avec le système
+/// (`--hidden`, fenêtre réduite), la fenêtre revient devant et la réponse est vraie, une
+/// seule fois par lancement (un rechargement de l'interface ne rouvre rien).
+#[tauri::command]
+pub fn pad_at_login(app: AppHandle) -> bool {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static DONE: AtomicBool = AtomicBool::new(false);
+    let at_login = std::env::args().any(|a| a == "--hidden");
+    if !at_login || DONE.swap(true, Ordering::Relaxed) {
+        return false;
+    }
+    crate::desktop::show_main(&app);
+    true
+}
+
 #[tauri::command]
 pub async fn import_cover(ctx: Ctxs<'_>, game_id: String, path: String) -> Result<String, String> {
     if !ctx.granted.has(&path) {

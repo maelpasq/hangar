@@ -194,6 +194,7 @@ fn main() {
             commands::exe_icon,
             commands::folder_size,
             commands::set_autostart,
+            commands::pad_at_login,
             commands::import_cover,
             commands::accounts_status,
             commands::steam_achievements,
