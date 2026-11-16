@@ -556,6 +556,12 @@ describe('social', () => {
     expect((await get(c, `/social/messages/${a.id}`)).messages).toEqual([]);
   });
 
+  it('limite les lignes « jeux ajoutés » par heure', async () => {
+    const added = { added: [{ id: 'steam:400', name: 'Portal' }] };
+    for (let i = 0; i < 20; i++) expect((await post(c, '/social/activity', added)).status).toBe(200);
+    expect((await post(c, '/social/activity', added)).status).toBe(429);
+  });
+
   it('signale un message, avec son texte pour l\'examen', async () => {
     const [m] = (await get(b, `/social/messages/${a.id}`)).messages;
     expect((await post(b, '/social/reports', { userId: a.id, messageId: m.id, reason: 'spam' })).status).toBe(200);
@@ -574,6 +580,13 @@ describe('social', () => {
     expect((await get(c, '/social/search?q=Bruno')).users).toEqual([]);
     expect((await call(`/social/users/${b.id}`, { token: c.token })).status).toBe(404);
     expect((await post(c, `/social/friends/${b.id}`)).status).toBe(404);
+    // Une conversation avec un compte bloqué disparaît aussi de la liste.
+    await post(a, `/social/blocks/${b.id}`);
+    expect((await get(b, '/social/conversations')).conversations).toEqual([]);
+    expect((await get(a, '/social/conversations')).conversations).toEqual([]);
+    await del(a, `/social/blocks/${b.id}`);
+    await post(a, `/social/friends/${b.id}`);
+    await post(b, `/social/friends/${a.id}`);
     await del(b, `/social/blocks/${c.id}`);
     expect((await get(c, '/social/search?q=Bruno')).users).toHaveLength(1);
   });
@@ -586,10 +599,63 @@ describe('social', () => {
     await put(a, '/social/me', { enabled: false });
     expect((await friendsOf(b)).friends[0].presence).toEqual({ state: 'offline', game: null });
     expect((await post(a, `/social/messages/${b.id}`, { text: 'Toujours là ?' })).status).toBe(403);
+    // Invisible même pour ses amis : plus de profil, et plus de message reçu.
+    expect((await call(`/social/users/${a.id}`, { token: b.token })).status).toBe(404);
+    expect((await post(b, `/social/messages/${a.id}`, { text: 'Tu es là ?' })).status).toBe(403);
     expect((await call('/me', { method: 'DELETE', token: a.token })).status).toBe(200);
     expect((await friendsOf(b)).friends).toEqual([]);
     expect((await get(b, '/social/conversations')).conversations).toEqual([]);
     expect(await db.select().from(schema.reports)).toEqual([]);
+  });
+});
+
+describe('signalement de bug', () => {
+  const HOOK = 'https://discord.com/api/webhooks/123/jeton-de-test';
+  const send = (fields: Record<string, string>, capture?: Uint8Array, from = '198.51.100.7') => {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    if (capture) form.append('capture', new Blob([capture.slice()]), 'capture.png');
+    return app.request(`${BASE}/bug`, { method: 'POST', headers: { 'cf-connecting-ip': from }, body: form });
+  };
+  const ok = { title: 'Ça plante <@everyone>', description: 'Au lancement @here', version: '1.2.28', os: 'windows' };
+
+  it('relaie vers le webhook du serveur, sans mention ni adresse IP, avec une limite par adresse', async () => {
+    expect((await send(ok)).status).toBe(503);
+    env.BUG_WEBHOOK = HOOK;
+    const real = globalThis.fetch;
+    const sent: { url: string; body: FormData }[] = [];
+    globalThis.fetch = (async (u: string, init: RequestInit) => {
+      // Cloudflare Workers n'accepte que `follow` ou `manual` (`error` lève une exception).
+      expect(init.redirect).toBe('manual');
+      sent.push({ url: String(u), body: init.body as FormData });
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    try {
+      expect((await send(ok, PNG)).status).toBe(200);
+      expect(sent[0].url).toBe(HOOK);
+      const payload = JSON.parse(String(sent[0].body.get('payload_json')));
+      expect(payload.allowed_mentions).toEqual({ parse: [] });
+      expect(payload.embeds[0]).toMatchObject({ title: '🐛 Ça plante <@everyone>', image: { url: 'attachment://capture.png' } });
+      expect(payload.embeds[0].fields).toEqual([
+        { name: 'Version', value: 'Hangar 1.2.28', inline: true },
+        { name: 'Système', value: 'Windows', inline: true }
+      ]);
+      expect(JSON.stringify(payload)).not.toContain('198.51.100.7');
+      // Requêtes mal formées : refusées sans rien relayer.
+      expect((await send({ ...ok, title: ' ' })).status).toBe(400);
+      expect((await send({ ...ok, os: 'amiga' })).status).toBe(400);
+      expect((await send({ ...ok, version: '1.0 <script>' })).status).toBe(400);
+      expect((await send(ok, new Uint8Array([1, 2, 3]))).status).toBe(400);
+      for (let i = 0; i < 4; i++) expect((await send(ok)).status).toBe(200);
+      expect((await send(ok)).status).toBe(429);
+      expect((await send(ok, undefined, '198.51.100.8')).status).toBe(200);
+      expect(sent).toHaveLength(6);
+      const keys = (await db.select().from(schema.rateLimit)).map((r) => r.key).join(' ');
+      expect(keys).not.toContain('198.51.100');
+    } finally {
+      globalThis.fetch = real;
+      env.BUG_WEBHOOK = undefined;
+    }
   });
 });
 

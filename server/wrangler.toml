@@ -1,7 +1,7 @@
 # Worker de l'API du compte Hangar. Deux environnements séparés, chacun avec sa base Turso :
 #   prod : l'app publiée        (npm run deploy:prod)
 #   test : Hangar Test          (npm run deploy:test, et npm run dev en local)
-# Les secrets (TURSO_URL, TURSO_TOKEN, AUTH_SECRET, SECRETS_KEY, clés OAuth, RESEND_API_KEY)
+# Les secrets (TURSO_URL, TURSO_TOKEN, AUTH_SECRET, SECRETS_KEY, clés OAuth, RESEND_API_KEY, BUG_WEBHOOK)
 # ne sont jamais ici : `wrangler secret put <NOM> --env <prod|test>` (voir README.md).
 name = "hangar-api"
 main = "src/index.ts"

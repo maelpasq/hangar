@@ -31,6 +31,8 @@ const MAX_TEXT = 2000;
 const MESSAGES_PER_MINUTE = 30;
 const REQUESTS_PER_HOUR = 30;
 const REPORTS_PER_DAY = 20;
+/** Lignes « jeux ajoutés » par heure : garde-fou contre un client qui inonde ses amis. */
+const ADDED_PER_HOUR = 20;
 const MAX_PENDING = 100;
 const PAGE = 50;
 export const BANNER_MAX = 1024 * 1024;
@@ -192,13 +194,16 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     return out.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   };
 
-  /** Un autre compte visible par `me` : pas bloqué, et amis activés (ou déjà amis). */
+  /**
+   * Un autre compte visible par `me` : pas bloqué, et amis activés. Un compte qui désactive les
+   * amis devient invisible, même pour ses amis (son lien reste, sans profil ni présence).
+   */
   const reachable = async (me: string, id: string) => {
     if (!isUserId(id)) return null;
     const rel = await relation(me, id);
     if (rel === 'blocked' || rel === 'blockedBy') return null;
     const [row] = await db.select().from(social).where(eq(social.userId, id));
-    if (rel !== 'self' && rel !== 'friend' && !row?.enabled) return null;
+    if (rel !== 'self' && !row?.enabled) return null;
     const [u] = await db.select().from(user).where(eq(user.id, id));
     return u ? { rel, row, u } : null;
   };
@@ -543,6 +548,12 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     if (games.some((g) => !g)) return c.json({ error: 'requete' }, 400);
     const row = await ensureSocial(db, me);
     if (!row.enabled) return c.json({ ok: true });
+    const now = Date.now();
+    const [{ n }] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(activity)
+      .where(and(eq(activity.userId, me), eq(activity.kind, 'added'), gt(activity.at, now - 3_600_000)));
+    if (n >= ADDED_PER_HOUR) return c.json({ error: 'trop' }, 429);
     const data = JSON.stringify({ games: games.slice(0, 8), count: games.length });
     await db.insert(activity).values({ id: newId(), userId: me, kind: 'added', data, at: Date.now() });
     const ids = await friendIds(db, me);
@@ -610,6 +621,9 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
         .limit(1);
       if (!m) continue;
       const other = m.fromId === me ? m.toId : m.fromId;
+      // Comme GET /messages/:id : rien d'un compte bloqué (dans un sens ou dans l'autre).
+      const rel = await relation(me, other);
+      if (rel === 'blocked' || rel === 'blockedBy') continue;
       out.push({ with: other, last: await open(m), unread: counts.get(other) ?? 0 });
     }
     return c.json({ conversations: out });
@@ -642,6 +656,9 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     const msg = invite ? null : text(body.text, MAX_TEXT);
     if (!invite && !msg) return c.json({ error: 'requete' }, 400);
     if (!(await meOn(me)) || (await relation(me, id)) !== 'friend') return c.json({ error: 'pas_ami' }, 403);
+    // Un ami qui a désactivé les amis ne reçoit plus rien.
+    const [them] = await db.select({ enabled: social.enabled }).from(social).where(eq(social.userId, id));
+    if (!them?.enabled) return c.json({ error: 'pas_ami' }, 403);
     const now = Date.now();
     const [{ n }] = await db
       .select({ n: sql<number>`count(*)` })

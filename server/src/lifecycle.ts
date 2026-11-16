@@ -54,7 +54,8 @@ export async function deleteAccount(db: Db, bucket: AvatarStore | undefined, id:
     db.delete(profiles).where(eq(profiles.userId, id)),
     db.delete(session).where(eq(session.userId, id)),
     db.delete(account).where(eq(account.userId, id)),
-    db.delete(verification).where(like(verification.identifier, `%${u?.email ?? id}`)),
+    // `_` et `%` d'une adresse sont des jokers de LIKE : échappés, sinon d'autres comptes y passent.
+    db.delete(verification).where(sql`${verification.identifier} like ${`%${(u?.email ?? id).replace(/[\\%_]/g, (ch) => `\\${ch}`)}`} escape '\\'`),
     db.delete(user).where(eq(user.id, id))
   ]);
 }

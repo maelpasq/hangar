@@ -12,3 +12,14 @@ installer/tauri.conf.json
 *.log
 PROMPT.md
 src-tauri/resources/mods/
+# Notes locales (Obsidian) et garde-fous contre la publication de secrets.
+Hangar-Knowledge/
+.obsidian/
+.env
+.env.*
+.dev.vars
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx

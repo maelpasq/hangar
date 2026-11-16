@@ -40,7 +40,7 @@ pub fn set_test_env(test: bool) {
     let _ = API.set(if test { TEST } else { PROD });
 }
 
-fn api() -> &'static str {
+pub(crate) fn api() -> &'static str {
     API.get().copied().unwrap_or(PROD)
 }
 

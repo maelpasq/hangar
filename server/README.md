@@ -12,6 +12,7 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `GET /login?port&challenge&state` | page de connexion, ouverte dans le navigateur par l'app |
 | `/auth/*` | Better Auth : code par e-mail, Discord, Google |
 | `GET /desktop/finish?port&challenge&state` | connectée : renvoie un code à usage unique à `http://127.0.0.1:<port>` |
+| `POST /bug` | signalement de bug de l'app, sans compte (`multipart` : `title`, `description`, `version`, `os`, `capture` facultative) : relayé au webhook `BUG_WEBHOOK`, 5 par heure et par adresse IP, 200 par jour |
 | `POST /desktop/token` | `{ code, verifier, deviceId, deviceName }` : rend le jeton du poste |
 | `GET /me` | compte (pseudo, version de l'avatar, visibilité) et liste des postes |
 | `PUT /me` | `{ name }` : pseudo (2 à 32 caractères) |
@@ -39,7 +40,7 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `POST /social/reports` | `{ userId, reason, messageId?, note? }` : signalement (20 par jour) |
 | `GET /social/live` | WebSocket du temps réel (Durable Object `Live`, un par compte) |
 
-Hors `/login`, `/auth/*` et `/desktop/*`, tout demande `Authorization: Bearer <jeton du poste>`.
+Hors `/login`, `/auth/*`, `/desktop/*` et `/bug`, tout demande `Authorization: Bearer <jeton du poste>`.
 
 Connexion d'un poste : l'app tire un vérifieur PKCE, ouvre une adresse locale, puis le navigateur
 sur `/login`. Après la connexion, le navigateur revient sur l'adresse locale avec un code (valable
@@ -99,6 +100,7 @@ puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` e
 | `RESEND_API_KEY` | envoi des codes par e-mail |
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Discord |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Google |
+| `BUG_WEBHOOK` | facultatif : webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`) ; sans lui, `POST /bug` répond 503 |
 
 Adresses de retour à déclarer chez Discord et Google : `<BASE_URL>/auth/callback/discord` et
 `<BASE_URL>/auth/callback/google`.

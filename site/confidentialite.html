@@ -73,7 +73,7 @@
 
       <h2 id="sans-compte">Sans compte</h2>
       <p>Hangar ne collecte aucune donnée personnelle. Ta bibliothèque, tes réglages et ton temps de jeu restent sur ton ordinateur. Tes clés et jetons (SteamGridDB, comptes de launchers reliés) sont rangés dans le coffre du système, jamais dans un fichier.</p>
-      <p>Hangar ne contacte d'autres services que pour ce que tu lui demandes : les images et infos des jeux (Steam, Epic Games, GOG, Microsoft Store, SteamGridDB si tu as saisi ta clé), les comptes de launchers que tu relies toi-même, les mises à jour de tes jeux et de Hangar (GitHub), les jeux web que tu lances, Discord si tu l'actives, et le bouton « Signaler un bug » quand tu envoies un message. La liste complète est dans le <a href="https://github.com/maelpasq/hangar#confidentialit%C3%A9" rel="noopener">README du projet</a>, et le code est public.</p>
+      <p>Hangar ne contacte d'autres services que pour ce que tu lui demandes : les images et infos des jeux (Steam, Epic Games, GOG, Microsoft Store, SteamGridDB si tu as saisi ta clé), les comptes de launchers que tu relies toi-même, les mises à jour de tes jeux et de Hangar (GitHub), les jeux web que tu lances, Discord si tu l'actives, et le bouton « Signaler un bug » quand tu envoies un message (il passe par l'API de Hangar, même sans compte, qui le relaie au développeur et ne garde qu'une empreinte de ton adresse IP pendant un jour, pour limiter les envois). La liste complète est dans le <a href="https://github.com/maelpasq/hangar#confidentialit%C3%A9" rel="noopener">README du projet</a>, et le code est public.</p>
 
       <h2 id="compte">Le compte Hangar</h2>
       <p>Tu crées un compte seulement si tu cliques sur « Se connecter » dans Hangar. Il est géré par pamal Studio, le développeur de Hangar.</p>
@@ -81,7 +81,7 @@
       <h3>Ce que le compte garde</h3>
       <ul>
         <li><strong>Ton identité de connexion</strong> : ton adresse e-mail et, si tu te connectes avec Discord ou Google, l'identifiant de ton compte chez eux (jamais ton mot de passe : Hangar n'en a pas).</li>
-        <li><strong>Ton profil</strong> : ton pseudo et ton avatar si tu en choisis un. Ils ne sont visibles que sur tes PC.</li>
+        <li><strong>Ton profil</strong> : ton pseudo et ton avatar si tu en choisis un. Ils ne sont visibles que sur tes PC, et par les autres joueurs seulement si tu actives les amis.</li>
         <li><strong>Tes PC reliés</strong> : le nom que tu leur donnes, leur date de connexion et leur dernier passage.</li>
         <li><strong>Ta bibliothèque synchronisée</strong> : favoris, jeux masqués, renommages, collections, jaquettes choisies (y compris les images que tu as importées), jeux ajoutés à la main (nom, lien d'installation), dates d'ajout et réglages d'apparence. Les jeux sont désignés par leur identifiant de launcher, ou, pour un jeu local, par le nom de son exécutable et de son dossier.</li>
         <li><strong>Ton temps de jeu</strong> : le total par jeu et par PC, et les sessions de jeu (début, fin, jeu, PC).</li>
@@ -101,7 +101,7 @@
         <li><strong>Tes messages</strong> avec tes amis, chiffrés sur le serveur (la clé n'est pas dans la base), avec leur date et la date de lecture.</li>
         <li><strong>Les signalements</strong> que tu fais, avec le texte du message signalé, examinés à la main par le développeur.</li>
       </ul>
-      <p>Pour chaque information partagée (statut en ligne, jeu en cours, temps de jeu, bibliothèque), tu choisis qui la voit : tout le monde, tes amis seulement ou personne. Ton adresse e-mail n'est jamais montrée. Désactiver les amis te rend invisible et hors ligne ; un compte bloqué ne te voit plus et ne peut plus t'écrire.</p>
+      <p>Pour chaque information partagée (statut en ligne, jeu en cours, temps de jeu, bibliothèque), tu choisis qui la voit : tout le monde, tes amis seulement ou personne. Ton adresse e-mail n'est jamais montrée. Désactiver les amis te rend invisible et hors ligne, même pour tes amis, qui ne peuvent plus voir ton profil ni t'écrire ; un compte bloqué ne te voit plus et ne peut plus t'écrire.</p>
 
       <h3>Pourquoi</h3>
       <p>Ces données servent uniquement à faire marcher le compte que tu as demandé : te connecter, retrouver ta bibliothèque sur tes PC et, si tu les actives, échanger avec tes amis. Elles ne sont ni vendues, ni partagées, ni utilisées pour de la publicité.</p>

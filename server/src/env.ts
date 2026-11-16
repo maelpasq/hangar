@@ -19,6 +19,8 @@ export interface Env {
   RESEND_API_KEY?: string;
   /** Expéditeur des e-mails, par exemple « Hangar <connexion@exemple.fr> ». */
   MAIL_FROM?: string;
+  /** Webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`). Absent : pas de signalement. */
+  BUG_WEBHOOK?: string;
   /** Bucket R2 des avatars (`wrangler.toml`). Absent : pas d'avatar. */
   AVATARS?: AvatarStore;
   /** Durable Objects du temps réel (`wrangler.toml`, classe `Live`). Absent : pas de temps réel. */

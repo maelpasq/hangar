@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createAuth, providers, resendMailer } from './auth';
 import { BACKGROUND_WEBP } from './background';
+import { bugRoute } from './bug';
 import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
 import { GEIST_WOFF2 } from './font';
@@ -34,6 +35,8 @@ const MAX_KEY = 512;
 const MAX_VALUE = 16 * 1024;
 /** Éléments par compte : garde-fou contre un client fou, très au-dessus d'une vraie bibliothèque. */
 const MAX_ENTRIES = 50_000;
+/** Sessions de jeu par compte : même garde-fou (dix parties par jour pendant plus de 50 ans). */
+const MAX_SESSIONS = 200_000;
 const CODE_TTL = 2 * 60_000;
 const DEVICE_ID = /^[0-9a-f]{32}$/;
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
@@ -83,11 +86,14 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     return c.json({ error: 'erreur' }, 500);
   });
   app.notFound((c) => c.json({ error: 'introuvable' }, 404));
-  // Les jaquettes ont leur propre limite (route `PUT /covers/:hash`).
+  // Les jaquettes et les signalements de bug ont leur propre limite (`PUT /covers/:hash`, `POST /bug`).
   const limit = bodyLimit({ maxSize: 2 * 1024 * 1024, onError: (c) => c.json({ error: 'trop_gros' }, 413) });
-  app.use('*', (c, next) => (c.req.path.startsWith('/covers/') ? next() : limit(c, next)));
+  app.use('*', (c, next) => (c.req.path.startsWith('/covers/') || c.req.path === '/bug' ? next() : limit(c, next)));
 
   app.get('/', (c) => c.json({ name: 'Hangar', ok: true }));
+
+  // Signalement de bug, avec ou sans compte (src/bug.ts).
+  app.route('/bug', bugRoute(db, env));
 
   // --- Profil (pseudo, avatar) ---
 
@@ -111,7 +117,8 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
       return bytes && type ? { type, bytes } : null;
     }
     const url = providerAvatar(u.image);
-    const res = url ? await fetch(url, { redirect: 'error' }).catch(() => null) : null;
+    // `manual` : une redirection n'est pas suivie et compte comme un échec (Workers refuse `error`).
+    const res = url ? await fetch(url, { redirect: 'manual' }).catch(() => null) : null;
     if (!res?.ok) return null;
     const bytes = new Uint8Array(await res.arrayBuffer());
     const type = imageType(bytes);
@@ -469,6 +476,11 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
       const [current] = await cursorOf.all({ user: me.userId });
       return c.json({ cursor: current?.cursor ?? 0 });
     }
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(gameSessions)
+      .where(eq(gameSessions.userId, me.userId));
+    if (count + rows.size > MAX_SESSIONS) return c.json({ error: 'plein' }, 413);
     const [bumped] = await db.batch([
       bump(me.userId),
       db
