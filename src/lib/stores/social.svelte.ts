@@ -526,7 +526,9 @@ class Social {
       games.push({ id, name: library.name(g) });
     }
     const favorites = s.prefs.profileGames.slice(0, MAX_PROFILE_GAMES);
-    const body = { top, favorites, collections, games: games.slice(0, 10_000) };
+    // Version de Hangar de ce poste, montrée sur le profil (renvoyée après chaque mise à jour).
+    const version = await api.appVersion().catch(() => undefined);
+    const body = { top, favorites, collections, games: games.slice(0, 10_000), version };
     const key = `${this.me}:${JSON.stringify(body)}`;
     if (store.get(SHOWCASE_KEY) !== hash(key)) {
       try {

@@ -519,20 +519,22 @@ describe('social', () => {
       top: [{ id: 'steam:620', name: 'Portal 2', ms: 3_600_000 }],
       favorites: [{ id: 'epic:fn', name: 'Fortnite' }],
       collections: [{ name: 'Coop', games: [{ id: 'steam:620', name: 'Portal 2' }] }],
-      games: [{ id: 'steam:620', name: 'Portal 2' }, { id: 'epic:fn', name: 'Fortnite' }]
+      games: [{ id: 'steam:620', name: 'Portal 2' }, { id: 'epic:fn', name: 'Fortnite' }],
+      version: '1.2.28.2'
     };
     expect((await put(b, '/social/showcase', showcase)).status).toBe(200);
     expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: 'steam:620', name: 'Portal 2' }] })).status).toBe(200);
     expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: '', name: 'x' }] })).status).toBe(400);
     const six = Array.from({ length: 6 }, (_, i) => ({ id: `steam:${i}`, name: `Jeu ${i}` }));
     expect((await put(a, '/social/showcase', { top: [], favorites: six, collections: [], games: [] })).status).toBe(400);
+    expect((await put(a, '/social/showcase', { top: [], collections: [], games: [], version: '<b>1</b>' })).status).toBe(400);
     const p = await get(a, `/social/users/${b.id}`);
-    expect(p).toMatchObject({ name: 'Bruno', relation: 'friend', code: null, playMs: 3_600_000, games: 2 });
+    expect(p).toMatchObject({ name: 'Bruno', relation: 'friend', code: null, playMs: 3_600_000, games: 2, version: '1.2.28.2' });
     expect(p.top).toEqual(showcase.top);
     expect(p.favorites).toEqual(showcase.favorites);
     expect(p.collections).toEqual(showcase.collections);
-    // Vitrine envoyée par une app d'avant les jeux favoris : liste vide.
-    expect((await get(b, `/social/users/${a.id}`)).favorites).toEqual([]);
+    // Vitrine envoyée par une app d'avant les jeux favoris et la version : liste vide, pas de version.
+    expect(await get(b, `/social/users/${a.id}`)).toMatchObject({ favorites: [], version: null });
     expect(p.common).toEqual([{ id: 'steam:620', name: 'Portal 2' }]);
     expect(p).not.toHaveProperty('email');
     // Un inconnu ne voit pas ce qui est réservé aux amis.

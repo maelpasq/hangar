@@ -12,8 +12,11 @@ import type {
   SocialSettings,
   SocialUser
 } from './types';
+import { RELEASES } from './util/release-notes';
 
 const ME = 'demo-compte-0001';
+/** Version de Hangar de la démo (la plus récente des notes de version). */
+const DEMO_VERSION = RELEASES[0]?.version ?? '1.0.0';
 const H = 3_600_000;
 const MIN = 60_000;
 const g = (id: string, name: string): SocialGame => ({ id, name });
@@ -39,6 +42,7 @@ interface Person {
   top: (SocialGame & { ms: number })[];
   favorites?: SocialGame[];
   collections: { name: string; games: SocialGame[] }[];
+  version?: string;
 }
 
 export function mockSocial(emit: (e: SocialEvent) => void) {
@@ -58,6 +62,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       id: 'demo-ami-0001',
       name: 'Lina',
       rel: 'friend',
+      version: DEMO_VERSION,
       presence: on(GAMES.satisfactory),
       since: now - 400 * 24 * H,
       playMs: 612 * H,
@@ -75,6 +80,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       id: 'demo-ami-0002',
       name: 'Sam',
       rel: 'friend',
+      version: '1.2.20',
       presence: on(),
       since: now - 200 * 24 * H,
       playMs: 298 * H,
@@ -181,6 +187,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
           presence: { state: 'online', game: null },
           playMs: 842 * H,
           games: myGames.size,
+          version: DEMO_VERSION,
           top: [
             { ...GAMES.satisfactory, ms: 230 * H },
             { ...GAMES.cs2, ms: 190 * H },
@@ -207,6 +214,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
         presence: card(p).presence,
         playMs: friend ? p.playMs : null,
         games: friend ? p.games.length : null,
+        version: p.version ?? null,
         top: friend ? p.top : null,
         favorites: friend ? (p.favorites ?? []) : null,
         collections: friend ? p.collections : null,

@@ -406,6 +406,8 @@ export interface SocialProfile {
   presence: Presence;
   playMs: number | null;
   games: number | null;
+  /** Version de Hangar de son dernier poste qui l'a envoyée (null : app d'avant cette info). */
+  version: string | null;
   top: (SocialGame & { ms: number })[] | null;
   /** Jeux favoris choisis par la personne (5 au plus). */
   favorites: SocialGame[] | null;

@@ -10,8 +10,10 @@
   import { presenceLabel, prettyCode, social } from '../stores/social.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
+  import { updater } from '../stores/update.svelte';
   import type { SocialProfile } from '../types';
   import { dateLabel, hoursLabel, plural, timeAgo } from '../util/format';
+  import { compareVersions } from '../util/release-notes';
 
   let { id }: { id: string } = $props();
 
@@ -55,6 +57,17 @@
   );
   const name = $derived(profile?.name ?? '');
   const since = $derived(social.lists.friends.find((f) => f.id === id)?.since);
+
+  // Version de Hangar : la mienne en direct, celle des autres telle que leur app l'a envoyée.
+  let mine = $state('');
+  api.appVersion().then(
+    (v) => (mine = v),
+    () => {}
+  );
+  const version = $derived(self ? mine || profile?.version : profile?.version);
+  /** Dernière version connue : la mienne, ou celle que la recherche de mise à jour a trouvée. */
+  const latest = $derived(updater.phase === 'available' && updater.version ? updater.version : mine);
+  const upToDate = $derived(!!version && !!latest && compareVersions(version, latest) >= 0);
 
   function confirm(action: 'remove' | 'block') {
     if (profile) ui.modal = { kind: 'socialConfirm', action, userId: profile.id, name: profile.name };
@@ -121,6 +134,12 @@
       {/if}
       {#if profile.games !== null}
         <div class="stat"><span class="sv num">{profile.games}</span><span class="sl">{profile.games > 1 ? 'jeux' : 'jeu'} dans la bibliothèque</span></div>
+      {/if}
+      {#if version}
+        <div class="stat">
+          <span class="sv num vrow">{version}{#if upToDate}<span class="tag ok">Hangar à jour</span>{/if}</span>
+          <span class="sl">version de Hangar</span>
+        </div>
       {/if}
       {#if since}
         <div class="stat"><span class="sv">{dateLabel(since)}</span><span class="sl">début de votre amitié</span></div>
@@ -396,6 +415,29 @@
   .sl {
     font-size: 12.5px;
     color: var(--muted);
+  }
+
+  .vrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tag {
+    height: 22px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .tag.ok {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    color: var(--success-text);
   }
 
   .sec {

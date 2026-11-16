@@ -42,6 +42,9 @@ const REASONS = ['spam', 'harcelement', 'contenu', 'autre'];
 const PLAY_AGAIN = 3_600_000;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+/** Numéro de version de Hangar : 1.2.28 ou 1.2.28.2. */
+const APP_VERSION = /^\d{1,4}(\.\d{1,4}){2,3}$/;
+
 const text = (v: unknown, max: number): string | null => {
   if (typeof v !== 'string') return null;
   const s = v.trim();
@@ -274,6 +277,9 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     }
     const favorites = favs.map(game);
     if (favorites.some((g) => !g)) return c.json({ error: 'requete' }, 400);
+    // `version` : version de Hangar du poste qui envoie (facultative, versions de l'app d'avant).
+    const version = typeof body.version === 'string' ? body.version : null;
+    if (body.version !== undefined && !(version && APP_VERSION.test(version))) return c.json({ error: 'requete' }, 400);
     const top = [];
     for (const t of body.top as unknown[]) {
       const g = game(t);
@@ -295,7 +301,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     await ensureSocial(db, me);
     await db
       .update(social)
-      .set({ showcase: JSON.stringify({ top, favorites, collections }), games: JSON.stringify(games) })
+      .set({ showcase: JSON.stringify({ top, favorites, collections, version }), games: JSON.stringify(games) })
       .where(eq(social.userId, me));
     return c.json({ ok: true });
   });
@@ -328,7 +334,12 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     if (!found) return c.json({ error: 'introuvable' }, 404);
     const { rel, row, u } = found;
     const vis = row ?? (await ensureSocial(db, u.id));
-    const showcase = parse<{ top: (Game & { ms: number })[]; favorites?: Game[]; collections: { name: string; games: Game[] }[] }>(
+    const showcase = parse<{
+      top: (Game & { ms: number })[];
+      favorites?: Game[];
+      collections: { name: string; games: Game[] }[];
+      version?: string | null;
+    }>(
       vis.showcase,
       { top: [], collections: [] }
     );
@@ -365,6 +376,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       presence: presence(vis, rel),
       playMs,
       games: count,
+      version: showcase.version ?? null,
       top: play ? showcase.top : null,
       favorites: lib ? (showcase.favorites ?? []) : null,
       collections: lib ? showcase.collections : null,
