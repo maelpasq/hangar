@@ -22,7 +22,7 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Duration;
 
 /// Launchers dont le compte peut être connecté (Xbox : jeux PC, seulement sous Windows).
@@ -270,6 +270,18 @@ struct Synced {
     latest: HashMap<String, String>,
     seen: Vec<xbox::Seen>,
     format: u32,
+    /// Connexion partagée avec le compte Hangar (voir `Shared`).
+    shared: bool,
+}
+
+/// Connexions partagées par le compte Hangar (docs/COMPTE.md) : un launcher connecté sur un poste
+/// l'est sur tous, déconnecté sur un poste il l'est partout. Le secret est chiffré sur le serveur.
+pub trait Shared: Send + Sync {
+    /// `Ok(Some)` : secret rangé sur le compte ; `Ok(None)` : aucun ; `Err` : pas de compte
+    /// Hangar ou serveur injoignable (on ne touche à rien).
+    fn get(&self, store: &str) -> Result<Option<String>, ()>;
+    /// Range (`Some`) ou retire (`None`) le secret sur le compte. Vrai si c'est fait.
+    fn put(&self, store: &str, secret: Option<&str>) -> bool;
 }
 
 /// Résultat de la dernière vérification GOG (`updates.json`).
@@ -321,6 +333,7 @@ pub struct Accounts {
     gains: Mutex<HashMap<String, Gain>>,
     /// Succès Steam déjà demandés : AppID -> (heure, succès).
     achievements: Mutex<HashMap<u32, CachedAchievements>>,
+    shared: OnceLock<Arc<dyn Shared>>,
 }
 
 pub use crate::model::Achievements;
@@ -350,7 +363,25 @@ impl Accounts {
             gog_busy: AtomicBool::new(false),
             gains: Mutex::new(HashMap::new()),
             achievements: Mutex::new(HashMap::new()),
+            shared: OnceLock::new(),
         }
+    }
+
+    /// Branche le partage des connexions par le compte Hangar (au démarrage).
+    pub fn set_shared(&self, shared: Arc<dyn Shared>) {
+        let _ = self.shared.set(shared);
+    }
+
+    /// Envoie (ou retire) le secret d'un launcher sur le compte Hangar. Vrai si c'est fait.
+    fn share(&self, store: &str, sec: Option<&str>) -> bool {
+        let Some(sh) = self.shared.get() else { return false };
+        let value = sec.map(|s| if store == "steam" { steam::shareable(s) } else { s.to_string() });
+        sh.put(store, value.as_deref())
+    }
+
+    /// Launchers qui peuvent être connectés sur ce poste.
+    fn connectable() -> impl Iterator<Item = &'static str> {
+        CONNECTABLE.iter().copied().filter(|s| *s != "xbox" || xbox::available())
     }
 
     /// Marque les jeux qui ont une mise à jour (versions Epic du compte, vérification GOG).
@@ -500,17 +531,33 @@ impl Accounts {
             lock(&self.data).remove(store);
             return;
         };
-        let r = self.fetch(store, &sec);
+        let mut r = self.fetch(store, &sec);
+        if r.is_err() {
+            // Jeton périmé ou renouvelé par un autre poste : celui du compte Hangar, s'il diffère.
+            if let Some(Ok(Some(remote))) = self.shared.get().map(|sh| sh.get(store)) {
+                if remote != sec {
+                    if let Ok(mut f) = self.fetch(store, &remote) {
+                        log::info!("compte {store} : jeton du compte Hangar repris");
+                        f.secret.get_or_insert(remote);
+                        r = Ok(f);
+                    }
+                }
+            }
+        }
+        if let Ok(Fetched { secret: Some(s), .. }) = &r {
+            if let Err(e) = set_secret(store, s) {
+                log::warn!("compte {store} : {e}");
+            }
+            // Jeton renouvelé : les autres postes reprendront celui-ci.
+            if lock(&self.data).get(store).is_some_and(|d| d.shared) {
+                self.share(store, Some(s));
+            }
+        }
         let mut data = lock(&self.data);
         let Some(entry) = data.get_mut(store) else { return }; // déconnecté pendant la synchro
         entry.synced_at = now_ms();
         match r {
             Ok(f) => {
-                if let Some(s) = f.secret {
-                    if let Err(e) = set_secret(store, &s) {
-                        log::warn!("compte {store} : {e}");
-                    }
-                }
                 log::info!("compte {store} : {} jeu(x)", f.games.len());
                 entry.user = f.user.or(entry.user.take());
                 entry.games = f.games;
@@ -541,17 +588,74 @@ impl Accounts {
     }
 
     /// Premier enregistrement : le secret n'est gardé que si la liste a pu être lue.
-    fn connect(&self, store: &str, sec: &str) -> Result<usize, String> {
+    /// `from_account` : connexion reprise du compte Hangar (déjà partagée).
+    fn connect_with(&self, store: &str, sec: &str, from_account: bool) -> Result<usize, String> {
         let f = self.fetch(store, sec).inspect_err(|e| log::warn!("compte {store} : connexion impossible ({e})"))?;
-        set_secret(store, f.secret.as_deref().unwrap_or(sec)).inspect_err(|e| log::warn!("compte {store} : {e}"))?;
+        let kept = f.secret.as_deref().unwrap_or(sec);
+        set_secret(store, kept).inspect_err(|e| log::warn!("compte {store} : {e}"))?;
+        // Les autres postes suivent : nouvelle connexion, ou jeton du compte renouvelé ici.
+        let shared = if from_account && kept == sec { true } else { self.share(store, Some(kept)) || from_account };
         let n = f.games.len();
         lock(&self.data).insert(
             store.to_string(),
-            Synced { user: f.user, games: f.games, synced_at: now_ms(), error: None, latest: f.latest, seen: f.seen, format: FORMAT },
+            Synced {
+                user: f.user,
+                games: f.games,
+                synced_at: now_ms(),
+                error: None,
+                latest: f.latest,
+                seen: f.seen,
+                format: FORMAT,
+                shared,
+            },
         );
         self.save();
-        log::info!("compte {store} connecté : {n} jeu(x)");
+        log::info!("compte {store} connecté{} : {n} jeu(x)", if from_account { " (compte Hangar)" } else { "" });
         Ok(n)
+    }
+
+    fn connect(&self, store: &str, sec: &str) -> Result<usize, String> {
+        self.connect_with(store, sec, false)
+    }
+
+    /// Accorde les connexions de ce poste avec celles du compte Hangar : un launcher connecté
+    /// ailleurs est connecté ici, un launcher déconnecté ailleurs l'est ici aussi, et les
+    /// connexions d'ici pas encore partagées le sont. Vrai si la liste des comptes a changé.
+    pub fn sync_shared(&self) -> bool {
+        let Some(sh) = self.shared.get() else { return false };
+        if self.busy.swap(true, Ordering::SeqCst) {
+            return false;
+        }
+        let mut changed = false;
+        for store in Self::connectable() {
+            // Pas de compte Hangar ou serveur injoignable : rien ne change.
+            let Ok(remote) = sh.get(store) else { break };
+            let here = lock(&self.data).get(store).map(|d| d.shared);
+            match (here, remote) {
+                (None, Some(r)) => changed |= self.connect_with(store, &r, true).is_ok(),
+                (Some(false), Some(_)) => {
+                    if let Some(d) = lock(&self.data).get_mut(store) {
+                        d.shared = true;
+                    }
+                    self.save();
+                }
+                (Some(false), None) => {
+                    let ok = secret(store).is_some_and(|sec| self.share(store, Some(&sec)));
+                    if let (true, Some(d)) = (ok, lock(&self.data).get_mut(store)) {
+                        d.shared = true;
+                    }
+                    self.save();
+                }
+                (Some(true), None) => {
+                    log::info!("compte {store} : déconnecté sur un autre poste");
+                    self.forget(store);
+                    changed = true;
+                }
+                (Some(true), Some(_)) | (None, None) => {}
+            }
+        }
+        self.busy.store(false, Ordering::SeqCst);
+        changed
     }
 
     /// Xbox, étape 1 : code à saisir sur microsoft.com/link.
@@ -583,7 +687,14 @@ impl Accounts {
         self.connect(store, &refresh)
     }
 
+    /// Déconnexion voulue ici : les autres postes du compte Hangar suivent.
     pub fn disconnect(&self, store: &str) {
+        self.share(store, None);
+        self.forget(store);
+    }
+
+    /// Oublie le compte sur ce poste seulement.
+    fn forget(&self, store: &str) {
         delete_secret(store);
         lock(&self.data).remove(store);
         if store == "steam" {

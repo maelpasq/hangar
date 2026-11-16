@@ -17,8 +17,30 @@ fn steam_id64() -> Option<u64> {
     crate::scanner::stats::most_recent_account(&t).map(|acc| acc + crate::scanner::stats::STEAM_ID64_BASE)
 }
 
-pub fn fetch(http: &Http, key: &str) -> Result<Fetched, String> {
-    let id = steam_id64().ok_or("Ouvre Steam une fois sur cet appareil avec ton compte, puis réessaie.")?;
+/// Secret Steam : la clé, suivie de `:<SteamID64>` quand il vient d'un autre poste par le compte
+/// Hangar (ce poste n'a peut-être jamais ouvert Steam). Rend la clé et le compte à interroger.
+fn parse(secret: &str) -> Result<(&str, u64), String> {
+    let (key, id) = match secret.split_once(':') {
+        Some((k, i)) => (k, i.parse::<u64>().ok()),
+        None => (secret, None),
+    };
+    if !valid_key(key) {
+        return Err("Clé Steam illisible : reconnecte le compte.".into());
+    }
+    let id = id.or_else(steam_id64).ok_or("Ouvre Steam une fois sur cet appareil avec ton compte, puis réessaie.")?;
+    Ok((key, id))
+}
+
+/// Secret à partager avec les autres postes : la clé et le compte Steam de ce poste.
+pub fn shareable(secret: &str) -> String {
+    match (secret.contains(':'), steam_id64()) {
+        (false, Some(id)) => format!("{secret}:{id}"),
+        _ => secret.to_string(),
+    }
+}
+
+pub fn fetch(http: &Http, secret: &str) -> Result<Fetched, String> {
+    let (key, id) = parse(secret)?;
     let url = format!(
         "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={id}&include_appinfo=1&include_played_free_games=1&format=json"
     );
@@ -27,8 +49,8 @@ pub fn fetch(http: &Http, key: &str) -> Result<Fetched, String> {
 }
 
 /// Succès d'un jeu Steam : (débloqués, total). `None` si le jeu n'a pas de succès.
-pub fn achievements(http: &Http, key: &str, app_id: u32) -> Result<Option<(u32, u32)>, String> {
-    let id = steam_id64().ok_or("Ouvre Steam une fois sur cet appareil avec ton compte, puis réessaie.")?;
+pub fn achievements(http: &Http, secret: &str, app_id: u32) -> Result<Option<(u32, u32)>, String> {
+    let (key, id) = parse(secret)?;
     let url = format!(
         "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={key}&steamid={id}&appid={app_id}&format=json"
     );
@@ -71,6 +93,14 @@ pub fn parse_owned(v: &Value) -> Vec<Game> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn secret_partage() {
+        let k = "0123456789ABCDEFabcdef0123456789";
+        assert_eq!(parse(&format!("{k}:76561197960287930")), Ok((k, 76561197960287930)));
+        assert!(parse("pas-une-cle:1").is_err());
+        assert_eq!(shareable(&format!("{k}:1")), format!("{k}:1"));
+    }
 
     #[test]
     fn cle() {

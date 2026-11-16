@@ -133,6 +133,8 @@ export interface Api {
   cloudPushSessions(sessions: CloudSession[]): Promise<void>;
   /** Clé SteamGridDB du compte (chiffrée côté serveur) ; rend vrai si ce poste a une clé. */
   cloudSyncSteamGridDb(first: boolean): Promise<boolean>;
+  /** Connexions des launchers partagées par le compte (connectées ou déconnectées ailleurs). */
+  cloudSyncLaunchers(): Promise<void>;
   /** Profil : nouveau pseudo. */
   cloudSetProfile(name: string): Promise<CloudStatus>;
   /** Nouvel avatar : image déjà réduite (PNG, JPEG ou WebP, 512 Ko au plus). */
@@ -289,6 +291,7 @@ async function tauriApi(): Promise<Api> {
     cloudPullSessions: (since) => invoke('cloud_pull_sessions', { since }),
     cloudPushSessions: (sessions) => invoke('cloud_push_sessions', { sessions }),
     cloudSyncSteamGridDb: (first) => invoke('cloud_sync_steamgriddb', { first }),
+    cloudSyncLaunchers: () => invoke('cloud_sync_launchers'),
     cloudSetProfile: (name) => invoke('cloud_set_profile', { name }),
     cloudSetAvatar: (bytes) => invoke('cloud_set_avatar', { bytes: Array.from(bytes) }),
     cloudRemoveAvatar: () => invoke('cloud_remove_avatar'),

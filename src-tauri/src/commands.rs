@@ -248,6 +248,17 @@ pub async fn cloud_sync_steamgriddb(ctx: Ctxs<'_>, first: bool) -> Result<bool, 
     blocking(move || cloud.sync_steamgriddb(first)).await?
 }
 
+/// Connexions des launchers partagées par le compte Hangar ; prévient le frontend
+/// (`accounts://synced`) si un launcher a été connecté ou déconnecté ici.
+#[tauri::command]
+pub async fn cloud_sync_launchers(app: AppHandle, ctx: Ctxs<'_>) -> Result<(), String> {
+    let acc = ctx.accounts.clone();
+    if blocking(move || acc.sync_shared()).await? {
+        let _ = app.emit("accounts://synced", ());
+    }
+    Ok(())
+}
+
 /// Profil du compte Hangar : nouveau pseudo.
 #[tauri::command]
 pub async fn cloud_set_profile(ctx: Ctxs<'_>, name: String) -> Result<crate::cloud::Status, String> {

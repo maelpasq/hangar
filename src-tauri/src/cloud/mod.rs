@@ -777,6 +777,36 @@ impl Cloud {
     }
 }
 
+/// Connexions des launchers partagées par le compte (secrets `compte-<store>`, chiffrés sur le
+/// serveur, hors de la synchro et de l'export).
+impl crate::accounts::Shared for Cloud {
+    fn get(&self, store: &str) -> Result<Option<String>, ()> {
+        let token = crate::accounts::secret(VAULT_KEY).ok_or(())?;
+        match call("GET", &format!("/secrets/compte-{store}"), Some(&token), None) {
+            Ok(v) => Ok(v["value"].as_str().map(str::trim).filter(|s| !s.is_empty() && s.len() <= 4096).map(String::from)),
+            Err(CallError::Status(404)) => Ok(None),
+            Err(CallError::Unauthorized) => {
+                self.forget();
+                Err(())
+            }
+            Err(_) => Err(()),
+        }
+    }
+
+    fn put(&self, store: &str, secret: Option<&str>) -> bool {
+        let Some(token) = crate::accounts::secret(VAULT_KEY) else { return false };
+        let path = format!("/secrets/compte-{store}");
+        let res = match secret {
+            Some(v) => call("PUT", &path, Some(&token), Some(&json!({ "value": v }))),
+            None => call("DELETE", &path, Some(&token), None),
+        };
+        if res.is_err() {
+            log::warn!("compte Hangar : connexion {store} pas partagée avec le compte");
+        }
+        res.is_ok()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

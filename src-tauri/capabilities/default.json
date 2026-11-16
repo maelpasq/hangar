@@ -64,6 +64,7 @@
     "allow-cloud-pull-sessions",
     "allow-cloud-push-sessions",
     "allow-cloud-sync-steamgriddb",
+    "allow-cloud-sync-launchers",
     "allow-cloud-set-profile",
     "allow-cloud-set-avatar",
     "allow-cloud-remove-avatar",

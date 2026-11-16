@@ -44,7 +44,7 @@ Base : `PersistedState` (`src/lib/types.ts`). Les identifiants `steam:`, `epic:`
 - préférences « de goût » : `autoCovers`, `showUninstalled`, `webGames`, `discordPresence`, `startPage`
 - `sessions` et `totals` (section 6), `webPlayed`, `firstSeen`
 - les jeux locaux et manuels, sous forme portable (section 4)
-- la clé SteamGridDB, chiffrée (voir ci-dessous)
+- la clé SteamGridDB et les connexions des launchers, chiffrées (voir ci-dessous)
 
 **Reste sur le poste**
 - `localFolders`, `steamIdCache`, `disabledStores`, `onboarded`, `lastVersion`
@@ -56,6 +56,13 @@ Base : `PersistedState` (`src/lib/types.ts`). Les identifiants `steam:`, `epic:`
 - Côté serveur, elle est chiffrée (AES-GCM) avec une clé de chiffrement rangée dans les secrets du Worker, jamais dans Turso : une fuite de la base seule ne la révèle pas.
 - Route dédiée, hors de la synchro générale : elle n'apparaît ni dans `/sync`, ni dans l'export, ni dans le profil.
 - Sur un nouveau poste connecté sans clé dans son coffre, Hangar la récupère et l'y range. Saisir, changer ou supprimer la clé sur un poste met à jour le compte ; se déconnecter la laisse dans le coffre du poste.
+
+**Connexions des launchers** (Steam, GOG, Epic, Xbox ; demande de l'utilisateur : ne pas tout reconnecter sur chaque PC)
+- Même mécanisme que la clé SteamGridDB : secrets `compte-<store>` chiffrés sur le serveur, hors de la synchro et de l'export, envoyés et reçus par le backend Rust seulement (`accounts::Shared`, implémenté par `cloud::Cloud`).
+- Un launcher connecté sur un poste l'est sur tous à la synchro suivante ; déconnecté sur un poste, il l'est partout. Les connexions d'avant cette version sont partagées à la première synchro.
+- Jetons renouvelés (GOG, Epic, Xbox) : le poste qui renouvelle envoie le nouveau ; un poste dont le jeton est refusé reprend celui du compte.
+- Steam : la clé part avec le SteamID64 du poste (`clé:id`), pour un poste où Steam n'a jamais été ouvert.
+- Xbox seulement sous Windows (et dans les builds qui ont l'identifiant Microsoft).
 
 ## 4. Jeux locaux et manuels sur un autre PC
 
@@ -118,7 +125,7 @@ Routes prévues :
 - `GET /sync?since=<curseur>` : changements depuis le curseur
 - `POST /sync` : envoi groupé de changements
 - `POST /sessions` : sessions de jeu
-- `GET`, `PUT`, `DELETE /secrets/steamgriddb` : clé SteamGridDB, chiffrée au repos
+- `GET`, `PUT`, `DELETE /secrets/<nom>` : clé SteamGridDB (`steamgriddb`) et connexions des launchers (`compte-steam`, `compte-gog`, `compte-epic`, `compte-xbox`), chiffrées au repos
 - `GET /export` : toutes les données (JSON)
 - `DELETE /me` : suppression du compte et de toutes ses données
 

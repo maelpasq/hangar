@@ -94,7 +94,13 @@ class Art {
     let p = this.auto.get(memo);
     if (!p) {
       const refresh = this.refreshNext.delete(g.id);
-      p = api.findArtwork(g.id, refresh).catch(() => ({ cover: null, hero: null, source: '' }));
+      // Jeu d'un autre PC : absent du scan, le backend ne le connaît pas. Recherche par son nom
+      // (Steam, SteamGridDB...), comme pour les jeux d'un ami.
+      p = (g.elsewhere ? api.findSocialArtwork(g.id, g.name) : api.findArtwork(g.id, refresh)).catch(() => ({
+        cover: null,
+        hero: null,
+        source: ''
+      }));
       this.auto.set(memo, p);
     }
     return p;

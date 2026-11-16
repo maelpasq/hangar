@@ -42,7 +42,8 @@ const DEVICE_ID = /^[0-9a-f]{32}$/;
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 const STATE = /^[A-Za-z0-9_-]{8,128}$/;
 const KEY = /^[a-z]+:.+$/s;
-const SECRET_NAMES = ['steamgriddb'];
+// Clé SteamGridDB, et connexions des launchers partagées entre les postes (clé Steam, jetons).
+const SECRET_NAMES = ['steamgriddb', 'compte-steam', 'compte-gog', 'compte-epic', 'compte-xbox'];
 const bytes = (b64: string) => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
 const FONT = bytes(GEIST_WOFF2);
 const LOGO = bytes(LOGO_PNG);
@@ -491,7 +492,7 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     return c.json({ cursor: bumped[0]?.cursor ?? 0 });
   });
 
-  // --- Secrets (clé SteamGridDB), chiffrés au repos, hors de la synchro et de l'export ---
+  // --- Secrets (clé SteamGridDB, connexions des launchers), chiffrés au repos, hors de la synchro et de l'export ---
 
   const secretName = (name: string) => (SECRET_NAMES.includes(name) ? name : null);
   const secretOf = (me: Device, name: string) => and(eq(secrets.userId, me.userId), eq(secrets.name, name));
@@ -509,7 +510,8 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     const me = c.get('device');
     const name = secretName(c.req.param('name'));
     const body: unknown = await c.req.json().catch(() => null);
-    const plain = isObject(body) ? str(body.value, 512) : null;
+    // Jeton de rafraîchissement Microsoft : jusqu'à quelques milliers de caractères.
+    const plain = isObject(body) ? str(body.value, 4096) : null;
     if (!name) return c.json({ error: 'introuvable' }, 404);
     if (!plain) return c.json({ error: 'requete' }, 400);
     const sealed = await seal(env.SECRETS_KEY, `${me.userId}:${name}`, plain);

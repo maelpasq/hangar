@@ -3,6 +3,7 @@
 // `util/cloud-sync.ts`.
 
 import { api } from '../api';
+import { art } from '../art.svelte';
 import type { CloudChange, CloudStatus } from '../types';
 import {
   ackPushed,
@@ -174,7 +175,11 @@ class Cloud {
       if (key !== null && key !== s.prefs.steamGridDb) {
         s.prefs.steamGridDb = key;
         library.save();
+        // Clé récupérée du compte : les jaquettes déjà cherchées sans elle sont recherchées à nouveau.
+        art.reset();
       }
+      // Launchers connectés ou déconnectés sur un autre poste (le scan suit, `accounts://synced`).
+      await api.cloudSyncLaunchers().catch((e) => console.warn('cloud_sync_launchers', message(e)));
       this.phase = 'idle';
       this.lastSync = Date.now();
       if (this.status.offline) this.status = { ...this.status, offline: false };

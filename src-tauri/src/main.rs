@@ -143,6 +143,10 @@ fn main() {
             }
             let art = Arc::new(art::Art::new(&paths.cache));
             let artworks = Arc::new(artwork::Artworks::new(art.clone(), &paths.cache));
+            let accounts = Arc::new(accounts::Accounts::new(&paths.config));
+            let cloud = Arc::new(cloud::Cloud::new(&paths.config));
+            // Connexions des launchers partagées par le compte Hangar.
+            accounts.set_shared(cloud.clone());
             let ctx = commands::Ctx {
                 info: Arc::new(info::Infos::new(art.clone(), artworks.clone(), &paths.cache)),
                 artwork: artworks,
@@ -151,8 +155,8 @@ fn main() {
                 tracker: tracker::Tracker::start(app.handle().clone()),
                 known: state::Known::default(),
                 xbox_busy: Arc::new(AtomicBool::new(false)),
-                accounts: Arc::new(accounts::Accounts::new(&paths.config)),
-                cloud: Arc::new(cloud::Cloud::new(&paths.config)),
+                accounts,
+                cloud,
                 presence: Arc::default(),
                 granted: state::Granted::default(),
                 paths,
@@ -185,6 +189,7 @@ fn main() {
             commands::cloud_pull_sessions,
             commands::cloud_push_sessions,
             commands::cloud_sync_steamgriddb,
+            commands::cloud_sync_launchers,
             commands::cloud_set_profile,
             commands::cloud_set_avatar,
             commands::cloud_remove_avatar,

@@ -288,6 +288,16 @@ describe('compte', () => {
     expect((await call('/secrets/steamgriddb', { token: a })).status).toBe(404);
   });
 
+  it('partage les connexions des launchers entre les postes', async () => {
+    const jeton = 'r'.repeat(3000);
+    expect((await call('/secrets/compte-xbox', { method: 'PUT', token: a, body: { value: jeton } })).status).toBe(200);
+    expect((await json(await call('/secrets/compte-xbox', { token: b }))).value).toBe(jeton);
+    expect((await call('/secrets/compte-gog', { method: 'PUT', token: a, body: { value: 'x'.repeat(5000) } })).status).toBe(400);
+    expect((await call('/secrets/compte-autre', { method: 'PUT', token: a, body: { value: 'x' } })).status).toBe(404);
+    expect((await call('/secrets/compte-xbox', { method: 'DELETE', token: b })).status).toBe(200);
+    expect((await call('/secrets/compte-xbox', { token: a })).status).toBe(404);
+  });
+
   it('gère le profil : pseudo et avatar', async () => {
     const me = await json(await call('/me', { token: a }));
     expect(me.user.avatar).toBe(null);

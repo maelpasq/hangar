@@ -459,6 +459,7 @@ export function mockApi(): Api {
       for (const s of sessions) if (!remoteSessions.some((x) => x.id === s.id)) remoteSessions.push({ ...s, deviceId: 'a'.repeat(32) });
     },
     cloudSyncSteamGridDb: async () => false,
+    cloudSyncLaunchers: async () => {},
     cloudSetProfile: async (name) => {
       await wait(300);
       if (!cloud.user) throw "Ce poste n'est pas connecté au compte.";
