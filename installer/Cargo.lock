@@ -1166,7 +1166,7 @@ dependencies = [
 
 [[package]]
 name = "hangar-setup"
-version = "1.2.28+4"
+version = "1.2.28+5"
 dependencies = [
  "serde",
  "tauri",
