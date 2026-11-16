@@ -56,6 +56,8 @@ pub fn hash(s: &str) -> String {
 const ALLOWED_SUFFIXES: &[&str] = &["steamstatic.com", "epicgames.com", "gog-statics.com", "steamgriddb.com"];
 const ALLOWED_HOSTS: &[&str] = &[
     "store.steampowered.com",
+    // Site officiel d'un jeu d'un autre PC, quand on l'installe ici (jamais en arrière-plan).
+    "www.wikidata.org",
     "api.gog.com",
     "gamesdb.gog.com",
     "images.gog.com",
@@ -71,6 +73,34 @@ pub fn allowed_url(url: &str) -> bool {
     }
     ALLOWED_HOSTS.contains(&host.as_str())
         || ALLOWED_SUFFIXES.iter().any(|s| host == *s || host.ends_with(&format!(".{s}")))
+}
+
+/// Site d'un jeu tel que Steam le donne (`http://jeu.com`, `www.jeu.com`...) passé en https ;
+/// une adresse vide ou une page Steam ne compte pas.
+fn website_link(raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    let rest = ["https://", "http://"]
+        .iter()
+        .find_map(|p| raw.get(..p.len()).filter(|h| h.eq_ignore_ascii_case(p)).map(|_| &raw[p.len()..]))
+        .unwrap_or(raw);
+    let url = crate::scanner::links::https(&format!("https://{rest}"))?;
+    let host = url[8..].split(['/', '?', '#']).next().unwrap_or("").to_lowercase();
+    let steam = ["steampowered.com", "steamcommunity.com"].iter().any(|s| host == *s || host.ends_with(&format!(".{s}")));
+    (!steam).then_some(url)
+}
+
+/// Éléments Wikidata (`Q123`) d'une recherche dont le nom ou l'alias trouvé est exactement `target`.
+fn wikidata_matches(v: &serde_json::Value, target: &str) -> Vec<String> {
+    let same = |s: Option<&serde_json::Value>| s.and_then(|s| s.as_str()).is_some_and(|s| crate::scanner::norm(s) == target);
+    let Some(items) = v.get("search").and_then(|s| s.as_array()) else { return vec![] };
+    items
+        .iter()
+        .filter(|i| same(i.get("label")) || same(i.get("match").and_then(|m| m.get("text"))))
+        .filter_map(|i| i.get("id")?.as_str())
+        .filter(|id| id.len() > 1 && id.starts_with('Q') && id[1..].bytes().all(|b| b.is_ascii_digit()))
+        .map(str::to_string)
+        .take(5)
+        .collect()
 }
 
 /// Adresse d'une redirection : absolue, ou relative à l'hôte de la requête.
@@ -305,6 +335,44 @@ impl Art {
         self.store_search(&clean).into_iter().find(|h| crate::scanner::norm(&h.name) == target).map(|h| h.id)
     }
 
+    /// Site officiel d'un jeu d'après sa fiche Steam (champ `website`), en https.
+    /// Erreur : Steam injoignable (à retenter plus tard, contrairement à `Ok(None)`).
+    pub fn official_site(&self, app_id: u32) -> Result<Option<String>, String> {
+        let url = format!("https://store.steampowered.com/api/appdetails?appids={app_id}&filters=basic&l=english&cc=US");
+        let v = self.get_json(&url, None).map_err(|_| "Steam injoignable".to_string())?;
+        let site = v.get(app_id.to_string()).and_then(|a| a.get("data")?.get("website")?.as_str());
+        Ok(site.and_then(website_link))
+    }
+
+    /// Site officiel d'un jeu ou d'un logiciel (Lunar Client...) d'après Wikidata (propriété P856),
+    /// seulement pour un élément dont le nom ou un alias est exactement celui du jeu.
+    pub fn wikidata_site(&self, name: &str) -> Result<Option<String>, String> {
+        let clean = clean_name(name);
+        let target = crate::scanner::norm(&clean);
+        if target.is_empty() {
+            return Ok(None);
+        }
+        let down = |_| "Wikidata injoignable".to_string();
+        let url = format!(
+            "https://www.wikidata.org/w/api.php?action=wbsearchentities&search={}&language=en&uselang=en&type=item&limit=7&format=json",
+            urlencode(clean.trim())
+        );
+        let v = self.get_json(&url, None).map_err(down)?;
+        let ids = wikidata_matches(&v, &target);
+        if ids.is_empty() {
+            return Ok(None);
+        }
+        let url = format!(
+            "https://www.wikidata.org/w/api.php?action=wbgetentities&ids={}&props=claims&format=json",
+            ids.join("%7C")
+        );
+        let v = self.get_json(&url, None).map_err(down)?;
+        Ok(ids.iter().find_map(|id| {
+            let claims = v.get("entities")?.get(id)?.get("claims")?.get("P856")?.as_array()?;
+            claims.iter().find_map(|c| website_link(c.get("mainsnak")?.get("datavalue")?.get("value")?.as_str()?))
+        }))
+    }
+
     /// 5 premiers résultats de recherche Steam ; un nombre est pris comme ID direct.
     pub fn search_steam(&self, query: &str) -> Vec<SteamHit> {
         let q = query.trim();
@@ -523,6 +591,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn site_officiel_en_https() {
+        assert_eq!(website_link("http://www.celestegame.com").as_deref(), Some("https://www.celestegame.com"));
+        assert_eq!(website_link(" HTTPS://hollowknight.com/ ").as_deref(), Some("https://hollowknight.com/"));
+        assert_eq!(website_link("www.outerwilds.com").as_deref(), Some("https://www.outerwilds.com"));
+        assert_eq!(website_link(""), None);
+        assert_eq!(website_link("pas un site"), None);
+        assert_eq!(website_link("https://store.steampowered.com/app/1"), None);
+        assert_eq!(website_link("javascript:alert(1)"), None);
+    }
+
+    #[test]
+    fn wikidata_nom_exact() {
+        let v = serde_json::json!({ "search": [
+            { "id": "Q1", "label": "Lunar Client" },
+            { "id": "Q2", "label": "GameMaker", "match": { "text": "Animo" } },
+            { "id": "Q3", "label": "Lunar Clients" },
+            { "id": "P4", "label": "Lunar Client" }
+        ] });
+        assert_eq!(wikidata_matches(&v, &crate::scanner::norm("Lunar Client")), vec!["Q1"]);
+        assert_eq!(wikidata_matches(&v, &crate::scanner::norm("animo")), vec!["Q2"]);
+    }
+
+    #[test]
     fn hotes_autorises() {
         assert!(allowed_url("https://shared.steamstatic.com/store_item_assets/steam/apps/1/library_hero.jpg"));
         assert!(allowed_url("https://cdn.cloudflare.steamstatic.com/steam/apps/1/header.jpg"));
@@ -611,5 +702,7 @@ mod reseau {
         assert!(miss.is_none());
         assert_eq!(art.resolve_steam_id("Hollow Knight"), Some(367520));
         assert!(art.search_steam("Factorio").iter().any(|h| h.id == 427520));
+        assert_eq!(art.official_site(504230), Ok(Some("https://www.celestegame.com".into())));
+        assert_eq!(art.wikidata_site("Lunar Client"), Ok(Some("https://www.lunarclient.com/".into())));
     }
 }

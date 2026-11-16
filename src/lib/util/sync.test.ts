@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { Game } from '../types';
 import { defaultState, normalizeState } from './state';
-import { httpsLink, installLink, linkDomain, portableId, portableOf, signature, stampChanges, syncEntries } from './sync';
+import {
+  httpsLink,
+  installChoices,
+  installLink,
+  linkDomain,
+  officialSiteToFind,
+  portableId,
+  portableOf,
+  signature,
+  stampChanges,
+  syncEntries,
+  wikidataKey
+} from './sync';
 
 const local = (over: Partial<Game> = {}): Game => ({
   id: 'local:d:\\jeux\\celeste',
@@ -36,6 +48,36 @@ describe('lien d\'installation', () => {
     s.installLinks[g.id] = '';
     expect(installLink(s, g)).toBeNull();
     expect(installLink(s, { ...g, id: 'steam:504230', store: 'steam' })).toBeNull();
+  });
+
+  it('site officiel de la fiche Steam avant la page Steam, à chercher une seule fois', () => {
+    const s = defaultState();
+    const g = local({ steamAppId: 504230 });
+    expect(officialSiteToFind(s, g)).toBe(504230);
+    s.officialSites['504230'] = '';
+    expect(officialSiteToFind(s, g)).toBeNull();
+    expect(installLink(s, g)).toBe('https://store.steampowered.com/app/504230');
+    s.officialSites['504230'] = 'https://www.celestegame.com';
+    expect(installLink(s, g)).toBe('https://www.celestegame.com');
+    // Lien trouvé au scan : rien à chercher.
+    expect(officialSiteToFind(defaultState(), local({ steamAppId: 504230, installUrl: 'https://exok.com/' }))).toBeNull();
+  });
+
+  it('popup Installer : sites officiels, page Steam à part', () => {
+    const s = defaultState();
+    const pid = '@lunarclient.exe|lunar client';
+    s.portable[pid] = { name: 'Lunar Client', exe: 'lunarclient.exe', dir: 'lunar client' };
+    const ghost = { ...local(), id: pid, name: 'Lunar Client', store: 'manual' as const, elsewhere: true, notInstalled: true };
+    expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({ sites: [], steam: null });
+    s.officialSites[wikidataKey(' Lunar  CLIENT ')] = 'https://www.lunarclient.com/';
+    expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({ sites: ['https://www.lunarclient.com/'], steam: null });
+    // Lien de l'autre PC (page Steam) : rangé à part ; site de la fiche Steam en tête, un par domaine.
+    s.portable[pid] = { ...s.portable[pid], steamAppId: 7, installUrl: 'https://store.steampowered.com/app/7' };
+    s.officialSites['7'] = 'https://lunarclient.com/download';
+    expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({
+      sites: ['https://lunarclient.com/download'],
+      steam: 'https://store.steampowered.com/app/7'
+    });
   });
 });
 

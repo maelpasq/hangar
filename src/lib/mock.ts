@@ -185,6 +185,8 @@ export function mockApi(): Api {
     [
       { key: 'game:@hollow_knight.exe|hollow knight', value: JSON.stringify({ name: 'Hollow Knight', steamAppId: 367520, installUrl: 'https://www.hollowknight.com/' }), updatedAt: Date.now() - 3 * day },
       { key: 'game:@outer.exe|outer wilds', value: JSON.stringify({ name: 'Outer Wilds', steamAppId: null, installUrl: null }), updatedAt: Date.now() - 3 * day },
+      // Pas sur Steam : son site vient de Wikidata.
+      { key: 'game:@lunar client.exe|lunar client', value: JSON.stringify({ name: 'Lunar Client', steamAppId: null, installUrl: null }), updatedAt: Date.now() - 3 * day },
       { key: 'fav:@hollow_knight.exe|hollow knight', value: 'true', updatedAt: Date.now() - 2 * day },
       { key: 'collection:cdemo', value: JSON.stringify({ name: 'Sur le portable', games: ['@hollow_knight.exe|hollow knight', '@outer.exe|outer wilds'] }), updatedAt: Date.now() - 2 * day },
       // Temps de jeu du portable (temps cumulé et détail par PC).
@@ -306,6 +308,8 @@ export function mockApi(): Api {
     onTrayLaunch: async () => () => {},
     onPadGuide: async () => () => {},
     resolveSteamId: async () => null,
+    officialSite: async (appId) => ({ 367520: 'https://hollowknight.com', 504230: 'https://www.celestegame.com' })[appId] ?? null,
+    wikidataSite: async (name) => (/lunar client/i.test(name) ? 'https://www.lunarclient.com/' : null),
     searchSteam: async (query) => {
       await wait(250);
       const q = query.trim().toLowerCase();

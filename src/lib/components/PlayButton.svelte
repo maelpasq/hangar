@@ -2,7 +2,6 @@
   // Bouton Jouer couleur d'accent (« Installer » pour un jeu non installé, « Mettre à jour le jeu »
   // avec `update` quand une mise à jour attend).
   import { updateGame } from '../actions';
-  import { elsewhereLabel } from '../ghosts';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import Icon from './Icon.svelte';
@@ -15,15 +14,12 @@
   }: { gameId: string; large?: boolean; label?: string; update?: boolean } = $props();
 
   const toInstall = $derived(!!library.get(gameId)?.notInstalled);
-  const elsewhere = $derived(library.get(gameId)?.elsewhere ? library.get(gameId) : null);
   const toUpdate = $derived(update && !toInstall && !!library.get(gameId)?.updatePending);
 </script>
 
 <button class="play" class:large onclick={() => (toUpdate ? updateGame(gameId) : runner.play(gameId))}>
   {#if runner.busyLabel(gameId)}
     <Icon name="download" size={large ? 18 : 17} stroke={2.2} />{runner.busyLabel(gameId)}
-  {:else if elsewhere}
-    <Icon name={elsewhere.installUrl ? 'globe' : 'folder'} size={large ? 18 : 17} stroke={2.2} />{elsewhereLabel(gameId)}
   {:else if toUpdate}
     <Icon name="download" size={large ? 18 : 17} stroke={2.2} />Mettre à jour le jeu
   {:else if toInstall}

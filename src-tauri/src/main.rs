@@ -221,6 +221,8 @@ fn main() {
             commands::install_targets,
             commands::open_folder,
             commands::resolve_steam_id,
+            commands::official_site,
+            commands::wikidata_site,
             commands::search_steam,
             commands::image,
             commands::find_artwork,

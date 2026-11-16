@@ -78,7 +78,7 @@ Sur un autre poste :
 
 - **Le scan trouve le jeu**, même ailleurs (autre dossier, autre disque) : si l'exécutable et le dossier correspondent à une fiche, le jeu y est rattaché et récupère ses personnalisations.
 - **Le jeu est introuvable** : carte en gris dans la bibliothèque, comme les jeux non installés des launchers (`notInstalled`), avec un badge « Sur un autre PC ». Affichée même si « jeux non installés » est désactivé ? À trancher (section 12).
-  - Bouton principal : « Installer depuis <site> » si un lien existe, sinon « Choisir l'exécutable ».
+  - Bouton principal : « Installer », qui ouvre une popup où la personne choisit : le ou les sites officiels trouvés (en tête), la page Steam à part, « Exécutable local » (rattache à la main) ou « Autre lien… ». À l'ouverture, la popup cherche ce qui manque : site de la fiche Steam (`appdetails`, champ `website`) et Wikidata d'après le nom exact du jeu (propriété P856, pour les jeux absents de Steam comme Lunar Client).
   - Menu du jeu : « J'ai déjà ce jeu : choisir l'exécutable » (rattache à la main) et « Masquer sur ce PC » (le jeu reste sur le compte et les autres postes).
 
 ## 5. Lien d'installation trouvé automatiquement
@@ -87,10 +87,11 @@ Cherché **sur le poste où le jeu est installé**, au moment du scan, puis sync
 
 1. **Registre Windows** (sans réseau) : clés de désinstallation déjà lues par `scanner/installed.rs`, champs `URLInfoAbout`, puis `URLUpdateInfo`, puis `HelpLink`.
 2. **Raccourcis Internet** (sans réseau) : fichiers `.url` dans le dossier du jeu ou son dossier du menu Démarrer.
-3. **Page Steam** : appid déjà trouvé pour les jaquettes (`storesearch`), donc aucun appel en plus.
-4. **Page GOG** : `api.gog.com/products/<id>` (déjà utilisé), champ de lien vers la page produit.
+3. **Site officiel de la fiche Steam** : champ `website` de `store.steampowered.com/api/appdetails` pour l'appid déjà trouvé (cherché une fois en arrière-plan, gardé dans `officialSites`).
+4. **Page Steam** : appid déjà trouvé pour les jaquettes (`storesearch`).
+5. **Page GOG** : `api.gog.com/products/<id>` (déjà utilisé), champ de lien vers la page produit.
 
-Les sources 1 et 2 n'existent que sous Windows ; ailleurs on commence à Steam. Aucune nouvelle adresse réseau.
+Les sources 1 et 2 n'existent que sous Windows ; ailleurs on commence à Steam. Wikidata (`www.wikidata.org`) n'est appelé que depuis la popup « Installer » d'un jeu d'un autre PC, jamais en arrière-plan.
 
 Garde-fous :
 - seuls les liens `https://` sont gardés ;

@@ -269,7 +269,7 @@
           ><Icon name="package" size={17} />Désinstaller</button
         >
       {/if}
-      {#if game.elsewhere && game.installUrl}
+      {#if game.elsewhere}
         <button class="act" onclick={() => attachElsewhere(game.id)}
           ><Icon name="folder" size={17} />J'ai déjà ce jeu : choisir l'exécutable</button
         >

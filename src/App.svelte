@@ -22,6 +22,7 @@
   import ConfirmUninstall from './lib/modals/ConfirmUninstall.svelte';
   import InstallDir from './lib/modals/InstallDir.svelte';
   import InstallLink from './lib/modals/InstallLink.svelte';
+  import InstallChoice from './lib/modals/InstallChoice.svelte';
   import Rename from './lib/modals/Rename.svelte';
   import BugReport from './lib/modals/BugReport.svelte';
   import CloseAsk from './lib/modals/CloseAsk.svelte';
@@ -307,6 +308,8 @@
     <Rename game={modalGame} />
   {:else if ui.modal?.kind === 'installLink' && modalGame}
     <InstallLink game={modalGame} />
+  {:else if ui.modal?.kind === 'installChoice' && modalGame}
+    <InstallChoice game={modalGame} />
   {:else if ui.modal?.kind === 'cover' && modalGame}
     <ChangeCover game={modalGame} />
   {:else if ui.modal?.kind === 'stop' && modalGame}

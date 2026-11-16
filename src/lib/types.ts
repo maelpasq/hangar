@@ -212,6 +212,8 @@ export interface PersistedState {
   customCovers: Record<string, string>;
   /** gameId -> appid Steam (0 = introuvable) */
   steamIdCache: Record<string, number>;
+  /** Site officiel des jeux hors store ("" : aucun) : appid -> lu sur sa fiche Steam, "wd:<nom>" -> trouvé sur Wikidata. */
+  officialSites: Record<string, string>;
   firstSeen: Record<string, number>;
   /** id du jeu web (web-games.json) -> dernier lancement */
   webPlayed: Record<string, number>;

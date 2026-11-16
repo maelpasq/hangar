@@ -35,6 +35,8 @@
     "allow-install-targets",
     "allow-open-folder",
     "allow-resolve-steam-id",
+    "allow-official-site",
+    "allow-wikidata-site",
     "allow-search-steam",
     "allow-image",
     "allow-find-artwork",

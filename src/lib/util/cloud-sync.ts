@@ -4,7 +4,7 @@
 
 import type { CloudChange, CloudSession, Collection, DeviceTime, Game, PersistedState, PortableGame, Prefs } from '../types';
 import { DEVICE_ID, SESSION_DAYS } from './state';
-import { httpsLink, isGhostId, portableId, profileGamesOf, SYNC_PREFS, syncEntries } from './sync';
+import { httpsLink, installLink, isGhostId, portableId, profileGamesOf, SYNC_PREFS, syncEntries } from './sync';
 
 /** Limites de l'API (server/src/app.ts) : un élément plus gros bloquerait tout l'envoi. */
 export const MAX_CHANGES = 1000;
@@ -323,7 +323,7 @@ export function ghostGames(s: PersistedState): Game[] {
   const out: Game[] = [];
   for (const [pid, f] of Object.entries(s.portable)) {
     if (!isGhostId(pid) || real.has(pid)) continue;
-    out.push({
+    const ghost: Game = {
       id: pid,
       name: f.name,
       store: 'manual',
@@ -335,9 +335,10 @@ export function ghostGames(s: PersistedState): Game[] {
       processNames: [],
       genre: null,
       notInstalled: true,
-      elsewhere: true,
-      ...(f.installUrl ? { installUrl: f.installUrl } : {})
-    });
+      elsewhere: true
+    };
+    const url = installLink(s, ghost);
+    out.push(url ? { ...ghost, installUrl: url } : ghost);
   }
   return out;
 }

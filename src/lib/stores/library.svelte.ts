@@ -6,7 +6,17 @@ import type { Collection, Game, PersistedState, Session, StoreId, Totals } from 
 import { dedupe } from '../util/games';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
 import { adoptGhosts, ghostGames, measuredMs, remoteTimes } from '../util/cloud-sync';
-import { installLink, isGhostId, portableOf, stampChanges, syncEntries } from '../util/sync';
+import {
+  installChoices,
+  installLink,
+  isGhostId,
+  officialSiteToFind,
+  portableOf,
+  stampChanges,
+  steamIdOf,
+  syncEntries,
+  wikidataKey
+} from '../util/sync';
 
 const EMPTY_TOTALS: Totals = { playMs: 0, launches: 0, lastPlayed: 0 };
 
@@ -185,6 +195,8 @@ class Library {
     if (!this.loaded) return;
     this.entries = syncEntries(this.state);
     this.save();
+    // Jeux d'un autre PC arrivés avec la synchro : leur site officiel.
+    this.findOfficialSites();
   }
 
   /** Enregistre l'état (regroupe les écritures rapprochées). */
@@ -292,6 +304,7 @@ class Library {
     }
     if (adoptGhosts(this.state)) changed = true;
     if (changed) this.save();
+    this.findOfficialSites();
   }
 
   /** Met à jour la fiche portable d'un jeu local ou manuel ; vrai si elle a changé. */
@@ -300,6 +313,67 @@ class Library {
     if (!fiche || JSON.stringify(fiche) === JSON.stringify(this.state.portable[g.id])) return false;
     this.state.portable[g.id] = fiche;
     return true;
+  }
+
+  private officialQueue: number[] = [];
+  private officialJob: Promise<void> | null = null;
+
+  /** Cherche en arrière-plan, un à la fois, le site officiel des jeux hors store qui n'ont au mieux que leur page Steam. */
+  private findOfficialSites(): void {
+    for (const g of this.all) {
+      const appid = officialSiteToFind(this.state, g);
+      if (appid && !this.officialQueue.includes(appid)) this.officialQueue.push(appid);
+    }
+    this.officialJob ??= this.pumpOfficial().finally(() => (this.officialJob = null));
+  }
+
+  private async pumpOfficial(): Promise<void> {
+    let found = false;
+    while (this.officialQueue.length) {
+      const appid = this.officialQueue.shift()!;
+      if (appid in this.state.officialSites) continue;
+      try {
+        this.state.officialSites[appid] = (await api.officialSite(appid)) ?? '';
+        found = true;
+      } catch (e) {
+        // Steam injoignable : on réessaiera au prochain scan.
+        console.warn('official_site', e);
+        this.officialQueue = [];
+      }
+    }
+    if (!found) return;
+    // Le lien des jeux locaux change : leur fiche synchronisée aussi.
+    for (const g of this.all) this.refreshPortable(g);
+    this.save();
+  }
+
+  /**
+   * Liens proposés pour installer un jeu hors store (popup « Installer ») : les sites officiels
+   * trouvés (lien choisi ou trouvé au scan, fiche Steam, Wikidata), puis la page Steam à part.
+   */
+  installChoices(g: Game): { sites: string[]; steam: string | null } {
+    return installChoices(this.state, g, [g.name, this.name(g)]);
+  }
+
+  /** Cherche les sites officiels pas encore cherchés pour la popup « Installer ». Erreur : réseau. */
+  async findInstallChoices(g: Game): Promise<void> {
+    const appid = steamIdOf(this.state, g);
+    const jobs: Promise<unknown>[] = [];
+    if (appid && !(appid in this.state.officialSites)) {
+      if (!this.officialQueue.includes(appid)) this.officialQueue.push(appid);
+      this.officialJob ??= this.pumpOfficial().finally(() => (this.officialJob = null));
+      jobs.push(this.officialJob);
+    }
+    for (const name of new Set([g.name, this.name(g)])) {
+      const key = wikidataKey(name);
+      if (!key || key in this.state.officialSites) continue;
+      jobs.push(api.wikidataSite(name).then((url) => (this.state.officialSites[key] = url ?? '')));
+    }
+    if (!jobs.length) return;
+    const done = await Promise.allSettled(jobs);
+    this.save();
+    const failed = done.find((r) => r.status === 'rejected');
+    if (failed) throw failed.reason;
   }
 
   /** Lien d'installation d'un jeu hors store (null : aucun). */

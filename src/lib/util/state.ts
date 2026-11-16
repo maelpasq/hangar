@@ -18,6 +18,7 @@ export function defaultState(): PersistedState {
     renames: {},
     customCovers: {},
     steamIdCache: {},
+    officialSites: {},
     firstSeen: {},
     webPlayed: {},
     totals: {},
@@ -105,6 +106,9 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   s.renames = strMap(raw.renames);
   s.customCovers = strMap(raw.customCovers);
   s.steamIdCache = numMap(raw.steamIdCache);
+  for (const [key, url] of Object.entries(strMap(raw.officialSites))) {
+    if (/^(\d+|wd:.{1,200})$/.test(key) && (url === '' || httpsLink(url))) s.officialSites[key] = url;
+  }
   s.firstSeen = numMap(raw.firstSeen);
   s.webPlayed = numMap(raw.webPlayed);
   s.localFolders = strArr(raw.localFolders);

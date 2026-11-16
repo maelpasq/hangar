@@ -70,6 +70,10 @@ export interface Api {
   onPadGuide(cb: (what: 'open' | 'close') => void): Promise<() => void>;
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
+  /** Site officiel d'un jeu d'après sa fiche Steam (null : aucun). */
+  officialSite(appId: number): Promise<string | null>;
+  /** Site officiel d'un jeu d'après Wikidata, cherché par son nom exact (null : aucun). */
+  wikidataSite(name: string): Promise<string | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
   /** Jaquette et bannière d'un jeu, toutes sources confondues (store, Steam, SteamGridDB). */
   findArtwork(gameId: string, refresh: boolean): Promise<Artwork>;
@@ -237,6 +241,8 @@ async function tauriApi(): Promise<Api> {
     onPadGuide: (cb) => on<string>('pad://guide', (w) => cb(w === 'close' ? 'close' : 'open')),
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
+    officialSite: (appId) => invoke('official_site', { appId }),
+    wikidataSite: (name) => invoke('wikidata_site', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),
     setSteamGridKey: (key) => invoke('set_steamgriddb_key', { key }),
     findArtwork: async (gameId, refresh) => artworkOf(await invoke<Parameters<typeof artworkOf>[0]>('find_artwork', { gameId, refresh })),
@@ -360,7 +366,7 @@ const UNTRACKED = new Set<string>([
   'image', 'exeIcon', 'folderSize', 'gameInfo', 'steamAchievements', 'findSocialArtwork', 'padAtLogin',
   'pickExe', 'pickFolder', 'pickImage', 'answerLauncherPrompt', 'connectAccount', 'xboxLoginCancel',
   'cloudLogin', 'cloudCancelLogin', 'cloudCoverHash', 'cloudUploadCover', 'cloudFetchCover', 'socialImage',
-  'socialLive', 'socialNotify', 'appVersion', 'installUpdate'
+  'socialLive', 'socialNotify', 'appVersion', 'installUpdate', 'officialSite', 'wikidataSite'
 ]);
 
 /** Passe chaque appel de `a` par `busy.track` (sauf UNTRACKED, les écouteurs et la fenêtre). */

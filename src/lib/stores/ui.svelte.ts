@@ -9,6 +9,8 @@ export type Modal =
   | { kind: 'add' }
   | { kind: 'rename'; gameId: string }
   | { kind: 'installLink'; gameId: string }
+  /** Jeu d'un autre PC : l'installer depuis son site officiel ou choisir son exécutable. */
+  | { kind: 'installChoice'; gameId: string }
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
   | { kind: 'uninstall'; gameId: string }

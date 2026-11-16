@@ -5,24 +5,11 @@ import { api } from './api';
 import { library } from './stores/library.svelte';
 import { ui } from './stores/ui.svelte';
 import { manualGameFrom } from './util/games';
-import { linkDomain } from './util/sync';
 
-/** Libellé du bouton principal : « Installer depuis celestegame.com » ou « Choisir l'exécutable ». */
-export function elsewhereLabel(id: string): string {
-  const url = library.get(id)?.installUrl;
-  return url ? `Installer depuis ${linkDomain(url)}` : "Choisir l'exécutable";
-}
-
-/** Bouton principal : le site du jeu dans le navigateur s'il est connu, sinon le choix de l'exécutable. */
-export async function playElsewhere(id: string): Promise<void> {
+/** Bouton principal « Installer » : choix entre le site officiel du jeu et son exécutable local. */
+export function playElsewhere(id: string): void {
   ui.menu = null;
-  const g = library.get(id);
-  if (!g?.elsewhere) return;
-  if (g.installUrl) {
-    await api.openGameLink(g.installUrl).catch((e) => ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true }));
-    return;
-  }
-  await attachElsewhere(id);
+  if (library.get(id)?.elsewhere) ui.modal = { kind: 'installChoice', gameId: id };
 }
 
 /** « J'ai déjà ce jeu » : l'exécutable choisi est rattaché au jeu du compte. */

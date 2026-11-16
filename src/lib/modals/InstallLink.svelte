@@ -1,6 +1,6 @@
 <script lang="ts">
   // Lien d'installation d'un jeu hors store : la page où le retrouver. Trouvé automatiquement
-  // (registre, raccourci Internet, page Steam), modifiable, jamais obligatoire.
+  // (registre, raccourci Internet, site officiel ou page Steam), modifiable, jamais obligatoire.
   import Modal from '../components/Modal.svelte';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';

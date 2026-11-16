@@ -731,6 +731,20 @@ pub async fn resolve_steam_id(ctx: Ctxs<'_>, name: String) -> Result<Option<u32>
     blocking(move || art.resolve_steam_id(&name)).await
 }
 
+/// Site officiel d'un jeu d'après sa fiche Steam (jeu hors store, pour l'installer ailleurs).
+#[tauri::command]
+pub async fn official_site(ctx: Ctxs<'_>, app_id: u32) -> Result<Option<String>, String> {
+    let art = ctx.art.clone();
+    blocking(move || art.official_site(app_id)).await?
+}
+
+/// Site officiel d'un jeu d'après Wikidata, cherché par son nom (popup « Installer »).
+#[tauri::command]
+pub async fn wikidata_site(ctx: Ctxs<'_>, name: String) -> Result<Option<String>, String> {
+    let art = ctx.art.clone();
+    blocking(move || art.wikidata_site(&name)).await?
+}
+
 #[tauri::command]
 pub async fn search_steam(ctx: Ctxs<'_>, query: String) -> Result<Vec<SteamHit>, String> {
     let art = ctx.art.clone();
