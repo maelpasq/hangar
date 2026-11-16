@@ -10,12 +10,17 @@
   import Icon, { type IconName } from './Icon.svelte';
   import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
+  import AccountMenu from './AccountMenu.svelte';
   import { cloud } from '../stores/cloud.svelte';
   import { presenceLabel, social } from '../stores/social.svelte';
 
   cloud.load();
 
   let { rail = false }: { rail?: boolean } = $props();
+
+  /** Menu du compte (profil, paramètres du compte, déconnexion). */
+  let accountOpen = $state(false);
+  let accountBtn = $state<HTMLButtonElement>();
 
   const current = $derived(
     ui.screen === 'library'
@@ -194,7 +199,12 @@
     {@const label = `Compte de ${cloud.name}, ${presenceLabel(status).toLowerCase()}${cloud.syncState === 'syncing' ? ' (synchronisation)' : ''}`}
     <button
       class="navb me"
-      onclick={() => ui.settings('account')}
+      class:open={accountOpen}
+      bind:this={accountBtn}
+      onclick={() => (accountOpen = !accountOpen)}
+      aria-haspopup="menu"
+      aria-expanded={accountOpen}
+      aria-controls={accountOpen ? 'account-menu' : undefined}
       aria-label={rail ? label : undefined}
       title={rail ? label : undefined}
     >
@@ -206,6 +216,15 @@
       </span>
       {#if !rail}<span class="ell">{cloud.name}</span>{/if}
     </button>
+    {#if accountOpen && accountBtn}
+      <AccountMenu
+        anchor={accountBtn}
+        onclose={(refocus) => {
+          accountOpen = false;
+          if (refocus) accountBtn?.focus();
+        }}
+      />
+    {/if}
   {:else}
     {@const label = cloud.busy ? 'Connexion en cours' : 'Se connecter'}
     <button
@@ -467,6 +486,12 @@
 
   .me {
     margin-top: 2px;
+  }
+
+  /* Menu du compte ouvert : le bouton reste allumé. */
+  .me.open {
+    background: var(--border-1);
+    color: var(--text);
   }
 
   .me .ell {

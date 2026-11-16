@@ -42,7 +42,8 @@
     | 'bulb'
     | 'gamepad'
     | 'layers'
-    | 'package';
+    | 'package'
+    | 'logout';
 </script>
 
 <script lang="ts">
@@ -131,6 +132,8 @@
     <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
   {:else if name === 'user'}
     <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+  {:else if name === 'logout'}
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
   {:else if name === 'globe'}
     <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
   {:else if name === 'flag'}
