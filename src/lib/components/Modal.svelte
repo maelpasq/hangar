@@ -11,7 +11,8 @@
     maxHeight,
     class: cls = '',
     children,
-    footer
+    footer,
+    hero
   }: {
     title: string;
     onclose: () => void;
@@ -21,6 +22,8 @@
     class?: string;
     children: Snippet;
     footer?: Snippet;
+    /** Bandeau pleine largeur au-dessus du titre (illustration). */
+    hero?: Snippet;
   } = $props();
 
   let box: HTMLDivElement;
@@ -74,6 +77,7 @@
     style:width="min({width}px, calc(100vw - 40px))"
     style:max-height={maxHeight ? `min(${maxHeight}px, calc(100vh - 60px))` : null}
   >
+    {#if hero}{@render hero()}{/if}
     <div class="head">
       <h2 {id}>{title}</h2>
       <button class="ibtn close" aria-label="Fermer" onclick={onclose}><Icon name="x" size={16} /></button>

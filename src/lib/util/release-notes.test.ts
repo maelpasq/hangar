@@ -13,6 +13,7 @@ Une entrée par version.
 
 ### 1.2.10 - 14 novembre 2026
 Accroche de la version.
+<!-- vitrine: social -->
 
 #### Nouveautés
 - **Onglet** : premier point
@@ -46,10 +47,12 @@ describe('notes de version', () => {
       sections: [
         { title: 'Nouveautés', items: ['**Onglet** : premier point qui continue.', 'Deuxième point.'] },
         { title: 'Corrections', items: ['Un bug.'] }
-      ]
+      ],
+      spotlight: 'social'
     });
     expect(all[1].intro).toBe("Ancienne entrée d'un seul paragraphe.");
     expect(all[1].sections).toEqual([]);
+    expect(all[1].spotlight).toBeUndefined();
   });
 
   it('choisit les versions à montrer', () => {

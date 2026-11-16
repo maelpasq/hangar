@@ -14,6 +14,9 @@ export interface ReleaseNotes {
   /** Phrase d'accroche (ou, pour les anciennes versions, toute la description). */
   intro: string;
   sections: NotesSection[];
+  /** Vitrine illustrée en tête de la fenêtre (grosse mise à jour), posée dans l'entrée par une
+   * ligne `<!-- vitrine: nom -->`, invisible dans la release GitHub. */
+  spotlight?: string;
 }
 
 /** Numéro de version montré aux gens : un correctif `1.2.27+1` (semver, seule forme acceptée par
@@ -49,6 +52,9 @@ export function parseReleases(md: string): ReleaseNotes[] {
       out.push(cur);
     } else if (!cur || !line) {
       continue;
+    } else if (/^<!--.*-->$/.test(line)) {
+      const v = /^<!--\s*vitrine\s*:\s*([\w-]+)\s*-->$/.exec(line);
+      if (v) cur.spotlight = v[1];
     } else if (line.startsWith('## ')) {
       cur = null;
     } else if (line.startsWith('#### ')) {
