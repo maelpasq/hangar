@@ -184,7 +184,7 @@ Page de connexion, ses états, page de fin et e-mail du code : `server/src/login
 - Mêmes tokens que l'app (fond `--bg-deep`, texte, accent violet, courbe par défaut), police Geist servie par l'API. Tutoiement.
 - Décor (choix de l'utilisateur, 15 nov. 2026) : la bannière de la marque sans son logo (`design/brand/da-hangar-fond.webp`, tirée de `da-hangar.webp`), en `cover`, fixe, servie par `/login/fond.webp`. Carte centrée par-dessus.
 - Carte : 420 px au plus, rayon 20 px, fond `rgba(20,22,29,.82)` flouté, contour `--border-2`. Logo 52 px centré en haut de la carte, avec halo (mouvement « Halo ») et étoile qui apparaît (courbe de l'« Apparition jaquette »). Titre 28 px / 800 / -0.6 px, aligné à gauche.
-- Bouton principal : accent, 46 px, rayon 14 px, ombre dérivée de l'accent. Discord et Google : boutons secondaires avec un point de couleur, jamais de logo.
+- Bouton principal : accent, 46 px, rayon 14 px, ombre dérivée de l'accent. Discord et Google : boutons secondaires avec le logo officiel du service (18 px, couleurs d'origine) devant le texte.
 - Code : six cases de 51 px (42 puis 34 px sur petit écran), un seul champ réel par-dessus ; la case active prend l'accent, envoi dès le sixième chiffre, secousse et cases rouges sur un code faux, « Renvoyer le code » bloqué 30 s.
 - Pages sans formulaire (réussie, refusée, lien incomplet) : même carte, titre, une phrase, puis une ligne d'état avec un point vert (pulsation « Point en jeu ») ou rouge.
 - E-mail : même carte en tableaux et styles en ligne, logo complet (arche et logotype, `/login/logo.png`, seule image), code en un seul bloc de chiffres espacés pour se copier d'un coup.
