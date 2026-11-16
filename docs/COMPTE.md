@@ -130,7 +130,7 @@ Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui ser
 
 ## 9. Vie privée, RGPD, règles du projet
 
-- Politique de confidentialité sur le site (`site/confidentialite.html`, https://hangar.pamalstudio.fr/confidentialite.html) : données stockées, durée, hébergeurs, droits. Lien dans Paramètres > Compte et en pied de page du site.
+- Politique de confidentialité sur le site (`site/confidentialite.html`, https://hangar.pamalstudio.fr/confidentialite.html) : données stockées, durée, hébergeurs, droits. Lien dans Paramètres > Amis et confidentialité et en pied de page du site.
 - **Durées** (`server/src/lifecycle.ts`, tâche planifiée quotidienne du Worker) : compte sans aucune connexion d'un poste pendant 2 ans supprimé, après un e-mail de rappel 30 jours avant (une connexion entre-temps remet tout à zéro) ; traces de connexion (session du navigateur avec IP, codes, limite de débit) effacées un jour après leur fin ; jaquettes qu'aucun élément ne désigne plus effacées après un jour de grâce.
 - Base Turso en région UE.
 - Export et suppression du compte depuis l'app.

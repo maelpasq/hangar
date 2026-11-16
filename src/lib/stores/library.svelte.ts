@@ -128,7 +128,7 @@ class Library {
     ];
   }
 
-  /** Temps de jeu mesuré sur un poste, tous jeux confondus (Paramètres > Compte). */
+  /** Temps de jeu mesuré sur un poste, tous jeux confondus (Paramètres > Compte et profil). */
   deviceTotal(deviceId: string): number {
     const list = deviceId === this.state.deviceId ? Object.values(this.state.totals) : Object.values(this.state.cloud.times[deviceId] ?? {});
     return list.reduce((sum, t) => sum + t.playMs, 0);

@@ -154,9 +154,9 @@
 
   const sections = $derived<{ id: SectionId; label: string; title?: string; icon: IconName; badge?: number; alert?: boolean }[]>([
     { id: 'general', label: 'Général', icon: 'sliders' },
-    { id: 'account', label: 'Compte', title: 'Compte Hangar', icon: 'user' },
+    { id: 'account', label: 'Compte et profil', icon: 'user' },
     // Amis : seulement avec un compte connecté.
-    ...(cloud.status.connected ? [{ id: 'friends' as const, label: 'Amis', title: 'Amis et confidentialité', icon: 'users' as const }] : []),
+    ...(cloud.status.connected ? [{ id: 'friends' as const, label: 'Amis et confidentialité', icon: 'users' as const }] : []),
     { id: 'appearance', label: 'Apparence', icon: 'sun' },
     { id: 'pad', label: 'Mode manette', icon: 'gamepad' },
     {
@@ -171,9 +171,11 @@
   ]);
   const current = $derived(sections.find((s) => s.id === section) ?? sections[0]);
 
-  const intro: Record<SectionId, string> = {
-    account: 'Facultatif. Hangar reste complet sans compte.',
-    friends: "Tes amis, ce qu'ils voient de toi et ton profil.",
+  const intro = $derived<Record<SectionId, string>>({
+    account: cloud.status.connected
+      ? 'Ton compte, ton profil et tes postes reliés.'
+      : 'Facultatif. Hangar reste complet sans compte.',
+    friends: 'Tes amis, et ce que les autres voient de toi.',
     general: 'Comportement de Hangar et mises à jour.',
     appearance: "Thème et couleur de l'interface.",
     pad: 'Hangar en plein écran, à la manette ou au clavier.',
@@ -181,7 +183,7 @@
       'Les launchers où Hangar cherche tes jeux. Relie un compte pour retrouver aussi ceux qui ne sont pas sur cet appareil.',
     library: 'Dossiers de jeux, ajouts à la main et jeux masqués.',
     covers: 'Où Hangar trouve les jaquettes et les bannières.'
-  };
+  });
 
   function go(id: SectionId) {
     section = id;
@@ -374,15 +376,14 @@
         <div class="groups">
           {#if section === 'account'}
             {@const s = cloud.status}
+            {@const so = social.settings}
             {#if s.connected}
               <section class="group" aria-label="Ton compte">
                 <h3>Ton compte</h3>
                 <div class="srow">
-                  <span class="avatar" aria-hidden="true"
-                    >{#if cloud.avatar}<img src={cloud.avatar} alt="" />{:else}{cloud.initial}{/if}</span
-                  >
+                  <span class="ico"><Icon name="user" size={18} /></span>
                   <span class="txt">
-                    <span class="lbl ell">{cloud.name}</span>
+                    <span class="lbl">Compte Hangar</span>
                     <span class="hint ell">{s.user?.email ?? ''}</span>
                   </span>
                   {#if s.offline}<span class="tag off">Hors ligne</span>{:else}<span class="tag ok">Connecté</span>{/if}
@@ -408,7 +409,7 @@
               <section class="group" aria-label="Profil" aria-busy={profileBusy}>
                 <h3>Profil</h3>
                 <div class="srow">
-                  <span class="ico"><Icon name="user" size={18} /></span>
+                  <span class="ico"><Icon name="edit" size={18} /></span>
                   {#if editingPseudo}
                     <form class="sfield grow" onsubmit={savePseudo}>
                       <label class="sr-only" for="pseudo">Pseudo</label>
@@ -460,6 +461,86 @@
                     >{cloud.avatar ? "Changer l'avatar" : 'Choisir une image'}</button
                   >
                 </div>
+                {#if so}
+                  <div class="srow">
+                    <span class="ico"><Icon name="image" size={18} /></span>
+                    <span class="txt">
+                      <span class="lbl">Bannière du profil</span>
+                      <span class="hint">{so.banner ? 'Affichée en haut de ton profil.' : 'Une image large, recadrée au centre.'}</span>
+                    </span>
+                    <input
+                      bind:this={bannerInput}
+                      id="banner-file"
+                      class="sr-only"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      tabindex="-1"
+                      aria-hidden="true"
+                      onchange={pickBanner}
+                    />
+                    {#if so.banner}
+                      <button class="btn-s" disabled={s.offline || profileBusy} onclick={() => social.removeBanner()}>Retirer</button>
+                    {/if}
+                    <button class="btn-s" disabled={s.offline || profileBusy} onclick={() => bannerInput?.click()}
+                      >{so.banner ? 'Changer' : 'Choisir une image'}</button
+                    >
+                  </div>
+                {/if}
+                <div class="srow">
+                  <span class="ico"><Icon name="star" size={18} /></span>
+                  <span class="txt">
+                    <span class="lbl">Jeux favoris</span>
+                    <span class="hint"
+                      >Jusqu'à {MAX_PROFILE_GAMES}, en haut de ton profil. À part des favoris de ta bibliothèque.</span
+                    >
+                    {#if favs.length}
+                      <span class="feat" role="list" aria-label="Jeux favoris">
+                        {#each favs as g (g.id)}
+                          <span class="fchip on" role="listitem"
+                            >{g.name}<button class="fx" aria-label="Retirer {g.name} des jeux favoris" onclick={() => removeFav(g.id)}
+                              ><Icon name="x" size={12} stroke={2.4} /></button
+                            ></span
+                          >
+                        {/each}
+                      </span>
+                    {/if}
+                  </span>
+                  <button class="btn-s" onclick={() => (ui.modal = { kind: 'profileGames' })}
+                    >{favs.length ? 'Modifier' : 'Choisir'}</button
+                  >
+                </div>
+                {#if library.state.collections.length}
+                  <div class="srow">
+                    <span class="ico"><Icon name="layers" size={18} /></span>
+                    <span class="txt">
+                      <span class="lbl">Collections mises en avant</span>
+                      <span class="hint">Jusqu'à {MAX_FEATURED}, sur ton profil, avec leurs jeux.</span>
+                      <span class="feat" role="group" aria-label="Collections mises en avant">
+                        {#each library.state.collections as c (c.id)}
+                          {@const on = library.state.prefs.showcase.includes(c.id)}
+                          <button class="fchip" class:on aria-pressed={on} onclick={() => toggleFeatured(c.id)}
+                            >{#if on}<Icon name="check" size={13} stroke={2.4} />{/if}{c.name}</button
+                          >
+                        {/each}
+                      </span>
+                    </span>
+                  </div>
+                {/if}
+                {#if so?.enabled}
+                  <div class="srow">
+                    <span class="ico"><Icon name="eye" size={18} /></span>
+                    <span class="txt">
+                      <span class="lbl">Mon profil</span>
+                      <span class="hint">Tel que le voient tes amis, dans Hangar.</span>
+                    </span>
+                    <button class="btn-s" onclick={() => ui.profile(social.me)}>Voir</button>
+                  </div>
+                {:else}
+                  <p class="gdesc">
+                    Ton profil n'est visible que par tes amis : active-les dans Amis et confidentialité pour le
+                    partager.
+                  </p>
+                {/if}
               </section>
 
               <section class="group" aria-label="Postes reliés">
@@ -526,14 +607,6 @@
                     >Supprimer</button
                   >
                 </div>
-                <div class="srow">
-                  <span class="ico"><Icon name="globe" size={18} /></span>
-                  <span class="txt">
-                    <span class="lbl">Politique de confidentialité</span>
-                    <span class="hint">Ce que le compte garde, où, combien de temps, et tes droits.</span>
-                  </span>
-                  <button class="btn-s" onclick={() => api.openLink('privacy').catch(() => {})}>Lire</button>
-                </div>
                 <p class="gdesc">
                   Un compte sans aucune connexion pendant 2 ans est supprimé, après un e-mail de rappel un mois
                   avant.
@@ -560,7 +633,7 @@
             {/if}
           {:else if section === 'friends'}
             {@const so = social.settings}
-            <section class="group" aria-label="Amis" aria-busy={profileBusy}>
+            <section class="group" aria-label="Amis">
               <h3>Amis</h3>
               <div class="srow">
                 <span class="ico"><Icon name="users" size={18} /></span>
@@ -595,9 +668,9 @@
               {/if}
             </section>
 
-            {#if so?.enabled}
-              <section class="group" aria-label="Confidentialité">
-                <h3>Confidentialité</h3>
+            <section class="group" aria-label="Confidentialité">
+              <h3>Confidentialité</h3>
+              {#if so?.enabled}
                 {#each PRIVACY as p (p.key)}
                   <div class="srow">
                     <span class="ico"><Icon name={p.key === 'status' ? 'globe' : p.key === 'game' ? 'gamepad' : p.key === 'play' ? 'refresh' : 'layers'} size={18} /></span>
@@ -612,87 +685,24 @@
                     />
                   </div>
                 {/each}
-                <p class="gdesc">
+              {/if}
+              <div class="srow">
+                <span class="ico"><Icon name="flag" size={18} /></span>
+                <span class="txt">
+                  <span class="lbl">Politique de confidentialité</span>
+                  <span class="hint">Ce que le compte garde, où, combien de temps, et tes droits.</span>
+                </span>
+                <button class="btn-s" onclick={() => api.openLink('privacy').catch(() => {})}>Lire</button>
+              </div>
+              <p class="gdesc">
+                {#if so?.enabled}
                   « Mes amis » : seulement les comptes que tu as acceptés. Tes messages sont chiffrés sur le serveur et
                   supprimés avec ton compte. Un compte bloqué ne te voit plus et ne peut plus t'écrire.
-                </p>
-              </section>
-
-              <section class="group" aria-label="Ton profil" aria-busy={profileBusy}>
-                <h3>Ton profil</h3>
-                <div class="srow">
-                  <span class="ico"><Icon name="star" size={18} /></span>
-                  <span class="txt">
-                    <span class="lbl">Jeux favoris</span>
-                    <span class="hint"
-                      >Jusqu'à {MAX_PROFILE_GAMES}, en haut de ton profil. À part des favoris de ta bibliothèque.</span
-                    >
-                    {#if favs.length}
-                      <span class="feat" role="list" aria-label="Jeux favoris">
-                        {#each favs as g (g.id)}
-                          <span class="fchip on" role="listitem"
-                            >{g.name}<button class="fx" aria-label="Retirer {g.name} des jeux favoris" onclick={() => removeFav(g.id)}
-                              ><Icon name="x" size={12} stroke={2.4} /></button
-                            ></span
-                          >
-                        {/each}
-                      </span>
-                    {/if}
-                  </span>
-                  <button class="btn-s" onclick={() => (ui.modal = { kind: 'profileGames' })}
-                    >{favs.length ? 'Modifier' : 'Choisir'}</button
-                  >
-                </div>
-                {#if library.state.collections.length}
-                  <div class="srow">
-                    <span class="ico"><Icon name="layers" size={18} /></span>
-                    <span class="txt">
-                      <span class="lbl">Collections mises en avant</span>
-                      <span class="hint">Jusqu'à {MAX_FEATURED}, sur ton profil, avec leurs jeux.</span>
-                      <span class="feat" role="group" aria-label="Collections mises en avant">
-                        {#each library.state.collections as c (c.id)}
-                          {@const on = library.state.prefs.showcase.includes(c.id)}
-                          <button class="fchip" class:on aria-pressed={on} onclick={() => toggleFeatured(c.id)}
-                            >{#if on}<Icon name="check" size={13} stroke={2.4} />{/if}{c.name}</button
-                          >
-                        {/each}
-                      </span>
-                    </span>
-                  </div>
+                {:else}
+                  Amis désactivés : personne ne voit ton activité ni ton profil.
                 {/if}
-                <div class="srow">
-                  <span class="ico"><Icon name="image" size={18} /></span>
-                  <span class="txt">
-                    <span class="lbl">Bannière du profil</span>
-                    <span class="hint">{so.banner ? 'Affichée en haut de ton profil.' : 'Une image large, recadrée au centre.'}</span>
-                  </span>
-                  <input
-                    bind:this={bannerInput}
-                    id="banner-file"
-                    class="sr-only"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    tabindex="-1"
-                    aria-hidden="true"
-                    onchange={pickBanner}
-                  />
-                  {#if so.banner}
-                    <button class="btn-s" disabled={profileBusy} onclick={() => social.removeBanner()}>Retirer</button>
-                  {/if}
-                  <button class="btn-s" disabled={profileBusy} onclick={() => bannerInput?.click()}
-                    >{so.banner ? 'Changer' : 'Choisir une image'}</button
-                  >
-                </div>
-                <div class="srow">
-                  <span class="ico"><Icon name="user" size={18} /></span>
-                  <span class="txt">
-                    <span class="lbl">Mon profil</span>
-                    <span class="hint">Tel que le voient tes amis, dans Hangar.</span>
-                  </span>
-                  <button class="btn-s" onclick={() => ui.profile(social.me)}>Voir</button>
-                </div>
-              </section>
-            {/if}
+              </p>
+            </section>
           {:else if section === 'general'}
             <section class="group" aria-label="Comportement">
               <h3>Comportement</h3>
