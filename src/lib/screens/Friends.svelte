@@ -113,7 +113,7 @@
         <form class="search" role="search" onsubmit={(e) => e.preventDefault()}>
           <label for="friend-search">Ajouter un ami</label>
           <div class="sbox">
-            <Icon name="search" size={16} />
+            <Icon name={searching ? 'refresh' : 'search'} size={16} class={searching ? 'spin' : ''} />
             <input
               id="friend-search"
               type="search"

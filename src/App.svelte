@@ -50,6 +50,8 @@
   import { runner } from './lib/stores/runner.svelte';
   import { ui } from './lib/stores/ui.svelte';
   import BlurImage from './lib/components/BlurImage.svelte';
+  import BusyBar from './lib/components/BusyBar.svelte';
+  import { watchGestures } from './lib/stores/busy.svelte';
 
   let search: HTMLInputElement | undefined = $state();
   let width = $state(1440);
@@ -145,6 +147,7 @@
   }
 
   onMount(() => {
+    watchGestures();
     const offs: (() => void)[] = [];
     let alive = true;
     (async () => {
@@ -345,6 +348,7 @@
   {/if}
 
   <Toast />
+  <BusyBar />
 </div>
 
 <style>

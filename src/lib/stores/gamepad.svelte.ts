@@ -2,6 +2,7 @@
 // Le dernier écouteur abonné reçoit les actions (le mode manette passe devant l'app).
 
 import { pressed, REPEATS, type PadAction } from '../util/pad';
+import { busy } from './busy.svelte';
 
 export type { PadAction };
 
@@ -74,6 +75,8 @@ class Pad {
   };
 
   private emit(a: PadAction): void {
+    // Un bouton de manette est un geste : ce qu'il déclenche peut afficher un chargement.
+    busy.gesture(null);
     this.listeners.at(-1)?.(a);
   }
 }

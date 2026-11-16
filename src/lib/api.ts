@@ -351,13 +351,37 @@ async function tauriApi(): Promise<Api> {
 
 export let api: Api;
 
+// Appels jamais montrés comme un chargement : travail de fond (images, infos, sauvegarde,
+// synchro), dialogues et connexions qui attendent l'utilisateur, lancement (LaunchOverlay),
+// mise à jour de Hangar (sa propre progression), fenêtre et écouteurs.
+const UNTRACKED = new Set<string>([
+  'loadState', 'saveState', 'loadLibrary', 'saveLibrary', 'launchGame', 'installProgress', 'steamDownloads',
+  'setTrayRecents', 'trayState', 'trayAction', 'closeMain', 'padBack', 'setPresence', 'gameBarOnButton',
+  'image', 'exeIcon', 'folderSize', 'gameInfo', 'steamAchievements', 'findSocialArtwork', 'padAtLogin',
+  'pickExe', 'pickFolder', 'pickImage', 'answerLauncherPrompt', 'connectAccount', 'xboxLoginCancel',
+  'cloudLogin', 'cloudCancelLogin', 'cloudCoverHash', 'cloudUploadCover', 'cloudFetchCover', 'socialImage',
+  'socialLive', 'socialNotify', 'appVersion', 'installUpdate'
+]);
+
+/** Passe chaque appel de `a` par `busy.track` (sauf UNTRACKED, les écouteurs et la fenêtre). */
+function withBusy(a: Api, track: <T>(p: Promise<T>) => Promise<T>): Api {
+  const out = { ...a } as Record<string, unknown>;
+  for (const [name, fn] of Object.entries(a)) {
+    if (typeof fn !== 'function' || UNTRACKED.has(name) || /^on[A-Z]/.test(name)) continue;
+    out[name] = (...args: unknown[]) => {
+      const r = (fn as (...x: unknown[]) => unknown)(...args);
+      // Jaquette cherchée en fond (sans « Actualiser ») : pas une action.
+      if (!(r instanceof Promise) || (name === 'findArtwork' && !args[1])) return r;
+      return track(r);
+    };
+  }
+  return out as unknown as Api;
+}
+
 /** À appeler une fois au démarrage, avant tout accès à `api`. */
 export async function initApi(): Promise<Api> {
-  if (isTauri()) {
-    api = await tauriApi();
-  } else {
-    const { mockApi } = await import('./mock');
-    api = mockApi();
-  }
+  const raw = isTauri() ? await tauriApi() : (await import('./mock')).mockApi();
+  const { busy } = await import('./stores/busy.svelte');
+  api = withBusy(raw, (p) => busy.track(p));
   return api;
 }

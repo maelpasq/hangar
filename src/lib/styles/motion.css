@@ -73,6 +73,16 @@
   }
 }
 
+/* Barre de chargement sans durée connue : un segment traverse la fenêtre (BusyBar). */
+@keyframes hgSlide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
 @keyframes hgSpin {
   to {
     transform: rotate(360deg);

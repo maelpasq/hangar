@@ -54,6 +54,56 @@ button {
   padding: 0;
 }
 
+/* Bouton dont l'action charge (stores/busy.svelte.ts) : son contenu laisse place à un rond qui tourne,
+   la taille ne bouge pas. Le texte est rendu transparent sans toucher à `color` (le rond la reprend). */
+button[data-hg-busy] {
+  cursor: progress;
+  pointer-events: none;
+}
+
+button[data-hg-busy=''] {
+  -webkit-text-fill-color: transparent;
+}
+
+button[data-hg-busy=''] > * {
+  opacity: 0 !important;
+}
+
+/* Grand bouton (ligne de jeu, tuile) : le contenu reste lisible, atténué, sous un rond plus grand. */
+button[data-hg-busy='block'] > * {
+  opacity: 0.35 !important;
+}
+
+button[data-hg-busy='block'][data-hg-busy]::after {
+  width: 26px !important;
+  height: 26px !important;
+  border-width: 3px !important;
+  color: var(--text);
+}
+
+button[data-hg-busy]::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: 1.15em !important;
+  height: 1.15em !important;
+  box-sizing: border-box;
+  border: 2px solid currentColor !important;
+  border-right-color: transparent !important;
+  border-radius: 50% !important;
+  background: none !important;
+  opacity: 1 !important;
+  transform: none;
+  animation: hgSpin 0.8s linear infinite !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[data-hg-busy]::after {
+    animation: none !important;
+  }
+}
+
 input,
 textarea {
   font: inherit;
