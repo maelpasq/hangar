@@ -6,6 +6,8 @@ import type { Api } from './api';
 import { STORES } from './stores-meta';
 import type { AccountStatus, CloudChange, CloudSession, CloudStatus, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, StoreId } from './types';
 import { RELEASES } from './util/release-notes';
+import { mockSocial } from './mock-social';
+import type { SocialEvent } from './types';
 import { defaultState } from './util/state';
 
 /** Version affichée en démo : la dernière de docs/RELEASES.md. */
@@ -173,6 +175,8 @@ export function mockApi(): Api {
   let xboxWaiting = false;
   let cloud: CloudStatus = { connected: false, offline: false, revoked: false, user: null, devices: [] };
   let cloudCancelled = false;
+  const socialListeners = new Set<(e: SocialEvent) => void>();
+  const social = mockSocial((e) => socialListeners.forEach((l) => l(e)));
   // Serveur de démo : un jeu manuel d'un autre PC (carte « Sur un autre PC ») et une collection.
   const day = 864e5;
   const remote = new Map<string, CloudChange>(
@@ -479,6 +483,22 @@ export function mockApi(): Api {
     cloudDeleteAccount: async () => {
       cloud = { connected: false, offline: false, revoked: false, user: null, devices: [] };
     },
+    social: async <T>(method: string, path: string, body?: unknown) => {
+      if (!cloud.connected) throw "Ce poste n'est pas connecté au compte.";
+      return (await social.handle(method, path, body ?? {})) as T;
+    },
+    socialImage: async () => null,
+    socialBanner: async () => {
+      await wait(500);
+      return (social.settings.banner = Date.now().toString(36));
+    },
+    socialLive: async () => {},
+    socialNotify: async () => {},
+    onSocialEvent: async (cb) => {
+      socialListeners.add(cb);
+      return () => socialListeners.delete(cb);
+    },
+    onSocialLive: async () => () => {},
     openLink: async () => {},
     openGameLink: async () => {},
     reportBug: async () => { await wait(800); },

@@ -28,6 +28,12 @@
   import CloudMerge from './lib/modals/CloudMerge.svelte';
   import ConfirmCloudDelete from './lib/modals/ConfirmCloudDelete.svelte';
   import { cloud } from './lib/stores/cloud.svelte';
+  import { social } from './lib/stores/social.svelte';
+  import Friends from './lib/screens/Friends.svelte';
+  import Profile from './lib/screens/Profile.svelte';
+  import SocialConfirm from './lib/modals/SocialConfirm.svelte';
+  import SocialInvite from './lib/modals/SocialInvite.svelte';
+  import SocialReport from './lib/modals/SocialReport.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import StartPage from './lib/modals/StartPage.svelte';
@@ -190,7 +196,7 @@
         else await whatsNew();
       }
       // Compte Hangar : synchro une fois la bibliothèque chargée.
-      if (!library.loadError) offs.push(cloud.start());
+      if (!library.loadError) offs.push(cloud.start(), social.start());
       await rescan();
       void updater.check(true);
     })();
@@ -271,6 +277,10 @@
         <WebGames />
       {:else if ui.screen === 'settings'}
         <Settings />
+      {:else if ui.screen === 'friends'}
+        <Friends />
+      {:else if ui.screen === 'profile' && ui.profileId}
+        <Profile id={ui.profileId} />
       {/if}
     {/key}
   </main>
@@ -317,6 +327,12 @@
     <CloudMerge resolve={ui.modal.resolve} />
   {:else if ui.modal?.kind === 'cloudDelete'}
     <ConfirmCloudDelete />
+  {:else if ui.modal?.kind === 'socialReport'}
+    <SocialReport userId={ui.modal.userId} name={ui.modal.name} messageId={ui.modal.messageId} />
+  {:else if ui.modal?.kind === 'socialInvite'}
+    <SocialInvite userId={ui.modal.userId} name={ui.modal.name} />
+  {:else if ui.modal?.kind === 'socialConfirm'}
+    <SocialConfirm action={ui.modal.action} userId={ui.modal.userId} name={ui.modal.name} />
   {:else if ui.modal?.kind === 'padSetup'}
     <PadSetup />
   {:else if ui.modal?.kind === 'collections' && modalGame}

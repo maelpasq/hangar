@@ -62,7 +62,7 @@
     <article class="wrap legal" aria-labelledby="t-conf">
       <h1 id="t-conf">Confidentialité</h1>
       <p class="lead">Hangar fonctionne entièrement sur ton ordinateur, sans télémétrie. Le compte Hangar est facultatif : il ne sert qu'à retrouver tes favoris, collections, jaquettes et ton temps de jeu sur tes autres PC.</p>
-      <p class="updated">Mise à jour : 15 novembre 2026</p>
+      <p class="updated">Mise à jour : 16 novembre 2026</p>
       <nav class="toc" aria-label="Sur cette page">
         <a href="#sans-compte">Sans compte</a>
         <a href="#compte">Le compte Hangar</a>
@@ -88,13 +88,26 @@
         <li><strong>Ta clé SteamGridDB</strong>, si tu en as une, chiffrée : la clé de chiffrement n'est pas dans la base.</li>
         <li><strong>Pendant la connexion dans le navigateur</strong> : une session de 15 minutes avec ton adresse IP et ton navigateur, et un compteur par adresse IP contre les abus.</li>
       </ul>
-      <p>Le compte ne reçoit rien d'autre : pas la liste de tes jeux installés en dehors de ce qui précède, pas de statistiques d'usage, pas de télémétrie.</p>
+      <p>Le compte ne reçoit rien d'autre : pas la liste de tes jeux installés en dehors de ce qui précède et des amis (ci-dessous), pas de statistiques d'usage, pas de télémétrie.</p>
+
+      <h3>Les amis (si tu les actives)</h3>
+      <p>Les amis sont désactivés par défaut. Si tu les actives (page Amis ou Paramètres &gt; Compte), le compte garde aussi :</p>
+      <ul>
+        <li><strong>Tes réglages</strong> : ton code ami, si l'on peut te trouver par ton pseudo, ce que tu partages et avec qui, ta bannière si tu en choisis une.</li>
+        <li><strong>Tes liens</strong> : tes amis, tes demandes envoyées et reçues, les comptes que tu as bloqués.</li>
+        <li><strong>Ta présence</strong> : si Hangar est ouvert, le jeu en cours et son heure de début, le temps de la partie.</li>
+        <li><strong>Ta vitrine et ta bibliothèque</strong> : tes jeux les plus joués, les collections que tu mets en avant, et la liste de tes jeux (nom et identifiant du store), pour montrer vos jeux en commun.</li>
+        <li><strong>Ton activité</strong> : les jeux que tu lances et ceux que tu ajoutes, pendant 30 jours.</li>
+        <li><strong>Tes messages</strong> avec tes amis, chiffrés sur le serveur (la clé n'est pas dans la base), avec leur date et la date de lecture.</li>
+        <li><strong>Les signalements</strong> que tu fais, avec le texte du message signalé, examinés à la main par le développeur.</li>
+      </ul>
+      <p>Pour chaque information partagée (statut en ligne, jeu en cours, temps de jeu, bibliothèque), tu choisis qui la voit : tout le monde, tes amis seulement ou personne. Ton adresse e-mail n'est jamais montrée. Désactiver les amis te rend invisible et hors ligne ; un compte bloqué ne te voit plus et ne peut plus t'écrire.</p>
 
       <h3>Ton profil public</h3>
       <p>Ton profil est privé par défaut. Si tu le rends public (Paramètres &gt; Compte), sa page montre ton pseudo, ton avatar, ton mois d'arrivée, ton temps de jeu total et ton nombre de jeux joués. Rien d'autre.</p>
 
       <h3>Pourquoi</h3>
-      <p>Ces données servent uniquement à faire marcher le compte que tu as demandé : te connecter et retrouver ta bibliothèque sur tes PC. Elles ne sont ni vendues, ni partagées, ni utilisées pour de la publicité.</p>
+      <p>Ces données servent uniquement à faire marcher le compte que tu as demandé : te connecter, retrouver ta bibliothèque sur tes PC et, si tu les actives, échanger avec tes amis. Elles ne sont ni vendues, ni partagées, ni utilisées pour de la publicité.</p>
 
       <h2 id="hebergeurs">Où sont les données</h2>
       <ul>
@@ -111,13 +124,15 @@
         <li><strong>Compte inactif</strong> : sans aucune connexion d'un de tes PC pendant 2 ans, le compte est supprimé. Un e-mail te prévient 30 jours avant ; ouvrir Hangar sur un PC connecté suffit pour le garder.</li>
         <li><strong>Traces de connexion</strong> (session du navigateur, codes, compteur anti-abus) : effacées un jour après leur fin.</li>
         <li><strong>Jaquettes importées</strong> que plus aucun jeu n'utilise : effacées sous un jour ou deux.</li>
+        <li><strong>Activité des amis</strong> (jeux lancés, jeux ajoutés) : effacée après 30 jours. Le jeu en cours est oublié dès que Hangar se ferme.</li>
+        <li><strong>Messages</strong> : tant que ton compte existe. Supprimer ton compte efface aussi tes conversations, des deux côtés.</li>
       </ul>
       <p>Les copies de sauvegarde automatiques de la base expirent d'elles-mêmes chez l'hébergeur.</p>
 
       <h2 id="droits">Tes droits</h2>
       <p>Tu as un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition sur tes données. La plupart se font directement dans Hangar, Paramètres &gt; Compte :</p>
       <ul>
-        <li><strong>Exporter mes données</strong> : tout ce que le compte garde, dans un fichier JSON.</li>
+        <li><strong>Exporter mes données</strong> : tout ce que le compte garde, dans un fichier JSON, amis et messages compris.</li>
         <li><strong>Supprimer mon compte</strong> : efface le compte et tout son contenu. Tes PC gardent leurs jeux et leurs réglages.</li>
         <li>Le pseudo, l'avatar, la visibilité du profil et le nom de tes PC se changent au même endroit ; tout le reste se modifie en utilisant Hangar.</li>
       </ul>

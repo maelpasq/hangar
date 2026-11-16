@@ -5,6 +5,7 @@
 import { and, eq, like, lt, sql } from 'drizzle-orm';
 import type { AvatarStore, Db, Notice } from './env';
 import { avatarKey, coverKey } from './profile';
+import { cleanActivity, deleteSocial } from './social';
 import {
   account,
   covers,
@@ -41,7 +42,9 @@ export async function deleteAccount(db: Db, bucket: AvatarStore | undefined, id:
   const [u] = await db.select({ email: user.email }).from(user).where(eq(user.id, id));
   const pics = await db.select({ hash: covers.hash }).from(covers).where(eq(covers.userId, id));
   if (bucket) await dropObjects(bucket, [avatarKey(id), ...pics.map((p) => coverKey(id, p.hash))]);
+  const socialRows = await deleteSocial(db, bucket, id);
   await db.batch([
+    ...socialRows,
     db.delete(entries).where(eq(entries.userId, id)),
     db.delete(gameSessions).where(eq(gameSessions.userId, id)),
     db.delete(covers).where(eq(covers.userId, id)),
@@ -154,6 +157,7 @@ export async function cleanLogins(db: Db, now: number): Promise<void> {
 /** Tâche planifiée quotidienne. */
 export async function daily(db: Db, bucket: AvatarStore | undefined, notice: Notice, now = Date.now()): Promise<void> {
   await cleanLogins(db, now);
+  await cleanActivity(db, now);
   const freed = await cleanCovers(db, bucket, now);
   const { warned, deleted } = await expireAccounts(db, bucket, notice, now);
   console.log(`[hangar] ménage : ${freed} jaquette(s), ${warned} rappel(s), ${deleted} compte(s) supprimé(s)`);

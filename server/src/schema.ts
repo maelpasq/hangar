@@ -162,3 +162,98 @@ export const secrets = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.name] })]
 );
+
+// --- Social (docs/COMPTE.md, phase 7) ---
+
+/**
+ * Réglages et état social d'un compte. `enabled` : amis activés (sinon invisible et hors ligne).
+ * Visibilités : `all`, `friends` ou `none`. `showcase` : vitrine du profil (JSON envoyé par l'app :
+ * jeux les plus joués, collections mises en avant) ; `games` : bibliothèque (identifiants portables
+ * et noms), pour les jeux en commun. `online` : un poste a sa connexion temps réel ouverte ;
+ * `seen` : dernier signe de vie ; `playing` : jeu en cours (JSON `{ id, name, since }`).
+ */
+export const social = sqliteTable(
+  'social',
+  {
+    userId: text('user_id').primaryKey(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+    code: text('code').notNull().unique(),
+    findable: integer('findable', { mode: 'boolean' }).notNull().default(true),
+    statusVis: text('status_vis').notNull().default('friends'),
+    gameVis: text('game_vis').notNull().default('friends'),
+    playVis: text('play_vis').notNull().default('friends'),
+    libraryVis: text('library_vis').notNull().default('friends'),
+    banner: text('banner'),
+    showcase: text('showcase'),
+    games: text('games'),
+    online: integer('online', { mode: 'boolean' }).notNull().default(false),
+    seen: integer('seen').notNull().default(0),
+    playing: text('playing'),
+    createdAt: integer('created_at').notNull()
+  },
+  (t) => [index('social_enabled').on(t.enabled, t.findable)]
+);
+
+/**
+ * Liens entre deux comptes, vus de `userId` : `friend`, `out` (demande envoyée), `in` (demande
+ * reçue), `blocked` (bloqué par `userId`). Une amitié a deux lignes, une demande aussi (out / in).
+ */
+export const friends = sqliteTable(
+  'friends',
+  {
+    userId: text('user_id').notNull(),
+    otherId: text('other_id').notNull(),
+    state: text('state').notNull(),
+    since: integer('since').notNull()
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.otherId] }), index('friends_other').on(t.otherId)]
+);
+
+/** Activité visible des amis : jeu lancé (`play`), jeux ajoutés (`added`). `data` : JSON. */
+export const activity = sqliteTable(
+  'activity',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    kind: text('kind').notNull(),
+    data: text('data').notNull(),
+    at: integer('at').notNull()
+  },
+  (t) => [index('activity_user').on(t.userId, t.at)]
+);
+
+/**
+ * Messages privés, chiffrés au repos (AES-GCM, clé hors de la base). `convo` : les deux comptes,
+ * triés, séparés par `:`. `kind` : `text` ou `invite` (invitation sur un jeu).
+ */
+export const messages = sqliteTable(
+  'messages',
+  {
+    id: text('id').primaryKey(),
+    convo: text('convo').notNull(),
+    fromId: text('from_id').notNull(),
+    toId: text('to_id').notNull(),
+    kind: text('kind').notNull(),
+    body: text('body').notNull(),
+    nonce: text('nonce').notNull(),
+    at: integer('at').notNull(),
+    readAt: integer('read_at')
+  },
+  (t) => [index('messages_convo').on(t.convo, t.at), index('messages_unread').on(t.toId, t.readAt)]
+);
+
+/** Signalements d'un compte ou d'un message, examinés à la main par le développeur. */
+export const reports = sqliteTable(
+  'reports',
+  {
+    id: text('id').primaryKey(),
+    reporterId: text('reporter_id').notNull(),
+    targetId: text('target_id').notNull(),
+    messageId: text('message_id'),
+    /** Texte du message signalé, copié au moment du signalement (pour l'examen). */
+    excerpt: text('excerpt'),
+    reason: text('reason').notNull(),
+    at: integer('at').notNull()
+  },
+  (t) => [index('reports_target').on(t.targetId)]
+);

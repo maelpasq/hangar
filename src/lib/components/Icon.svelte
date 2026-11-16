@@ -34,6 +34,10 @@
     | 'cube'
     | 'bolt'
     | 'users'
+    | 'send'
+    | 'chat'
+    | 'userPlus'
+    | 'ban'
     | 'user'
     | 'bulb'
     | 'gamepad'
@@ -147,6 +151,14 @@
     <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9" />
   {:else if name === 'bolt'}
     <path d="M13 3 5 14h6l-1 7 8-11h-6z" />
+  {:else if name === 'send'}
+    <path d="M21 3 10 14" /><path d="m21 3-7 18-4-7-7-4z" />
+  {:else if name === 'chat'}
+    <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z" />
+  {:else if name === 'userPlus'}
+    <circle cx="9" cy="8" r="4" /><path d="M2 21a7 7 0 0 1 14 0" /><path d="M19 8v6M16 11h6" />
+  {:else if name === 'ban'}
+    <circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" />
   {:else if name === 'users'}
     <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6" />
   {:else if name === 'bulb'}

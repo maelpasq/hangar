@@ -138,6 +138,8 @@ export interface Prefs {
   padAtLogin: boolean;
   /** Onglet ouvert au démarrage. null : pas encore demandé (première ouverture ou mise à jour). */
   startPage: StartPage | null;
+  /** Collections mises en avant sur le profil Hangar (identifiants, 3 au plus). */
+  showcase: string[];
 }
 
 /** Ce que fait la fermeture de la fenêtre principale. */
@@ -331,6 +333,112 @@ export interface CloudUser {
   /** Profil visible de tous (page publique sur le serveur du compte). */
   public: boolean;
 }
+
+// ─── Social du compte Hangar (docs/COMPTE.md, phase 7) ───
+
+/** À qui une information est montrée. */
+export type Visibility = 'all' | 'friends' | 'none';
+/** Lien avec un autre compte, vu d'ici. `blockedBy` : il nous a bloqués. */
+export type Relation = 'self' | 'friend' | 'out' | 'in' | 'blocked' | 'blockedBy' | 'none';
+
+/** Jeu tel qu'il voyage entre comptes : identifiant portable et nom. */
+export interface SocialGame {
+  id: string;
+  name: string;
+}
+
+/** Statut vu par quelqu'un (`hidden` : la personne ne le partage pas avec lui). */
+export interface Presence {
+  state: 'online' | 'playing' | 'offline' | 'hidden';
+  game: (SocialGame & { since: number }) | null;
+}
+
+export interface SocialSettings {
+  enabled: boolean;
+  /** Code ami, 8 caractères (affiché en deux groupes de 4). */
+  code: string;
+  /** Trouvable par son pseudo (le code ami marche toujours). */
+  findable: boolean;
+  privacy: { status: Visibility; game: Visibility; play: Visibility; library: Visibility };
+  /** Version de la bannière, ou null. */
+  banner: string | null;
+}
+
+/** Un autre compte dans une liste (amis, demandes, recherche). */
+export interface SocialUser {
+  id: string;
+  name: string;
+  /** Version de l'avatar (null : initiale). */
+  avatar: string | null;
+  relation: Relation;
+  presence: Presence;
+  /** Date du lien (amitié, demande). */
+  since?: number;
+}
+
+export interface FriendLists {
+  friends: SocialUser[];
+  incoming: SocialUser[];
+  outgoing: SocialUser[];
+  blocked: SocialUser[];
+}
+
+export interface ActivityItem {
+  id: string;
+  /** `play` : jeu lancé (`data` : le jeu) ; `added` : jeux ajoutés (`data.games`, `data.count`). */
+  kind: 'play' | 'added';
+  at: number;
+  data: { id?: string; name?: string; games?: SocialGame[]; count?: number };
+  userId?: string;
+  userName?: string;
+}
+
+/** Profil vu dans l'app. Un champ null : la personne ne le partage pas avec nous. */
+export interface SocialProfile {
+  id: string;
+  name: string;
+  avatar: string | null;
+  banner: string | null;
+  since: number;
+  relation: Relation;
+  /** Code ami : seulement sur son propre profil. */
+  code: string | null;
+  presence: Presence;
+  playMs: number | null;
+  games: number | null;
+  top: (SocialGame & { ms: number })[] | null;
+  collections: { name: string; games: SocialGame[] }[] | null;
+  common: SocialGame[] | null;
+  activity: ActivityItem[];
+}
+
+export interface ChatMessage {
+  id: string;
+  from: string;
+  to: string;
+  kind: 'text' | 'invite';
+  text: string;
+  /** Invitation : le jeu proposé. */
+  game: SocialGame | null;
+  at: number;
+  readAt: number | null;
+}
+
+export interface Conversation {
+  with: string;
+  last: ChatMessage;
+  unread: number;
+}
+
+/** Évènements de la connexion temps réel. */
+export type SocialEvent =
+  | { type: 'presence'; id: string; presence: Presence }
+  | { type: 'friends' }
+  | { type: 'request'; from: { id: string; name: string } }
+  | { type: 'accepted'; from: { id: string; name: string } }
+  | { type: 'activity' }
+  | { type: 'message'; message: ChatMessage; from: { id: string; name: string } }
+  | { type: 'read'; by: string; with: string; at: number };
 
 /** Succès Steam d'un jeu (compte Steam connecté). */
 export interface Achievements {

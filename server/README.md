@@ -26,6 +26,19 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `PUT /covers/:hash`, `GET /covers/:hash` | jaquette en fichier local (PNG, JPEG ou WebP, 4 Mo au plus), nommée par son empreinte SHA-256, rangée dans R2 |
 | `GET /export` | toutes les données du compte (JSON) |
 | `DELETE /me` | supprime le compte et toutes ses données |
+| `GET`, `PUT /social/me` | amis activés, code ami (`newCode: true` en tire un autre), trouvable par pseudo, visibilités (`all`, `friends`, `none`) du statut, du jeu en cours, du temps de jeu et de la bibliothèque |
+| `PUT /social/showcase` | `{ top, collections, games }` : jeux les plus joués, collections mises en avant, bibliothèque (jeux en commun) |
+| `PUT`, `DELETE /social/banner` | bannière du profil (PNG, JPEG ou WebP, 1 Mo au plus), dans R2 |
+| `GET /social/users/:id` (+ `/avatar`, `/banner`) | profil vu dans l'app, filtré selon le lien et les visibilités choisies |
+| `GET /social/search?q=` | code ami exact, ou pseudo (comptes qui l'acceptent), 20 au plus |
+| `GET /social/friends` | amis (avec présence), demandes reçues et envoyées, comptes bloqués |
+| `POST`, `DELETE /social/friends/:id` | demande ou acceptation ; retrait, annulation ou refus |
+| `POST`, `DELETE /social/blocks/:id` | bloquer, débloquer |
+| `PUT /social/presence` | `{ game }` : jeu en cours (null : aucun), ajouté à l'activité |
+| `GET`, `POST /social/activity` | activité des amis ; `{ added }` : nouveaux jeux |
+| `GET /social/conversations`, `GET`, `POST /social/messages/:id`, `POST /social/messages/:id/read` | messages privés entre amis (2000 caractères, 30 par minute), chiffrés en base, invitations sur un jeu (`{ game }`) |
+| `POST /social/reports` | `{ userId, reason, messageId?, note? }` : signalement (20 par jour) |
+| `GET /social/live` | WebSocket du temps réel (Durable Object `Live`, un par compte) |
 
 Hors `/login`, `/auth/*`, `/desktop/*` et `/u/*`, tout demande `Authorization: Bearer <jeton du poste>`.
 
@@ -38,6 +51,13 @@ Ménage quotidien (`src/lifecycle.ts`, déclencheur `crons` de `wrangler.toml`) 
 effacées un jour après leur fin, jaquettes plus désignées par aucun élément, comptes sans connexion
 depuis 2 ans supprimés après un e-mail de rappel 30 jours avant. Essai local : `npx wrangler dev
 --env test --test-scheduled`, puis `curl "http://127.0.0.1:8787/__scheduled"`.
+
+Social : un Durable Object `Live` par compte (`src/live.ts`, API d'hibernation) garde les connexions
+WebSocket de ses postes ; l'API y pousse les évènements (présence, demandes, messages, lectures). La
+première connexion ouverte met le compte en ligne, la dernière fermée le met hors ligne (et oublie le
+jeu en cours) ; sans signe de vie depuis 10 minutes, il est hors ligne quoi qu'il arrive. Les
+visibilités sont appliquées par l'API, jamais par l'app. Signalements : table `reports`, à lire à la
+main (`select * from reports order by at desc`).
 
 Synchro : un élément par clé (celles de `src/lib/util/sync.ts`), la modification la plus récente
 gagne. Le curseur est un compteur par compte, pas une date : deux horloges décalées ne font rien

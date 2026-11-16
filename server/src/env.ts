@@ -21,6 +21,14 @@ export interface Env {
   MAIL_FROM?: string;
   /** Bucket R2 des avatars (`wrangler.toml`). Absent : pas d'avatar. */
   AVATARS?: AvatarStore;
+  /** Durable Objects du temps réel (`wrangler.toml`, classe `Live`). Absent : pas de temps réel. */
+  LIVE?: LiveNamespace;
+}
+
+/** Ce que l'API utilise d'un espace de Durable Objects. */
+export interface LiveNamespace {
+  idFromName(name: string): unknown;
+  get(id: unknown): { fetch(input: string | Request, init?: RequestInit): Promise<Response> };
 }
 
 /** Ce que l'API utilise d'un bucket R2 (remplacé dans les tests). */

@@ -35,7 +35,7 @@ Maquette : `design/reference/maquette-hangar.dc.html` (70 Ko, ne jamais la lire 
 - **Le dépôt GitHub est public** : rien de personnel dans ce qui est commité ou poussé (chemins locaux avec le nom d'utilisateur, adresse e-mail, clés, jetons, journaux, captures avec des données privées). Vérifier le diff avant chaque push.
 - **Ne jamais supprimer de fichiers de l'utilisateur.** « Masquer » cache un jeu dans Hangar, rien de plus. Seule exception : « Désinstaller », après confirmation dans Hangar, supprime le dossier du jeu connu de son launcher et ses manifestes (`src-tauri/src/manage.rs`, avec ses garde-fous).
 - **Accessibilité** : vrais `<button>`, `<input>` avec `<label>`, `aria-label` sur les boutons-icônes, focus visible, navigation clavier, respect de `prefers-reduced-motion`.
-- **Réseau du compte Hangar** (en plus de la liste « Pas de réseau inutile ») : le compte facultatif (Paramètres > Compte), seulement une fois l'utilisateur connecté : `hangar-api.pamalstudio.fr` (`hangar-api-test.pamalstudio.fr` pour Hangar Test), page de connexion ouverte dans son navigateur, retour par `127.0.0.1` le temps de la connexion (`src-tauri/src/cloud/`).
+- **Réseau du compte Hangar** (en plus de la liste « Pas de réseau inutile ») : le compte facultatif (Paramètres > Compte), seulement une fois l'utilisateur connecté : `hangar-api.pamalstudio.fr` (`hangar-api-test.pamalstudio.fr` pour Hangar Test), page de connexion ouverte dans son navigateur, retour par `127.0.0.1` le temps de la connexion (`src-tauri/src/cloud/`). Les amis (phase 7) passent par la même API, plus une connexion temps réel `wss://` vers `/social/live`, ouverte seulement si l'utilisateur a activé les amis (`src-tauri/src/cloud/social.rs`).
 
 ## Commandes
 

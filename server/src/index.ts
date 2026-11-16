@@ -1,21 +1,19 @@
-// Entrée du Worker Cloudflare : client Turso par HTTP, une app par isolat. La tâche planifiée
-// (`wrangler.toml`, une fois par jour) fait le ménage : jaquettes plus utilisées, comptes inactifs.
-import { createClient } from '@libsql/client/web';
-import { drizzle } from 'drizzle-orm/libsql/web';
+// Entrée du Worker Cloudflare : une app par isolat. La tâche planifiée (`wrangler.toml`, une fois
+// par jour) fait le ménage : jaquettes plus utilisées, comptes inactifs, vieille activité.
 import { createApp } from './app';
 import { noticeMailer } from './auth';
-import type { Db, Env } from './env';
+import { dbOf } from './db';
+import type { Env } from './env';
 import { daily } from './lifecycle';
-import * as schema from './schema';
+import { liveHub } from './live';
 
-let db: Db | undefined;
+export { Live } from './live';
+
 let app: ReturnType<typeof createApp> | undefined;
-
-const dbOf = (env: Env): Db => (db ??= drizzle(createClient({ url: env.TURSO_URL, authToken: env.TURSO_TOKEN }), { schema }));
 
 export default {
   fetch(request: Request, env: Env): Response | Promise<Response> {
-    app ??= createApp(dbOf(env), env);
+    app ??= createApp(dbOf(env), env, undefined, liveHub(env.LIVE));
     return app.fetch(request);
   },
 

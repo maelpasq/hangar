@@ -43,7 +43,8 @@ export function defaultState(): PersistedState {
       discordPresence: false,
       padButton: false,
       padAtLogin: false,
-      startPage: null
+      startPage: null,
+      showcase: []
     },
     cloud: defaultCloud()
   };
@@ -130,6 +131,9 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (sp === 'home' || sp === 'library' || sp === 'favorites' || sp === 'web') s.prefs.startPage = sp;
     else if (typeof sp === 'string' && /^collection:.+/.test(sp)) s.prefs.startPage = sp as `collection:${string}`;
     if (typeof p.steamGridDb === 'boolean') s.prefs.steamGridDb = p.steamGridDb;
+    if (Array.isArray(p.showcase)) {
+      s.prefs.showcase = [...new Set(p.showcase.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length < 100))].slice(0, 3);
+    }
   }
   if (Array.isArray(raw.collections)) {
     const seen = new Set<string>();

@@ -21,6 +21,10 @@ export type Modal =
   /** Compte Hangar, première synchro : fusionner ou utiliser le compte. */
   | { kind: 'cloudMerge'; resolve: (choice: 'merge' | 'account') => void }
   | { kind: 'cloudDelete' }
+  /** Amis : signaler un compte (ou un de ses messages), l'inviter sur un jeu, retirer ou bloquer. */
+  | { kind: 'socialReport'; userId: string; name: string; messageId?: string }
+  | { kind: 'socialInvite'; userId: string; name: string }
+  | { kind: 'socialConfirm'; action: 'remove' | 'block'; userId: string; name: string }
   /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
   | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
   | { kind: 'bug' }
@@ -39,8 +43,11 @@ export interface Toast {
   leaving?: boolean;
 }
 
+/** Écrans du social (docs/COMPTE.md, phase 7) : page Amis, profil d'un compte. */
+export type SocialScreen = 'friends' | 'profile';
+
 interface Place {
-  screen: Screen;
+  screen: Screen | SocialScreen;
   favOnly: boolean;
   /** Onglet « À installer » : jeux possédés non installés. */
   toInstall: boolean;
@@ -50,10 +57,12 @@ interface Place {
   collection: string | null;
   store: StoreId | 'all';
   gameId: string | null;
+  /** Profil affiché (écran `profile`). */
+  profileId: string | null;
 }
 
 class Ui {
-  screen = $state<Screen>('home');
+  screen = $state<Screen | SocialScreen>('home');
   favOnly = $state(false);
   toInstall = $state(false);
   updates = $state(false);
@@ -70,6 +79,7 @@ class Ui {
   /** Ce que le bureau permet (Discord, raccourci), donné par le backend. */
   desktop = $state<DesktopInfo | null>(null);
   gameId = $state<string | null>(null);
+  profileId = $state<string | null>(null);
   /** Pile de navigation pour le bouton Retour. */
   history = $state<Place[]>([]);
   /** Incrémenté à chaque navigation pour rejouer l'animation d'entrée. */
@@ -98,12 +108,13 @@ class Ui {
       updates: this.updates,
       collection: this.collection,
       store: this.store,
-      gameId: this.gameId
+      gameId: this.gameId,
+      profileId: this.profileId
     };
   }
 
-  private go(p: Partial<Place> & { screen: Screen }, push = true): void {
-    if (push && this.screen === 'game') this.history = [...this.history.slice(-20), this.place()];
+  private go(p: Partial<Place> & { screen: Screen | SocialScreen }, push = true): void {
+    if (push && (this.screen === 'game' || this.screen === 'profile')) this.history = [...this.history.slice(-20), this.place()];
     else if (push) this.history = [this.place()];
     this.screen = p.screen;
     this.favOnly = p.favOnly ?? false;
@@ -112,6 +123,7 @@ class Ui {
     this.collection = p.collection ?? null;
     this.store = p.store ?? 'all';
     this.gameId = p.gameId ?? this.gameId;
+    this.profileId = p.profileId ?? this.profileId;
     this.menu = null;
     this.pageScrolled = false;
     this.navKey++;
@@ -177,6 +189,18 @@ class Ui {
     this.history = this.history.slice(0, -1);
     if (!prev) return this.go({ screen: 'home' }, false);
     this.go(prev, false);
+  }
+
+  /** Page Amis (liste, demandes, activité, conversations). */
+  friends(): void {
+    if (this.screen === 'friends') return;
+    this.go({ screen: 'friends' });
+  }
+
+  /** Profil d'un compte Hangar (le sien ou celui d'un autre), dans l'app. */
+  profile(id: string): void {
+    if (this.screen === 'profile' && this.profileId === id) return;
+    this.go({ screen: 'profile', profileId: id });
   }
 
   toast(text: string, opts: Omit<Toast, 'id' | 'text'> = {}): void {

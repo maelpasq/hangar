@@ -5,7 +5,7 @@
 import type { Game, PersistedState, PortableGame, Prefs } from '../types';
 
 /** Préférences « de goût », qui suivent la personne. */
-export const SYNC_PREFS = ['autoCovers', 'showUninstalled', 'webGames', 'discordPresence', 'startPage'] as const;
+export const SYNC_PREFS = ['autoCovers', 'showUninstalled', 'webGames', 'discordPresence', 'startPage', 'showcase'] as const;
 /** Préférences liées à la machine, qui restent sur le poste. */
 export const LOCAL_PREFS = [
   'minimizeOnLaunch',

@@ -10,6 +10,11 @@ compatibility_flags = ["nodejs_compat"]
 # Pas de télémétrie de l'outil.
 send_metrics = false
 
+# Temps réel du social (src/live.ts) : un Durable Object par compte, stockage SQLite.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Live"]
+
 [env.prod]
 name = "hangar-api"
 workers_dev = false
@@ -19,6 +24,7 @@ vars = { BASE_URL = "https://hangar-api.pamalstudio.fr", MAIL_FROM = "Hangar <co
 r2_buckets = [{ binding = "AVATARS", bucket_name = "hangar-avatars" }]
 # Ménage quotidien : jaquettes plus utilisées, comptes inactifs depuis 2 ans (src/lifecycle.ts).
 triggers = { crons = ["17 3 * * *"] }
+durable_objects = { bindings = [{ name = "LIVE", class_name = "Live" }] }
 
 # En local (npm run dev), .dev.vars remplace BASE_URL par http://127.0.0.1:8787.
 [env.test]
@@ -28,3 +34,4 @@ routes = [{ pattern = "hangar-api-test.pamalstudio.fr", custom_domain = true }]
 vars = { BASE_URL = "https://hangar-api-test.pamalstudio.fr", MAIL_FROM = "Hangar Test <connexion@pamalstudio.fr>" }
 r2_buckets = [{ binding = "AVATARS", bucket_name = "hangar-avatars-test" }]
 triggers = { crons = ["17 3 * * *"] }
+durable_objects = { bindings = [{ name = "LIVE", class_name = "Live" }] }

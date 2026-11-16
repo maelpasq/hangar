@@ -29,6 +29,7 @@ import {
   totalPlay
 } from './profile';
 import { covers, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user } from './schema';
+import { type Hub, exportSocial, socialRoutes } from './social';
 
 /** Changements par envoi ; une page de lecture en contient au plus le double (voir `page`). */
 const MAX_CHANGES = 1000;
@@ -77,7 +78,7 @@ function page<T extends { seq: number }>(rows: T[], current: number): { rows: T[
   return { rows: kept, cursor: kept[kept.length - 1].seq, more: true };
 }
 
-export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)) {
+export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env), hub: Hub = async () => {}) {
   const auth = createAuth(db, env, sendMail);
   const app = new Hono<Vars>();
 
@@ -634,6 +635,7 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
       covers: pics.map((r) => ({ hash: r.hash, type: r.type, size: r.size, createdAt: r.createdAt })),
       // Valeurs chiffrées, jamais exportées : elles sont aussi dans le coffre de tes PC.
       secrets: kept,
+      social: await exportSocial(db, env, me.userId),
       entries: all.filter((r) => !r.deleted).map((r) => ({ key: r.key, value: r.value, updatedAt: r.updatedAt, deviceId: r.deviceId })),
       sessions: played.map((r) => ({ id: r.id, gameId: r.gameId, start: r.start, end: r.end, deviceId: r.deviceId }))
     });
@@ -644,6 +646,9 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
     await deleteAccount(db, bucket, c.get('device').userId);
     return c.json({ ok: true });
   });
+
+  // Le social, sous /social (docs/COMPTE.md, phase 7).
+  api.route('/social', socialRoutes(db, env, hub, { avatarOf, loadAvatar }));
 
   app.route('/', api);
   return app;

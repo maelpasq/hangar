@@ -13,6 +13,7 @@ import type { Env } from '../src/env';
 import { DAY, INACTIVE_DAYS, WARN_DAYS, cleanCovers, cleanLogins, expireAccounts } from '../src/lifecycle';
 import { mailHtml, noticeHtml } from '../src/mail';
 import { sha256Hex } from '../src/profile';
+import { STALE, normCode, setOnline } from '../src/social';
 import * as schema from '../src/schema';
 
 const BASE = 'http://127.0.0.1:8787';
@@ -40,7 +41,11 @@ const dir = mkdtempSync(join(tmpdir(), 'hangar-api-'));
 const client = createClient({ url: `file:${join(dir, 'test.db')}` });
 const db = drizzle(client, { schema });
 const codes = new Map<string, string>();
-const app = createApp(db, env, async (to, code) => void codes.set(to, code));
+/** Évènements temps réel envoyés, par compte. */
+const pushed: { to: string; event: Record<string, unknown> }[] = [];
+const app = createApp(db, env, async (to, code) => void codes.set(to, code), async (ids, event) => {
+  for (const to of ids) pushed.push({ to, event });
+});
 
 beforeAll(() => migrate(db, { migrationsFolder: './drizzle' }));
 afterAll(() => {
@@ -433,6 +438,187 @@ describe('compte', () => {
   it('se déconnecte', async () => {
     expect((await call('/logout', { method: 'POST', token: other })).status).toBe(200);
     expect((await call('/me', { token: other })).status).toBe(401);
+  });
+});
+
+describe('social', () => {
+  type Who = { token: string; id: string };
+  let a: Who, b: Who, c: Who;
+  const D = (ch: string) => ch.repeat(32);
+  const who = async (email: string, device: string, name: string): Promise<Who> => {
+    const token = await login(email, device);
+    expect((await call('/me', { method: 'PUT', token, body: { name } })).status).toBe(200);
+    const id = (await json(await call('/me', { token }))).user.id as string;
+    return { token, id };
+  };
+  const put = (t: Who, path: string, body: unknown) => call(path, { method: 'PUT', token: t.token, body });
+  const post = (t: Who, path: string, body: unknown = {}) => call(path, { method: 'POST', token: t.token, body });
+  const del = (t: Who, path: string) => call(path, { method: 'DELETE', token: t.token });
+  const get = async (t: Who, path: string) => json(await call(path, { token: t.token }));
+  const friendsOf = (t: Who) => get(t, '/social/friends');
+
+  beforeAll(async () => {
+    a = await who('alice.social@exemple.fr', D('1'), 'Alice');
+    b = await who('bruno.social@exemple.fr', D('2'), 'Bruno');
+    c = await who('chloe.social@exemple.fr', D('3'), 'Chloé');
+  });
+
+  it('crée les réglages désactivés, avec un code ami, et ne montre personne avant activation', async () => {
+    const me = await get(a, '/social/me');
+    expect(me.enabled).toBe(false);
+    expect(me.code).toMatch(/^[A-Z2-9]{8}$/);
+    expect(me.privacy).toEqual({ status: 'friends', game: 'friends', play: 'friends', library: 'friends' });
+    expect((await get(b, '/social/search?q=Alice')).users).toEqual([]);
+    // Amis désactivés : pas de demande possible.
+    expect((await post(a, `/social/friends/${b.id}`)).status).toBe(403);
+    for (const t of [a, b, c]) expect((await put(t, '/social/me', { enabled: true })).status).toBe(200);
+    expect((await put(a, '/social/me', { privacy: { status: 'tous' } })).status).toBe(400);
+  });
+
+  it('trouve par pseudo (si accepté) et par code ami', async () => {
+    const found = await get(b, '/social/search?q=ali');
+    expect(found.users.map((u: { name: string }) => u.name)).toEqual(['Alice']);
+    expect(found.users[0]).not.toHaveProperty('email');
+    expect(found.users[0].relation).toBe('none');
+    // Un pseudo avec des jokers SQL ne trouve pas tout le monde.
+    expect((await get(b, '/social/search?q=%25%25')).users).toEqual([]);
+    await put(a, '/social/me', { findable: false });
+    expect((await get(b, '/social/search?q=ali')).users).toEqual([]);
+    const { code } = await get(a, '/social/me');
+    const pretty = `${code.slice(0, 4).toLowerCase()}-${code.slice(4)}`;
+    expect(normCode(pretty)).toBe(code);
+    expect((await get(b, `/social/search?q=${pretty}`)).users.map((u: { id: string }) => u.id)).toEqual([a.id]);
+    await put(a, '/social/me', { findable: true });
+  });
+
+  it('envoie, reçoit et accepte une demande d\'ami', async () => {
+    pushed.length = 0;
+    expect(await json(await post(a, `/social/friends/${b.id}`))).toEqual({ ok: true, relation: 'out' });
+    expect(pushed).toContainEqual({ to: b.id, event: { type: 'request', from: { id: a.id, name: 'Alice' } } });
+    expect((await friendsOf(a)).outgoing.map((u: { id: string }) => u.id)).toEqual([b.id]);
+    expect((await friendsOf(b)).incoming.map((u: { id: string }) => u.id)).toEqual([a.id]);
+    expect(await json(await post(b, `/social/friends/${a.id}`))).toEqual({ ok: true, relation: 'friend' });
+    expect((await friendsOf(a)).friends.map((u: { id: string }) => u.id)).toEqual([b.id]);
+    expect((await friendsOf(b)).friends.map((u: { id: string }) => u.id)).toEqual([a.id]);
+    expect((await friendsOf(b)).incoming).toEqual([]);
+    // Refus : C demande, A refuse.
+    await post(c, `/social/friends/${a.id}`);
+    await del(a, `/social/friends/${c.id}`);
+    expect((await friendsOf(c)).outgoing).toEqual([]);
+  });
+
+  it('montre la présence et le jeu en cours aux amis, selon les réglages', async () => {
+    const seen = async () => (await friendsOf(a)).friends[0].presence;
+    expect(await seen()).toEqual({ state: 'offline', game: null });
+    pushed.length = 0;
+    await setOnline(db, async (ids, event) => void ids.forEach((to) => pushed.push({ to, event })), b.id, true);
+    expect(pushed.some((p) => p.to === a.id && p.event.type === 'presence')).toBe(true);
+    expect(await seen()).toEqual({ state: 'online', game: null });
+    await put(b, '/social/presence', { game: { id: 'steam:620', name: 'Portal 2' } });
+    const p = await seen();
+    expect(p.state).toBe('playing');
+    expect(p.game).toMatchObject({ id: 'steam:620', name: 'Portal 2' });
+    // Activité : un lancement, pas de doublon s'il est redit.
+    await put(b, '/social/presence', { game: { id: 'steam:620', name: 'Portal 2' } });
+    const acts = (await get(a, '/social/activity')).items;
+    expect(acts.filter((x: { kind: string }) => x.kind === 'play')).toHaveLength(1);
+    expect(acts[0]).toMatchObject({ userId: b.id, userName: 'Bruno', data: { name: 'Portal 2' } });
+    // Le jeu caché : en ligne seulement ; le statut caché aussi : rien.
+    await put(b, '/social/me', { privacy: { game: 'none' } });
+    expect(await seen()).toEqual({ state: 'online', game: null });
+    expect((await get(a, '/social/activity')).items.filter((x: { kind: string }) => x.kind === 'play')).toEqual([]);
+    await put(b, '/social/me', { privacy: { status: 'none' } });
+    expect(await seen()).toEqual({ state: 'hidden', game: null });
+    await put(b, '/social/me', { privacy: { status: 'friends', game: 'friends' } });
+    // Sans signe de vie depuis 10 minutes : hors ligne.
+    await db.update(schema.social).set({ seen: Date.now() - STALE - 1000 }).where(eq(schema.social.userId, b.id));
+    expect(await seen()).toEqual({ state: 'offline', game: null });
+    await setOnline(db, async () => {}, b.id, false);
+    const [row] = await db.select().from(schema.social).where(eq(schema.social.userId, b.id));
+    expect(row.playing).toBeNull();
+  });
+
+  it('montre le profil dans l\'app : temps de jeu, vitrine, jeux en commun', async () => {
+    await call('/sync', { token: b.token, body: { changes: [{ key: `time:${D('2')}:steam:620`, value: JSON.stringify({ ms: 7_200_000, h: 3_600_000 }), updatedAt: 1 }] } });
+    const showcase = {
+      top: [{ id: 'steam:620', name: 'Portal 2', ms: 3_600_000 }],
+      collections: [{ name: 'Coop', games: [{ id: 'steam:620', name: 'Portal 2' }] }],
+      games: [{ id: 'steam:620', name: 'Portal 2' }, { id: 'epic:fn', name: 'Fortnite' }]
+    };
+    expect((await put(b, '/social/showcase', showcase)).status).toBe(200);
+    expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: 'steam:620', name: 'Portal 2' }] })).status).toBe(200);
+    expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: '', name: 'x' }] })).status).toBe(400);
+    const p = await get(a, `/social/users/${b.id}`);
+    expect(p).toMatchObject({ name: 'Bruno', relation: 'friend', code: null, playMs: 3_600_000, games: 2 });
+    expect(p.top).toEqual(showcase.top);
+    expect(p.collections).toEqual(showcase.collections);
+    expect(p.common).toEqual([{ id: 'steam:620', name: 'Portal 2' }]);
+    expect(p).not.toHaveProperty('email');
+    // Un inconnu ne voit pas ce qui est réservé aux amis.
+    const stranger = await get(c, `/social/users/${b.id}`);
+    expect(stranger).toMatchObject({ relation: 'none', playMs: null, top: null, collections: null, common: null, games: null });
+    expect(stranger.presence.state).toBe('hidden');
+    await put(b, '/social/me', { privacy: { play: 'all' } });
+    expect((await get(c, `/social/users/${b.id}`)).playMs).toBe(3_600_000);
+    expect((await get(b, `/social/users/${b.id}`)).code).toMatch(/^[A-Z2-9]{8}$/);
+  });
+
+  it('échange des messages entre amis, chiffrés en base', async () => {
+    pushed.length = 0;
+    const sent = await json(await post(a, `/social/messages/${b.id}`, { text: 'On fait une partie ?' }));
+    expect(sent.message).toMatchObject({ from: a.id, to: b.id, kind: 'text', text: 'On fait une partie ?' });
+    expect(pushed.filter((p) => p.event.type === 'message').map((p) => p.to).sort()).toEqual([a.id, b.id].sort());
+    const [raw] = await db.select().from(schema.messages).where(eq(schema.messages.id, sent.message.id));
+    expect(raw.body).not.toContain('partie');
+    await post(a, `/social/messages/${b.id}`, { game: { id: 'steam:620', name: 'Portal 2' } });
+    expect((await post(c, `/social/messages/${b.id}`, { text: 'Salut' })).status).toBe(403);
+    expect((await post(a, `/social/messages/${b.id}`, { text: '   ' })).status).toBe(400);
+    expect((await post(a, `/social/messages/${b.id}`, { text: 'x'.repeat(2001) })).status).toBe(400);
+
+    const convos = (await get(b, '/social/conversations')).conversations;
+    expect(convos).toHaveLength(1);
+    expect(convos[0]).toMatchObject({ with: a.id, unread: 2, last: { kind: 'invite', game: { name: 'Portal 2' } } });
+    const history = await get(b, `/social/messages/${a.id}`);
+    expect(history.messages.map((m: { kind: string }) => m.kind)).toEqual(['text', 'invite']);
+    await post(b, `/social/messages/${a.id}/read`);
+    expect((await get(b, '/social/conversations')).conversations[0].unread).toBe(0);
+    expect((await get(c, `/social/messages/${a.id}`)).messages).toEqual([]);
+  });
+
+  it('signale un message, avec son texte pour l\'examen', async () => {
+    const [m] = (await get(b, `/social/messages/${a.id}`)).messages;
+    expect((await post(b, '/social/reports', { userId: a.id, messageId: m.id, reason: 'spam' })).status).toBe(200);
+    expect((await post(b, '/social/reports', { userId: a.id, reason: 'pas une raison' })).status).toBe(400);
+    expect((await post(c, '/social/reports', { userId: a.id, messageId: m.id, reason: 'spam' })).status).toBe(404);
+    const [r] = await db.select().from(schema.reports).where(eq(schema.reports.reporterId, b.id));
+    expect(r).toMatchObject({ targetId: a.id, excerpt: 'On fait une partie ?', reason: 'spam' });
+  });
+
+  it('bloque : plus de demande, de recherche ni de profil', async () => {
+    await post(c, `/social/friends/${b.id}`);
+    await post(b, `/social/blocks/${c.id}`);
+    expect((await friendsOf(b)).incoming).toEqual([]);
+    expect((await friendsOf(b)).blocked.map((u: { id: string }) => u.id)).toEqual([c.id]);
+    expect((await friendsOf(c)).outgoing).toEqual([]);
+    expect((await get(c, '/social/search?q=Bruno')).users).toEqual([]);
+    expect((await call(`/social/users/${b.id}`, { token: c.token })).status).toBe(404);
+    expect((await post(c, `/social/friends/${b.id}`)).status).toBe(404);
+    await del(b, `/social/blocks/${c.id}`);
+    expect((await get(c, '/social/search?q=Bruno')).users).toHaveLength(1);
+  });
+
+  it('exporte amis et messages, désactive, puis supprime tout avec le compte', async () => {
+    const out = await get(a, '/export');
+    expect(out.social.friends).toEqual([expect.objectContaining({ id: b.id, name: 'Bruno', state: 'friend' })]);
+    expect(out.social.messages[0]).toMatchObject({ from: 'moi', to: b.id, content: { text: 'On fait une partie ?' } });
+    // Amis désactivés : hors ligne pour tous, plus de message.
+    await put(a, '/social/me', { enabled: false });
+    expect((await friendsOf(b)).friends[0].presence).toEqual({ state: 'offline', game: null });
+    expect((await post(a, `/social/messages/${b.id}`, { text: 'Toujours là ?' })).status).toBe(403);
+    expect((await call('/me', { method: 'DELETE', token: a.token })).status).toBe(200);
+    expect((await friendsOf(b)).friends).toEqual([]);
+    expect((await get(b, '/social/conversations')).conversations).toEqual([]);
+    expect(await db.select().from(schema.reports)).toEqual([]);
   });
 });
 

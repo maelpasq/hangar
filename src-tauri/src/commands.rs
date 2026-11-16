@@ -321,6 +321,42 @@ pub async fn cloud_delete_account(ctx: Ctxs<'_>) -> Result<(), String> {
 }
 
 /// Ouvre le profil public du compte dans le navigateur.
+/// Appel de l'API sociale du compte (`/social/*`), avec le jeton du poste.
+#[tauri::command]
+pub async fn cloud_social(ctx: Ctxs<'_>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.social(&method, &path, body)).await?
+}
+
+/// Avatar ou bannière d'un autre compte, en `data:` (None : aucun).
+#[tauri::command]
+pub async fn cloud_social_image(ctx: Ctxs<'_>, kind: String, user_id: String) -> Result<Option<String>, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.social_image(&kind, &user_id)).await?
+}
+
+/// Nouvelle bannière du profil (déjà recadrée par l'app) : rend sa version.
+#[tauri::command]
+pub async fn cloud_social_banner(ctx: Ctxs<'_>, bytes: Vec<u8>) -> Result<String, String> {
+    let cloud = ctx.cloud.clone();
+    blocking(move || cloud.social_banner(bytes)).await?
+}
+
+/// Ouvre ou ferme la connexion temps réel des amis (évènements `social://event`).
+#[tauri::command]
+pub fn cloud_live(app: AppHandle, on: bool) {
+    crate::cloud::live(app, on);
+}
+
+/// Notification du système (nouveau message, demande d'ami), quand Hangar n'est pas au premier plan.
+#[tauri::command]
+pub fn social_notify(app: AppHandle, title: String, body: String) {
+    let title: String = title.chars().take(80).collect();
+    let body: String = body.chars().take(200).collect();
+    let id = app.config().identifier.clone();
+    std::thread::spawn(move || crate::cloud::notify(&id, &title, &body));
+}
+
 #[tauri::command]
 pub async fn cloud_open_profile(ctx: Ctxs<'_>) -> Result<(), String> {
     let cloud = ctx.cloud.clone();

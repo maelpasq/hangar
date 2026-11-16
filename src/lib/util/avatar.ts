@@ -30,3 +30,35 @@ export async function squareAvatar(file: File): Promise<Uint8Array> {
     bmp.close();
   }
 }
+
+/** Bannière du profil : 1500 × 500 (3:1), recadrée au centre. */
+export const BANNER_W = 1500;
+export const BANNER_H = 500;
+
+/** Rectangle centré (source) au format de la bannière. */
+export function centerWide(w: number, h: number, ratio = BANNER_W / BANNER_H): { x: number; y: number; w: number; h: number } {
+  const cw = Math.min(w, Math.round(h * ratio));
+  const ch = Math.min(h, Math.round(cw / ratio));
+  return { x: Math.round((w - cw) / 2), y: Math.round((h - ch) / 2), w: cw, h: ch };
+}
+
+/** Recadre et réduit l'image en bannière WebP (1 Mo au plus côté serveur). */
+export async function wideBanner(file: File): Promise<Uint8Array> {
+  if (!file.type.startsWith('image/') || file.size > MAX_INPUT) throw new Error('image');
+  const bmp = await createImageBitmap(file);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = BANNER_W;
+    canvas.height = BANNER_H;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('image');
+    ctx.imageSmoothingQuality = 'high';
+    const r = centerWide(bmp.width, bmp.height);
+    ctx.drawImage(bmp, r.x, r.y, r.w, r.h, 0, 0, BANNER_W, BANNER_H);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/webp', 0.82));
+    if (!blob) throw new Error('image');
+    return new Uint8Array(await blob.arrayBuffer());
+  } finally {
+    bmp.close();
+  }
+}

@@ -62,6 +62,25 @@ export function dateLabel(ts: number): string {
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+/** Moment récent : « À l'instant », « Il y a 5 min », « Il y a 3 h », puis comme `relativeDay`. */
+export function timeAgo(ts: number, now = Date.now()): string {
+  const min = Math.floor((now - ts) / 60_000);
+  if (min < 1) return "À l'instant";
+  if (min < 60) return `Il y a ${min} min`;
+  if (min < 12 * 60) return `Il y a ${Math.floor(min / 60)} h`;
+  return relativeDay(ts, now);
+}
+
+/** Heure d'un message : « 14:05 », précédée du jour s'il n'est pas d'aujourd'hui. */
+export function messageTime(ts: number, now = Date.now()): string {
+  const d = new Date(ts);
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const days = daysAgo(ts, now);
+  if (days === 0) return hm;
+  if (days === 1) return `Hier ${hm}`;
+  return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${hm}`;
+}
+
 /** Pluriel simple : « 1 jeu », « 3 jeux ». */
 export function plural(n: number, one: string, many: string): string {
   return `${nf.format(n)} ${n > 1 ? many : one}`;

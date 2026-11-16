@@ -1,7 +1,7 @@
 // Seul point d'appel aux commandes Tauri. En dehors de Tauri (npm run dev:web),
 // l'implémentation de démo de mock.ts est utilisée.
 
-import type { CloudChange, CloudSession, CloudStatus } from './types';
+import type { CloudChange, CloudSession, CloudStatus, SocialEvent } from './types';
 import { displayVersion } from './util/release-notes';
 import type { AccountStatus, Achievements, Artwork, CloseAction, DesktopInfo, InstallTarget, TrayGame, TrayState, Game, LaunchEvent, LauncherPrompt, PersistedState, Session, SteamHit, StoreId } from './types';
 
@@ -148,6 +148,19 @@ export interface Api {
   cloudExport(): Promise<string | null>;
   /** Supprime le compte et toutes ses données sur le serveur. */
   cloudDeleteAccount(): Promise<void>;
+  /** Appel de l'API sociale du compte (chemin sous `/social/`). */
+  social<T = unknown>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T>;
+  /** Avatar ou bannière d'un compte, en `data:` (null : aucun). */
+  socialImage(kind: 'avatar' | 'banner', userId: string): Promise<string | null>;
+  /** Envoie la bannière du profil (déjà recadrée) : rend sa version. */
+  socialBanner(bytes: Uint8Array): Promise<string>;
+  /** Ouvre ou ferme la connexion temps réel des amis. */
+  socialLive(on: boolean): Promise<void>;
+  /** Notification du système (Hangar pas au premier plan). */
+  socialNotify(title: string, body: string): Promise<void>;
+  onSocialEvent(cb: (e: SocialEvent) => void): Promise<() => void>;
+  /** La connexion temps réel s'ouvre (true) ou se coupe (false). */
+  onSocialLive(cb: (on: boolean) => void): Promise<() => void>;
   /** Page d'aide connue (liste fermée côté backend). */
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings' | 'privacy'): Promise<void>;
   /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
@@ -289,6 +302,13 @@ async function tauriApi(): Promise<Api> {
     cloudFetchCover: (hash) => invoke('cloud_fetch_cover', { hash }),
     cloudExport: () => invoke('cloud_export'),
     cloudDeleteAccount: () => invoke('cloud_delete_account'),
+    social: (method, path, body) => invoke('cloud_social', { method, path, body: body ?? null }),
+    socialImage: (kind, userId) => invoke('cloud_social_image', { kind, userId }),
+    socialBanner: (bytes) => invoke('cloud_social_banner', { bytes: Array.from(bytes) }),
+    socialLive: (on) => invoke('cloud_live', { on }),
+    socialNotify: (title, body) => invoke('social_notify', { title, body }),
+    onSocialEvent: (cb) => on<SocialEvent>('social://event', cb),
+    onSocialLive: (cb) => on<boolean>('social://live', cb),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),

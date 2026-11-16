@@ -11,6 +11,7 @@
   import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
   import { cloud } from '../stores/cloud.svelte';
+  import { social } from '../stores/social.svelte';
 
   cloud.load();
 
@@ -44,6 +45,8 @@
     ...(library.updates.length
       ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
+    // Amis : seulement avec un compte (pas de bouton qui ne mène nulle part).
+    ...(cloud.status.connected ? [{ key: 'friends', label: 'Amis', icon: 'users' as const, go: () => social.openFriends() }] : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
     // Hangar MC pas encore ouvert : bouton grisé qui présente ce qui arrive.
     { key: 'hangarmc', label: 'Hangar MC', icon: 'cube', soon: true, go: () => (ui.modal = { kind: 'mcSoon' }) },
@@ -52,6 +55,8 @@
 
   /** Point rouge sur Paramètres tant que la clé SteamGridDB n'est pas ajoutée. */
   const alertOn = (key: string) => key === 'settings' && !library.state.prefs.steamGridDb;
+  /** Pastille de l'entrée Amis : messages non lus et demandes reçues. */
+  const badgeOf = (key: string) => (key === 'friends' ? social.badge : 0);
 
   const collections = $derived(
     library.state.collections.map((c) => ({ ...c, count: library.inCollection(c.id).length }))
@@ -78,12 +83,14 @@
         class:on={current === n.key}
         class:soon={n.soon}
         aria-current={current === n.key ? 'page' : undefined}
-        aria-label={rail || alertOn(n.key)
+        aria-label={rail || alertOn(n.key) || badgeOf(n.key)
           ? n.soon
             ? `${n.label}, bientôt`
             : alertOn(n.key)
               ? `${n.label}, clé SteamGridDB à ajouter`
-              : n.label
+              : badgeOf(n.key)
+                ? `${n.label}, ${badgeOf(n.key)} nouveauté${badgeOf(n.key) > 1 ? 's' : ''}`
+                : n.label
           : undefined}
         title={rail ? n.label : undefined}
         onclick={n.go}
@@ -91,8 +98,8 @@
         <span class="ic">{#if n.key === 'hangarmc'}<McLogo size={19} />{:else}<Icon name={n.icon} />{/if}</span>
         {#if !rail}
           <span>{n.label}</span>
-          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
-        {:else if alertOn(n.key)}
+          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else if badgeOf(n.key)}<span class="nbadge num" aria-hidden="true">{badgeOf(n.key)}</span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
+        {:else if alertOn(n.key) || badgeOf(n.key)}
           <span class="alert-dot rail-dot" aria-hidden="true"></span>
         {/if}
       </button>
@@ -423,6 +430,21 @@
     border: 1px dashed var(--border-3);
     justify-content: center;
     color: var(--text-3);
+  }
+
+  /* Messages non lus et demandes d'ami (entrée Amis). */
+  .nbadge {
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
   }
 
   /* Compte Hangar, sous « Ajouter un jeu ». */
