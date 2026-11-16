@@ -2,7 +2,7 @@
   import Logo from './Logo.svelte';
   import { isMac } from '../util/platform';
   import { plural } from '../util/format';
-  // Barre latérale : navigation, stores, carte « En jeu », bouton « Ajouter un jeu ».
+  // Barre latérale : navigation, stores, carte « En jeu », bouton « Ajouter un jeu », Amis, compte.
   import { STORES } from '../stores-meta';
   import StoreLogo from './StoreLogo.svelte';
   import { library, presentStores } from '../stores/library.svelte';
@@ -11,7 +11,7 @@
   import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
   import { cloud } from '../stores/cloud.svelte';
-  import { social } from '../stores/social.svelte';
+  import { presenceLabel, social } from '../stores/social.svelte';
 
   cloud.load();
 
@@ -45,8 +45,6 @@
     ...(library.updates.length
       ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
-    // Amis : seulement avec un compte (pas de bouton qui ne mène nulle part).
-    ...(cloud.status.connected ? [{ key: 'friends', label: 'Amis', icon: 'users' as const, go: () => social.openFriends() }] : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
     // Hangar MC pas encore ouvert : bouton grisé qui présente ce qui arrive.
     { key: 'hangarmc', label: 'Hangar MC', icon: 'cube', soon: true, go: () => (ui.modal = { kind: 'mcSoon' }) },
@@ -55,8 +53,6 @@
 
   /** Point rouge sur Paramètres tant que la clé SteamGridDB n'est pas ajoutée. */
   const alertOn = (key: string) => key === 'settings' && !library.state.prefs.steamGridDb;
-  /** Pastille de l'entrée Amis : messages non lus et demandes reçues. */
-  const badgeOf = (key: string) => (key === 'friends' ? social.badge : 0);
 
   const collections = $derived(
     library.state.collections.map((c) => ({ ...c, count: library.inCollection(c.id).length }))
@@ -83,14 +79,12 @@
         class:on={current === n.key}
         class:soon={n.soon}
         aria-current={current === n.key ? 'page' : undefined}
-        aria-label={rail || alertOn(n.key) || badgeOf(n.key)
+        aria-label={rail || alertOn(n.key)
           ? n.soon
             ? `${n.label}, bientôt`
             : alertOn(n.key)
               ? `${n.label}, clé SteamGridDB à ajouter`
-              : badgeOf(n.key)
-                ? `${n.label}, ${badgeOf(n.key)} nouveauté${badgeOf(n.key) > 1 ? 's' : ''}`
-                : n.label
+              : n.label
           : undefined}
         title={rail ? n.label : undefined}
         onclick={n.go}
@@ -98,8 +92,8 @@
         <span class="ic">{#if n.key === 'hangarmc'}<McLogo size={19} />{:else}<Icon name={n.icon} />{/if}</span>
         {#if !rail}
           <span>{n.label}</span>
-          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else if badgeOf(n.key)}<span class="nbadge num" aria-hidden="true">{badgeOf(n.key)}</span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
-        {:else if alertOn(n.key) || badgeOf(n.key)}
+          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
+        {:else if alertOn(n.key)}
           <span class="alert-dot rail-dot" aria-hidden="true"></span>
         {/if}
       </button>
@@ -177,7 +171,27 @@
     {#if !rail}Ajouter un jeu{/if}
   </button>
   {#if cloud.status.connected}
-    {@const label = `Compte de ${cloud.name}${cloud.syncState === 'offline' ? ' (hors ligne)' : cloud.syncState === 'syncing' ? ' (synchronisation)' : ''}`}
+    <!-- Amis : seulement avec un compte (pas de bouton qui ne mène nulle part). -->
+    {@const badge = social.badge}
+    {@const on = ui.screen === 'friends'}
+    <button
+      class="navb friends"
+      class:on
+      aria-current={on ? 'page' : undefined}
+      aria-label={rail || badge ? `Amis${badge ? `, ${badge} nouveauté${badge > 1 ? 's' : ''}` : ''}` : undefined}
+      title={rail ? 'Amis' : undefined}
+      onclick={() => social.openFriends()}
+    >
+      <span class="ic"><Icon name="users" /></span>
+      {#if !rail}
+        <span>Amis</span>
+        {#if badge}<span class="nbadge num" aria-hidden="true">{badge}</span>{/if}
+      {:else if badge}
+        <span class="alert-dot rail-dot" aria-hidden="true"></span>
+      {/if}
+    </button>
+    {@const status = social.myPresence}
+    {@const label = `Compte de ${cloud.name}, ${presenceLabel(status).toLowerCase()}${cloud.syncState === 'syncing' ? ' (synchronisation)' : ''}`}
     <button
       class="navb me"
       onclick={() => ui.settings('account')}
@@ -186,8 +200,7 @@
     >
       <span class="avatar" aria-hidden="true">
         {#if cloud.avatar}<img src={cloud.avatar} alt="" />{:else}{cloud.initial}{/if}<span
-          class="dot"
-          class:offline={cloud.syncState === 'offline'}
+          class="dot {status.state}"
           class:syncing={cloud.syncState === 'syncing'}
         ></span>
       </span>
@@ -447,9 +460,13 @@
     font-weight: 700;
   }
 
-  /* Compte Hangar, sous « Ajouter un jeu ». */
-  .me {
+  /* Amis puis compte Hangar, sous « Ajouter un jeu ». */
+  .friends {
     margin-top: 6px;
+  }
+
+  .me {
+    margin-top: 2px;
   }
 
   .me .ell {
@@ -481,7 +498,7 @@
     object-fit: cover;
   }
 
-  /* Pastille d'état : connecté (vert) ou hors ligne (gris). */
+  /* Pastille de statut, mêmes couleurs que chez les amis : vert en ligne ou en jeu, gris hors ligne. */
   .dot {
     position: absolute;
     right: -2px;
@@ -489,17 +506,17 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: var(--success);
+    background: var(--muted);
     border: 2px solid var(--bg);
   }
 
-  .dot.offline {
-    background: var(--muted);
+  .dot.online,
+  .dot.playing {
+    background: var(--success);
   }
 
-  /* Synchro en cours : la pastille prend l'accent et respire. */
+  /* Synchro en cours : la pastille respire. */
   .dot.syncing {
-    background: var(--accent);
     animation: sync-pulse 1.2s ease-in-out infinite;
   }
 

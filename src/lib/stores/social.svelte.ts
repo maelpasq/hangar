@@ -17,7 +17,7 @@ import type {
   SocialUser,
   Visibility
 } from '../types';
-import { portableId, isGhostId } from '../util/sync';
+import { portableId, isGhostId, MAX_PROFILE_GAMES } from '../util/sync';
 import { cloud } from './cloud.svelte';
 import { library } from './library.svelte';
 import { runner } from './runner.svelte';
@@ -95,6 +95,18 @@ class Social {
   unread = $derived(this.conversations.reduce((n, c) => n + c.unread, 0));
   /** Pastille de l'entrée Amis : messages non lus et demandes reçues. */
   badge = $derived(this.unread + this.lists.incoming.length);
+  /**
+   * Mon statut tel que mes amis le voient, suivi en direct : en jeu, en ligne (amis activés et
+   * temps réel ouvert), sinon hors ligne (amis désactivés, compte hors ligne).
+   */
+  myPresence = $derived.by<Presence>(() => {
+    if (!this.enabled || !this.live) return { state: 'offline', game: null };
+    const id = runner.current;
+    const g = id ? library.get(id) : undefined;
+    const pid = id ? portableId(library.state, id) : null;
+    if (g && pid) return { state: 'playing', game: { id: pid, name: library.name(g), since: runner.running[id!] } };
+    return { state: 'online', game: null };
+  });
   /** Amis en ligne ou en jeu d'abord, puis par nom. */
   sortedFriends = $derived(
     [...this.lists.friends].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'fr'))
@@ -177,6 +189,7 @@ class Social {
       $effect(() => {
         void cloud.lastSync;
         void library.state.prefs.showcase;
+        void library.state.prefs.profileGames;
         if (this.enabled && library.ready) this.scheduleShowcase();
       });
     });
@@ -510,7 +523,8 @@ class Social {
       seen.add(id);
       games.push({ id, name: library.name(g) });
     }
-    const body = { top, collections, games: games.slice(0, 10_000) };
+    const favorites = s.prefs.profileGames.slice(0, MAX_PROFILE_GAMES);
+    const body = { top, favorites, collections, games: games.slice(0, 10_000) };
     const key = `${this.me}:${JSON.stringify(body)}`;
     if (store.get(SHOWCASE_KEY) !== hash(key)) {
       try {

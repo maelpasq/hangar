@@ -1,6 +1,6 @@
 <script lang="ts">
   // Profil d'un compte Hangar dans l'app (le sien ou celui d'un autre) : bannière, avatar,
-  // statut, temps de jeu, jeux les plus joués, collections mises en avant, jeux en commun,
+  // statut, temps de jeu, jeux favoris, jeux les plus joués, collections mises en avant, jeux en commun,
   // activité. Le serveur ne renvoie que ce que la personne partage avec nous.
   import Icon from '../components/Icon.svelte';
   import SocialAvatar from '../components/SocialAvatar.svelte';
@@ -8,6 +8,7 @@
   import { api } from '../api';
   import { cloud } from '../stores/cloud.svelte';
   import { presenceLabel, prettyCode, social } from '../stores/social.svelte';
+  import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { SocialProfile } from '../types';
   import { dateLabel, hoursLabel, plural, timeAgo } from '../util/format';
@@ -42,7 +43,12 @@
   });
 
   const self = $derived(profile?.relation === 'self');
-  const live = $derived(social.lists.friends.find((f) => f.id === id)?.presence ?? profile?.presence);
+  // Mon propre statut suit l'app en direct ; celui des autres, la liste d'amis (temps réel).
+  const live = $derived(
+    self ? social.myPresence : (social.lists.friends.find((f) => f.id === id)?.presence ?? profile?.presence)
+  );
+  // Mes jeux favoris : ceux choisis dans les Paramètres, sans attendre l'envoi au serveur.
+  const favorites = $derived(self ? library.state.prefs.profileGames : (profile?.favorites ?? []));
   const banner = $derived(profile ? social.image('banner', profile.id, profile.banner) : null);
   const reserved = $derived(
     !!profile && !self && profile.playMs === null && profile.top === null && profile.collections === null && profile.common === null
@@ -131,6 +137,28 @@
       </section>
     {/if}
 
+    {#if favorites.length}
+      <section class="sec" aria-label="Jeux favoris">
+        <div class="shead">
+          <h2>Jeux favoris</h2>
+          {#if self}
+            <button class="btn small" onclick={() => (ui.modal = { kind: 'profileGames' })}
+              ><Icon name="edit" size={14} />Modifier</button
+            >
+          {/if}
+        </div>
+        <div class="tiles">
+          {#each favorites as g (g.id)}<SocialGameTile game={g} />{/each}
+        </div>
+      </section>
+    {:else if self}
+      <section class="card note">
+        <Icon name="star" size={18} />
+        <p>Montre jusqu'à 5 jeux favoris en haut de ton profil.</p>
+        <button class="btn" onclick={() => (ui.modal = { kind: 'profileGames' })}><Icon name="plus" size={15} />Choisir mes jeux</button>
+      </section>
+    {/if}
+
     {#if profile.top?.length}
       <section class="sec" aria-label="Jeux les plus joués">
         <h2>Jeux les plus joués</h2>
@@ -179,12 +207,6 @@
       </section>
     {/if}
 
-    {#if self && !profile.top?.length && !profile.collections?.length}
-      <section class="card note">
-        <Icon name="layers" size={18} />
-        <p>Tes jeux les plus joués apparaissent ici. Choisis des collections à mettre en avant dans les Paramètres.</p>
-      </section>
-    {/if}
   {:else}
     <p class="loading">Chargement du profil...</p>
   {/if}
@@ -277,6 +299,25 @@
     margin-top: 4px;
     color: var(--muted);
     font-size: 14px;
+  }
+
+  .note .btn {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Titre de section avec son bouton (Jeux favoris de mon profil). */
+  .shead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .btn.small {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
   }
 
   .status .playing {

@@ -255,14 +255,20 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     return c.json(settingsOf(row));
   });
 
-  /** Vitrine (jeux les plus joués, collections mises en avant) et bibliothèque, envoyées par l'app. */
+  /** Vitrine (jeux les plus joués, jeux favoris, collections mises en avant) et bibliothèque, envoyées par l'app. */
   r.put('/showcase', async (c) => {
     const me = c.get('device').userId;
     const body: unknown = await c.req.json().catch(() => null);
     if (!isObject(body) || !Array.isArray(body.top) || !Array.isArray(body.collections) || !Array.isArray(body.games)) {
       return c.json({ error: 'requete' }, 400);
     }
-    if (body.top.length > 10 || body.collections.length > 3 || body.games.length > 10_000) return c.json({ error: 'requete' }, 400);
+    // `favorites` : facultatif (versions de l'app d'avant les jeux favoris).
+    const favs: unknown[] = body.favorites === undefined ? [] : Array.isArray(body.favorites) ? body.favorites : [null];
+    if (body.top.length > 10 || favs.length > 5 || body.collections.length > 3 || body.games.length > 10_000) {
+      return c.json({ error: 'requete' }, 400);
+    }
+    const favorites = favs.map(game);
+    if (favorites.some((g) => !g)) return c.json({ error: 'requete' }, 400);
     const top = [];
     for (const t of body.top as unknown[]) {
       const g = game(t);
@@ -284,7 +290,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     await ensureSocial(db, me);
     await db
       .update(social)
-      .set({ showcase: JSON.stringify({ top, collections }), games: JSON.stringify(games) })
+      .set({ showcase: JSON.stringify({ top, favorites, collections }), games: JSON.stringify(games) })
       .where(eq(social.userId, me));
     return c.json({ ok: true });
   });
@@ -317,10 +323,10 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     if (!found) return c.json({ error: 'introuvable' }, 404);
     const { rel, row, u } = found;
     const vis = row ?? (await ensureSocial(db, u.id));
-    const showcase = parse<{ top: (Game & { ms: number })[]; collections: { name: string; games: Game[] }[] }>(vis.showcase, {
-      top: [],
-      collections: []
-    });
+    const showcase = parse<{ top: (Game & { ms: number })[]; favorites?: Game[]; collections: { name: string; games: Game[] }[] }>(
+      vis.showcase,
+      { top: [], collections: [] }
+    );
     const play = sees(vis.playVis, rel);
     const lib = sees(vis.libraryVis, rel);
     let playMs: number | null = null;
@@ -355,6 +361,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       playMs,
       games: count,
       top: play ? showcase.top : null,
+      favorites: lib ? (showcase.favorites ?? []) : null,
       collections: lib ? showcase.collections : null,
       common,
       activity: recent.filter((a) => sees(a.kind === 'play' ? vis.gameVis : vis.libraryVis, rel)).slice(0, 10).map(activityView)

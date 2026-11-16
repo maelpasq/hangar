@@ -4,7 +4,7 @@
 
 import type { CloudChange, CloudSession, Collection, DeviceTime, Game, PersistedState, PortableGame, Prefs } from '../types';
 import { DEVICE_ID, SESSION_DAYS } from './state';
-import { httpsLink, isGhostId, portableId, SYNC_PREFS, syncEntries } from './sync';
+import { httpsLink, isGhostId, portableId, profileGamesOf, SYNC_PREFS, syncEntries } from './sync';
 
 /** Limites de l'API (server/src/app.ts) : un élément plus gros bloquerait tout l'envoi. */
 export const MAX_CHANGES = 1000;
@@ -56,6 +56,12 @@ function prefValue(k: (typeof SYNC_PREFS)[number], v: unknown): Prefs[typeof k] 
     case 'startPage':
       if (v === null || v === 'home' || v === 'library' || v === 'favorites' || v === 'web') return v;
       return typeof v === 'string' && /^collection:.+/.test(v) ? (v as `collection:${string}`) : undefined;
+    case 'showcase':
+      return Array.isArray(v) && v.every((x) => typeof x === 'string' && x.length > 0 && x.length < 100)
+        ? [...new Set(v as string[])].slice(0, 3)
+        : undefined;
+    case 'profileGames':
+      return profileGamesOf(v);
     default:
       return typeof v === 'boolean' ? v : undefined;
   }

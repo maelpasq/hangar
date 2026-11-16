@@ -25,6 +25,7 @@ export type Modal =
   | { kind: 'socialReport'; userId: string; name: string; messageId?: string }
   | { kind: 'socialInvite'; userId: string; name: string }
   | { kind: 'socialConfirm'; action: 'remove' | 'block'; userId: string; name: string }
+  | { kind: 'profileGames' }
   /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
   | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
   | { kind: 'bug' }

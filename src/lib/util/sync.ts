@@ -2,10 +2,10 @@
 // élément par élément, et la date de dernière modification de chacun. Rien ne part sur le
 // réseau ici : tout reste dans state.json.
 
-import type { Game, PersistedState, PortableGame, Prefs } from '../types';
+import type { Game, PersistedState, PortableGame, Prefs, SocialGame } from '../types';
 
 /** Préférences « de goût », qui suivent la personne. */
-export const SYNC_PREFS = ['autoCovers', 'showUninstalled', 'webGames', 'discordPresence', 'startPage', 'showcase'] as const;
+export const SYNC_PREFS = ['autoCovers', 'showUninstalled', 'webGames', 'discordPresence', 'startPage', 'showcase', 'profileGames'] as const;
 /** Préférences liées à la machine, qui restent sur le poste. */
 export const LOCAL_PREFS = [
   'minimizeOnLaunch',
@@ -21,6 +21,22 @@ export const LOCAL_PREFS = [
 type Unsorted = Exclude<keyof Prefs, (typeof SYNC_PREFS)[number] | (typeof LOCAL_PREFS)[number]>;
 const _sorted: Unsorted extends never ? true : never = true;
 void _sorted;
+
+/** Jeux favoris du profil au plus. */
+export const MAX_PROFILE_GAMES = 5;
+
+/** Jeux favoris du profil validés (identifiant portable et nom, sans doublon), sinon undefined. */
+export function profileGamesOf(v: unknown): SocialGame[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out: SocialGame[] = [];
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue;
+    const { id, name } = x as Record<string, unknown>;
+    if (typeof id !== 'string' || !id || id.length > 512 || typeof name !== 'string' || !name.trim()) continue;
+    if (!out.some((g) => g.id === id)) out.push({ id, name: name.trim().slice(0, 200) });
+  }
+  return out.slice(0, MAX_PROFILE_GAMES);
+}
 
 /** Lien `https://` propre, sinon null (même règle que le backend, `scanner/links.rs`). */
 export function httpsLink(raw: string): string | null {

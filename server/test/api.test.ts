@@ -507,21 +507,27 @@ describe('social', () => {
     await call('/sync', { token: b.token, body: { changes: [{ key: `time:${D('2')}:steam:620`, value: JSON.stringify({ ms: 7_200_000, h: 3_600_000 }), updatedAt: 1 }] } });
     const showcase = {
       top: [{ id: 'steam:620', name: 'Portal 2', ms: 3_600_000 }],
+      favorites: [{ id: 'epic:fn', name: 'Fortnite' }],
       collections: [{ name: 'Coop', games: [{ id: 'steam:620', name: 'Portal 2' }] }],
       games: [{ id: 'steam:620', name: 'Portal 2' }, { id: 'epic:fn', name: 'Fortnite' }]
     };
     expect((await put(b, '/social/showcase', showcase)).status).toBe(200);
     expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: 'steam:620', name: 'Portal 2' }] })).status).toBe(200);
     expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: '', name: 'x' }] })).status).toBe(400);
+    const six = Array.from({ length: 6 }, (_, i) => ({ id: `steam:${i}`, name: `Jeu ${i}` }));
+    expect((await put(a, '/social/showcase', { top: [], favorites: six, collections: [], games: [] })).status).toBe(400);
     const p = await get(a, `/social/users/${b.id}`);
     expect(p).toMatchObject({ name: 'Bruno', relation: 'friend', code: null, playMs: 3_600_000, games: 2 });
     expect(p.top).toEqual(showcase.top);
+    expect(p.favorites).toEqual(showcase.favorites);
     expect(p.collections).toEqual(showcase.collections);
+    // Vitrine envoyée par une app d'avant les jeux favoris : liste vide.
+    expect((await get(b, `/social/users/${a.id}`)).favorites).toEqual([]);
     expect(p.common).toEqual([{ id: 'steam:620', name: 'Portal 2' }]);
     expect(p).not.toHaveProperty('email');
     // Un inconnu ne voit pas ce qui est réservé aux amis.
     const stranger = await get(c, `/social/users/${b.id}`);
-    expect(stranger).toMatchObject({ relation: 'none', playMs: null, top: null, collections: null, common: null, games: null });
+    expect(stranger).toMatchObject({ relation: 'none', playMs: null, top: null, favorites: null, collections: null, common: null, games: null });
     expect(stranger.presence.state).toBe('hidden');
     await put(b, '/social/me', { privacy: { play: 'all' } });
     expect((await get(c, `/social/users/${b.id}`)).playMs).toBe(3_600_000);

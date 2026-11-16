@@ -176,6 +176,8 @@ export function mockApi(): Api {
   let cloud: CloudStatus = { connected: false, offline: false, revoked: false, user: null, devices: [] };
   let cloudCancelled = false;
   const socialListeners = new Set<(e: SocialEvent) => void>();
+  // Temps réel de démo : ouvert dès que l'app le demande (statut « En ligne »).
+  const liveListeners = new Set<(on: boolean) => void>();
   const social = mockSocial((e) => socialListeners.forEach((l) => l(e)));
   // Serveur de démo : un jeu manuel d'un autre PC (carte « Sur un autre PC ») et une collection.
   const day = 864e5;
@@ -490,13 +492,18 @@ export function mockApi(): Api {
       await wait(500);
       return (social.settings.banner = Date.now().toString(36));
     },
-    socialLive: async () => {},
+    socialLive: async (on) => {
+      setTimeout(() => liveListeners.forEach((l) => l(on)), 150);
+    },
     socialNotify: async () => {},
     onSocialEvent: async (cb) => {
       socialListeners.add(cb);
       return () => socialListeners.delete(cb);
     },
-    onSocialLive: async () => () => {},
+    onSocialLive: async (cb) => {
+      liveListeners.add(cb);
+      return () => liveListeners.delete(cb);
+    },
     openLink: async () => {},
     openGameLink: async () => {},
     reportBug: async () => { await wait(800); },

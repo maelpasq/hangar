@@ -1,5 +1,5 @@
 import type { CloudSync, Collection, DeviceTime, Game, PersistedState, PortableGame, Session, SortKey, StoreId } from '../types';
-import { httpsLink } from './sync';
+import { httpsLink, profileGamesOf } from './sync';
 import { STORE_ORDER } from '../stores-meta';
 
 export const SESSION_DAYS = 90;
@@ -44,7 +44,8 @@ export function defaultState(): PersistedState {
       padButton: false,
       padAtLogin: false,
       startPage: null,
-      showcase: []
+      showcase: [],
+      profileGames: []
     },
     cloud: defaultCloud()
   };
@@ -134,6 +135,8 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
     if (Array.isArray(p.showcase)) {
       s.prefs.showcase = [...new Set(p.showcase.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length < 100))].slice(0, 3);
     }
+    const pg = profileGamesOf(p.profileGames);
+    if (pg) s.prefs.profileGames = pg;
   }
   if (Array.isArray(raw.collections)) {
     const seen = new Set<string>();

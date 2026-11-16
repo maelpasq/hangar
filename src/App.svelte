@@ -33,6 +33,7 @@
   import Profile from './lib/screens/Profile.svelte';
   import SocialConfirm from './lib/modals/SocialConfirm.svelte';
   import SocialInvite from './lib/modals/SocialInvite.svelte';
+  import ProfileGames from './lib/modals/ProfileGames.svelte';
   import SocialReport from './lib/modals/SocialReport.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
@@ -329,6 +330,8 @@
     <ConfirmCloudDelete />
   {:else if ui.modal?.kind === 'socialReport'}
     <SocialReport userId={ui.modal.userId} name={ui.modal.name} messageId={ui.modal.messageId} />
+  {:else if ui.modal?.kind === 'profileGames'}
+    <ProfileGames />
   {:else if ui.modal?.kind === 'socialInvite'}
     <SocialInvite userId={ui.modal.userId} name={ui.modal.name} />
   {:else if ui.modal?.kind === 'socialConfirm'}

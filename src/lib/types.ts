@@ -140,6 +140,8 @@ export interface Prefs {
   startPage: StartPage | null;
   /** Collections mises en avant sur le profil Hangar (identifiants, 3 au plus). */
   showcase: string[];
+  /** Jeux favoris du profil Hangar (5 au plus), à part des favoris de la bibliothèque. */
+  profileGames: SocialGame[];
 }
 
 /** Ce que fait la fermeture de la fenêtre principale. */
@@ -405,6 +407,8 @@ export interface SocialProfile {
   playMs: number | null;
   games: number | null;
   top: (SocialGame & { ms: number })[] | null;
+  /** Jeux favoris choisis par la personne (5 au plus). */
+  favorites: SocialGame[] | null;
   collections: { name: string; games: SocialGame[] }[] | null;
   common: SocialGame[] | null;
   activity: ActivityItem[];

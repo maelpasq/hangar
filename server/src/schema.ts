@@ -168,7 +168,7 @@ export const secrets = sqliteTable(
 /**
  * Réglages et état social d'un compte. `enabled` : amis activés (sinon invisible et hors ligne).
  * Visibilités : `all`, `friends` ou `none`. `showcase` : vitrine du profil (JSON envoyé par l'app :
- * jeux les plus joués, collections mises en avant) ; `games` : bibliothèque (identifiants portables
+ * jeux les plus joués, jeux favoris, collections mises en avant) ; `games` : bibliothèque (identifiants portables
  * et noms), pour les jeux en commun. `online` : un poste a sa connexion temps réel ouverte ;
  * `seen` : dernier signe de vie ; `playing` : jeu en cours (JSON `{ id, name, since }`).
  */

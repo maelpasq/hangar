@@ -37,6 +37,7 @@ interface Person {
   playMs: number;
   games: SocialGame[];
   top: (SocialGame & { ms: number })[];
+  favorites?: SocialGame[];
   collections: { name: string; games: SocialGame[] }[];
 }
 
@@ -67,6 +68,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
         { ...GAMES.elden, ms: 98 * H },
         { ...GAMES.hades, ms: 41 * H }
       ],
+      favorites: [GAMES.hades, GAMES.elden, GAMES.bg3],
       collections: [{ name: 'Coop du dimanche', games: [GAMES.satisfactory, GAMES.bg3] }]
     },
     {
@@ -127,6 +129,8 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
   const card = (p: Person): SocialUser => ({ id: p.id, name: p.name, avatar: null, relation: p.rel, presence: p.rel === 'friend' ? p.presence : { state: 'hidden', game: null }, since: p.since });
   const find = (id: string) => people.find((p) => p.id === id);
   const fail = (m: string) => Promise.reject(m);
+  /** Mes jeux favoris, tels qu'envoyés par la dernière vitrine. */
+  let myFavorites: SocialGame[] = [];
 
   async function handle(method: string, path: string, body: any): Promise<unknown> {
     await new Promise((r) => setTimeout(r, 120));
@@ -142,6 +146,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       }
       return structuredClone(settings);
     }
+    if (head === 'showcase' && Array.isArray(body?.favorites)) myFavorites = body.favorites;
     if (head === 'showcase' || head === 'presence' || head === 'activity' && method === 'POST' || head === 'reports') return { ok: true };
     if (head === 'banner') return (settings.banner = null), { ok: true };
     if (head === 'activity') return { items: activity };
@@ -181,6 +186,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
             { ...GAMES.cs2, ms: 190 * H },
             { ...GAMES.bg3, ms: 120 * H }
           ],
+          favorites: myFavorites,
           collections: [{ name: 'Avec les potes', games: [GAMES.satisfactory, GAMES.cs2, GAMES.valorant, GAMES.rocket] }],
           common: null,
           activity: [{ id: 's1', kind: 'play', at: now - 2 * H, data: GAMES.cs2 }]
@@ -202,6 +208,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
         playMs: friend ? p.playMs : null,
         games: friend ? p.games.length : null,
         top: friend ? p.top : null,
+        favorites: friend ? (p.favorites ?? []) : null,
         collections: friend ? p.collections : null,
         common: friend ? p.games.filter((x) => myGames.has(x.id)) : null,
         activity: friend ? activity.filter((a) => a.userId === p.id) : []

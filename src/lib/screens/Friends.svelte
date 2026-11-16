@@ -99,7 +99,7 @@
       </p>
       <div class="gbtns">
         <button class="btn primary" onclick={() => social.setEnabled(true)}><Icon name="check" size={16} />Activer les amis</button>
-        <button class="btn" onclick={() => ui.settings('account')}>Confidentialité</button>
+        <button class="btn" onclick={() => ui.settings('friends')}>Confidentialité</button>
       </div>
     </div>
   {:else}

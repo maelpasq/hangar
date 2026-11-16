@@ -53,10 +53,8 @@
     background: var(--muted);
   }
 
-  .dot.online {
-    background: var(--accent);
-  }
-
+  /* Couleurs de statut classiques : vert en ligne ou en jeu, gris hors ligne. */
+  .dot.online,
   .dot.playing {
     background: var(--success);
   }
