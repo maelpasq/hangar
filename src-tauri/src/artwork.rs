@@ -473,7 +473,6 @@ fn steam_header(id: u32) -> Vec<Cand> {
 
 // ───────────────────────────── Epic ─────────────────────────────
 
-/// `com.epicgames.launcher://apps/<ns>%3A<catalogItemId>%3A<appName>?...` -> (catalogItemId, appName).
 /// Jeu à chercher pour un ID portable venu d'un autre compte (`steam:730`, `gog:1207658924`,
 /// `epic:Fortnite`, `xbox:<pfn>`, `ubisoft:<id>`...). Un ID inconnu ou douteux ne garde que
 /// le nom (recherches par le nom). None si le nom est vide.
@@ -497,6 +496,7 @@ pub fn social_game(id: &str, name: &str) -> Option<Game> {
     Some(g)
 }
 
+/// `com.epicgames.launcher://apps/<ns>%3A<catalogItemId>%3A<appName>?...` -> (catalogItemId, appName).
 pub fn epic_ids(target: &str) -> Option<(String, String)> {
     let rest = target.split("://apps/").nth(1)?.split('?').next()?;
     let parts: Vec<&str> = rest.split("%3A").collect();

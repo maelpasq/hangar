@@ -56,6 +56,7 @@ Une simple correction de bug, sans nouveauté à annoncer, ne prend pas le `patc
   npm run correctif -- "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   ```
   Le script monte le numéro partout, crée le commit « Version 1.2.27.1 » et le tag annoté `v1.2.27+1`. Puis étapes 5 à 7. La release s'appelle « Hangar v1.2.27.1 », son texte dit « Correctif de la version 1.2.27, sans nouveauté ».
+- Le correctif peut compléter l'entrée de sa version de base (changements visibles qui la complètent) : qui vient d'une version plus ancienne voit les notes à jour, qui a déjà vu celles de la 1.2.27 n'a toujours pas de fenêtre.
 - La version suivante avec patch note reprend `npm version patch` : 1.2.27+2 -> 1.2.28.
 - Mot-clé **« PUSH PATCH »** : tout d'un coup, sans redemander. Amener sur `main` les commits de l'app faits sur `dev` depuis la dernière version (cherry-pick, jamais les commits Hangar Test), étapes 1 et 2, `npm run correctif`, push avec le tag, suivi de la construction et vérification de la release (fichiers en `1.2.27+1`, `latest.json` avec la version `1.2.27+1`). Ni site, ni README, ni entrée d'historique. Puis reporter le commit « Version 1.2.27.1 » sur `dev`.
 
@@ -70,18 +71,18 @@ Hangar devient social : crée ton compte Hangar gratuit, retrouve ta bibliothèq
 <!-- vitrine: social -->
 
 #### Nouveautés
-- **Compte Hangar** (facultatif) : « Se connecter » dans la barre latérale, par code reçu par e-mail, Discord ou Google. Sans compte, Hangar reste 100 % local, comme avant.
+- **Compte Hangar** (facultatif) : « Se connecter » dans la barre latérale, par code reçu par e-mail, Discord ou Google. Sans compte, Hangar reste 100 % local, comme avant. Une fois connecté, ton compte en bas de la barre latérale ouvre un menu : ton profil, les paramètres du compte et la déconnexion.
 - **Synchro sur tous tes PC** : favoris, jeux masqués, renommages, jaquettes, collections, jeux web, apparence et préférences te suivent sur Windows, macOS et Linux. Ta clé SteamGridDB aussi, chiffrée.
 - **Jeux d'un autre PC** : tes jeux locaux et ajoutés à la main sur un autre poste apparaissent en gris, avec un lien pour les installer, « J'ai déjà ce jeu » ou « Masquer sur ce PC ». Ils se rattachent tout seuls quand le scan les trouve.
 - **Temps de jeu cumulé** : le temps de chaque jeu additionne tous tes postes, avec le détail par PC sur la fiche du jeu.
 - **Amis** : une page **Amis** dans la barre latérale. Une fois les amis activés (ils sont désactivés par défaut), ajoute-les par pseudo ou par code ami, accepte leurs demandes et vois en direct qui est en ligne, qui est en jeu et à quoi.
 - **Discussion en direct** : écris à tes amis, reçois une notification pour chaque nouveau message et invite-les sur un jeu.
-- **Ton profil** : pseudo, avatar, bannière, jeux favoris (5 au plus), jeux les plus joués, collections mises en avant et activité récente. Tu choisis dans **Paramètres > Amis** ce que tes amis voient de chaque information.
-- **Tes données** : dans **Paramètres > Compte**, tes PC connectés (à renommer ou déconnecter), l'export de toutes tes données et la suppression du compte. La politique de confidentialité est sur le site.
+- **Ton profil** : pseudo, avatar, bannière, jeux favoris (5 au plus), jeux les plus joués, collections mises en avant et activité récente, à régler dans **Paramètres > Compte et profil**. Tu choisis dans **Paramètres > Amis et confidentialité** ce que tes amis voient de chaque information. Les jeux de tes amis que tu n'as pas s'affichent avec leur vraie jaquette.
+- **Tes données** : dans **Paramètres > Compte et profil**, tes PC connectés (à renommer ou déconnecter), l'export de toutes tes données et la suppression du compte. La politique de confidentialité est sur le site.
 
 #### Améliorations
 - **Lien d'installation** des jeux hors store : trouvé automatiquement (registre, raccourcis, page Steam) et modifiable dans la fiche du jeu.
-- **Paramètres** : Général passe en tête, et une catégorie **Amis** regroupe tes amis, la confidentialité et ton profil.
+- **Paramètres** : Général passe en tête. **Compte et profil** regroupe ton compte, ton profil et tes données, **Amis et confidentialité** tes amis et ce qu'ils voient de toi.
 - **Signaler un bug** : le signalement passe par le serveur de Hangar, plus sûr, avec une limite pour éviter les abus.
 
 ### 1.2.26 - 15 novembre 2026
