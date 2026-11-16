@@ -334,6 +334,8 @@ export interface CloudUser {
   email: string;
   /** Avatar en `data:`, ou null : initiale sur fond d'accent. */
   avatar: string | null;
+  /** Création du compte (ms, 0 si inconnue). */
+  createdAt?: number;
 }
 
 // ─── Social du compte Hangar (docs/COMPTE.md, phase 7) ───

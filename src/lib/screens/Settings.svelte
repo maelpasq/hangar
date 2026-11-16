@@ -16,7 +16,7 @@
   import { accounts } from '../stores/accounts.svelte';
   import { cloud } from '../stores/cloud.svelte';
   import { MAX_FEATURED, VISIBILITY, prettyCode, social } from '../stores/social.svelte';
-  import { wideBanner } from '../util/avatar';
+  import { acceptImage, type CropShape } from '../util/avatar';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import { updater } from '../stores/update.svelte';
@@ -72,11 +72,19 @@
     e.preventDefault();
     if (pseudo.trim().length >= 2 && (await profileTask(() => cloud.setName(pseudo)))) editingPseudo = false;
   }
-  function pickAvatar(e: Event) {
+  /** Ouvre l'image choisie dans la fenêtre de recadrage, qui l'envoie une fois validée. */
+  function pickImage(e: Event, shape: CropShape) {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
-    if (file) void profileTask(() => cloud.setAvatar(file));
+    if (!file) return;
+    if (!acceptImage(file)) {
+      ui.toast('Image illisible ou trop lourde : choisis un PNG, un JPEG ou un WebP de moins de 20 Mo.', { error: true });
+      return;
+    }
+    const save = (bytes: Uint8Array) =>
+      profileTask(() => (shape === 'avatar' ? cloud.setAvatar(bytes) : social.setBanner(bytes)));
+    ui.modal = { kind: 'crop', file, shape, save };
   }
   // Amis et confidentialité (docs/COMPTE.md, phase 7).
   let bannerInput = $state<HTMLInputElement>();
@@ -86,20 +94,6 @@
     { key: 'play', label: 'Temps de jeu', hint: 'Ton temps total et tes jeux les plus joués.' },
     { key: 'library', label: 'Bibliothèque', hint: 'Tes jeux favoris, collections mises en avant, jeux en commun et nouveaux jeux.' }
   ];
-  function pickBanner(e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) return;
-    void profileTask(async () => {
-      try {
-        return await social.setBanner(await wideBanner(file));
-      } catch {
-        ui.toast('Image illisible : choisis un PNG, un JPEG ou un WebP.', { error: true });
-        return false;
-      }
-    });
-  }
   function toggleFeatured(id: string) {
     const cur = library.state.prefs.showcase;
     library.state.prefs.showcase = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id].slice(-MAX_FEATURED);
@@ -440,7 +434,7 @@
                   >
                   <span class="txt">
                     <span class="lbl">Avatar</span>
-                    <span class="hint">{cloud.avatar ? 'Visible sur tous tes PC.' : 'Une image carrée de préférence, recadrée au centre.'}</span>
+                    <span class="hint">{cloud.avatar ? 'Visible sur tous tes PC.' : 'Choisis une image, puis recadre-la.'}</span>
                   </span>
                   <input
                     bind:this={avatarInput}
@@ -450,7 +444,7 @@
                     accept="image/png,image/jpeg,image/webp"
                     tabindex="-1"
                     aria-hidden="true"
-                    onchange={pickAvatar}
+                    onchange={(e) => pickImage(e, 'avatar')}
                   />
                   {#if cloud.avatar}
                     <button class="btn-s" disabled={s.offline || profileBusy} onclick={() => profileTask(() => cloud.removeAvatar())}
@@ -466,7 +460,7 @@
                     <span class="ico"><Icon name="image" size={18} /></span>
                     <span class="txt">
                       <span class="lbl">Bannière du profil</span>
-                      <span class="hint">{so.banner ? 'Affichée en haut de ton profil.' : 'Une image large, recadrée au centre.'}</span>
+                      <span class="hint">{so.banner ? 'Affichée en haut de ton profil.' : 'Une image large, que tu recadres ensuite.'}</span>
                     </span>
                     <input
                       bind:this={bannerInput}
@@ -476,7 +470,7 @@
                       accept="image/png,image/jpeg,image/webp"
                       tabindex="-1"
                       aria-hidden="true"
-                      onchange={pickBanner}
+                      onchange={(e) => pickImage(e, 'banner')}
                     />
                     {#if so.banner}
                       <button class="btn-s" disabled={s.offline || profileBusy} onclick={() => social.removeBanner()}>Retirer</button>

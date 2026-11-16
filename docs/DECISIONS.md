@@ -370,3 +370,11 @@ Le serveur est dans `server/` (son propre `package.json`, rien ne change dans l'
 ## Profil : jeux installés rangés par poste (16 nov. 2026)
 
 La colonne `social.games` du serveur garde un objet JSON `{ [deviceId]: jeux installés }` au lieu d'une seule liste. Avant, le dernier poste synchronisé écrasait la liste (un PC sans jeu installé mettait le profil à 0 jeu). Le compteur et les jeux en commun prennent l'union des postes encore connectés. Pas de migration : l'ancienne liste est relue sous la clé vide jusqu'au premier envoi. L'app renvoie sa vitrine une fois après la mise à jour (clé de cache `v2`).
+
+## Recadrage de l'avatar et de la bannière, bienvenue après l'inscription (16 nov. 2026)
+
+Demande de l'utilisateur : un vrai recadrage, et une popup dans Hangar à la création du compte. L'image choisie (Paramètres > Compte ou bienvenue) s'ouvre dans `ImageCropper.svelte` : cadre rond (avatar) ou 3:1 (bannière), glisser pour placer, molette ou curseur pour zoomer (x1 à x5), flèches et +/- au clavier ; la zone hors cadre reste visible, assombrie. Les calculs (zone toujours dans l'image, zoom autour du point visé) sont dans `util/avatar.ts`, testés. Sorties inchangées : 256 × 256 et 1500 × 500 en WebP.
+
+Le serveur ne dit pas si la connexion vient de créer le compte : la bienvenue (`CloudWelcome.svelte`) s'ouvre après `login()` quand `user.createdAt` (déjà renvoyé par `/me`, maintenant gardé par l'app) date de moins de 30 min, une seule fois par compte sur ce poste (`localStorage`), et attend qu'aucune autre fenêtre ne soit ouverte (assistant de démarrage, question de fusion). Pseudo, avatar et bannière s'y changent ; « Plus tard » ne change rien.
+
+La CSP de l'app autorise maintenant `blob:` dans `img-src` (seulement les images) : l'aperçu du recadrage affiche l'image choisie par une URL `blob:` locale, sans la convertir en `data:` (jusqu'à 20 Mo).

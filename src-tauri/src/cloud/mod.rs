@@ -58,6 +58,9 @@ pub struct User {
     pub avatar: Option<String>,
     #[serde(default)]
     pub avatar_version: Option<String>,
+    /// Création du compte (ms depuis 1970, 0 si inconnue) : bienvenue après l'inscription.
+    #[serde(default)]
+    pub created_at: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -452,6 +455,7 @@ impl Cloud {
                 email: s(&u["email"]),
                 avatar: None,
                 avatar_version: u["avatar"].as_str().filter(|v| !v.is_empty()).map(String::from),
+                created_at: u["createdAt"].as_u64().unwrap_or(0),
             }),
             devices: serde_json::from_value(me["devices"].clone()).unwrap_or_default(),
             ..Status::default()
@@ -905,6 +909,7 @@ mod tests {
         assert_eq!(u.name, "Alex");
         assert_eq!(u.id, "u");
         assert!(u.avatar_version.is_none());
+        assert_eq!(u.created_at, 1);
         // Ancien cache (sans profil) : toujours lisible.
         let old: Status = serde_json::from_value(json!({ "connected": true, "user": { "name": "A", "email": "a@b.c" } })).unwrap();
         assert!(old.user.unwrap().avatar.is_none());

@@ -22,7 +22,6 @@ import {
   resetCloud,
   timeChanges
 } from '../util/cloud-sync';
-import { squareAvatar } from '../util/avatar';
 import { syncEntries } from '../util/sync';
 import { library } from './library.svelte';
 import { ui } from './ui.svelte';
@@ -34,6 +33,8 @@ const PULL_EVERY = 15 * 60_000;
 const PUSH_DELAY = 5_000;
 /** Garde-fou : pages lues ou envoyées par synchro. */
 const MAX_PAGES = 100;
+/** Bienvenue après la création du compte : seulement si elle date de moins de 30 min. */
+const WELCOME_MS = 30 * 60_000;
 
 const message = (e: unknown) => String(e).replace(/^Error:\s*/, '');
 
@@ -304,7 +305,7 @@ class Cloud {
     this.busy = true;
     try {
       this.status = await api.cloudLogin(library.state.deviceId);
-      ui.toast(`Connecté au compte Hangar : ${this.name}`);
+      if (!this.welcome()) ui.toast(`Connecté au compte Hangar : ${this.name}`);
       void this.sync();
       return true;
     } catch (e) {
@@ -315,6 +316,27 @@ class Cloud {
     } finally {
       this.busy = false;
     }
+  }
+
+  /**
+   * Compte créé il y a moins de WELCOME_MS et pas encore accueilli sur ce poste : fenêtre de
+   * bienvenue (pseudo, avatar, bannière), dès qu'aucune autre fenêtre n'est ouverte.
+   */
+  private welcome(): boolean {
+    const u = this.status.user;
+    if (!u?.createdAt || Date.now() - u.createdAt > WELCOME_MS) return false;
+    const key = `hangar.welcome.${u.id}`;
+    try {
+      if (localStorage.getItem(key)) return false;
+      localStorage.setItem(key, '1');
+    } catch {
+      // Stockage indisponible : la bienvenue s'affiche quand même.
+    }
+    void (async () => {
+      while (ui.modal) await new Promise((r) => setTimeout(r, 400));
+      if (this.status.connected) ui.modal = { kind: 'cloudWelcome' };
+    })();
+    return true;
   }
 
   cancel(): void {
@@ -358,14 +380,8 @@ class Cloud {
     return this.apply(() => api.cloudSetProfile(name.trim()));
   }
 
-  async setAvatar(file: File): Promise<boolean> {
-    let bytes: Uint8Array;
-    try {
-      bytes = await squareAvatar(file);
-    } catch {
-      ui.toast('Image illisible : choisis un PNG, un JPEG ou un WebP.', { error: true });
-      return false;
-    }
+  /** Avatar déjà recadré et réduit (ImageCropper). */
+  setAvatar(bytes: Uint8Array): Promise<boolean> {
     return this.apply(() => api.cloudSetAvatar(bytes));
   }
 

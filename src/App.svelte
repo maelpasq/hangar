@@ -35,6 +35,8 @@
   import SocialConfirm from './lib/modals/SocialConfirm.svelte';
   import SocialInvite from './lib/modals/SocialInvite.svelte';
   import ProfileGames from './lib/modals/ProfileGames.svelte';
+  import CropImage from './lib/modals/CropImage.svelte';
+  import CloudWelcome from './lib/modals/CloudWelcome.svelte';
   import SocialReport from './lib/modals/SocialReport.svelte';
   import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
@@ -334,6 +336,10 @@
     <CloudMerge resolve={ui.modal.resolve} />
   {:else if ui.modal?.kind === 'cloudDelete'}
     <ConfirmCloudDelete />
+  {:else if ui.modal?.kind === 'cloudWelcome'}
+    <CloudWelcome />
+  {:else if ui.modal?.kind === 'crop'}
+    {#key ui.modal.file}<CropImage file={ui.modal.file} shape={ui.modal.shape} save={ui.modal.save} />{/key}
   {:else if ui.modal?.kind === 'socialReport'}
     <SocialReport userId={ui.modal.userId} name={ui.modal.name} messageId={ui.modal.messageId} />
   {:else if ui.modal?.kind === 'profileGames'}

@@ -412,7 +412,7 @@ export function mockApi(): Api {
         connected: true,
         offline: false,
         revoked: false,
-        user: { id: 'demo-compte-0001', name: 'Alex', email: 'alex@exemple.fr', avatar: null },
+        user: { id: 'demo-compte-0001', name: 'Alex', email: 'alex@exemple.fr', avatar: null, createdAt: Date.now() - 5000 },
         devices: [
           { id: 'a'.repeat(32), name: 'PC-SALON', createdAt: Date.now() - 864e5 * 30, lastSeen: Date.now(), connected: true, current: true },
           { id: 'b'.repeat(32), name: 'Portable', createdAt: Date.now() - 864e5 * 9, lastSeen: Date.now() - 864e5 * 2, connected: true, current: false }

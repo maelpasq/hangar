@@ -2,6 +2,7 @@
 
 import { api } from '../api';
 import type { DesktopInfo, InstallTarget, StoreId } from '../types';
+import type { CropShape } from '../util/avatar';
 
 export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
 
@@ -23,6 +24,10 @@ export type Modal =
   /** Compte Hangar, première synchro : fusionner ou utiliser le compte. */
   | { kind: 'cloudMerge'; resolve: (choice: 'merge' | 'account') => void }
   | { kind: 'cloudDelete' }
+  /** Compte Hangar tout juste créé : bienvenue, pseudo, avatar et bannière. */
+  | { kind: 'cloudWelcome' }
+  /** Recadrer l'avatar ou la bannière ; `save` envoie l'image (vrai : la fenêtre se ferme). */
+  | { kind: 'crop'; file: File; shape: CropShape; save: (bytes: Uint8Array) => Promise<boolean> }
   /** Amis : signaler un compte (ou un de ses messages), l'inviter sur un jeu, retirer ou bloquer. */
   | { kind: 'socialReport'; userId: string; name: string; messageId?: string }
   | { kind: 'socialInvite'; userId: string; name: string }
