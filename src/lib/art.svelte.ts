@@ -4,7 +4,7 @@
 
 import { api } from './api';
 import { library } from './stores/library.svelte';
-import type { Artwork, Game } from './types';
+import type { Artwork, Game, SocialGame } from './types';
 
 export interface CoverResult {
   src: string;
@@ -116,6 +116,30 @@ class Art {
       this.covers[key] = r;
     });
     return undefined;
+  }
+
+  /**
+   * Jaquette d'un jeu vu chez un autre compte et absent d'ici : CDN Steam par son ID Steam,
+   * sinon par son nom (recherche Steam, seulement si les jaquettes automatiques sont actives).
+   * undefined = en cours, null = jaquette générée.
+   */
+  socialCover(g: SocialGame): CoverResult | null | undefined {
+    const m = /^steam:(\d+)$/.exec(g.id);
+    const steam = m ? Number(m[1]) : null;
+    if (!steam && !library.state.prefs.autoCovers) return null;
+    const key = this.socialKey(g);
+    if (key in this.covers) return this.covers[key];
+    this.load(`c|${key}`, async () => {
+      const id = steam ?? (await api.resolveSteamId(g.name).catch(() => null));
+      this.covers[key] = id ? await steamCover(id) : null;
+    });
+    return undefined;
+  }
+
+  /** Clé de cache de `socialCover` (pour `fail`). */
+  socialKey(g: SocialGame): string {
+    const m = /^steam:(\d+)$/.exec(g.id);
+    return m ? `social:steam:${m[1]}` : `social:name:${g.name.trim().toLowerCase()}`;
   }
 
   /** Bannière ; undefined = en cours, null = aucune. */

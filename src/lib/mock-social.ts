@@ -25,7 +25,7 @@ const GAMES = {
   rocket: g('epic:rocketleague', 'Rocket League'),
   elden: g('steam:eldenring', 'ELDEN RING'),
   fortnite: g('epic:fortnite', 'Fortnite'),
-  hades: g('steam:hades2', 'Hades II')
+  hades: g('steam:1145350', 'Hades II')
 };
 
 interface Person {
