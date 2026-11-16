@@ -38,10 +38,11 @@
     <label for="invite-search">Rechercher dans tes jeux installés</label>
     <input id="invite-search" type="search" autocomplete="off" bind:value={query} />
   </div>
-  <ul class="list">
+  <ul class="list scroll">
     {#each games as g (g.id)}
       <li>
-        <button class="row" disabled={busy} onclick={() => pick(g)}>
+        <!-- Pas de classe « row » : c'est une classe globale (rangée de jaquettes, marges négatives). -->
+        <button class="pick" disabled={busy} onclick={() => pick(g)}>
           <span class="cv"><Cover game={g} showName={false} /></span>
           <span class="nm">{library.name(g)}</span>
         </button>
@@ -64,7 +65,11 @@
     overflow-y: auto;
   }
 
-  .row {
+  .list > li {
+    flex-shrink: 0;
+  }
+
+  .pick {
     width: 100%;
     display: flex;
     align-items: center;
@@ -74,7 +79,7 @@
     text-align: left;
   }
 
-  .row:hover {
+  .pick:hover:not(:disabled) {
     background: var(--surface-3);
   }
 
