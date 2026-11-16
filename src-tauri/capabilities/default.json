@@ -38,6 +38,7 @@
     "allow-search-steam",
     "allow-image",
     "allow-find-artwork",
+    "allow-find-social-artwork",
     "allow-set-steamgriddb-key",
     "allow-pick-exe",
     "allow-pick-folder",

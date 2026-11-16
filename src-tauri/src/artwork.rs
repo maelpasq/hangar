@@ -108,10 +108,23 @@ impl Artworks {
 
     /// Jaquette et bannière d'un jeu (cache, puis chaîne de sources).
     pub fn find(&self, game: &Game, sgdb_key: Option<&str>, refresh: bool) -> Artwork {
+        self.find_as(game, sgdb_key, refresh, "")
+    }
+
+    /// Jaquette d'un jeu vu chez un autre compte et absent d'ici, d'après son ID portable
+    /// et son nom (même chaîne de sources, cache à part).
+    pub fn find_social(&self, id: &str, name: &str, sgdb_key: Option<&str>) -> Artwork {
+        match social_game(id, name) {
+            Some(game) => self.find_as(&game, sgdb_key, false, "ami:"),
+            None => Artwork::default(),
+        }
+    }
+
+    fn find_as(&self, game: &Game, sgdb_key: Option<&str>, refresh: bool, prefix: &str) -> Artwork {
         let key = sgdb_key.map(str::trim).filter(|k| !k.is_empty());
         // « v2 » : nouvelle source (Microsoft Store par le nom), les anciens échecs sont retentés.
         let ck = format!(
-            "{}|{}|v2{}",
+            "{prefix}{}|{}|v2{}",
             game.id,
             if key.is_some() { "sgdb" } else { "-" },
             if search_name(&game.id).is_some() { "n" } else { "" }
@@ -173,15 +186,18 @@ impl Artworks {
         // 1. Image native du store, puis la base GOG pour la même plateforme.
         match game.store.as_str() {
             "epic" => {
-                if let Some((cid, app)) = epic_ids(&game.launch.target) {
-                    let imgs = self.epic_catalog().get(&cid).cloned().unwrap_or_default();
-                    let (sharp, blurry) = epic_candidates(&imgs);
-                    apply(sharp, "epic", &mut out);
-                    if !done(&out) {
-                        apply(self.gamesdb("epic", &app), "gog", &mut out);
+                let ids = epic_ids(&game.launch.target);
+                // Jeu vu chez un ami : pas de lien de lancement, l'appName vient de l'ID.
+                let app = ids.as_ref().map(|(_, a)| a.clone()).or_else(|| game.id.strip_prefix("epic:").map(str::to_string));
+                let imgs = ids.and_then(|(cid, _)| self.epic_catalog().get(&cid).cloned()).unwrap_or_default();
+                let (sharp, blurry) = epic_candidates(&imgs);
+                apply(sharp, "epic", &mut out);
+                if !done(&out) {
+                    if let Some(app) = &app {
+                        apply(self.gamesdb("epic", app), "gog", &mut out);
                     }
-                    apply(blurry, "epic", &mut out);
                 }
+                apply(blurry, "epic", &mut out);
             }
             "gog" => {
                 if let Some(id) = game.id.strip_prefix("gog:") {
@@ -458,6 +474,29 @@ fn steam_header(id: u32) -> Vec<Cand> {
 // ───────────────────────────── Epic ─────────────────────────────
 
 /// `com.epicgames.launcher://apps/<ns>%3A<catalogItemId>%3A<appName>?...` -> (catalogItemId, appName).
+/// Jeu à chercher pour un ID portable venu d'un autre compte (`steam:730`, `gog:1207658924`,
+/// `epic:Fortnite`, `xbox:<pfn>`, `ubisoft:<id>`...). Un ID inconnu ou douteux ne garde que
+/// le nom (recherches par le nom). None si le nom est vide.
+pub fn social_game(id: &str, name: &str) -> Option<Game> {
+    let name: String = name.trim().chars().take(200).collect();
+    if name.is_empty() || id.len() > 512 {
+        return None;
+    }
+    let (store, rest) = id.split_once(':').unwrap_or(("", ""));
+    let digits = !rest.is_empty() && rest.len() <= 12 && rest.bytes().all(|b| b.is_ascii_digit());
+    let plain = !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b));
+    let known = match store {
+        "steam" | "gog" => digits,
+        _ => plain && !store.is_empty() && store.bytes().all(|b| b.is_ascii_lowercase()),
+    };
+    let (gid, store) = if known { (id.to_string(), store) } else { (format!("ami:{name}"), "") };
+    let mut g = Game::new(gid, name, store, crate::model::uri(""));
+    if store == "steam" {
+        g.steam_app_id = rest.parse().ok();
+    }
+    Some(g)
+}
+
 pub fn epic_ids(target: &str) -> Option<(String, String)> {
     let rest = target.split("://apps/").nth(1)?.split('?').next()?;
     let parts: Vec<&str> = rest.split("%3A").collect();
@@ -621,6 +660,20 @@ pub fn sgdb_images(v: &Value) -> Vec<Cand> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn jeux_vus_chez_un_ami() {
+        let g = social_game("steam:730", " Counter-Strike 2 ").unwrap();
+        assert_eq!((g.id.as_str(), g.store.as_str(), g.steam_app_id, g.name.as_str()), ("steam:730", "steam", Some(730), "Counter-Strike 2"));
+        let g = social_game("epic:Fortnite", "Fortnite").unwrap();
+        assert_eq!((g.id.as_str(), g.store.as_str()), ("epic:Fortnite", "epic"));
+        // ID douteux : seulement le nom.
+        let g = social_game("gog:../../x", "Jeu").unwrap();
+        assert_eq!((g.id.as_str(), g.store.as_str()), ("ami:Jeu", ""));
+        let g = social_game("@jeu.exe|Jeu", "Jeu").unwrap();
+        assert_eq!(g.store, "");
+        assert!(social_game("steam:730", "  ").is_none());
+    }
 
     #[test]
     fn identifiants_epic() {

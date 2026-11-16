@@ -119,27 +119,29 @@ class Art {
   }
 
   /**
-   * Jaquette d'un jeu vu chez un autre compte et absent d'ici : CDN Steam par son ID Steam,
-   * sinon par son nom (recherche Steam, seulement si les jaquettes automatiques sont actives).
+   * Jaquette d'un jeu vu chez un autre compte et absent d'ici : CDN Steam pour un jeu Steam,
+   * sinon la même chaîne que la bibliothèque (store d'origine, GOG, Steam par le nom,
+   * Microsoft Store, SteamGridDB), si les jaquettes automatiques sont actives.
    * undefined = en cours, null = jaquette générée.
    */
   socialCover(g: SocialGame): CoverResult | null | undefined {
     const m = /^steam:(\d+)$/.exec(g.id);
     const steam = m ? Number(m[1]) : null;
-    if (!steam && !library.state.prefs.autoCovers) return null;
+    const auto = library.state.prefs.autoCovers;
+    if (!steam && !auto) return null;
     const key = this.socialKey(g);
     if (key in this.covers) return this.covers[key];
     this.load(`c|${key}`, async () => {
-      const id = steam ?? (await api.resolveSteamId(g.name).catch(() => null));
-      this.covers[key] = id ? await steamCover(id) : null;
+      let r = steam ? await steamCover(steam) : null;
+      if (!r && auto) r = (await api.findSocialArtwork(g.id, g.name).catch(() => null))?.cover ?? null;
+      this.covers[key] = r;
     });
     return undefined;
   }
 
   /** Clé de cache de `socialCover` (pour `fail`). */
   socialKey(g: SocialGame): string {
-    const m = /^steam:(\d+)$/.exec(g.id);
-    return m ? `social:steam:${m[1]}` : `social:name:${g.name.trim().toLowerCase()}`;
+    return `social:${g.id}|${library.state.prefs.steamGridDb ? 'k' : ''}`;
   }
 
   /** Bannière ; undefined = en cours, null = aucune. */

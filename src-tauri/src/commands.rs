@@ -742,6 +742,17 @@ pub async fn find_artwork(ctx: Ctxs<'_>, game_id: String, refresh: bool) -> Resu
     .await
 }
 
+/// Jaquette d'un jeu vu chez un autre compte et absent d'ici (jamais d'erreur : vide si rien).
+#[tauri::command]
+pub async fn find_social_artwork(ctx: Ctxs<'_>, id: String, name: String) -> Result<Artwork, String> {
+    let aw = ctx.artwork.clone();
+    blocking(move || {
+        let key = crate::accounts::steamgriddb_key();
+        aw.find_social(&id, &name, key.as_deref())
+    })
+    .await
+}
+
 /// Enregistre la clé API SteamGridDB dans le coffre du système (vide : la retire).
 /// Une clé non vide est d'abord essayée sur l'API : refusée (401/403), elle n'est pas gardée.
 #[tauri::command]

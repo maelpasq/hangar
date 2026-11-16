@@ -219,6 +219,7 @@ fn main() {
             commands::search_steam,
             commands::image,
             commands::find_artwork,
+            commands::find_social_artwork,
             commands::set_steamgriddb_key,
             commands::pick_exe,
             commands::pick_folder,

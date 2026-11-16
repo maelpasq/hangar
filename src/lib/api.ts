@@ -73,6 +73,8 @@ export interface Api {
   searchSteam(query: string): Promise<SteamHit[]>;
   /** Jaquette et bannière d'un jeu, toutes sources confondues (store, Steam, SteamGridDB). */
   findArtwork(gameId: string, refresh: boolean): Promise<Artwork>;
+  /** Jaquette d'un jeu vu chez un autre compte et absent d'ici (ID portable + nom). */
+  findSocialArtwork(id: string, name: string): Promise<Artwork>;
   /** Clé API SteamGridDB, rangée dans le coffre du système (vide : la retire). */
   setSteamGridKey(key: string): Promise<void>;
   /** Source affichable d'une image distante (en cache disque côté Tauri), ou null si introuvable. */
@@ -189,6 +191,12 @@ async function tauriApi(): Promise<Api> {
   const { getCurrentWindow } = await import('@tauri-apps/api/window');
   const updater = await import('@tauri-apps/plugin-updater');
   const { relaunch } = await import('@tauri-apps/plugin-process');
+  type Img = { path: string; landscape: boolean } | null;
+  const artworkOf = (a: { cover: Img; hero: Img; source: string }): Artwork => ({
+    cover: a.cover ? { src: convertFileSrc(a.cover.path), landscape: a.cover.landscape } : null,
+    hero: a.hero ? convertFileSrc(a.hero.path) : null,
+    source: a.source
+  });
   const { getIdentifier, getVersion } = await import('@tauri-apps/api/app');
   let pending: Awaited<ReturnType<typeof updater.check>> = null;
   const w = getCurrentWindow();
@@ -229,18 +237,8 @@ async function tauriApi(): Promise<Api> {
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),
     setSteamGridKey: (key) => invoke('set_steamgriddb_key', { key }),
-    findArtwork: async (gameId, refresh) => {
-      type Img = { path: string; landscape: boolean } | null;
-      const a = await invoke<{ cover: Img; hero: Img; source: string }>('find_artwork', {
-        gameId,
-        refresh
-      });
-      return {
-        cover: a.cover ? { src: convertFileSrc(a.cover.path), landscape: a.cover.landscape } : null,
-        hero: a.hero ? convertFileSrc(a.hero.path) : null,
-        source: a.source
-      };
-    },
+    findArtwork: async (gameId, refresh) => artworkOf(await invoke<Parameters<typeof artworkOf>[0]>('find_artwork', { gameId, refresh })),
+    findSocialArtwork: async (id, name) => artworkOf(await invoke<Parameters<typeof artworkOf>[0]>('find_social_artwork', { id, name })),
     image: async (url) => {
       const p = await invoke<string | null>('image', { url });
       return p ? convertFileSrc(p) : null;
