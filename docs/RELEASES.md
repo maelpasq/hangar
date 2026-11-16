@@ -17,7 +17,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    - puis des sections `#### Nouveautés`, `#### Améliorations`, `#### Corrections` (seulement celles qui ont du contenu), chacune en liste à puces : un point par changement visible, concret, du point de vue de l'utilisateur (ce qui change pour lui, où, sur quel système si ce n'est pas partout) ;
    - jamais de `###` dans l'entrée (il marque la version suivante), ni de détail interne (noms de fichiers, refactorisations, CI) sauf s'il a un effet visible.
 
-   Cette même entrée s'affiche **dans Hangar**, dans la fenêtre « Hangar a été mis à jour » au premier démarrage après la mise à jour (et via Paramètres > Général > Nouveautés), pour que chacun comprenne pourquoi il a mis à jour. Elle est lue dans ce fichier au build (`src/lib/util/release-notes.ts`, aucun réseau) : sans entrée, pas de fenêtre. Seuls l'accroche, les titres `####`, les puces et le gras `**...**` sont rendus. Vérifie le rendu avant de committer : `npm run dev:web`, Paramètres > Général > Nouveautés.
+   Cette même entrée s'affiche **dans Hangar**, dans la fenêtre « Hangar a été mis à jour » au premier démarrage après la mise à jour (et via Paramètres > Général > Nouveautés), pour que chacun comprenne pourquoi il a mis à jour. Elle est lue dans ce fichier au build (`src/lib/util/release-notes.ts`, aucun réseau) : sans entrée, pas de fenêtre. Seuls l'accroche, les titres `####`, les puces et le gras `**...**` sont rendus. Pour une grosse mise à jour, une ligne `<!-- vitrine: social -->` sous l'accroche (invisible sur GitHub) ajoute en tête de la fenêtre une vitrine illustrée et animée (`social` : compte et amis, `src/lib/components/SocialArt.svelte` et `SocialPitch.svelte`, branchés dans `WhatsNew.svelte`). Vérifie le rendu avant de committer : `npm run dev:web`, Paramètres > Général > Nouveautés.
 
    Puis committer :
    ```bash
@@ -64,6 +64,25 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 ## Historique
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
+
+### 1.2.28 - 16 novembre 2026
+Hangar devient social : crée ton compte Hangar gratuit, retrouve ta bibliothèque sur tous tes PC, ajoute tes amis et discute avec eux sans quitter Hangar.
+<!-- vitrine: social -->
+
+#### Nouveautés
+- **Compte Hangar** (facultatif) : « Se connecter » dans la barre latérale, par code reçu par e-mail, Discord ou Google. Sans compte, Hangar reste 100 % local, comme avant.
+- **Synchro sur tous tes PC** : favoris, jeux masqués, renommages, jaquettes, collections, jeux web, apparence et préférences te suivent sur Windows, macOS et Linux. Ta clé SteamGridDB aussi, chiffrée.
+- **Jeux d'un autre PC** : tes jeux locaux et ajoutés à la main sur un autre poste apparaissent en gris, avec un lien pour les installer, « J'ai déjà ce jeu » ou « Masquer sur ce PC ». Ils se rattachent tout seuls quand le scan les trouve.
+- **Temps de jeu cumulé** : le temps de chaque jeu additionne tous tes postes, avec le détail par PC sur la fiche du jeu.
+- **Amis** : une page **Amis** dans la barre latérale. Une fois les amis activés (ils sont désactivés par défaut), ajoute-les par pseudo ou par code ami, accepte leurs demandes et vois en direct qui est en ligne, qui est en jeu et à quoi.
+- **Discussion en direct** : écris à tes amis, reçois une notification pour chaque nouveau message et invite-les sur un jeu.
+- **Ton profil** : pseudo, avatar, bannière, jeux favoris (5 au plus), jeux les plus joués, collections mises en avant et activité récente. Tu choisis dans **Paramètres > Amis** ce que tes amis voient de chaque information.
+- **Tes données** : dans **Paramètres > Compte**, tes PC connectés (à renommer ou déconnecter), l'export de toutes tes données et la suppression du compte. La politique de confidentialité est sur le site.
+
+#### Améliorations
+- **Lien d'installation** des jeux hors store : trouvé automatiquement (registre, raccourcis, page Steam) et modifiable dans la fiche du jeu.
+- **Paramètres** : Général passe en tête, et une catégorie **Amis** regroupe tes amis, la confidentialité et ton profil.
+- **Signaler un bug** : le signalement passe par le serveur de Hangar, plus sûr, avec une limite pour éviter les abus.
 
 ### 1.2.26 - 15 novembre 2026
 Tes comptes en font plus : relie Xbox, retrouve le temps de jeu d'Epic, GOG et Xbox et tes succès sur la fiche, et Rockstar rejoint les stores détectés.
