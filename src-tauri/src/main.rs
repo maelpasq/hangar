@@ -42,13 +42,8 @@ fn main() {
     // démarrage avec le système à part, sans mise à jour automatique (elle installerait la
     // vraie version par-dessus l'app de l'utilisateur).
     let test_env = context.config().identifier.ends_with(".test");
-    // Nom de l'environnement de test (« Hangar Test », ou « Hangar Test 2 » pour essayer la
-    // synchro du compte entre deux postes) : titre de la fenêtre et coffre à part.
-    let env_name: &'static str = if test_env {
-        Box::leak(context.config().product_name.clone().unwrap_or_else(|| "Hangar Test".into()).into_boxed_str())
-    } else {
-        "Hangar"
-    };
+    // Nom de l'environnement : titre de la fenêtre et coffre à part.
+    let env_name = if test_env { "Hangar Test" } else { "Hangar" };
     // Le coffre est fixé une seule fois (le premier nom gagne) : ici, avant le setup.
     accounts::set_vault(env_name);
     let builder = tauri::Builder::default()
