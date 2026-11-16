@@ -388,6 +388,23 @@
     tile.style.setProperty('--y', `${e.clientY - r.top}px`);
   });
 
+  // Menu : la section en cours de lecture est mise en évidence (aucune dans le haut de page).
+  const navLinks = [...document.querySelectorAll('.nav a[href^="#"]')];
+  const navSections = navLinks.map((a) => document.getElementById(a.hash.slice(1)));
+  let spyQueued = false;
+  function spy() {
+    spyQueued = false;
+    const line = innerHeight * 0.35;
+    const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
+    let cur = -1;
+    navSections.forEach((s, i) => { if (s.getBoundingClientRect().top <= line) cur = i; });
+    if (atEnd) cur = navSections.length - 1;
+    navLinks.forEach((a, i) => (i === cur ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current')));
+  }
+  addEventListener('scroll', () => { if (!spyQueued) { spyQueued = true; requestAnimationFrame(spy); } }, { passive: true });
+  addEventListener('resize', spy);
+  spy();
+
   const io = new IntersectionObserver((entries) => entries.forEach((e) => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }), { rootMargin: '0px 0px -8% 0px' });
