@@ -36,7 +36,7 @@
   @keyframes drop { from { transform: translateY(-60px); } }
   .digits { animation: bob 2.4s steps(1, end) 1.4s infinite; }
   @keyframes bob { 50% { transform: translateY(-1px); } }
-  /* Le bloc manquant : il se pose, hésite, puis part dans le vide */
+  /* Le bloc manquant : il se pose, hésite, tombe sur le pont (2,73 s), casse le pont (2,82 s) et part dans le vide */
   .lost-blk { animation: fall 2.8s .55s both; }
   @keyframes fall {
     0% { transform: translateY(-60px); animation-timing-function: steps(7); }
@@ -45,13 +45,23 @@
     53% { transform: none; animation-timing-function: steps(1, end); }
     58% { transform: translateX(-1px); animation-timing-function: steps(1, end); }
     63% { transform: none; animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+    78% { transform: translateY(28px); animation-timing-function: steps(1, end); }
+    81% { transform: translateY(28px); animation-timing-function: cubic-bezier(.4, 0, 1, .6); }
     100% { transform: translateY(64px); }
   }
+  /* Le pont tient jusqu'à l'impact : il se fissure, puis ses morceaux tombent avec le bloc */
+  .crack { opacity: 0; animation: on .01s 2.74s both; }
+  @keyframes on { to { opacity: 1; } }
+  .chunk { animation: crumble .6s cubic-bezier(.55, 0, 1, .45) both; animation-delay: var(--c); }
+  @keyframes crumble { to { transform: translateY(22px); } }
+  /* Ce qui n'existe qu'une fois le pont cassé */
+  .after { animation: hide 2.82s; }
+  @keyframes hide { from, to { opacity: 0; } }
 
   .pit { fill: url(#pit); }
   .mote { fill: #a99bff; opacity: 0; animation: rise 3.6s steps(18) infinite; animation-delay: var(--d); }
   @keyframes rise { 0% { transform: none; opacity: 0; } 25% { opacity: .9; } 100% { transform: translateY(-18px); opacity: 0; } }
-  .broken { transform-origin: 84px 64px; animation: sway 3.4s steps(6) infinite alternate; }
+  .broken { transform-origin: 84px 64px; animation: sway 3.4s steps(6) infinite alternate, hide 2.82s; }
   @keyframes sway { from { transform: rotate(-5deg); } to { transform: rotate(4deg); } }
   .bridge { opacity: 0; }
 
@@ -135,6 +145,7 @@
     .walkL, .lb { opacity: 0; }
     .standL, .q { opacity: 1; }
     .lost-blk { transform: translateY(64px); }
+    .chunk { visibility: hidden; }
     .fixed .lost-blk { transform: none; }
     .fixed #hero { transform: translate(150px, 51px); }
     .fixed .walkL, .fixed .q { opacity: 0; }
@@ -211,6 +222,16 @@
         <rect class="star" x="27" y="38" width="1" height="1" style="--d:-2.6s"/>
         <rect class="star" x="163" y="44" width="1" height="1" style="--d:-1.6s"/>
 
+        <rect class="pit" x="84" y="64" width="32" height="16"/>
+        <rect class="mote" x="92" y="78" width="1" height="1" style="--d:0s"/>
+        <rect class="mote" x="101" y="80" width="1" height="1" style="--d:-1.3s"/>
+        <rect class="mote" x="109" y="79" width="1" height="1" style="--d:-2.4s"/>
+        <rect class="mote" x="97" y="81" width="1" height="1" style="--d:-.7s"/>
+        <g class="chunk" style="--c:2.92s"><path fill="#6b5a99" d="M84 63h8v1h-8z"/><path fill="#4d3c80" d="M84 64h3v2h-3zM88 64h3v2h-3z"/></g>
+        <g class="chunk" style="--c:2.82s"><path fill="#6b5a99" d="M92 63h8v1h-8z"/><path fill="#4d3c80" d="M92 64h3v2h-3zM96 64h3v2h-3z"/><path class="crack" fill="#0d0a18" d="M92 63h1v1h-1z"/></g>
+        <g class="chunk" style="--c:2.86s"><path fill="#6b5a99" d="M100 63h8v1h-8z"/><path fill="#4d3c80" d="M100 64h3v2h-3zM104 64h3v2h-3z"/><path class="crack" fill="#0d0a18" d="M100 63h1v1h-1z"/></g>
+        <g class="chunk" style="--c:2.98s"><path fill="#6b5a99" d="M108 63h8v1h-8z"/><path fill="#4d3c80" d="M108 64h3v2h-3zM112 64h4v2h-4z"/><path class="crack" fill="#0d0a18" d="M108 63h1v1h-1z"/></g>
+
         <g class="digits">
           <use class="blk" href="#blk" x="67" y="6" style="--d:0.16s"/>
           <use class="blk" href="#blk" x="79" y="6" style="--d:0.18s"/>
@@ -244,12 +265,6 @@
           <use class="lost-blk" href="#blk" x="97" y="30"/>
         </g>
 
-        <rect class="pit" x="84" y="64" width="32" height="16"/>
-        <rect class="mote" x="92" y="78" width="1" height="1" style="--d:0s"/>
-        <rect class="mote" x="101" y="80" width="1" height="1" style="--d:-1.3s"/>
-        <rect class="mote" x="109" y="79" width="1" height="1" style="--d:-2.4s"/>
-        <rect class="mote" x="97" y="81" width="1" height="1" style="--d:-.7s"/>
-
         <rect x="-1" y="66" width="85" height="14" fill="url(#tile)"/>
         <rect x="116" y="66" width="77" height="14" fill="url(#tile)"/>
         <path fill="#9b7bff" d="M-1 64h85v1h-85zM116 64h77v1h-77z"/>
@@ -260,7 +275,7 @@
           <path fill="#6b5a99" d="M84 64h1v13h-1z"/>
           <path fill="#3d2f6b" d="M83 66h3v2h-3zM83 70h3v2h-3zM83 74h3v2h-3z"/>
         </g>
-        <path fill="#3d2f6b" d="M112 63h4v2h-4z"/>
+        <path class="after" fill="#3d2f6b" d="M112 63h4v2h-4z"/>
         <g class="bridge">
           <path fill="#6b5a99" style="--i:0" d="M84 63h32v1h-32z"/>
           <path fill="#4d3c80" style="--i:1" d="M84 64h3v2h-3z"/><path fill="#4d3c80" style="--i:2" d="M88 64h3v2h-3z"/>
