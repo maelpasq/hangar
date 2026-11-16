@@ -75,6 +75,7 @@
 </script>
 
 <div class="screen scroll page">
+  <div class="wrap">
   {#if failed}
     <div class="gate">
       <span class="gico"><Icon name="user" size={30} /></span>
@@ -229,12 +230,19 @@
   {:else}
     <p class="loading">Chargement du profil...</p>
   {/if}
+  </div>
 </div>
 
 <style>
   .page {
     flex: 1;
     padding: 8px 28px 48px;
+  }
+
+  /* Profil centré, largeur limitée : la bannière 4:1 reste à taille raisonnable sur grand écran. */
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
   }
 
   .gate {
