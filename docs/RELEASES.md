@@ -72,8 +72,8 @@ Hangar devient social : crée ton compte Hangar gratuit, retrouve ta bibliothèq
 
 #### Nouveautés
 - **Compte Hangar** (facultatif) : « Se connecter » dans la barre latérale, par code reçu par e-mail, Discord ou Google. Sans compte, Hangar reste 100 % local, comme avant. Une fois connecté, ton compte en bas de la barre latérale ouvre un menu : ton profil, les paramètres du compte et la déconnexion.
-- **Synchro sur tous tes PC** : favoris, jeux masqués, renommages, jaquettes, collections, jeux web, apparence et préférences te suivent sur Windows, macOS et Linux. Ta clé SteamGridDB aussi, chiffrée.
-- **Jeux d'un autre PC** : tes jeux locaux et ajoutés à la main sur un autre poste apparaissent en gris, avec un lien pour les installer, « J'ai déjà ce jeu » ou « Masquer sur ce PC ». Ils se rattachent tout seuls quand le scan les trouve.
+- **Synchro sur tous tes PC** : favoris, jeux masqués, renommages, jaquettes, collections, jeux web, apparence et préférences te suivent sur Windows, macOS et Linux. Ta clé SteamGridDB aussi, chiffrée, et tes connexions Steam, GOG, Epic et Xbox : connecté ou déconnecté sur un PC, tu l'es partout.
+- **Jeux d'un autre PC** : tes jeux locaux et ajoutés à la main sur un autre poste apparaissent en gris, avec leur vraie jaquette, un lien pour les installer, « J'ai déjà ce jeu » ou « Masquer sur ce PC ». Ils se rattachent tout seuls quand le scan les trouve.
 - **Temps de jeu cumulé** : le temps de chaque jeu additionne tous tes postes, avec le détail par PC sur la fiche du jeu.
 - **Amis** : une page **Amis** dans la barre latérale. Une fois les amis activés (ils sont désactivés par défaut), ajoute-les par pseudo ou par code ami, accepte leurs demandes et vois en direct qui est en ligne, qui est en jeu et à quoi.
 - **Discussion en direct** : écris à tes amis, reçois une notification pour chaque nouveau message et invite-les sur un jeu.
