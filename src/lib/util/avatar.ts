@@ -3,9 +3,9 @@
 
 /** Côté de l'avatar envoyé (il s'affiche au plus en 72 px, net sur un écran haute densité). */
 export const AVATAR_SIZE = 256;
-/** Bannière du profil : 1500 × 500 (3:1). */
-export const BANNER_W = 1500;
-export const BANNER_H = 500;
+/** Bannière du profil : 1600 × 400 (4:1). */
+export const BANNER_W = 1600;
+export const BANNER_H = 400;
 /** Image choisie trop lourde pour valoir la peine d'être décodée. */
 export const MAX_INPUT = 20 * 1024 * 1024;
 /** Zoom maximal du recadrage (1 = la plus grande zone possible). */

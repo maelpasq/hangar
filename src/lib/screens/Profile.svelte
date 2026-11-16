@@ -265,7 +265,8 @@
 
   .hero {
     position: relative;
-    height: 210px;
+    /* Exactement le cadre de recadrage (1600 × 400) : rien n'est rogné à l'affichage. */
+    aspect-ratio: 4 / 1;
     border-radius: var(--r-hero);
     overflow: hidden;
     background:

@@ -184,7 +184,8 @@
 
   .banner {
     position: relative;
-    height: 128px;
+    /* Même ratio que le recadrage et que le profil : ce qu'on voit ici est ce qui s'affiche. */
+    aspect-ratio: 4 / 1;
     overflow: hidden;
     background:
       radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 60%),

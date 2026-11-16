@@ -382,3 +382,7 @@ La CSP de l'app autorise maintenant `blob:` dans `img-src` (seulement les images
 ## Logo sombre pour les thèmes clairs (16 nov. 2026)
 
 Le logo (arche claire) disparaissait sur fond clair. Variante sombre : `design/brand/hangar-mark-dark.svg` (et `hangar-mark-dark-1024.png`), même tracé, lueur et étoile violettes inchangées, seule l'arche passe d'un lavande clair à une encre sombre (`#2b2636` > `#342e42` > `#6f6683`). `Logo.svelte` bascule selon `data-theme` (barre latérale, menu de la barre des tâches, Big Picture, écran Linux) ; `tone="light"` la force sur fond toujours sombre (pastille de `SocialArt`). Le favicon (`public/favicon.svg`, site compris, et celui de la page de connexion du compte) suit `prefers-color-scheme` du navigateur. L'icône d'application garde sa tuile sombre : pas de variante.
+
+## Bannière du profil en 4:1 (16 nov. 2026)
+
+Le cadre de recadrage remplit toute la largeur de la zone (sa hauteur suit), la bannière du profil et l'aperçu de bienvenue ont exactement le ratio du recadrage (rien n'est rogné à l'affichage), sur toute la largeur de la page. Demande de l'utilisateur : bannière moins haute, passée de 1500 × 500 (3:1) à 1600 × 400 (4:1) ; les bannières déjà envoyées sont rognées en haut et en bas.

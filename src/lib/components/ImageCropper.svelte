@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Recadrage d'une image (avatar rond ou bannière 3:1) : glisser pour déplacer, molette ou curseur
+  // Recadrage d'une image (avatar rond ou bannière 4:1) : glisser pour déplacer, molette ou curseur
   // pour zoomer, flèches et +/- au clavier. La zone hors du cadre reste visible, assombrie.
   import { onDestroy } from 'svelte';
   import {
@@ -28,12 +28,15 @@
   let sh = $state(0);
   let dragging = $state(false);
 
-  // Cadre centré dans la scène, avec une marge pour voir l'image autour.
+  // Cadre centré dans la scène, avec une marge pour voir l'image autour. La bannière prend toute
+  // la largeur : la scène suit sa hauteur, le cadre garde donc toujours la même taille.
+  const pad = 28;
+  // (+ 2 : la bordure de la scène, comptée dans sa hauteur CSS)
+  const stageH = $derived(shape === 'banner' && sw ? Math.ceil((sw - pad * 2) / ratio + pad * 2) + 2 : null);
   const frame = $derived.by(() => {
-    const pad = 28;
     let w = Math.max(0, sw - pad * 2);
     let h = w / ratio;
-    if (h > sh - pad * 2) {
+    if (shape !== 'banner' && h > sh - pad * 2) {
       h = Math.max(0, sh - pad * 2);
       w = h * ratio;
     }
@@ -119,6 +122,7 @@
     class:ready={!!rect}
     bind:clientWidth={sw}
     bind:clientHeight={sh}
+    style:height={stageH ? `${stageH}px` : null}
     role="application"
     tabindex="0"
     aria-label="Zone de recadrage. Flèches pour déplacer l'image, plus et moins pour zoomer, zéro pour recentrer."
