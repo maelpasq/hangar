@@ -1,6 +1,6 @@
 // API du compte Hangar (docs/COMPTE.md, section 8). L'app s'identifie par un jeton de poste
 // (`Authorization: Bearer`), obtenu après la connexion dans le navigateur.
-import { and, asc, eq, gt, like, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createAuth, providers, resendMailer } from './auth';
@@ -8,7 +8,7 @@ import { BACKGROUND_WEBP } from './background';
 import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
 import { GEIST_WOFF2 } from './font';
-import { loginPage, pageHeaders, profilePage, statusPage } from './login-page';
+import { loginPage, pageHeaders, statusPage } from './login-page';
 import { deleteAccount } from './lifecycle';
 import { LOGO_PNG } from './logo';
 import {
@@ -16,17 +16,13 @@ import {
   COVER_HASH,
   COVER_MAX,
   MAX_COVERS,
-  PUBLIC_KEY,
   avatarKey,
   coverKey,
   avatarVersion,
   cleanName,
-  dataUrl,
   imageType,
-  isUserId,
   providerAvatar,
-  sha256Hex,
-  totalPlay
+  sha256Hex
 } from './profile';
 import { covers, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user } from './schema';
 import { type Hub, exportSocial, socialRoutes } from './social';
@@ -93,17 +89,9 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
 
   app.get('/', (c) => c.json({ name: 'Hangar', ok: true }));
 
-  // --- Profil (pseudo, avatar, visibilité) ---
+  // --- Profil (pseudo, avatar) ---
 
   const bucket = env.AVATARS;
-
-  const isPublic = async (userId: string) => {
-    const [row] = await db
-      .select({ value: entries.value, deleted: entries.deleted })
-      .from(entries)
-      .where(and(eq(entries.userId, userId), eq(entries.key, PUBLIC_KEY)));
-    return !!row && !row.deleted && row.value === 'true';
-  };
 
   /** Version de l'avatar d'un compte (l'app le retélécharge quand elle change), ou null. */
   const avatarOf = async (image: string | null): Promise<string | null> => {
@@ -135,26 +123,6 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
       .where(and(eq(user.id, u.id), eq(user.image, u.image)));
     return { type, bytes };
   };
-
-  /** Profil public : rien d'autre que le pseudo, l'avatar, la date d'arrivée et le temps de jeu. */
-  app.get('/u/:id', async (c) => {
-    const nonce = randomToken();
-    const id = c.req.param('id');
-    const [u] = isUserId(id) ? await db.select().from(user).where(eq(user.id, id)) : [];
-    if (!u || !(await isPublic(id))) return c.body(profilePage(nonce, null), 404, pageHeaders(nonce));
-    const times = await db
-      .select({ key: entries.key, value: entries.value })
-      .from(entries)
-      .where(and(eq(entries.userId, id), like(entries.key, 'time:%'), eq(entries.deleted, false)));
-    const pic = await loadAvatar(u).catch(() => null);
-    const html = profilePage(nonce, {
-      name: u.name.trim() || 'Profil Hangar',
-      avatar: pic ? dataUrl(pic.type, pic.bytes) : null,
-      since: u.createdAt.getTime(),
-      ...totalPlay(times)
-    });
-    return c.body(html, 200, pageHeaders(nonce));
-  });
 
   // --- Connexion (navigateur) ---
 
@@ -285,36 +253,20 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
         name: u.name,
         image: u.image,
         avatar: await avatarOf(u.image),
-        public: await isPublic(u.id),
         createdAt: u.createdAt.getTime()
       },
       devices: await deviceList(me)
     });
   });
 
-  /** Pseudo et visibilité du profil. La visibilité suit la synchro (élément `profile:public`). */
+  /** Pseudo du profil. */
   api.put('/me', async (c) => {
     const me = c.get('device');
     const body: unknown = await c.req.json().catch(() => null);
     if (!isObject(body)) return c.json({ error: 'requete' }, 400);
     const name = 'name' in body ? cleanName(body.name) : undefined;
     if (name === null) return c.json({ error: 'pseudo' }, 400);
-    if ('public' in body && typeof body.public !== 'boolean') return c.json({ error: 'requete' }, 400);
     if (name) await db.update(user).set({ name, updatedAt: new Date() }).where(eq(user.id, me.userId));
-    if (typeof body.public === 'boolean') {
-      const value = String(body.public);
-      const updatedAt = Date.now();
-      await db.batch([
-        bump(me.userId),
-        db
-          .insert(entries)
-          .values({ userId: me.userId, key: PUBLIC_KEY, value, updatedAt, deviceId: me.deviceId, deleted: false, seq: nextSeq(me.userId) })
-          .onConflictDoUpdate({
-            target: [entries.userId, entries.key],
-            set: { value, updatedAt, deviceId: me.deviceId, deleted: false, seq: sql`excluded.seq` }
-          })
-      ]);
-    }
     return c.json({ ok: true });
   });
 
@@ -626,7 +578,6 @@ export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env)
             email: u.email,
             name: u.name,
             avatar: u.image ? (u.image.startsWith('r2:') ? 'image envoyée' : u.image) : null,
-            public: await isPublic(me.userId),
             createdAt: u.createdAt.getTime()
           }
         : null,

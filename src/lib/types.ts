@@ -330,8 +330,6 @@ export interface CloudUser {
   email: string;
   /** Avatar en `data:`, ou null : initiale sur fond d'accent. */
   avatar: string | null;
-  /** Profil visible de tous (page publique sur le serveur du compte). */
-  public: boolean;
 }
 
 // ─── Social du compte Hangar (docs/COMPTE.md, phase 7) ───

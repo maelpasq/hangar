@@ -1,14 +1,12 @@
-// Profil du compte (docs/COMPTE.md, phase 5) : pseudo, avatar (R2) et visibilité.
+// Profil du compte (docs/COMPTE.md, phase 5) : pseudo et avatar (R2).
 //
 // - Pseudo : `user.name` (table de Better Auth).
 // - Avatar : un objet R2 par compte ; `user.image` vaut `r2:<version>`. À la connexion par Discord
 //   ou Google, `user.image` est l'adresse de l'avatar du service : copiée dans R2 à la première
 //   demande (l'app ne contacte jamais ces services).
-// - Visibilité : l'élément `profile:public` du compte (table `entries`), privé par défaut.
 
 /** Taille maximale d'un avatar (l'app envoie un carré de 256 px). */
 export const AVATAR_MAX = 512 * 1024;
-export const PUBLIC_KEY = 'profile:public';
 /** Services de connexion dont l'avatar peut être copié. */
 const PROVIDER_HOSTS = ['cdn.discordapp.com', 'lh3.googleusercontent.com'];
 const USER_ID = /^[A-Za-z0-9_-]{8,64}$/;
@@ -89,11 +87,4 @@ export function totalPlay(rows: { key: string; value: string | null }[]): { play
     games.add(pid);
   }
   return { playMs, games: games.size };
-}
-
-/** Image en `data:` pour la page publique (qui ne charge rien d'ailleurs). */
-export function dataUrl(type: string, bytes: Uint8Array): string {
-  let s = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return `data:${type};base64,${btoa(s)}`;
 }

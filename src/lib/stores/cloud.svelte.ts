@@ -350,13 +350,7 @@ class Cloud {
   // ─── Profil ───
 
   setName(name: string): Promise<boolean> {
-    return this.apply(() => api.cloudSetProfile(name.trim(), null));
-  }
-
-  async setPublic(on: boolean): Promise<boolean> {
-    const ok = await this.apply(() => api.cloudSetProfile(null, on));
-    if (ok) ui.toast(on ? 'Ton profil est maintenant public.' : 'Ton profil est maintenant privé.');
-    return ok;
+    return this.apply(() => api.cloudSetProfile(name.trim()));
   }
 
   async setAvatar(file: File): Promise<boolean> {
@@ -398,10 +392,6 @@ class Cloud {
     this.resetSync();
     ui.toast('Compte Hangar supprimé. Tes jeux et réglages restent sur ce PC.');
     return true;
-  }
-
-  openProfile(): void {
-    api.cloudOpenProfile().catch((e) => ui.toast(message(e), { error: true }));
   }
 }
 

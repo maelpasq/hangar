@@ -58,9 +58,6 @@ pub struct User {
     pub avatar: Option<String>,
     #[serde(default)]
     pub avatar_version: Option<String>,
-    /// Profil visible de tous (`/u/<id>` sur l'API).
-    #[serde(default)]
-    pub public: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -455,7 +452,6 @@ impl Cloud {
                 email: s(&u["email"]),
                 avatar: None,
                 avatar_version: u["avatar"].as_str().filter(|v| !v.is_empty()).map(String::from),
-                public: u["public"].as_bool().unwrap_or(false),
             }),
             devices: serde_json::from_value(me["devices"].clone()).unwrap_or_default(),
             ..Status::default()
@@ -679,17 +675,10 @@ impl Cloud {
         self.with_token(|t| call("DELETE", &format!("/devices/{id}"), Some(t), None))
     }
 
-    /// Pseudo et visibilité du profil (l'un ou l'autre, ou les deux).
-    pub fn set_profile(&self, name: Option<String>, public: Option<bool>) -> Result<Status, String> {
-        let mut body = serde_json::Map::new();
-        if let Some(n) = name {
-            let n = clean_name(&n).ok_or("Pseudo invalide : entre 2 et 32 caractères.")?;
-            body.insert("name".into(), json!(n));
-        }
-        if let Some(p) = public {
-            body.insert("public".into(), json!(p));
-        }
-        let body = Value::Object(body);
+    /// Nouveau pseudo.
+    pub fn set_profile(&self, name: String) -> Result<Status, String> {
+        let n = clean_name(&name).ok_or("Pseudo invalide : entre 2 et 32 caractères.")?;
+        let body = json!({ "name": n });
         self.with_token_or("Ce pseudo n'est pas accepté.", |t| call("PUT", "/me", Some(t), Some(&body)))
     }
 
@@ -786,15 +775,6 @@ impl Cloud {
         log::info!("compte Hangar : compte supprimé");
         Ok(())
     }
-
-    /// Ouvre le profil public dans le navigateur.
-    pub fn open_profile(&self) -> Result<(), String> {
-        let id = self.read_cache().and_then(|s| s.user).map(|u| u.id).unwrap_or_default();
-        if !safe_user_id(&id) {
-            return Err("Profil indisponible, réessaie une fois connecté.".into());
-        }
-        crate::launcher::shell_open(&format!("{}/u/{id}", api()), "", None, "open")
-    }
 }
 
 #[cfg(test)]
@@ -869,9 +849,6 @@ mod tests {
         assert_eq!(image_type(b"RIFF\0\0\0\0WEBPVP8 "), Some("image/webp"));
         assert_eq!(image_type(&[0xff, 0xd8, 0xff, 0xe0]), Some("image/jpeg"));
         assert_eq!(image_type(b"<svg onload=x>"), None);
-        assert!(safe_user_id("AbC123_-xyz"));
-        assert!(!safe_user_id("../../x"));
-        assert!(!safe_user_id("court"));
     }
 
     #[test]
@@ -881,6 +858,9 @@ mod tests {
         assert!(safe_token("a-b_C9"));
         assert!(!safe_token("a b"));
         assert!(!safe_token(""));
+        assert!(safe_user_id("AbC123_-xyz"));
+        assert!(!safe_user_id("../../x"));
+        assert!(!safe_user_id("court"));
     }
 
     #[test]
@@ -894,7 +874,7 @@ mod tests {
         let u = s.user.clone().unwrap();
         assert_eq!(u.name, "Alex");
         assert_eq!(u.id, "u");
-        assert!(!u.public && u.avatar_version.is_none());
+        assert!(u.avatar_version.is_none());
         // Ancien cache (sans profil) : toujours lisible.
         let old: Status = serde_json::from_value(json!({ "connected": true, "user": { "name": "A", "email": "a@b.c" } })).unwrap();
         assert!(old.user.unwrap().avatar.is_none());

@@ -248,11 +248,11 @@ pub async fn cloud_sync_steamgriddb(ctx: Ctxs<'_>, first: bool) -> Result<bool, 
     blocking(move || cloud.sync_steamgriddb(first)).await?
 }
 
-/// Profil du compte Hangar : pseudo et/ou visibilité.
+/// Profil du compte Hangar : nouveau pseudo.
 #[tauri::command]
-pub async fn cloud_set_profile(ctx: Ctxs<'_>, name: Option<String>, public: Option<bool>) -> Result<crate::cloud::Status, String> {
+pub async fn cloud_set_profile(ctx: Ctxs<'_>, name: String) -> Result<crate::cloud::Status, String> {
     let cloud = ctx.cloud.clone();
-    blocking(move || cloud.set_profile(name, public)).await?
+    blocking(move || cloud.set_profile(name)).await?
 }
 
 /// Nouvel avatar, déjà réduit par le frontend (carré de 256 px).
@@ -320,7 +320,6 @@ pub async fn cloud_delete_account(ctx: Ctxs<'_>) -> Result<(), String> {
     blocking(move || cloud.delete_account()).await?
 }
 
-/// Ouvre le profil public du compte dans le navigateur.
 /// Appel de l'API sociale du compte (`/social/*`), avec le jeton du poste.
 #[tauri::command]
 pub async fn cloud_social(ctx: Ctxs<'_>, method: String, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
@@ -355,12 +354,6 @@ pub fn social_notify(app: AppHandle, title: String, body: String) {
     let body: String = body.chars().take(200).collect();
     let id = app.config().identifier.clone();
     std::thread::spawn(move || crate::cloud::notify(&id, &title, &body));
-}
-
-#[tauri::command]
-pub async fn cloud_open_profile(ctx: Ctxs<'_>) -> Result<(), String> {
-    let cloud = ctx.cloud.clone();
-    blocking(move || cloud.open_profile()).await?
 }
 
 /// Ouvre une page d'aide connue dans le navigateur (liste fermée, pas d'URL libre).

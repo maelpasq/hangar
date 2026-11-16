@@ -288,21 +288,17 @@ describe('compte', () => {
     expect((await call('/secrets/steamgriddb', { token: a })).status).toBe(404);
   });
 
-  it('gère le profil : pseudo, avatar et visibilité', async () => {
+  it('gère le profil : pseudo et avatar', async () => {
     const me = await json(await call('/me', { token: a }));
-    const id = me.user.id;
-    expect(me.user.public).toBe(false);
     expect(me.user.avatar).toBe(null);
-    // Privé par défaut : la page publique ne dit rien.
-    const hidden = await call(`/u/${id}`);
-    expect(hidden.status).toBe(404);
-    expect(await hidden.text()).not.toContain('moi@exemple.fr');
+    expect(me.user).not.toHaveProperty('public');
+    // Plus de page publique.
+    expect((await call(`/u/${me.user.id}`)).status).toBe(401);
 
     for (const name of ['x', ' ', 'a'.repeat(33), 'a\u0000b', 42]) {
       expect((await call('/me', { method: 'PUT', token: a, body: { name } })).status).toBe(400);
     }
-    expect((await call('/me', { method: 'PUT', token: a, body: { public: 'oui' } })).status).toBe(400);
-    expect((await call('/me', { method: 'PUT', token: a, body: { name: '  <Pilote>  du  dimanche ', public: true } })).status).toBe(200);
+    expect((await call('/me', { method: 'PUT', token: a, body: { name: '  <Pilote>  du  dimanche ' } })).status).toBe(200);
 
     // L'avatar : une vraie image, pas trop grosse.
     const put = (bytes: Uint8Array<ArrayBuffer>) =>
@@ -311,44 +307,14 @@ describe('compte', () => {
     expect((await put(new Uint8Array(600 * 1024).fill(0xff))).status).toBe(413);
     const sent = await json(await put(PNG));
     const after = await json(await call('/me', { token: b }));
-    expect(after.user).toMatchObject({ name: '<Pilote> du dimanche', public: true, avatar: sent.avatar });
+    expect(after.user).toMatchObject({ name: '<Pilote> du dimanche', avatar: sent.avatar });
     const pic = await call('/me/avatar', { token: b });
     expect(pic.headers.get('content-type')).toBe('image/png');
     expect(new Uint8Array(await pic.arrayBuffer())).toEqual(PNG);
 
-    // La visibilité suit la synchro des autres postes.
-    const sync = await json(await call('/sync?since=0', { token: b }));
-    expect(sync.changes.find((ch: any) => ch.key === 'profile:public')?.value).toBe('true');
-
-    // Page publique : pseudo échappé, avatar inclus, temps de jeu de tous les postes, sans l'e-mail.
-    await call('/sync', {
-      token: b,
-      body: {
-        changes: [
-          { key: `time:${DEVICE_B}:manual:9`, value: JSON.stringify({ ms: 7_200_000, n: 1, last: 1, h: 7_200_000 }), updatedAt: 1 },
-          // Heures de Steam reprises : seul le temps mesuré par Hangar (h) compte.
-          { key: `time:${DEVICE_B}:steam:10`, value: JSON.stringify({ ms: 360_000_000, n: 1, last: 1, s: 1, h: 3_600_000 }), updatedAt: 1 },
-          // Ancienne version de l'app, sans h : tout le temps si le store ne compte rien, rien sinon.
-          { key: `time:${DEVICE_A}:manual:9`, value: JSON.stringify({ ms: 3_600_000, n: 1, last: 1 }), updatedAt: 1 },
-          { key: `time:${DEVICE_A}:steam:11`, value: JSON.stringify({ ms: 360_000_000, n: 1, last: 1, s: 1 }), updatedAt: 1 }
-        ]
-      }
-    });
-    const page = await call(`/u/${id}`);
-    expect(page.status).toBe(200);
-    const html = await page.text();
-    expect(html).toContain('&lt;Pilote&gt; du dimanche');
-    expect(html).not.toContain('<Pilote>');
-    expect(html).toContain('data:image/png;base64,');
-    expect(html).toContain('<b>4 h</b>');
-    expect(html).toContain('<b>2</b><span>jeux joués');
-    expect(html).not.toContain('moi@exemple.fr');
-
     expect((await call('/me/avatar', { method: 'DELETE', token: a })).status).toBe(200);
     expect(bucket.size).toBe(0);
     expect((await call('/me/avatar', { token: a })).status).toBe(404);
-    expect((await call('/me', { method: 'PUT', token: a, body: { public: false } })).status).toBe(200);
-    expect((await call(`/u/${id}`)).status).toBe(404);
   });
 
   it('copie l\'avatar du service de connexion', async () => {
@@ -401,7 +367,6 @@ describe('compte', () => {
     await call('/sync', { token: a, body: { changes: [{ key: 'cover:steam:9', value: JSON.stringify(`file:${hash}`), updatedAt: t }] } });
     const exported = await json(await call('/export', { token: a }));
     expect(exported.covers.map((x: any) => x.hash).sort()).toEqual([hash, await sha256Hex(unused)].sort());
-    expect(exported.user.public).toBe(false);
 
     // Trop récentes : gardées. Un jour plus tard : seule celle qu'aucun élément ne désigne part.
     expect(await cleanCovers(db, env.AVATARS, t)).toBe(0);

@@ -122,7 +122,7 @@ Routes prévues :
 - `GET /export` : toutes les données (JSON)
 - `DELETE /me` : suppression du compte et de toutes ses données
 
-Routes ajoutées en l'écrivant : `PUT` et `GET /covers/:hash` (jaquettes en fichier local, phase 6), `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`, `PUT /me` (pseudo, visibilité), `GET`, `PUT`, `DELETE /me/avatar`, `GET /u/:id` (profil public).
+Routes ajoutées en l'écrivant : `PUT` et `GET /covers/:hash` (jaquettes en fichier local, phase 6), `GET /login` (page de connexion), `GET /desktop/finish` et `POST /desktop/token` (retour vers l'app, section 7), `POST /logout`, `PUT` et `DELETE /devices/:id` (renommer un poste, le déconnecter à distance), `GET /sessions?since=<curseur>`, `PUT /me` (pseudo), `GET`, `PUT`, `DELETE /me/avatar`. La page publique `GET /u/:id` a existé puis a été retirée (16 nov. 2026, voir DECISIONS.md).
 
 Routes du social (phase 7), sous `/social/` : `GET`, `PUT /me` (activation, code ami, trouvable par pseudo, visibilités), `PUT /showcase` (vitrine et bibliothèque), `PUT`, `DELETE /banner`, `GET /users/:id` (profil vu dans l'app) et `/users/:id/avatar`, `/users/:id/banner`, `GET /search?q=`, `GET /friends`, `POST`, `DELETE /friends/:id` (demande, acceptation, refus, retrait), `POST`, `DELETE /blocks/:id`, `PUT /presence`, `GET`, `POST /activity`, `GET /conversations`, `GET`, `POST /messages/:id`, `POST /messages/:id/read`, `POST /reports`, `GET /live` (WebSocket).
 
@@ -149,9 +149,9 @@ Tables (en plus de celles de Better Auth) : `profiles` (compte, compteur qui ser
 2. **Connexion dans l'app** : entrée « Se connecter » / compte sous « Ajouter un jeu » dans la barre latérale, Paramètres > Compte, étape de l'assistant, retour par `127.0.0.1`, coffre. L'entrée de la barre latérale n'apparaît qu'à partir de cette phase (pas de bouton qui ne mène nulle part).
 3. **Synchro** : récupération, envoi, file hors ligne, fusion à la première connexion, indicateur d'état ; rattachement des jeux locaux et cartes en gris « Sur un autre PC ».
 4. **Temps de jeu cumulé** : historique et statistiques tous postes, détail par poste.
-5. **Profil** : pseudo, avatar (R2), visibilité publique ou privée. Le social vient après.
+5. **Profil** : pseudo, avatar (R2). Le social vient après. (Une visibilité publique avec page web a existé, retirée le 16 nov. 2026.)
 6. **Cadre et publication** : politique de confidentialité, export et suppression, docs et liste réseau, version. Ajouté : jaquettes en fichier local synchronisées, suppression des comptes inactifs, ménage quotidien. La version se publie avec le reste du compte (dev vers main), sur demande.
-7. **Social, dans l'app** : tout se passe dans Hangar, la page web `/u/:id` reste un simple aperçu.
+7. **Social, dans l'app** : tout se passe dans Hangar, sans page web de profil.
    - **Profil dans l'app** : sa propre page (avatar, pseudo, bannière, temps de jeu total, jeux les plus joués, collections mises en avant, activité récente) et celle des autres, ouvertes sans navigateur.
    - **Amis** : recherche par pseudo ou par code ami, demande, acceptation, refus, blocage ; liste des amis avec leur statut (en ligne, en jeu sur tel jeu, hors ligne) et leur jeu en cours.
    - **Page Amis** dans la barre latérale : liste, demandes reçues et envoyées, activité des amis (jeux lancés, nouveaux jeux), jeux en commun.

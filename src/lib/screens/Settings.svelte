@@ -447,29 +447,6 @@
                     >{cloud.avatar ? "Changer l'avatar" : 'Choisir une image'}</button
                   >
                 </div>
-                <div class="srow">
-                  <span class="ico"><Icon name="globe" size={18} /></span>
-                  <span class="txt">
-                    <span class="lbl">Profil public</span>
-                    <span class="hint"
-                      >{s.user?.public
-                        ? 'Ta page de profil est visible par toute personne qui a son lien.'
-                        : 'Privé : personne ne voit ton profil.'}</span
-                    >
-                  </span>
-                  {#if s.user?.public}
-                    <button class="btn-s" disabled={s.offline} onclick={() => cloud.openProfile()}>Voir ma page</button>
-                  {/if}
-                  <Toggle
-                    on={s.user?.public === true}
-                    label="Profil public"
-                    onchange={(v) => void profileTask(() => cloud.setPublic(v))}
-                  />
-                </div>
-                <p class="gdesc">
-                  Ta page publique montre ton pseudo, ton avatar et le temps passé dans les jeux lancés avec Hangar,
-                  jamais la liste de tes jeux ni ton adresse e-mail.
-                </p>
               </section>
 
               <section class="group" aria-label="Amis et confidentialité" aria-busy={profileBusy}>

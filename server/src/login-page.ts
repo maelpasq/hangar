@@ -222,7 +222,7 @@ paint();
 if (failed) msg("La connexion avec ce service n'a pas abouti. Réessaie, ou utilise ton adresse e-mail.");
 `;
 
-function shell(nonce: string, title: string, inner: string, script = '', style = ''): string {
+function shell(nonce: string, title: string, inner: string, script = ''): string {
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -232,7 +232,7 @@ function shell(nonce: string, title: string, inner: string, script = '', style =
 <meta name="theme-color" content="#07080b">
 <title>${title}</title>
 <link rel="icon" href="${FAVICON}">
-<style nonce="${nonce}">${STYLE}${style}</style>
+<style nonce="${nonce}">${STYLE}</style>
 </head>
 <body>
 <main>${MARK}${inner}</main>
@@ -328,56 +328,4 @@ export function pageHeaders(nonce: string): Record<string, string> {
     'x-content-type-options': 'nosniff',
     'cache-control': 'no-store'
   };
-}
-
-const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (ch) => ESCAPES[ch]);
-
-/** Profil public d'un compte : ce que la personne a choisi de montrer, rien d'autre. */
-export interface PublicProfile {
-  name: string;
-  /** Image en `data:` (la page ne charge rien d'ailleurs), ou null : initiale. */
-  avatar: string | null;
-  since: number;
-  playMs: number;
-  games: number;
-}
-
-const PROFILE_STYLE = `
-.who { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
-.who img, .who .ini { flex: none; width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
-  border: 1px solid var(--b3); }
-.who .ini { display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 30px; font-weight: 800; }
-.who h1 { margin: 0 0 2px; overflow-wrap: anywhere; }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.stats div { padding: 14px; border-radius: 13px; border: 1px solid var(--b1); background: var(--s2); }
-.stats b { display: block; font-size: 22px; font-weight: 750; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
-.stats span { font-size: 12.5px; color: var(--muted); }`;
-
-/** Durée lisible : minutes sous une heure, heures ensuite. */
-export function playLabel(ms: number): string {
-  const min = Math.round(ms / 60_000);
-  if (min < 60) return `${min} min`;
-  return `${Math.round(min / 60).toLocaleString('fr-FR')} h`;
-}
-
-/** Page publique d'un profil (`/u/<id>`), ou page « introuvable » quand le profil est privé. */
-export function profilePage(nonce: string, p: PublicProfile | null): string {
-  if (!p) {
-    return shell(nonce, 'Profil introuvable', `<h1>Profil introuvable</h1><p>Ce profil Hangar n'existe pas ou n'est pas public.</p>`);
-  }
-  const name = escapeHtml(p.name);
-  const pic = p.avatar
-    ? `<img src="${p.avatar}" alt="">`
-    : `<span class="ini" aria-hidden="true">${escapeHtml(p.name.charAt(0).toUpperCase())}</span>`;
-  const since = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(p.since);
-  const games = `${p.games.toLocaleString('fr-FR')}`;
-  return shell(
-    nonce,
-    `${name} sur Hangar`,
-    `<div class="who">${pic}<div><h1>${name}</h1><p>Sur Hangar depuis ${since}</p></div></div>
-<div class="stats"><div><b>${playLabel(p.playMs)}</b><span>de jeu avec Hangar</span></div><div><b>${games}</b><span>${p.games > 1 ? 'jeux joués' : 'jeu joué'}</span></div></div>`,
-    '',
-    PROFILE_STYLE
-  );
 }

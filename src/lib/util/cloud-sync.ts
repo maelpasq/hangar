@@ -390,7 +390,7 @@ export function measuredMs(s: PersistedState, id: string, storeCounted: boolean)
 /**
  * Temps de jeu de ce poste qui ont changé depuis le dernier envoi (au plus `MAX_CHANGES`).
  * `storeCounted` : le store compte déjà ce jeu sur tous les postes (Steam, GOG Galaxy).
- * `h` : le temps mesuré par Hangar seul (profil public).
+ * `h` : le temps mesuré par Hangar seul (pour le futur profil dans l'app).
  */
 export function timeChanges(s: PersistedState, storeCounted: (id: string) => boolean, now = Date.now()): CloudChange[] {
   const out: CloudChange[] = [];

@@ -188,7 +188,6 @@ fn main() {
             commands::cloud_set_profile,
             commands::cloud_set_avatar,
             commands::cloud_remove_avatar,
-            commands::cloud_open_profile,
             commands::cloud_cover_hash,
             commands::cloud_upload_cover,
             commands::cloud_fetch_cover,
