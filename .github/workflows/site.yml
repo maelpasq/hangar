@@ -26,7 +26,7 @@ jobs:
           mkdir -p _site/fonts _site/images
           cp site/*.html site/style.css _site/
           cp public/favicon.svg _site/
-          cp installer/ui/wordmark.png _site/
+          cp installer/ui/wordmark.png site/logotype.webp _site/
           cp installer/ui/fonts/geist-latin-wght-normal.woff2 _site/fonts/
           cp site/fonts/*.woff2 _site/fonts/
           cp docs/images/*.webp _site/images/
