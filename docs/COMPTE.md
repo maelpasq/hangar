@@ -59,7 +59,7 @@ Base : `PersistedState` (`src/lib/types.ts`). Les identifiants `steam:`, `epic:`
 
 **Connexions des launchers** (Steam, GOG, Epic, Xbox ; demande de l'utilisateur : ne pas tout reconnecter sur chaque PC)
 - Même mécanisme que la clé SteamGridDB : secrets `compte-<store>` chiffrés sur le serveur, hors de la synchro et de l'export, envoyés et reçus par le backend Rust seulement (`accounts::Shared`, implémenté par `cloud::Cloud`).
-- Un launcher connecté sur un poste l'est sur tous à la synchro suivante ; déconnecté sur un poste, il l'est partout. Les connexions d'avant cette version sont partagées à la première synchro.
+- Un launcher connecté sur un poste l'est sur tous à la synchro suivante ; déconnecté sur un poste, il l'est partout. Les connexions d'avant cette version sont partagées à la première synchro. Une connexion à un compte Hangar (le même ou un autre) remet le partage à zéro : les launchers du poste sont envoyés au compte, jamais oubliés parce que ce compte ne les a pas.
 - Jetons renouvelés (GOG, Epic, Xbox) : le poste qui renouvelle envoie le nouveau ; un poste dont le jeton est refusé reprend celui du compte.
 - Steam : la clé part avec le SteamID64 du poste (`clé:id`), pour un poste où Steam n'a jamais été ouvert.
 - Xbox seulement sous Windows (et dans les builds qui ont l'identifiant Microsoft).

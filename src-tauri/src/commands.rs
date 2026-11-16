@@ -186,6 +186,8 @@ pub async fn cloud_login(app: AppHandle, ctx: Ctxs<'_>, device_id: String) -> Re
     let cloud = ctx.cloud.clone();
     let res = blocking(move || cloud.login(&device_id)).await?;
     if res.is_ok() {
+        // Le compte a pu changer : les launchers d'ici lui seront envoyés, pas oubliés.
+        ctx.accounts.unshare_all();
         if let Some(w) = app.get_webview_window("main") {
             let _ = w.unminimize();
             let _ = w.show();

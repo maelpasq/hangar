@@ -372,6 +372,20 @@ impl Accounts {
         let _ = self.shared.set(shared);
     }
 
+    /// Connexion à un compte Hangar (peut-être un autre) : les launchers de ce poste ne sont plus
+    /// partagés. La synchro suivante les envoie au compte au lieu de les croire déconnectés ailleurs.
+    pub fn unshare_all(&self) {
+        let mut data = lock(&self.data);
+        if !data.values().any(|d| d.shared) {
+            return;
+        }
+        for d in data.values_mut() {
+            d.shared = false;
+        }
+        drop(data);
+        self.save();
+    }
+
     /// Envoie (ou retire) le secret d'un launcher sur le compte Hangar. Vrai si c'est fait.
     fn share(&self, store: &str, sec: Option<&str>) -> bool {
         let Some(sh) = self.shared.get() else { return false };
@@ -829,6 +843,17 @@ mod tests {
         assert!(!allowed("https://user@api.steampowered.com/x"));
         assert!(!allowed("https://api.steampowered.com:444/x"));
         assert!(!allowed("https://cdn1.epicgames.com/x"));
+    }
+
+    #[test]
+    fn changement_de_compte_hangar() {
+        let t = tempfile::tempdir().unwrap();
+        let acc = Accounts::new(t.path());
+        lock(&acc.data).insert("steam".into(), Synced { shared: true, ..Default::default() });
+        acc.unshare_all();
+        assert!(!lock(&acc.data)["steam"].shared);
+        // Gardé sur le disque : un redémarrage ne remet pas l'ancien partage.
+        assert!(!lock(&Accounts::new(t.path()).data)["steam"].shared);
     }
 
     #[test]
