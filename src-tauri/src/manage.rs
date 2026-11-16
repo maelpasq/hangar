@@ -129,9 +129,12 @@ pub fn steam_progress(id: u32) -> Option<(f64, bool)> {
     let text = fs::read_to_string(path).ok()?;
     let staged = acf_num(&text, "BytesStaged");
     let started = acf_num(&text, "StateFlags") & 1024 != 0;
+    let paused = !started || steam_root().and_then(|r| log_paused(&log_tail(&r.join("logs/content_log.txt")), id)) == Some(true);
     let mut base = BASE.lock().unwrap_or_else(|e| e.into_inner());
-    // Seulement quand Steam télécharge ce jeu (UpdateStarted), pas en pause ni en file d'attente.
-    let written = match steam_written().filter(|_| started) {
+    // Seulement quand Steam télécharge ce jeu, pas en pause ni en file d'attente : Steam garde
+    // UpdateStarted sur les jeux en pause, et ses octets écrits (tous jeux confondus) feraient
+    // monter leur pourcentage pendant le téléchargement d'un autre.
+    let written = match steam_written().filter(|_| !paused) {
         Some((pid, w)) => {
             let b = base.entry(id).or_insert((pid, w, staged));
             // Steam relancé ou manifeste réécrit (pause) : on repart de ses nouveaux chiffres.
@@ -149,7 +152,6 @@ pub fn steam_progress(id: u32) -> Option<(f64, bool)> {
     if p.is_none() {
         base.remove(&id);
     }
-    let paused = !started || steam_root().and_then(|r| log_paused(&log_tail(&r.join("logs/content_log.txt")), id)) == Some(true);
     p.map(|v| (v, paused))
 }
 
