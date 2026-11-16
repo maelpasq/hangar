@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page introuvable - Hangar</title>
+<meta name="description" content="Cette page n'existe pas. Le chemin du retour, lui, marche toujours.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a0b0f">
+<meta name="color-scheme" content="dark">
+<!-- Chemins absolus : GitHub Pages sert cette page pour n'importe quelle adresse inconnue, même en profondeur -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<style>
+  main { overflow-x: clip; }
+  .lost { text-align: center; padding-top: clamp(3rem, 7vw, 5.5rem); }
+  .lost h1 { margin-top: .9rem; font-size: clamp(2.5rem, 7vw, 4.75rem); }
+  .lost .lead { max-width: 560px; margin: 1.1rem auto 0; }
+  .pix { font-family: 'Pixelify Sans', 'Geist', system-ui, sans-serif; letter-spacing: .02em; }
+
+  /* La scène : un petit niveau en pixel art, fondu sur les côtés */
+  .scene {
+    display: block; width: min(100%, 768px); height: auto; margin: clamp(2rem, 5vw, 3rem) auto 0;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .scene * { transform-box: view-box; }
+  .far { fill: #110e1d; animation: pan 120s linear infinite; }
+  .near { fill: #161228; animation: pan 70s linear infinite; }
+  @keyframes pan { to { transform: translateX(-192px); } }
+  .star { fill: #c9c0ff; animation: twinkle 3.2s steps(1, end) infinite; animation-delay: var(--d); }
+  @keyframes twinkle { 50% { opacity: .15; } }
+
+  /* Les blocs du 404 tombent comme des pièces, puis flottent sur deux images */
+  .blk { animation: drop .55s steps(7) both; animation-delay: var(--d); }
+  @keyframes drop { from { transform: translateY(-60px); } }
+  .digits { animation: bob 2.4s steps(1, end) 1.4s infinite; }
+  @keyframes bob { 50% { transform: translateY(-1px); } }
+  /* Le bloc manquant : il se pose, hésite, puis part dans le vide */
+  .lost-blk { animation: fall 2.8s .55s both; }
+  @keyframes fall {
+    0% { transform: translateY(-60px); animation-timing-function: steps(7); }
+    20% { transform: none; animation-timing-function: steps(1, end); }
+    48% { transform: translateX(1px); animation-timing-function: steps(1, end); }
+    53% { transform: none; animation-timing-function: steps(1, end); }
+    58% { transform: translateX(-1px); animation-timing-function: steps(1, end); }
+    63% { transform: none; animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+    100% { transform: translateY(64px); }
+  }
+
+  .pit { fill: url(#pit); }
+  .mote { fill: #a99bff; opacity: 0; animation: rise 3.6s steps(18) infinite; animation-delay: var(--d); }
+  @keyframes rise { 0% { transform: none; opacity: 0; } 25% { opacity: .9; } 100% { transform: translateY(-18px); opacity: 0; } }
+  .broken { transform-origin: 84px 64px; animation: sway 3.4s steps(6) infinite alternate; }
+  @keyframes sway { from { transform: rotate(-5deg); } to { transform: rotate(4deg); } }
+  .bridge { opacity: 0; }
+
+  /* Le héros : arrive, regarde le trou, se pose la question, repart */
+  #hero { transform: translate(-12px, 51px); animation: walk 9s linear 1.8s infinite; }
+  @keyframes walk { 0% { transform: translate(-12px, 51px); } 32%, 68% { transform: translate(75px, 51px); } 100% { transform: translate(-12px, 51px); } }
+  .flip { transform-box: fill-box; transform-origin: center; animation: flip 9s steps(1, end) 1.8s infinite; }
+  @keyframes flip { 0% { transform: none; } 68%, 100% { transform: scaleX(-1); } }
+  .walkL { animation: walkL 9s steps(1, end) 1.8s infinite; }
+  @keyframes walkL { 0% { opacity: 1; } 32% { opacity: 0; } 68%, 100% { opacity: 1; } }
+  .standL { opacity: 0; animation: standL 9s steps(1, end) 1.8s infinite; }
+  @keyframes standL { 0% { opacity: 0; } 32% { opacity: 1; } 68%, 100% { opacity: 0; } }
+  .la { animation: la .36s steps(1, end) infinite; }
+  @keyframes la { 50% { opacity: 0; } }
+  .lb { opacity: 0; animation: lb .36s steps(1, end) infinite; }
+  @keyframes lb { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
+  .head { animation: peek 9s steps(1, end) 1.8s infinite; }
+  @keyframes peek { 0% { transform: none; } 44% { transform: translate(1px, 1px); } 58%, 100% { transform: none; } }
+  .q { opacity: 0; animation: q 9s steps(1, end) 1.8s infinite; }
+  @keyframes q { 0% { opacity: 0; } 37% { opacity: 1; transform: translateY(-1px); } 39% { opacity: 1; transform: none; } 63%, 100% { opacity: 0; } }
+  .ant { animation: twinkle 1.2s steps(1, end) infinite; }
+
+  /* Code retrouvé : le bloc remonte, le pont se reconstruit, le héros traverse */
+  .fixed .broken { opacity: 0; }
+  .fixed .bridge { opacity: 1; }
+  .fixed .bridge > * { animation: drop .45s steps(6) both; animation-delay: calc(var(--i) * 70ms); }
+  .fixed .lost-blk { animation: back .6s steps(8) both; }
+  @keyframes back { from { transform: translateY(64px); } }
+  .fixed #hero { animation: cross 7s linear .6s infinite; }
+  @keyframes cross { to { transform: translate(204px, 51px); } }
+  .fixed .flip, .fixed .head { animation: none; }
+  .fixed .walkL { animation: none; opacity: 1; }
+  .fixed .standL, .fixed .q { animation: none; opacity: 0; }
+
+  /* Écran « Continuer ? » */
+  .continue { margin-top: clamp(1.75rem, 4vw, 2.5rem); display: flex; align-items: baseline; justify-content: center; gap: .75rem; font-size: clamp(1.25rem, 3vw, 1.625rem); font-weight: 600; color: var(--text-2); }
+  .continue .count { min-width: 1.2ch; font-size: 1.5em; color: var(--accent-2); text-shadow: 3px 3px 0 #3a1f8f; }
+  .continue.over { color: var(--muted); }
+  .press { margin-top: .35rem; font-size: .9375rem; color: var(--muted); animation: blink 1.1s steps(1, end) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .actions { margin-top: 1.75rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+  /* Astuces façon écran de chargement */
+  .tip { margin: 2.25rem auto 0; max-width: 620px; display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .8rem .8rem .8rem 1.1rem; border-radius: 16px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-1); text-align: left; }
+  .tip .eyebrow { flex: none; }
+  .tip p { flex: 1; font-size: .9375rem; color: var(--text-3); text-wrap: pretty; transition: opacity .2s ease; }
+  .tip p.out { opacity: 0; }
+  .next { flex: none; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border: 0; border-radius: 10px; cursor: pointer; color: var(--text-2); background: var(--surface-3); transition: color .2s ease, background-color .2s ease, transform .6s var(--spring); }
+  .next:hover { color: var(--text); background: rgba(255,255,255,.12); }
+  .next:active { transform: scale(.92); transition-duration: .1s; }
+  .next svg { width: 12px; height: 12px; fill: currentColor; }
+
+  /* Succès débloqué */
+  .ach {
+    position: fixed; right: 20px; bottom: 20px; z-index: 20; display: flex; align-items: center; gap: 14px;
+    max-width: calc(100% - 40px); padding: 10px 20px 10px 10px; border-radius: 999px;
+    background: rgba(22,25,34,.92); box-shadow: inset 0 0 0 1px var(--border-2), 0 24px 48px -16px rgba(0,0,0,.7);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    transform: translateY(calc(100% + 40px)); opacity: 0; visibility: hidden;
+    transition: transform .7s var(--spring), opacity .3s ease, visibility 0s .7s;
+  }
+  .ach.show { transform: none; opacity: 1; visibility: visible; transition: transform .7s var(--spring), opacity .3s ease; }
+  .ach .ico { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4a2fb8, #24164f); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .ach .ico svg { width: 22px; height: auto; }
+  .ach small { display: block; font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-2); }
+  .ach strong { display: block; font-size: .9375rem; font-weight: 650; line-height: 1.3; }
+  .ach span { display: block; font-size: .8125rem; color: var(--muted); line-height: 1.35; }
+  .ach .pts { flex: none; margin-left: 4px; font-size: 1.0625rem; font-weight: 600; color: #f5c85c; }
+
+  /* Pas de clavier : pas d'Entrée à presser */
+  @media (hover: none) { .press { display: none; } }
+  @media (max-width: 640px) {
+    /* La scène est recadrée sur le trou pour garder des pixels lisibles */
+    .scene { width: 160%; max-width: none; margin-inline: -30%; }
+    .ach { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+    .tip { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scene *, .press { animation: none !important; }
+    #hero { transform: translate(75px, 51px); }
+    .walkL, .lb { opacity: 0; }
+    .standL, .q { opacity: 1; }
+    .lost-blk { transform: translateY(64px); }
+    .fixed .lost-blk { transform: none; }
+    .fixed #hero { transform: translate(150px, 51px); }
+    .fixed .walkL, .fixed .q { opacity: 0; }
+    .fixed .standL { opacity: 1; }
+    .ach { transform: none; transition: opacity .3s ease, visibility 0s .3s; }
+    .ach.show { transition: opacity .3s ease; }
+    .tip p { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="ha" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#dcd8e3"/><stop offset=".42" stop-color="#d4cfde"/><stop offset="1" stop-color="#6f6683"/></linearGradient>
+      <radialGradient id="hg" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6e3bf6"/><stop offset=".5" stop-color="#7a52f0" stop-opacity=".75"/><stop offset="1" stop-color="#8a6ff0" stop-opacity="0"/></radialGradient>
+      <linearGradient id="hs" x1="0" y1="345" x2="0" y2="575" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8a5cff"/><stop offset="1" stop-color="#652cee"/></linearGradient>
+      <path id="hp" d="M50 682 L50 315 Q50 275 84.9 255.4 L430.1 61.6 Q465 42 499.9 61.6 L845.1 255.4 Q880 275 880 315 L880 682 L725 612 L725 359 Q725 345 712.8 338.1 L477.2 204.9 Q465 198 452.8 204.9 L217.2 338.1 Q205 345 205 359 L205 612 Z"/>
+      <symbol id="mark" viewBox="0 0 930 720">
+        <use href="#hp" fill="url(#ha)"/><use href="#hp" fill="url(#hg)"/>
+        <path d="M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 450 467 345 Z" fill="url(#hs)"/>
+      </symbol>
+      <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7M6 9.5V20h12V9.5"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Hangar, accueil">
+        <svg class="mark" viewBox="0 0 930 720" aria-hidden="true"><use href="#mark"/></svg>
+        <img class="wordmark" src="/wordmark.png" alt="" width="91" height="20">
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="/#fonctions">Fonctions</a>
+        <a href="/#apercu">Aperçu</a>
+        <a href="/#installer">Installer</a>
+        <a class="ext" href="https://github.com/maelpasq/hangar" rel="noopener" aria-label="GitHub (site externe)">GitHub<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
+      </nav>
+      <a class="btn small nav-dl" href="/#installer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="wrap lost" aria-labelledby="t-404">
+      <p class="eyebrow">Erreur 404</p>
+      <h1 id="t-404">Tu es sorti <span>de la carte.</span></h1>
+      <p class="lead">Cette page n'existe pas, ou plus. Un bloc est tombé dans le vide et a emporté le chemin avec lui. Le retour à l'accueil, lui, marche toujours.</p>
+
+      <svg class="scene" id="scene" viewBox="0 0 192 80" width="768" height="320" shape-rendering="crispEdges" aria-hidden="true">
+        <defs>
+          <symbol id="blk" viewBox="0 0 6 6" width="6" height="6">
+            <rect width="6" height="6" fill="#7c4dff"/>
+            <rect width="6" height="1" fill="#b9a6ff"/><rect y="1" width="1" height="5" fill="#9d84ff"/>
+            <rect x="5" y="1" width="1" height="5" fill="#5b36c9"/><rect x="1" y="5" width="5" height="1" fill="#4421a8"/>
+            <rect x="1" y="1" width="1" height="1" fill="#efeaff"/>
+          </symbol>
+          <pattern id="tile" width="8" height="8" patternUnits="userSpaceOnUse" y="66">
+            <rect width="8" height="8" fill="#1a1530"/><rect width="8" height="1" fill="#241d40"/><rect y="1" width="1" height="7" fill="#201a3a"/>
+            <rect y="7" width="8" height="1" fill="#110d20"/><rect x="5" y="3" width="1" height="1" fill="#2a2249"/><rect x="2" y="5" width="1" height="1" fill="#14101f"/>
+          </pattern>
+          <linearGradient id="pit" x1="0" y1="64" x2="0" y2="80" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6e3bf6" stop-opacity="0"/><stop offset="1" stop-color="#6e3bf6" stop-opacity=".32"/></linearGradient>
+        </defs>
+
+        <g class="far"><path d="M0 80V47H8V48H16V45H24V40H32V44H40V43H48V44H56V40H64V45H72V45H80V42H88V38H96V42H104V45H112V42H120V45H128V47H136V39H144V39H152V42H160V49H168V48H176V44H184V40H192V47V80Z"/><path transform="translate(192 0)" d="M0 80V47H8V48H16V45H24V40H32V44H40V43H48V44H56V40H64V45H72V45H80V42H88V38H96V42H104V45H112V42H120V45H128V47H136V39H144V39H152V42H160V49H168V48H176V44H184V40H192V47V80Z"/></g>
+        <g class="near"><path d="M0 80V55H4V54H8V55H12V58H16V59H20V57H24V55H28V58H32V56H36V55H40V56H44V54H48V53H52V53H56V57H60V57H64V56H68V56H72V56H76V57H80V56H84V57H88V56H92V59H96V57H100V56H104V56H108V55H112V55H116V55H120V56H124V55H128V60H132V59H136V56H140V55H144V57H148V54H152V54H156V54H160V56H164V54H168V54H172V55H176V56H180V56H184V53H188V54H192V55V80Z"/><path transform="translate(192 0)" d="M0 80V55H4V54H8V55H12V58H16V59H20V57H24V55H28V58H32V56H36V55H40V56H44V54H48V53H52V53H56V57H60V57H64V56H68V56H72V56H76V57H80V56H84V57H88V56H92V59H96V57H100V56H104V56H108V55H112V55H116V55H120V56H124V55H128V60H132V59H136V56H140V55H144V57H148V54H152V54H156V54H160V56H164V54H168V54H172V55H176V56H180V56H184V53H188V54H192V55V80Z"/></g>
+        <rect class="star" x="12" y="9" width="1" height="1" style="--d:0s"/>
+        <rect class="star" x="41" y="22" width="1" height="1" style="--d:-1.1s"/>
+        <rect class="star" x="151" y="8" width="1" height="1" style="--d:-2s"/>
+        <rect class="star" x="177" y="27" width="1" height="1" style="--d:-.6s"/>
+        <rect class="star" x="27" y="38" width="1" height="1" style="--d:-2.6s"/>
+        <rect class="star" x="163" y="44" width="1" height="1" style="--d:-1.6s"/>
+
+        <g class="digits">
+          <use class="blk" href="#blk" x="67" y="6" style="--d:0.16s"/>
+          <use class="blk" href="#blk" x="79" y="6" style="--d:0.18s"/>
+          <use class="blk" href="#blk" x="67" y="12" style="--d:0.11s"/>
+          <use class="blk" href="#blk" x="79" y="12" style="--d:0.15s"/>
+          <use class="blk" href="#blk" x="67" y="18" style="--d:0.28s"/>
+          <use class="blk" href="#blk" x="73" y="18" style="--d:0.30s"/>
+          <use class="blk" href="#blk" x="79" y="18" style="--d:0.17s"/>
+          <use class="blk" href="#blk" x="79" y="24" style="--d:0.49s"/>
+          <use class="blk" href="#blk" x="79" y="30" style="--d:0.47s"/>
+          <use class="blk" href="#blk" x="91" y="6" style="--d:0.13s"/>
+          <use class="blk" href="#blk" x="97" y="6" style="--d:0.09s"/>
+          <use class="blk" href="#blk" x="103" y="6" style="--d:0.25s"/>
+          <use class="blk" href="#blk" x="91" y="12" style="--d:0.28s"/>
+          <use class="blk" href="#blk" x="103" y="12" style="--d:0.09s"/>
+          <use class="blk" href="#blk" x="91" y="18" style="--d:0.30s"/>
+          <use class="blk" href="#blk" x="103" y="18" style="--d:0.22s"/>
+          <use class="blk" href="#blk" x="91" y="24" style="--d:0.43s"/>
+          <use class="blk" href="#blk" x="103" y="24" style="--d:0.26s"/>
+          <use class="blk" href="#blk" x="91" y="30" style="--d:0.46s"/>
+          <use class="blk" href="#blk" x="103" y="30" style="--d:0.44s"/>
+          <use class="blk" href="#blk" x="115" y="6" style="--d:0.06s"/>
+          <use class="blk" href="#blk" x="127" y="6" style="--d:0.02s"/>
+          <use class="blk" href="#blk" x="115" y="12" style="--d:0.37s"/>
+          <use class="blk" href="#blk" x="127" y="12" style="--d:0.38s"/>
+          <use class="blk" href="#blk" x="115" y="18" style="--d:0.18s"/>
+          <use class="blk" href="#blk" x="121" y="18" style="--d:0.28s"/>
+          <use class="blk" href="#blk" x="127" y="18" style="--d:0.45s"/>
+          <use class="blk" href="#blk" x="127" y="24" style="--d:0.27s"/>
+          <use class="blk" href="#blk" x="127" y="30" style="--d:0.41s"/>
+          <use class="lost-blk" href="#blk" x="97" y="30"/>
+        </g>
+
+        <rect class="pit" x="84" y="64" width="32" height="16"/>
+        <rect class="mote" x="92" y="78" width="1" height="1" style="--d:0s"/>
+        <rect class="mote" x="101" y="80" width="1" height="1" style="--d:-1.3s"/>
+        <rect class="mote" x="109" y="79" width="1" height="1" style="--d:-2.4s"/>
+        <rect class="mote" x="97" y="81" width="1" height="1" style="--d:-.7s"/>
+
+        <rect x="-1" y="66" width="85" height="14" fill="url(#tile)"/>
+        <rect x="116" y="66" width="77" height="14" fill="url(#tile)"/>
+        <path fill="#9b7bff" d="M-1 64h85v1h-85zM116 64h77v1h-77z"/>
+        <path fill="#5b36c9" d="M-1 65h85v1h-85zM116 65h77v1h-77z"/>
+        <path fill="#0d0a18" d="M83 66h1v14h-1zM116 66h1v14h-1z"/>
+
+        <g class="broken">
+          <path fill="#6b5a99" d="M84 64h1v13h-1z"/>
+          <path fill="#3d2f6b" d="M83 66h3v2h-3zM83 70h3v2h-3zM83 74h3v2h-3z"/>
+        </g>
+        <path fill="#3d2f6b" d="M112 63h4v2h-4z"/>
+        <g class="bridge">
+          <path fill="#6b5a99" style="--i:0" d="M84 63h32v1h-32z"/>
+          <path fill="#4d3c80" style="--i:1" d="M84 64h3v2h-3z"/><path fill="#4d3c80" style="--i:2" d="M88 64h3v2h-3z"/>
+          <path fill="#4d3c80" style="--i:3" d="M92 64h3v2h-3z"/><path fill="#4d3c80" style="--i:4" d="M96 64h3v2h-3z"/>
+          <path fill="#4d3c80" style="--i:5" d="M100 64h3v2h-3z"/><path fill="#4d3c80" style="--i:6" d="M104 64h3v2h-3z"/>
+          <path fill="#4d3c80" style="--i:7" d="M108 64h3v2h-3z"/><path fill="#4d3c80" style="--i:8" d="M112 64h4v2h-4z"/>
+        </g>
+
+        <g id="hero">
+            <g class="flip">
+              <rect class="ant" x="2" y="0" width="1" height="1" fill="#c9c0ff"/>
+              <g class="head"><path fill="#8b90a3" d="M2 1h1v1h-1z"/><path fill="#ece8f4" d="M2 2h4v1h-4zM1 3h6v1h-6zM0 4h3v1h-3zM0 5h3v1h-3z"/><path fill="#2b1d66" d="M3 4h4v1h-4zM3 5h1v1h-1zM5 5h2v1h-2z"/><path fill="#a79fc0" d="M7 4h1v1h-1zM7 5h1v1h-1zM1 6h6v1h-6z"/><path fill="#b6a8ff" d="M4 5h1v1h-1z"/></g>
+              <path fill="#7c4dff" d="M1 7h5v1h-5zM1 8h5v1h-5zM7 8h1v1h-1zM1 9h5v1h-5z"/><path fill="#5b36c9" d="M6 7h1v1h-1zM0 8h1v1h-1zM6 8h1v1h-1zM6 9h1v1h-1z"/>
+              <g class="walkL"><g class="la"><path fill="#cfc8e4" d="M1 10h1v1h-1zM5 10h1v1h-1zM1 11h1v1h-1zM6 11h1v1h-1z"/><path fill="#6e3bf6" d="M0 12h2v1h-2zM6 12h2v1h-2z"/></g><g class="lb"><path fill="#cfc8e4" d="M2 10h1v1h-1zM4 10h1v1h-1zM3 11h2v1h-2z"/><path fill="#6e3bf6" d="M3 12h3v1h-3z"/></g></g>
+              <g class="standL"><path fill="#cfc8e4" d="M2 10h1v1h-1zM5 10h1v1h-1zM2 11h1v1h-1zM5 11h1v1h-1z"/><path fill="#6e3bf6" d="M1 12h2v1h-2zM5 12h2v1h-2z"/></g>
+            </g>
+            <g class="q"><path fill="#f2f3f8" d="M3 -9h3v1h-3zM2 -8h1v1h-1zM6 -8h1v1h-1zM6 -7h1v1h-1zM4 -6h2v1h-2zM4 -5h1v1h-1zM4 -3h1v1h-1z"/></g>
+        </g>
+      </svg>
+
+      <div class="continue pix" id="continue" aria-hidden="true"><span id="cont-label">Continuer ?</span><span class="count" id="count">9</span></div>
+      <p class="press pix" id="press" aria-hidden="true">Appuie sur Entrée</p>
+
+      <div class="actions">
+        <a class="btn" href="/"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"/></svg>Retour à l'accueil</a>
+        <a class="btn quiet" href="/#installer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger Hangar</a>
+      </div>
+
+      <div class="tip">
+        <span class="eyebrow">Astuce</span>
+        <p id="tip" aria-live="polite">Désolé, mais ta page est dans un autre château.</p>
+        <button class="next" id="next" type="button" aria-label="Astuce suivante" hidden><svg viewBox="0 0 4 7" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h1v1h1v1h1v1h1v1h-1v1h-1v1h-1v1h-1z"/></svg></button>
+      </div>
+    </section>
+  </main>
+
+  <div class="ach" id="ach" role="status" aria-live="polite" aria-atomic="true">
+    <div class="ico" aria-hidden="true"><svg viewBox="0 0 9 10" shape-rendering="crispEdges"><path fill="#f5c85c" d="M1 0h7v1h-7zM0 1h7v1h-7zM8 1h1v1h-1zM0 2h1v1h-1zM2 2h4v1h-4zM8 2h1v1h-1zM0 3h1v1h-1zM2 3h4v1h-4zM8 3h1v1h-1zM1 4h5v1h-5zM2 5h3v1h-3zM3 6h1v1h-1zM3 7h1v1h-1zM2 8h3v1h-3z"/><path fill="#c4902e" d="M7 1h1v1h-1zM6 2h1v1h-1zM6 3h1v1h-1zM6 4h1v1h-1zM5 5h1v1h-1zM4 6h1v1h-1zM4 7h1v1h-1zM5 8h1v1h-1zM1 9h6v1h-6z"/></svg></div>
+    <div><small>Succès débloqué</small><strong id="ach-t"></strong><span id="ach-d"></span></div>
+    <b class="pts pix" id="ach-p"></b>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <span>Hangar, par pamal Studio · <span class="tag"></span>Licence MIT</span>
+      <nav aria-label="Liens">
+        <a href="https://github.com/maelpasq/hangar" rel="noopener">Code source</a>
+        <a href="https://github.com/maelpasq/hangar/releases" rel="noopener">Versions</a>
+        <a href="https://github.com/maelpasq/hangar/issues/new/choose" rel="noopener">Signaler un bug</a>
+        <a href="/confidentialite.html">Confidentialité</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Astuces de chargement : une au hasard, la suivante sur demande
+  const tips = [
+    "Désolé, mais ta page est dans un autre château.",
+    "Il est dangereux d'y aller seul. Prends plutôt le bouton du dessus.",
+    "Le gâteau était un mensonge. Cette page aussi.",
+    "Un 404 sauvage apparaît ! Il n'a pas l'air bien coriace.",
+    "Ce n'est pas un point de sauvegarde. Inutile de recharger.",
+    "Cette zone sera débloquée dans un prochain DLC. Ou jamais.",
+    "Hé, écoute ! Cette page n'existe pas.",
+    "Un Creeper est passé par là. Il ne reste plus grand-chose.",
+    "Tous tes jeux tiennent dans Hangar. Cette page, non.",
+    "Les vieux codes marchent encore ici. Tu sais lesquels."
+  ];
+  const tip = document.getElementById('tip'), next = document.getElementById('next');
+  let ti = Math.floor(Math.random() * tips.length);
+  tip.textContent = tips[ti];
+  next.hidden = false;
+  next.addEventListener('click', () => {
+    ti = (ti + 1) % tips.length;
+    if (reduce) { tip.textContent = tips[ti]; return; }
+    tip.classList.add('out');
+    setTimeout(() => { tip.textContent = tips[ti]; tip.classList.remove('out'); }, 200);
+  });
+
+  // Succès débloqué
+  const ach = document.getElementById('ach');
+  let hideT;
+  function unlock(title, desc, pts) {
+    clearTimeout(hideT);
+    ach.classList.remove('show');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.getElementById('ach-t').textContent = title;
+      document.getElementById('ach-d').textContent = desc;
+      document.getElementById('ach-p').textContent = pts;
+      ach.classList.add('show');
+      hideT = setTimeout(() => ach.classList.remove('show'), 6500);
+    }));
+  }
+  setTimeout(() => unlock('Hors des sentiers battus', "Trouver une page qui n'existe pas.", '+10'), 2600);
+
+  // Continuer ? 9, 8, 7... puis fin de partie (une seule fois)
+  const count = document.getElementById('count'), cont = document.getElementById('continue');
+  const press = document.getElementById('press');
+  let n = 9;
+  const tick = setInterval(() => {
+    n -= 1;
+    if (n > 0) { count.textContent = n; return; }
+    clearInterval(tick);
+    cont.classList.add('over');
+    document.getElementById('cont-label').textContent = 'Partie terminée';
+    count.textContent = '';
+    press.textContent = 'Crédits illimités : Entrée pour rejouer';
+  }, 1000);
+
+  // Entrée (hors d'un bouton ou d'un lien) : on continue, donc retour à l'accueil
+  // Et le code que tout le monde connaît répare le pont
+  const code = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let pos = 0, fixed = false;
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.target.closest('a, button, input, textarea, select')) { location.href = '/'; return; }
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    pos = k === code[pos] ? pos + 1 : (k === code[0] ? 1 : 0);
+    if (pos === code.length) {
+      pos = 0;
+      if (fixed) return;
+      fixed = true;
+      document.getElementById('scene').classList.add('fixed');
+      unlock('Vieille école', 'Réparer le pont avec un code de 1986.', '+30');
+    }
+  });
+})();
+</script>
+</body>
+</html>
