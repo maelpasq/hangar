@@ -492,7 +492,7 @@ class Social {
     this.showcaseTimer = setTimeout(() => void this.sendShowcase(), 3000);
   }
 
-  /** Vitrine du profil et bibliothèque (jeux en commun) : envoyées seulement quand elles changent. */
+  /** Vitrine du profil et bibliothèque installée (jeux en commun) : envoyées seulement quand elles changent. */
   private async sendShowcase(): Promise<void> {
     if (!this.enabled) return;
     const s = library.state;
@@ -517,9 +517,11 @@ class Social {
       }));
     const seen = new Set<string>();
     const games: SocialGame[] = [];
+    // Jeux en commun : seulement les jeux installés sur ce poste, quel que soit leur store
+    // (ni les jeux possédés à installer, ni ceux « Sur un autre PC »).
     for (const g of library.all) {
       const id = pid(g);
-      if (!id || seen.has(id) || s.hidden.includes(g.id)) continue;
+      if (!id || g.notInstalled || seen.has(id) || s.hidden.includes(g.id)) continue;
       seen.add(id);
       games.push({ id, name: library.name(g) });
     }
