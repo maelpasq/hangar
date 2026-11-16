@@ -1,6 +1,6 @@
 // Une branche par session de travail, pour que plusieurs sessions ne se gênent pas sur `dev` :
 //   node scripts/session.mjs start <nom>   crée la branche session/<nom> depuis dev, dans son propre
-//                                          dossier (../Hangar-sessions/<nom>), et affiche ce dossier
+//                                          dossier (../sessions/<nom>), et affiche ce dossier
 //   node scripts/session.mjs finish        depuis ce dossier, après validation et commit : repose la
 //                                          branche sur dev puis avance dev dessus (rien n'est poussé)
 //   node scripts/session.mjs remove <nom>  supprime le dossier et la branche, une fois fusionnée
@@ -20,7 +20,7 @@ const worktrees = git(['worktree', 'list', '--porcelain'])
   .map((b) => ({ path: b.match(/^worktree (.+)$/m)?.[1], branch: b.match(/^branch refs\/heads\/(.+)$/m)?.[1] }))
   .filter((w) => w.path);
 const main = worktrees[0].path;
-const sessionDir = (name) => join(dirname(main), 'Hangar-sessions', name);
+const sessionDir = (name) => join(dirname(main), 'sessions', name);
 const checkName = (name) => {
   if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(name ?? '')) fail('Nom de session attendu : minuscules, chiffres et tirets.');
   return name;
