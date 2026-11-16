@@ -38,13 +38,23 @@ const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" wi
   <g transform="translate(512 528) scale(0.8) translate(-465 -362)">${inner}</g>
 </svg>`;
 
-// Favicon : logo seul sur fond transparent, cadré au carré.
-const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="15 -53 900 900" width="64" height="64">${inner}</svg>`;
+// Version sombre du logo, pour les fonds clairs (thème clair de l'app, onglets clairs des navigateurs).
+const markDark = readFileSync(`${BRAND}/hangar-mark-dark.svg`, 'utf8');
+const darkStops = [...markDark.matchAll(/id="hg-arch"[\s\S]*?<\/linearGradient>/g)][0][0].match(/#[0-9a-f]{6}/g);
+
+// Favicon : logo seul sur fond transparent, cadré au carré. Arche sombre quand le navigateur est en clair.
+const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="15 -53 900 900" width="64" height="64">
+  <style>@media (prefers-color-scheme: light) { ${darkStops.map((c, i) => `.a${i} { stop-color: ${c}; }`).join(' ')} }</style>${inner
+    .replace(/(id="hg-arch"[\s\S]*?<\/linearGradient>)/, (g) => {
+      let i = 0;
+      return g.replace(/<stop /g, () => `<stop class="a${i++}" `);
+    })}</svg>`;
 
 mkdirSync('public', { recursive: true });
 writeFileSync(`${BRAND}/hangar-icon.svg`, icon);
 writeFileSync(`${BRAND}/hangar-icon-1024.png`, render(icon, 1024));
 writeFileSync(`${BRAND}/hangar-mark-1024.png`, render(mark, 1024));
+writeFileSync(`${BRAND}/hangar-mark-dark-1024.png`, render(markDark, 1024));
 writeFileSync('public/favicon.svg', favicon);
 writeFileSync('public/favicon-32.png', render(favicon, 32));
 

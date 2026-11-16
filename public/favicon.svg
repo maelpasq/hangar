@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="15 -53 900 900" width="64" height="64">
+  <style>@media (prefers-color-scheme: light) { .a0 { stop-color: #2b2636; } .a1 { stop-color: #342e42; } .a2 { stop-color: #6f6683; } }</style>
   
   <defs>
     <!-- Arche : lavande clair en haut, gris violacé en bas -->
     <linearGradient id="hg-arch" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#dcd8e3"/>
-      <stop offset="0.42" stop-color="#d4cfde"/>
-      <stop offset="1" stop-color="#6f6683"/>
+      <stop class="a0" offset="0" stop-color="#dcd8e3"/>
+      <stop class="a1" offset="0.42" stop-color="#d4cfde"/>
+      <stop class="a2" offset="1" stop-color="#6f6683"/>
     </linearGradient>
     <!-- Lueur violette sur la jambe gauche -->
     <radialGradient id="hg-glow" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse">

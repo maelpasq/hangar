@@ -378,3 +378,7 @@ Demande de l'utilisateur : un vrai recadrage, et une popup dans Hangar à la cr�
 Le serveur ne dit pas si la connexion vient de créer le compte : la bienvenue (`CloudWelcome.svelte`) s'ouvre après `login()` quand `user.createdAt` (déjà renvoyé par `/me`, maintenant gardé par l'app) date de moins de 30 min, une seule fois par compte sur ce poste (`localStorage`), et attend qu'aucune autre fenêtre ne soit ouverte (assistant de démarrage, question de fusion). Pseudo, avatar et bannière s'y changent ; « Plus tard » ne change rien.
 
 La CSP de l'app autorise maintenant `blob:` dans `img-src` (seulement les images) : l'aperçu du recadrage affiche l'image choisie par une URL `blob:` locale, sans la convertir en `data:` (jusqu'à 20 Mo).
+
+## Logo sombre pour les thèmes clairs (16 nov. 2026)
+
+Le logo (arche claire) disparaissait sur fond clair. Variante sombre : `design/brand/hangar-mark-dark.svg` (et `hangar-mark-dark-1024.png`), même tracé, lueur et étoile violettes inchangées, seule l'arche passe d'un lavande clair à une encre sombre (`#2b2636` > `#342e42` > `#6f6683`). `Logo.svelte` bascule selon `data-theme` (barre latérale, menu de la barre des tâches, Big Picture, écran Linux) ; `tone="light"` la force sur fond toujours sombre (pastille de `SocialArt`). Le favicon (`public/favicon.svg`, site compris, et celui de la page de connexion du compte) suit `prefers-color-scheme` du navigateur. L'icône d'application garde sa tuile sombre : pas de variante.

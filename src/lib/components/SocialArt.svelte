@@ -75,7 +75,7 @@
     <span class="ring"></span>
     <span class="ring r2"></span>
     <span class="ring r3"></span>
-    <span class="disc"><Logo size={46} /></span>
+    <span class="disc"><Logo size={46} tone="light" /></span>
   </div>
 
   {#each friends as f, i (f.name)}

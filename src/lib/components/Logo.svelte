@@ -1,14 +1,24 @@
 <script lang="ts">
   // Logo Hangar (arche + étoile), même tracé que design/brand/hangar-mark.svg.
-  let { size = 30 }: { size?: number } = $props();
+  // L'arche suit le thème : claire sur fond sombre, sombre (hangar-mark-dark.svg) en thème clair.
+  // `tone` force une version quand le fond ne suit pas le thème (ex. pastille toujours sombre).
+  let { size = 30, tone = 'auto' }: { size?: number; tone?: 'auto' | 'light' | 'dark' } = $props();
   const uid = $props.id();
 </script>
 
-<svg width={size} height={size} viewBox="15 -53 900 900" aria-hidden="true">
+<svg
+  class="logo"
+  class:light={tone === 'light'}
+  class:dark={tone === 'dark'}
+  width={size}
+  height={size}
+  viewBox="15 -53 900 900"
+  aria-hidden="true"
+>
   <defs>
     <linearGradient id="{uid}-a" x1="0" y1="42" x2="0" y2="682" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#dcd8e3" />
-      <stop offset="0.42" stop-color="#d4cfde" />
+      <stop class="a0" offset="0" />
+      <stop class="a1" offset="0.42" />
       <stop offset="1" stop-color="#6f6683" />
     </linearGradient>
     <radialGradient id="{uid}-g" cx="30" cy="730" r="430" gradientUnits="userSpaceOnUse">
@@ -32,3 +42,20 @@
     fill="url(#{uid}-s)"
   />
 </svg>
+
+<style>
+  .a0 {
+    stop-color: #dcd8e3;
+  }
+  .a1 {
+    stop-color: #d4cfde;
+  }
+  :global(:root[data-theme='light']) .logo:not(.light) .a0,
+  .dark .a0 {
+    stop-color: #2b2636;
+  }
+  :global(:root[data-theme='light']) .logo:not(.light) .a1,
+  .dark .a1 {
+    stop-color: #342e42;
+  }
+</style>

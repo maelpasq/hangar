@@ -31,7 +31,8 @@ const STAR = 'M467 345 Q477 450 627 460 Q477 470 467 575 Q457 470 310 460 Q457 4
 const FAVICON =
   'data:image/svg+xml,' +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 930 720"><path d="${ARCH}" fill="#cfc9dc"/><path d="${STAR}" fill="#7440f4"/></svg>`
+    // Arche sombre (design/brand/hangar-mark-dark.svg) quand l'onglet du navigateur est clair.
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 930 720"><style>@media (prefers-color-scheme: light) { .a { fill: #2b2636; } }</style><path class="a" d="${ARCH}" fill="#cfc9dc"/><path d="${STAR}" fill="#7440f4"/></svg>`
   );
 
 /** Logo, centré en haut de la carte. Le fond de la page est la bannière de la marque sans logo. */
