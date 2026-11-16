@@ -529,7 +529,8 @@ class Social {
     // Version de Hangar de ce poste, montrée sur le profil (renvoyée après chaque mise à jour).
     const version = await api.appVersion().catch(() => undefined);
     const body = { top, favorites, collections, games: games.slice(0, 10_000), version };
-    const key = `${this.me}:${JSON.stringify(body)}`;
+    // `v2` : jeux rangés par poste côté serveur, chaque poste renvoie sa liste une fois.
+    const key = `v2:${this.me}:${JSON.stringify(body)}`;
     if (store.get(SHOWCASE_KEY) !== hash(key)) {
       try {
         await api.social('PUT', '/social/showcase', body);

@@ -5,13 +5,13 @@
 // Confidentialité : chaque information partagée a sa visibilité (`all`, `friends`, `none`),
 // appliquée ici, jamais dans l'app. Un compte qui n'a pas activé les amis est invisible (recherche,
 // présence) ; un blocage, dans un sens ou dans l'autre, coupe tout.
-import { and, asc, desc, eq, gt, inArray, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { seal, unseal } from './crypto';
 import type { AvatarStore, Db, Env } from './env';
 import { imageType, isUserId, totalPlay } from './profile';
-import { activity, entries, friends, messages, reports, social, user } from './schema';
+import { activity, devices, entries, friends, messages, reports, social, user } from './schema';
 
 /** Envoi d'un évènement aux connexions temps réel de ces comptes (remplacé dans les tests). */
 export type Hub = (userIds: string[], event: Record<string, unknown>) => Promise<void>;
@@ -59,6 +59,44 @@ const parse = <T>(raw: string | null, fallback: T): T => {
   }
 };
 const newId = () => crypto.randomUUID();
+
+/**
+ * Jeux installés, rangés par poste (`{ [deviceId]: Game[] }`) : chaque poste n'envoie que les siens,
+ * le profil montre l'union des postes connectés. Ancien format (une seule liste, écrasée par le
+ * dernier poste synchronisé) : gardé sous la clé `''` jusqu'au premier envoi au nouveau format.
+ */
+type DeviceGames = Record<string, Game[]>;
+function deviceGames(raw: string | null): DeviceGames {
+  const v = parse<unknown>(raw, null);
+  if (Array.isArray(v)) return { '': v as Game[] };
+  return isObject(v) ? (v as DeviceGames) : {};
+}
+
+/** Postes encore connectés d'un compte. */
+async function liveDevices(db: Db, userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ id: devices.deviceId })
+    .from(devices)
+    .where(and(eq(devices.userId, userId), isNotNull(devices.tokenHash)));
+  return new Set(rows.map((r) => r.id));
+}
+
+/** Bibliothèque installée d'un compte : union des listes de ses postes connectés, sans doublon. */
+async function libraryOf(db: Db, userId: string, raw: string | null): Promise<Game[]> {
+  const byDevice = deviceGames(raw);
+  const live = await liveDevices(db, userId);
+  const seen = new Set<string>();
+  const out: Game[] = [];
+  for (const [device, list] of Object.entries(byDevice)) {
+    if (device !== '' && !live.has(device)) continue;
+    for (const g of Array.isArray(list) ? list : []) {
+      if (!isObject(g) || typeof g.id !== 'string' || seen.has(g.id)) continue;
+      seen.add(g.id);
+      out.push(g);
+    }
+  }
+  return out;
+}
 
 /** Un jeu tel que l'app le décrit : identifiant portable et nom. */
 function game(v: unknown): Game | null {
@@ -298,10 +336,15 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     }
     const games = (body.games as unknown[]).map(game);
     if (games.some((g) => !g)) return c.json({ error: 'requete' }, 400);
-    await ensureSocial(db, me);
+    const row = await ensureSocial(db, me);
+    // Jeux installés de ce poste seulement : ceux des autres postes connectés sont gardés.
+    const live = await liveDevices(db, me);
+    const byDevice: DeviceGames = {};
+    for (const [device, list] of Object.entries(deviceGames(row.games))) if (live.has(device)) byDevice[device] = list;
+    byDevice[c.get('device').deviceId] = games as Game[];
     await db
       .update(social)
-      .set({ showcase: JSON.stringify({ top, favorites, collections, version }), games: JSON.stringify(games) })
+      .set({ showcase: JSON.stringify({ top, favorites, collections, version }), games: JSON.stringify(byDevice) })
       .where(eq(social.userId, me));
     return c.json({ ok: true });
   });
@@ -356,11 +399,11 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     let common: Game[] | null = null;
     let count: number | null = null;
     if (lib) {
-      const theirs = parse<Game[]>(vis.games, []);
+      const theirs = await libraryOf(db, u.id, vis.games);
       count = theirs.length;
       if (rel !== 'self') {
         const [mine] = await db.select({ games: social.games }).from(social).where(eq(social.userId, me));
-        const own = new Set(parse<Game[]>(mine?.games ?? null, []).map((g) => g.id));
+        const own = new Set((await libraryOf(db, me, mine?.games ?? null)).map((g) => g.id));
         common = theirs.filter((g) => own.has(g.id)).slice(0, 60);
       }
     }

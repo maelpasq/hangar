@@ -546,6 +546,24 @@ describe('social', () => {
     expect((await get(b, `/social/users/${b.id}`)).code).toMatch(/^[A-Z2-9]{8}$/);
   });
 
+  it('compte les jeux installés de tous les postes connectés, pas seulement du dernier synchronisé', async () => {
+    const lib = (games: { id: string; name: string }[]) => ({ top: [], collections: [], games });
+    // Ancien format (une seule liste) : toujours lu tel quel.
+    await db.update(schema.social).set({ games: JSON.stringify([{ id: 'gog:1', name: 'Ancien' }]) }).where(eq(schema.social.userId, b.id));
+    expect((await get(b, `/social/users/${b.id}`)).games).toBe(1);
+    expect((await put(b, '/social/showcase', lib([{ id: 'steam:620', name: 'Portal 2' }, { id: 'epic:fn', name: 'Fortnite' }]))).status).toBe(200);
+    // Un second poste sans jeu installé n'efface pas ceux du premier.
+    const portable: Who = { token: await login('bruno.social@exemple.fr', D('9'), 'Portable'), id: b.id };
+    expect((await put(portable, '/social/showcase', lib([]))).status).toBe(200);
+    expect((await get(b, `/social/users/${b.id}`)).games).toBe(2);
+    expect((await put(portable, '/social/showcase', lib([{ id: 'steam:620', name: 'Portal 2' }, { id: 'steam:70', name: 'Half-Life' }]))).status).toBe(200);
+    expect((await get(b, `/social/users/${b.id}`)).games).toBe(3);
+    expect((await get(a, `/social/users/${b.id}`)).common.map((g: { id: string }) => g.id).sort()).toEqual(['steam:620']);
+    // Poste déconnecté : ses jeux ne comptent plus.
+    expect((await call('/logout', { method: 'POST', token: portable.token })).status).toBe(200);
+    expect((await get(b, `/social/users/${b.id}`)).games).toBe(2);
+  });
+
   it('échange des messages entre amis, chiffrés en base', async () => {
     pushed.length = 0;
     const sent = await json(await post(a, `/social/messages/${b.id}`, { text: 'On fait une partie ?' }));
