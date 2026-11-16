@@ -52,7 +52,7 @@
         <a href="index.html#fonctions">Fonctions</a>
         <a href="index.html#apercu">Aperçu</a>
         <a href="index.html#installer">Installer</a>
-        <a class="ext" href="https://github.com/maelpasq/hangar" rel="noopener" aria-label="GitHub (site externe)">GitHub<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
+        <a class="ext" href="https://github.com/maelpasq/hangar" target="_blank" rel="noopener">GitHub<span class="sr"> (nouvel onglet)</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
         <a class="nav-mc" href="hangar-mc.html"><svg viewBox="0 0 17 13" shape-rendering="crispEdges" aria-hidden="true"><path d="M7 0h3v1h-3zM5 1h7v1h-7zM3 2h11v1h-11zM2 3h6v1h-6zM9 3h6v1h-6zM1 4h5v1h-5zM11 4h5v1h-5zM0 5h5v1h-5zM12 5h5v1h-5zM0 6h3v1h-3zM8 6h1v1h-1zM14 6h3v1h-3zM0 7h3v1h-3zM7 7h3v1h-3zM14 7h3v1h-3zM0 8h3v1h-3zM5 8h7v1h-7zM14 8h3v1h-3zM0 9h3v1h-3zM7 9h3v1h-3zM14 9h3v1h-3zM0 10h3v1h-3zM8 10h1v1h-1zM14 10h3v1h-3zM0 11h3v1h-3zM14 11h3v1h-3zM0 12h2v1h-2zM15 12h2v1h-2z"/></svg>Hangar MC</a>
       </nav>
       <a class="btn small nav-dl" href="index.html#installer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dl"/></svg>Télécharger</a>
@@ -62,19 +62,20 @@
   <main>
     <article class="wrap legal" aria-labelledby="t-conf">
       <h1 id="t-conf">Confidentialité</h1>
-      <p class="lead">Hangar fonctionne entièrement sur ton ordinateur, sans télémétrie. Le compte Hangar est facultatif : il ne sert qu'à retrouver tes favoris, collections, jaquettes et ton temps de jeu sur tes autres PC.</p>
+      <p class="lead">Hangar fonctionne entièrement sur ton ordinateur, sans télémétrie. Le compte Hangar est facultatif : il ne sert qu'à retrouver tes favoris, collections, jaquettes et ton temps de jeu sur tes autres PC et, si tu actives les amis, à retrouver tes amis dans Hangar.</p>
       <p class="updated">Mise à jour : 16 novembre 2026</p>
       <nav class="toc" aria-label="Sur cette page">
         <a href="#sans-compte">Sans compte</a>
         <a href="#compte">Le compte Hangar</a>
+        <a href="#social">Le social</a>
         <a href="#hebergeurs">Où sont les données</a>
         <a href="#duree">Combien de temps</a>
         <a href="#droits">Tes droits</a>
       </nav>
 
       <h2 id="sans-compte">Sans compte</h2>
-      <p>Hangar ne collecte aucune donnée personnelle. Ta bibliothèque, tes réglages et ton temps de jeu restent sur ton ordinateur. Tes clés et jetons (SteamGridDB, comptes de launchers reliés) sont rangés dans le coffre du système, jamais dans un fichier.</p>
-      <p>Hangar ne contacte d'autres services que pour ce que tu lui demandes : les images et infos des jeux (Steam, Epic Games, GOG, Microsoft Store, SteamGridDB si tu as saisi ta clé), les comptes de launchers que tu relies toi-même, les mises à jour de tes jeux et de Hangar (GitHub), les jeux web que tu lances, Discord si tu l'actives, et le bouton « Signaler un bug » quand tu envoies un message (il passe par l'API de Hangar, même sans compte, qui le relaie au développeur et ne garde qu'une empreinte de ton adresse IP pendant un jour, pour limiter les envois). La liste complète est dans le <a href="https://github.com/maelpasq/hangar#confidentialit%C3%A9" rel="noopener">README du projet</a>, et le code est public.</p>
+      <p>Hangar ne collecte aucune donnée personnelle. Ta bibliothèque, tes réglages et ton temps de jeu restent sur ton ordinateur. Tes clés et jetons (SteamGridDB, comptes de launchers reliés) sont rangés dans le coffre du système, jamais dans un fichier (avec un compte, ils sont aussi gardés chiffrés sur le compte, voir plus bas).</p>
+      <p>Hangar ne contacte d'autres services que pour ce que tu lui demandes : les images et infos des jeux (Steam, Epic Games, GOG, Microsoft Store, SteamGridDB si tu as saisi ta clé), les comptes de launchers que tu relies toi-même, le site officiel d'un jeu installé sur un autre de tes PC quand tu cliques sur « Installer » (sa fiche Steam, ou Wikidata d'après son nom), les mises à jour de tes jeux et de Hangar (GitHub), les jeux web que tu lances, Discord si tu l'actives, et le bouton « Signaler un bug » quand tu envoies un message (il passe par l'API de Hangar, même sans compte, qui le relaie au développeur et ne garde qu'une empreinte de ton adresse IP pendant un jour, pour limiter les envois). La liste complète est dans le <a class="ext" href="https://github.com/maelpasq/hangar#confidentialit%C3%A9" target="_blank" rel="noopener">README du projet<span class="sr"> (nouvel onglet)</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>, et le code est public.</p>
 
       <h2 id="compte">Le compte Hangar</h2>
       <p>Tu crées un compte seulement si tu cliques sur « Se connecter » dans Hangar. Il est géré par pamal Studio, le développeur de Hangar.</p>
@@ -87,30 +88,62 @@
         <li><strong>Ta bibliothèque synchronisée</strong> : favoris, jeux masqués, renommages, collections, jaquettes choisies (y compris les images que tu as importées), jeux ajoutés à la main (nom, lien d'installation), dates d'ajout et réglages d'apparence. Les jeux sont désignés par leur identifiant de launcher, ou, pour un jeu local, par le nom de son exécutable et de son dossier.</li>
         <li><strong>Ton temps de jeu</strong> : le total par jeu et par PC, et les sessions de jeu (début, fin, jeu, PC).</li>
         <li><strong>Ta clé SteamGridDB</strong>, si tu en as une, chiffrée : la clé de chiffrement n'est pas dans la base.</li>
+        <li><strong>Tes connexions de launchers</strong> (Steam, GOG, Epic Games, Xbox), si tu en relies : leur clé ou leur jeton de connexion, et pour Steam l'identifiant de ton compte, chiffrés de la même façon. Ils te gardent connecté sur tous tes PC : relié ou déconnecté sur un PC, un launcher l'est partout.</li>
         <li><strong>Pendant la connexion dans le navigateur</strong> : une session de 15 minutes avec ton adresse IP et ton navigateur, et un compteur par adresse IP contre les abus.</li>
       </ul>
-      <p>Le compte ne reçoit rien d'autre : pas la liste de tes jeux installés en dehors de ce qui précède et des amis (ci-dessous), pas de statistiques d'usage, pas de télémétrie.</p>
-
-      <h3>Les amis (si tu les actives)</h3>
-      <p>Les amis sont désactivés par défaut. Si tu les actives (page Amis ou Paramètres &gt; Compte), le compte garde aussi :</p>
-      <ul>
-        <li><strong>Tes réglages</strong> : ton code ami, si l'on peut te trouver par ton pseudo, ce que tu partages et avec qui, ta bannière si tu en choisis une.</li>
-        <li><strong>Tes liens</strong> : tes amis, tes demandes envoyées et reçues, les comptes que tu as bloqués.</li>
-        <li><strong>Ta présence</strong> : si Hangar est ouvert, le jeu en cours et son heure de début, le temps de la partie.</li>
-        <li><strong>Ta vitrine et ta bibliothèque</strong> : tes jeux les plus joués, les collections que tu mets en avant, et la liste de tes jeux (nom et identifiant du store), pour montrer vos jeux en commun.</li>
-        <li><strong>Ton activité</strong> : les jeux que tu lances et ceux que tu ajoutes, pendant 30 jours.</li>
-        <li><strong>Tes messages</strong> avec tes amis, chiffrés sur le serveur (la clé n'est pas dans la base), avec leur date et la date de lecture.</li>
-        <li><strong>Les signalements</strong> que tu fais, avec le texte du message signalé, examinés à la main par le développeur.</li>
-      </ul>
-      <p>Pour chaque information partagée (statut en ligne, jeu en cours, temps de jeu, bibliothèque), tu choisis qui la voit : tout le monde, tes amis seulement ou personne. Ton adresse e-mail n'est jamais montrée. Désactiver les amis te rend invisible et hors ligne, même pour tes amis, qui ne peuvent plus voir ton profil ni t'écrire ; un compte bloqué ne te voit plus et ne peut plus t'écrire.</p>
+      <p>Le compte ne reçoit rien d'autre : pas la liste de tes jeux installés en dehors de ce qui précède et du social (ci-dessous), pas de statistiques d'usage, pas de télémétrie.</p>
 
       <h3>Pourquoi</h3>
       <p>Ces données servent uniquement à faire marcher le compte que tu as demandé : te connecter, retrouver ta bibliothèque sur tes PC et, si tu les actives, échanger avec tes amis. Elles ne sont ni vendues, ni partagées, ni utilisées pour de la publicité.</p>
 
+      <h2 id="social">Le social : amis, profil et messages</h2>
+      <p>Les amis sont <strong>désactivés par défaut</strong>. Tant que tu ne les actives pas (page Amis ou Paramètres &gt; Compte), personne ne peut te trouver, voir ton profil ni t'écrire, et rien de ce qui suit n'est envoyé. Tout se passe dans Hangar : il n'y a pas de page de profil publique sur le web.</p>
+
+      <h3>Ce que les autres joueurs voient</h3>
+      <p>Une fois les amis activés, un joueur qui te trouve (et que tu n'as pas bloqué) voit toujours :</p>
+      <ul>
+        <li>ton pseudo, ton avatar et ta bannière ;</li>
+        <li>la date de création de ton compte et la version de Hangar que tu utilises.</li>
+      </ul>
+      <p>Le reste dépend de tes réglages. Pour chaque information, tu choisis qui la voit : <strong>tout le monde, tes amis seulement ou personne</strong> (par défaut : tes amis seulement).</p>
+      <ul>
+        <li><strong>Statut</strong> : en ligne ou hors ligne.</li>
+        <li><strong>Jeu en cours</strong> : le jeu auquel tu joues et depuis quand, et les jeux que tu as lancés récemment.</li>
+        <li><strong>Temps de jeu</strong> : ton temps de jeu total et tes jeux les plus joués.</li>
+        <li><strong>Bibliothèque</strong> : le nombre de jeux installés sur tes PC, vos jeux en commun, les jeux et collections que tu mets en avant sur ton profil, et les jeux que tu as ajoutés récemment.</li>
+      </ul>
+      <p>Personne ne voit jamais ton adresse e-mail, le nom de tes PC, tes jeux masqués ni tes conversations avec d'autres.</p>
+
+      <h3>Te trouver</h3>
+      <p>On peut t'ajouter avec ton <strong>code ami</strong>, que tu donnes à qui tu veux. La recherche par pseudo se désactive dans tes réglages : ton code ami reste alors le seul moyen de te trouver.</p>
+
+      <h3>Messages</h3>
+      <p>On ne peut écrire qu'à ses amis, et seulement tant que les amis sont activés des deux côtés. Les messages (et les invitations sur un jeu) passent par l'API du compte et y sont <strong>chiffrés</strong> ; la clé n'est pas dans la base. Personne d'autre que vous deux ne les consulte, sauf un message que l'un de vous signale : son texte est alors copié pour l'examen.</p>
+
+      <h3>Bloquer et signaler</h3>
+      <p>Un compte bloqué ne te trouve plus, ne voit plus ton profil et ne peut plus t'écrire ; il n'est pas prévenu. Tu peux signaler un compte ou un message : le signalement (avec le texte du message signalé) est examiné à la main par le développeur, et n'est pas montré à la personne signalée.</p>
+
+      <h3>Connexion en temps réel</h3>
+      <p>Pour les messages et la présence de tes amis, Hangar garde une connexion ouverte avec l'API du compte, <strong>seulement quand tu es connecté et que les amis sont activés</strong>. Elle se ferme dès que tu les désactives ou que tu fermes Hangar.</p>
+
+      <h3>Ce que le compte garde en plus</h3>
+      <ul>
+        <li><strong>Tes réglages</strong> : ton code ami, si l'on peut te trouver par ton pseudo, ce que tu partages et avec qui, ta bannière si tu en choisis une.</li>
+        <li><strong>Tes liens</strong> : tes amis, tes demandes envoyées et reçues, les comptes que tu as bloqués.</li>
+        <li><strong>Ta présence</strong> : si Hangar est ouvert, le jeu en cours et son heure de début, le temps de la partie.</li>
+        <li><strong>Ta vitrine et ta bibliothèque</strong> : tes jeux les plus joués, les jeux et collections que tu mets en avant, la version de Hangar que tu utilises, et la liste des jeux installés sur chacun de tes PC (nom et identifiant du store), pour montrer vos jeux en commun.</li>
+        <li><strong>Ton activité</strong> : les jeux que tu lances et ceux que tu ajoutes, pendant 30 jours.</li>
+        <li><strong>Tes messages</strong> avec tes amis, chiffrés, avec leur date et la date de lecture.</li>
+        <li><strong>Les signalements</strong> que tu fais.</li>
+      </ul>
+
+      <h3>Désactiver les amis</h3>
+      <p>Désactiver les amis te rend invisible et hors ligne pour tout le monde, amis compris : plus personne ne peut te trouver, voir ton profil ni t'écrire, et la connexion en temps réel se ferme. Tes amis et tes messages sont gardés pour le jour où tu les réactives ; pour tout effacer, supprime ton compte.</p>
+
       <h2 id="hebergeurs">Où sont les données</h2>
       <ul>
         <li><strong>Turso</strong> : la base de données du compte, en Europe.</li>
-        <li><strong>Cloudflare</strong> : l'API du compte (hangar-api.pamalstudio.fr) et le stockage des avatars et des jaquettes importées.</li>
+        <li><strong>Cloudflare</strong> : l'API du compte (hangar-api.pamalstudio.fr) et le stockage des avatars, des bannières et des jaquettes importées.</li>
         <li><strong>Resend</strong> : l'envoi des e-mails (code de connexion, rappel avant suppression).</li>
         <li><strong>Discord ou Google</strong> : seulement si tu choisis de te connecter avec eux.</li>
       </ul>
@@ -130,11 +163,11 @@
       <h2 id="droits">Tes droits</h2>
       <p>Tu as un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition sur tes données. La plupart se font directement dans Hangar, Paramètres &gt; Compte :</p>
       <ul>
-        <li><strong>Exporter mes données</strong> : tout ce que le compte garde, dans un fichier JSON, amis et messages compris.</li>
+        <li><strong>Exporter mes données</strong> : tout ce que le compte garde, dans un fichier JSON, amis et messages compris. Par sécurité, tes clés et connexions de launchers n'y figurent que par leur nom.</li>
         <li><strong>Supprimer mon compte</strong> : efface le compte et tout son contenu. Tes PC gardent leurs jeux et leurs réglages.</li>
         <li>Le pseudo, l'avatar et le nom de tes PC se changent au même endroit ; tout le reste se modifie en utilisant Hangar.</li>
       </ul>
-      <p>Pour toute autre demande, écris au développeur avec le bouton « Signaler un bug » de Hangar (message privé). Tu peux aussi adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>.</p>
+      <p>Pour toute autre demande, écris au développeur avec le bouton « Signaler un bug » de Hangar (message privé). Tu peux aussi adresser une réclamation à la <a class="ext" href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">CNIL<span class="sr"> (nouvel onglet)</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>.</p>
     </article>
   </main>
 
@@ -142,9 +175,9 @@
     <div class="wrap">
       <span>Hangar, par pamal Studio · <span class="tag"></span>Licence MIT</span>
       <nav aria-label="Liens">
-        <a href="https://github.com/maelpasq/hangar" rel="noopener">Code source</a>
-        <a href="https://github.com/maelpasq/hangar/releases" rel="noopener">Versions</a>
-        <a href="https://github.com/maelpasq/hangar/issues/new/choose" rel="noopener">Signaler un bug</a>
+        <a class="ext" href="https://github.com/maelpasq/hangar" target="_blank" rel="noopener">Code source<span class="sr"> (nouvel onglet)</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
+        <a class="ext" href="https://github.com/maelpasq/hangar/releases" target="_blank" rel="noopener">Versions<span class="sr"> (nouvel onglet)</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
+        <a class="ext" href="https://github.com/maelpasq/hangar/issues/new/choose" target="_blank" rel="noopener">Signaler un bug<span class="sr"> (nouvel onglet)</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 8.5l5-5M4.5 3.5h4v4"/></svg></a>
         <a href="confidentialite.html" aria-current="page">Confidentialité</a>
       </nav>
     </div>

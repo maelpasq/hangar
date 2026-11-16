@@ -111,6 +111,11 @@ main, footer { position: relative; z-index: 1; }
   transition: transform .4s var(--spring), opacity .2s ease;
 }
 .ext:hover svg { transform: translate(1px, -1px); opacity: 1; }
+/* Texte lu seulement par les lecteurs d'écran (ex. « nouvel onglet ») */
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 
 /* Boutons : retour au moment de l'appui (pas au relâchement), retour en place sur un ressort */
 .btn {
