@@ -5,6 +5,8 @@
   import { givenView } from '../../../src/lib/util/badges';
   import { ApiError, api, type Badge, type UserCard } from '../api';
   import { actionLabel, ago, date, dateTime, hours, num } from '../format';
+  import { DURATIONS, KINDS, kindLabel, reportStatusOf, untilLabel } from '../moderation';
+  import type { SanctionKind } from '../api';
   import { href } from '../router.svelte';
 
   let { id, badgeIds }: { id: string; badgeIds: Badge[] } = $props();
@@ -16,6 +18,45 @@
   let badgeError = $state(false);
   let avatarOk = $state(true);
   let copied = $state(false);
+
+  // Nouvelle sanction.
+  let kind = $state<SanctionKind>('social');
+  let days = $state<string>('7');
+  let reason = $state('');
+  let punishing = $state(false);
+  let punishError = $state('');
+
+  async function punish(e: SubmitEvent) {
+    e.preventDefault();
+    if (!u || punishing || !reason.trim()) return;
+    punishing = true;
+    punishError = '';
+    try {
+      await api.sanction(u.id, kind, reason.trim(), days === 'def' ? null : Number(days));
+      reason = '';
+      await load();
+    } catch {
+      punishError = "La sanction n'a pas été appliquée.";
+    } finally {
+      punishing = false;
+    }
+  }
+
+  async function liftOne(id: string) {
+    punishing = true;
+    punishError = '';
+    try {
+      await api.lift(id);
+      await load();
+    } catch {
+      punishError = "La sanction n'a pas été levée.";
+    } finally {
+      punishing = false;
+    }
+  }
+
+  const activeSanctions = $derived(u?.sanctions.filter((s) => s.active) ?? []);
+  const pastSanctions = $derived(u?.sanctions.filter((s) => !s.active) ?? []);
 
   async function load() {
     try {
@@ -160,6 +201,72 @@
       {/if}
     </section>
 
+    <section class="card wide" aria-labelledby="mod-title">
+      <h2 id="mod-title">Sanctions</h2>
+      {#if activeSanctions.length}
+        <ul class="sanctions">
+          {#each activeSanctions as s (s.id)}
+            <li class="on">
+              <span class="grow">
+                <b>{kindLabel(s.kind)}</b>, {untilLabel(s.until)}
+                <span class="muted">· depuis le {date(s.at)}</span><br />
+                <span class="soft">Motif : {s.reason}</span>
+              </span>
+              <button class="btn" type="button" disabled={punishing} onclick={() => liftOne(s.id)}>Lever</button>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="muted">Aucune sanction en cours.</p>
+      {/if}
+
+      <form class="punish" onsubmit={punish}>
+        <fieldset>
+          <legend class="label">Nouvelle sanction</legend>
+          <div class="kinds">
+            {#each KINDS as k (k.id)}
+              <label class="kind" class:sel={kind === k.id}>
+                <input type="radio" name="kind" value={k.id} bind:group={kind} />
+                <span><b>{k.label}</b><br /><span class="muted">{k.help}</span></span>
+              </label>
+            {/each}
+          </div>
+        </fieldset>
+        <div class="row2">
+          <label class="field">
+            <span class="label">Durée</span>
+            <select bind:value={days}>
+              {#each DURATIONS as d (d.label)}
+                <option value={d.days === null ? 'def' : String(d.days)}>{d.label}</option>
+              {/each}
+            </select>
+          </label>
+          <label class="field grow">
+            <span class="label">Motif (montré à la personne dans Hangar)</span>
+            <input type="text" maxlength="500" placeholder="Par exemple : messages insultants" bind:value={reason} />
+          </label>
+        </div>
+        {#if punishError}<p class="error small" role="alert">{punishError}</p>{/if}
+        <button class="btn danger" type="submit" disabled={punishing || !reason.trim()}>
+          {punishing ? 'Application…' : 'Appliquer la sanction'}
+        </button>
+      </form>
+
+      {#if pastSanctions.length}
+        <details class="past">
+          <summary>Anciennes sanctions ({pastSanctions.length})</summary>
+          <ul class="plain">
+            {#each pastSanctions as s (s.id)}
+              <li>
+                <span class="grow">{kindLabel(s.kind)} : {s.reason}</span>
+                <span class="muted">{date(s.at)}{s.liftedAt ? `, levée le ${date(s.liftedAt)}` : ', terminée'}</span>
+              </li>
+            {/each}
+          </ul>
+        </details>
+      {/if}
+    </section>
+
     <section class="card wide">
       <h2>Signalements reçus <span class="muted">({num(u.reportsReceived.length)})</span></h2>
       {#if u.reportsMade}<p class="hint muted">A lui-même signalé {num(u.reportsMade)} fois.</p>{/if}
@@ -169,6 +276,7 @@
             <li>
               <div class="line">
                 <b>{r.reason}</b>
+                <span class="pill" style:--c={reportStatusOf(r.status).color}>{reportStatusOf(r.status).label}</span>
                 <span class="muted">
                   par
                   <a href={href.compte(r.reporterId)}>{r.reporterName ?? 'compte supprimé'}</a>,
@@ -449,13 +557,145 @@
     white-space: pre-wrap;
   }
 
+  .sanctions {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sanctions li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+    border-radius: var(--r-btn);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+    color: var(--text-soft);
+  }
+
+  .punish {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-1);
+  }
+
+  .punish fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 8px;
+    padding: 0;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .kinds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .kind {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--r-btn);
+    border: 1px solid var(--border-2);
+    background: var(--surface-1);
+    color: var(--text-soft);
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .kind input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .kind:has(input:focus-visible) {
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 2px;
+  }
+
+  .kind.sel {
+    border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+  }
+
+  .row2 {
+    display: flex;
+    gap: 10px;
+  }
+
+  .field select,
+  .field input {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--text);
+    outline: none;
+  }
+
+  .field select:focus,
+  .field input:focus {
+    border-color: var(--accent-ring);
+  }
+
+  .danger {
+    align-self: flex-start;
+    background: color-mix(in srgb, var(--danger) 22%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+    color: var(--danger-text);
+  }
+
+  .danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 32%, transparent);
+  }
+
+  .past {
+    margin-top: 14px;
+    color: var(--text-3);
+  }
+
+  .past summary {
+    cursor: pointer;
+    margin-bottom: 6px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 8px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    color: var(--text-soft);
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+  }
+
   .small {
     margin: 10px 0 0;
     font-size: 12.5px;
   }
 
   @media (max-width: 900px) {
-    .grid {
+    .grid,
+    .kinds {
       grid-template-columns: 1fr;
     }
   }

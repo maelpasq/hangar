@@ -115,7 +115,8 @@ class Cloud {
 
   /** Synchronise maintenant (une seule à la fois ; demandée pendant une synchro, elle est refaite après). */
   sync(): Promise<void> {
-    if (!this.status.connected || library.loadError) return Promise.resolve();
+    // Compte suspendu par la modération : la synchro attend la levée.
+    if (!this.status.connected || library.loadError || this.status.suspension?.kind === 'total') return Promise.resolve();
     if (this.running) {
       this.again = true;
       return this.running;

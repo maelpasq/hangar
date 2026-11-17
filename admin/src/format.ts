@@ -41,6 +41,18 @@ export function actionLabel(l: LogRow): string {
     }
     case 'bug.note':
       return 'Note interne modifiée';
+    case 'sanction.donner': {
+      const d = l.detail ?? {};
+      const what = d.kind === 'total' ? 'Compte suspendu' : 'Amis coupés';
+      const how = typeof d.days === 'number' ? `${d.days} j` : 'définitivement';
+      return `${what} (${how}) : ${String(d.reason ?? '')}`;
+    }
+    case 'sanction.lever':
+      return `Sanction levée : ${l.detail?.kind === 'total' ? 'compte suspendu' : 'amis coupés'}`;
+    case 'signalement.statut': {
+      const names: Record<string, string> = { ouvert: 'ouvert', traite: 'traité', rejete: 'rejeté' };
+      return `Signalement ${names[String(l.detail?.vers)] ?? String(l.detail?.vers)}`;
+    }
     default:
       return l.action;
   }

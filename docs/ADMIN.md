@@ -30,7 +30,7 @@ Le dashboard ne répond que sur `ADMIN_HOST` ; l'API de l'app n'y répond pas, e
    l'« Application Audience (AUD) Tag » et le nom d'équipe (Settings > Custom Pages : `<équipe>.cloudflareaccess.com`).
 2. Secrets du Worker : `npx wrangler secret put ACCESS_TEAM --env <prod|test>` (`https://<équipe>.cloudflareaccess.com`)
    et `ACCESS_AUD` (l'étiquette AUD). `ADMIN_EMAIL` existe déjà.
-3. Migrations `server/drizzle/0004_admin_log.sql` et `0005_bugs.sql` à appliquer sur la base (`npm run db:migrate`, voir server/README.md).
+3. Migrations `server/drizzle/0004_admin_log.sql`, `0005_bugs.sql` et `0006_sanctions.sql` à appliquer sur la base (`npm run db:migrate`, voir server/README.md).
 4. `npm run deploy:test` ou `npm run deploy:prod` dans `server/` (compile `admin/` d'abord).
 
 ## Écrans
@@ -39,11 +39,21 @@ Le dashboard ne répond que sur `ADMIN_HOST` ; l'API de l'app n'y répond pas, e
 |---|---|
 | Accueil | bugs ouverts, comptes (+ nouveaux sur 7 jours), actifs sur 7 jours, amis activés (en ligne), signalements, inscriptions par jour sur 30 jours, badges donnés |
 | Bugs | signalements du bouton insecte : filtre par statut (ouverts, nouveau, confirmé, en cours, corrigé, rejeté, doublon, tous) avec leur nombre, recherche par numéro ou mots ; fiche avec description, capture, suivi (statut, version de correction, doublon, note interne) et historique |
-| Comptes | recherche par pseudo, e-mail, code ami ou identifiant (50 au plus, récents d'abord) |
-| Fiche | identité, badges (donner / retirer), amis, bibliothèque synchronisée, postes, signalements reçus, journal du compte |
+| Signalements | comptes et messages signalés depuis l'app : filtre ouvert, traité, rejeté, tous ; compte visé (avec ses sanctions en cours), auteur, motif, extrait du message ; marquer traité, rejeter, rouvrir |
+| Comptes | recherche par pseudo, e-mail, code ami ou identifiant (50 au plus, récents d'abord), sanction en cours |
+| Fiche | identité, badges (donner / retirer), amis, bibliothèque synchronisée, postes, sanctions (en cours, nouvelle, anciennes), signalements reçus, journal du compte |
 | Journal | toutes les actions du dashboard (qui, quoi, quel compte, quand) |
 
 Les messages privés restent chiffrés : seule la copie gardée au moment d'un signalement est visible.
+
+## Sanctions
+
+| Sanction | Effet |
+|---|---|
+| Amis coupés (`social`) | amis désactivés (hors ligne, introuvable), impossibles à réactiver ; le reste du compte marche |
+| Compte suspendu (`total`) | l'API ne répond plus que `GET /me` (et l'avatar), la déconnexion, la gestion des postes, l'export et la suppression ; amis coupés aussi |
+
+Durée : 1, 3, 7, 30 ou 90 jours, ou définitive. Le motif est montré à la personne dans Hangar (Paramètres > Compte, écran Amis). Une suspension totale suit l'adresse e-mail (empreinte gardée même si le compte est supprimé) : un nouveau compte à la même adresse la reprend, et la lever libère les deux. À la levée, les amis restent désactivés : la personne les réactive elle-même.
 
 ## API (`/api/*` sur l'adresse du dashboard)
 
@@ -57,9 +67,12 @@ Les messages privés restent chiffrés : seule la copie gardée au moment d'un s
 | `GET /api/bugs?statut=&q=&before=` | bugs (50 par page) et leur nombre par statut |
 | `GET /api/bugs/:id` (+ `/capture`) | fiche d'un bug et son historique |
 | `PUT /api/bugs/:id` | `{ status, fixedIn, duplicateOf, note }`, noté au journal (`bug.statut`, `bug.note`) ; un changement de statut repeint le message Discord |
+| `GET /api/reports?statut=&before=` | signalements (50 par page) et leur nombre par statut |
+| `PUT /api/reports/:id` | `{ status }` : `ouvert`, `traite`, `rejete` (journal : `signalement.statut`) |
+| `POST /api/users/:id/sanctions` | `{ kind, reason, days }` (`days` null : définitive), journal : `sanction.donner` |
+| `DELETE /api/sanctions/:id` | lève une sanction en cours (journal : `sanction.lever`) |
 | `GET /api/log?before=` | journal, 50 lignes par page |
 
 ## Suite prévue
 
-3. Statut des signalements de comptes, bannissement social ou total (release de l'app nécessaire).
 4. Badges créés depuis le dashboard (`badge_defs`, icônes embarquées dans l'app, compatibilité des anciennes versions).

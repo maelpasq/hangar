@@ -13,6 +13,7 @@ import type { Env } from '../src/env';
 import { DAY, INACTIVE_DAYS, WARN_DAYS, cleanCovers, cleanLogins, expireAccounts } from '../src/lifecycle';
 import { mailHtml, noticeHtml } from '../src/mail';
 import { sha256Hex } from '../src/profile';
+import { lift, sanction } from '../src/sanctions';
 import { STALE, commonGames, normCode, setOnline, storeCount } from '../src/social';
 import * as schema from '../src/schema';
 
@@ -870,5 +871,55 @@ describe('badges', () => {
     const g = (id: string) => ({ id, name: id });
     expect(storeCount([g('steam:1'), g('steam:2'), g('epic:a'), g('@jeu.exe|jeu'), g('riot:valorant')])).toBe(3);
     expect(storeCount([])).toBe(0);
+  });
+});
+
+describe('sanctions', () => {
+  const hub = async () => {};
+  it('coupe les amis, puis suspend le compte, en laissant le voir, l\'exporter et le supprimer', async () => {
+    const token = await login('sanctionne@exemple.fr', 'e'.repeat(32));
+    const id = (await json(await call('/me', { token }))).user.id;
+    const on = await call('/social/me', { token, method: 'PUT', body: { enabled: true } });
+    expect(on.status).toBe(200);
+
+    // Amis coupés : désactivés, impossibles à réactiver, le reste du compte marche.
+    const s = await sanction(db, hub, { userId: id, kind: 'social', reason: 'Spam', days: 7, actor: 'admin' });
+    const me = await json(await call('/me', { token }));
+    expect(me.suspension).toMatchObject({ kind: 'social', reason: 'Spam' });
+    expect(me.suspension.until).toBeGreaterThan(Date.now());
+    expect((await json(await call('/social/me', { token }))).enabled).toBe(false);
+    const refused = await call('/social/me', { token, method: 'PUT', body: { enabled: true } });
+    expect(refused.status).toBe(403);
+    expect(await json(refused)).toMatchObject({ error: 'amis_suspendus', reason: 'Spam' });
+    expect((await call('/social/friends', { token })).status).toBe(403);
+    expect((await call('/sync?since=0', { token })).status).toBe(200);
+
+    // Suspension totale, définitive : seules quelques routes restent.
+    await sanction(db, hub, { userId: id, kind: 'total', reason: 'Triche', days: null, actor: 'admin' });
+    expect((await json(await call('/me', { token }))).suspension).toEqual({ kind: 'total', reason: 'Triche', until: null });
+    const sync = await call('/sync?since=0', { token });
+    expect(sync.status).toBe(403);
+    expect(await json(sync)).toEqual({ error: 'compte_suspendu', reason: 'Triche', until: null });
+    expect((await call('/social/me', { token })).status).toBe(403);
+    expect((await call('/export', { token })).status).toBe(200);
+
+    // Levée de la sociale : la totale reste.
+    expect(await lift(db, hub, s.id)).not.toBeNull();
+    expect(await lift(db, hub, s.id)).toBeNull();
+    expect((await json(await call('/me', { token }))).suspension.kind).toBe('total');
+
+    // Compte supprimé puis recréé à la même adresse : la suspension suit.
+    expect((await call('/me', { token, method: 'DELETE' })).status).toBe(200);
+    const again = await login('sanctionne@exemple.fr', 'f'.repeat(32));
+    expect((await json(await call('/me', { token: again }))).suspension).toEqual({ kind: 'total', reason: 'Triche', until: null });
+    expect((await call('/sync?since=0', { token: again })).status).toBe(403);
+  });
+
+  it('une suspension finie ne compte plus', async () => {
+    const token = await login('temporaire@exemple.fr', '1'.repeat(32));
+    const id = (await json(await call('/me', { token }))).user.id;
+    await sanction(db, hub, { userId: id, kind: 'total', reason: 'Pause', days: 1, actor: 'admin' }, Date.now() - 2 * DAY);
+    expect((await json(await call('/me', { token }))).suspension).toBeNull();
+    expect((await call('/sync?since=0', { token })).status).toBe(200);
   });
 });

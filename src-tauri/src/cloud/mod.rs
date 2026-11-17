@@ -78,6 +78,18 @@ pub struct Device {
     pub current: bool,
 }
 
+/// Sanction de la modération en cours (`kind` : `social` ou `total`), lue dans `GET /me`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Suspension {
+    pub kind: String,
+    #[serde(default)]
+    pub reason: String,
+    /// Fin (ms), absente : définitive.
+    #[serde(default)]
+    pub until: Option<u64>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
@@ -88,6 +100,9 @@ pub struct Status {
     /// Le serveur a refusé le jeton (poste déconnecté à distance) : on vient de repasser en anonyme.
     #[serde(default, skip_deserializing)]
     pub revoked: bool,
+    /// Sanction de la modération en cours ; jamais gardée en cache (relue à chaque `GET /me`).
+    #[serde(default, skip_deserializing)]
+    pub suspension: Option<Suspension>,
     pub user: Option<User>,
     #[serde(default)]
     pub devices: Vec<Device>,
@@ -149,6 +164,10 @@ enum CallError {
     Unauthorized,
     /// Réseau ou réponse illisible.
     Offline,
+    /// Compte suspendu par la modération (403 `compte_suspendu`).
+    Suspended,
+    /// Amis coupés par la modération (403 `amis_suspendus`).
+    SocialSuspended,
     /// Autre refus du serveur (code HTTP).
     Status(u16),
 }
@@ -158,6 +177,8 @@ impl CallError {
         match self {
             CallError::Unauthorized => "Ce poste n'est plus connecté au compte.".into(),
             CallError::Offline => OFFLINE.into(),
+            CallError::Suspended => "Ton compte Hangar est suspendu par la modération : détails dans Paramètres > Compte.".into(),
+            CallError::SocialSuspended => "Les amis sont désactivés sur ton compte par la modération.".into(),
             CallError::Status(c) => format!("Le serveur du compte a répondu une erreur {c}, réessaie plus tard."),
         }
     }
@@ -185,6 +206,17 @@ fn request(method: &str, path: &str, token: Option<&str>) -> ureq::Request {
 fn call_error(path: &str, e: ureq::Error) -> CallError {
     match e {
         ureq::Error::Status(401, _) => CallError::Unauthorized,
+        ureq::Error::Status(403, r) => {
+            let body: Value = r.into_json().unwrap_or(Value::Null);
+            match body["error"].as_str() {
+                Some("compte_suspendu") => CallError::Suspended,
+                Some("amis_suspendus") => CallError::SocialSuspended,
+                _ => {
+                    log::warn!("compte Hangar : réponse 403 sur {path}");
+                    CallError::Status(403)
+                }
+            }
+        }
         ureq::Error::Status(c, _) => {
             if c != 404 {
                 log::warn!("compte Hangar : réponse {c} sur {path}");
@@ -458,6 +490,7 @@ impl Cloud {
                 created_at: u["createdAt"].as_u64().unwrap_or(0),
             }),
             devices: serde_json::from_value(me["devices"].clone()).unwrap_or_default(),
+            suspension: serde_json::from_value(me["suspension"].clone()).ok(),
             ..Status::default()
         }
     }
@@ -814,6 +847,19 @@ impl crate::accounts::Shared for Cloud {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn suspension_lue_dans_me() {
+        let me = json!({ "user": { "id": "u" }, "devices": [], "suspension": { "kind": "total", "reason": "Triche", "until": null } });
+        let s = Cloud::from_me(&me);
+        assert_eq!(s.suspension, Some(Suspension { kind: "total".into(), reason: "Triche".into(), until: None }));
+        assert_eq!(Cloud::from_me(&json!({ "user": {}, "suspension": null })).suspension, None);
+        // Jamais relue depuis le cache : seul le serveur la donne.
+        let cached: Status = serde_json::from_str(r#"{"connected":true,"suspension":{"kind":"total"},"user":null}"#).unwrap();
+        assert_eq!(cached.suspension, None);
+        assert!(CallError::Suspended.message().contains("suspendu"));
+        assert!(CallError::SocialSuspended.message().contains("amis"));
+    }
 
     #[test]
     fn pkce_comme_le_serveur() {

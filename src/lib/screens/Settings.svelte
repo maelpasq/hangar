@@ -29,6 +29,7 @@
   import { hoursLabel, plural, relativeDay } from '../util/format';
   import { isLinux, isMac } from '../util/platform';
   import { RELEASES, notesBetween } from '../util/release-notes';
+  import { suspensionText } from '../util/suspension';
 
   type SectionId = 'account' | 'friends' | 'general' | 'appearance' | 'pad' | 'launchers' | 'library' | 'covers';
 
@@ -376,6 +377,13 @@
             {#if s.connected}
               <section class="group" aria-label="Ton compte">
                 <h3>Ton compte</h3>
+                {#if s.suspension}
+                  {@const t = suspensionText(s.suspension)}
+                  <div class="susp" role="status">
+                    <Icon name="ban" size={18} />
+                    <span><b>{t.title}</b><br />{t.body}</span>
+                  </div>
+                {/if}
                 <div class="srow">
                   <span class="ico"><Icon name="user" size={18} /></span>
                   <span class="txt">
@@ -391,7 +399,10 @@
                     <span class="lbl">Synchronisation</span>
                     <span class="hint" aria-live="polite">{syncHint}</span>
                   </span>
-                  <button class="btn-s" disabled={cloud.syncState === 'syncing'} onclick={() => cloud.sync()}
+                  <button
+                    class="btn-s"
+                    disabled={cloud.syncState === 'syncing' || s.suspension?.kind === 'total'}
+                    onclick={() => cloud.sync()}
                     >Synchroniser maintenant</button
                   >
                 </div>
@@ -654,10 +665,17 @@
                   <span class="hint"
                     >{so?.enabled
                       ? "Tes amis te voient en ligne et peuvent t'écrire."
-                      : 'Désactivés : personne ne peut te trouver, tu apparais hors ligne.'}</span
+                      : cloud.status.suspension
+                        ? suspensionText(cloud.status.suspension).short
+                        : 'Désactivés : personne ne peut te trouver, tu apparais hors ligne.'}</span
                   >
                 </span>
-                <Toggle on={so?.enabled === true} label="Activer les amis" onchange={(v) => void social.setEnabled(v)} />
+                <Toggle
+                  on={so?.enabled === true}
+                  label="Activer les amis"
+                  disabled={!!cloud.status.suspension && !so?.enabled}
+                  onchange={(v) => void social.setEnabled(v)}
+                />
               </div>
               {#if so?.enabled}
                 <div class="srow">
@@ -1327,6 +1345,29 @@
 
   .opt.need {
     color: var(--danger-text);
+  }
+
+  .susp {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 0 0 10px;
+    padding: 12px 14px;
+    border-radius: var(--r-btn);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+
+  .susp :global(svg) {
+    flex: none;
+    margin-top: 2px;
+    color: var(--danger-text);
+  }
+
+  .susp b {
+    color: var(--strong);
   }
 
   .gdesc {

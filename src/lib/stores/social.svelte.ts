@@ -292,6 +292,9 @@ class Social {
       case 'settings':
         void this.loadSettings();
         break;
+      case 'account':
+        void cloud.refresh();
+        break;
       case 'request':
         void this.refreshLists();
         this.notify(`${e.from.name} veut devenir ton ami`, 'Demande d\'ami reçue sur Hangar.', () => this.openFriends());

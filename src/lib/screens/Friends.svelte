@@ -12,6 +12,7 @@
   import { ui } from '../stores/ui.svelte';
   import type { ActivityItem, SocialUser } from '../types';
   import { plural, timeAgo } from '../util/format';
+  import { suspensionText } from '../util/suspension';
 
   let query = $state('');
   let results = $state<SocialUser[] | null>(null);
@@ -89,6 +90,13 @@
       <span class="gico"><Icon name="globe" size={30} /></span>
       <h1>Amis</h1>
       <p>Le serveur du compte est injoignable. Tes amis reviendront avec la connexion.</p>
+    </div>
+  {:else if cloud.status.suspension}
+    {@const t = suspensionText(cloud.status.suspension)}
+    <div class="gate">
+      <span class="gico"><Icon name="ban" size={30} /></span>
+      <h1>{t.title}</h1>
+      <p>{t.body}</p>
     </div>
   {:else if !social.settings}
     <div class="gate"><p>Chargement...</p></div>

@@ -317,6 +317,18 @@ export interface CloudDevice {
   current: boolean;
 }
 
+/**
+ * Sanction de la modération : `social`, amis coupés (impossibles à réactiver) ; `total`, compte
+ * suspendu (plus de synchro ni d'amis, export et suppression possibles).
+ */
+export interface CloudSuspension {
+  kind: 'social' | 'total';
+  /** Motif écrit par la modération. */
+  reason: string;
+  /** Fin (ms), null : définitive. */
+  until: number | null;
+}
+
 /** Compte Hangar (facultatif). Le jeton reste dans le coffre du système, jamais ici. */
 export interface CloudStatus {
   connected: boolean;
@@ -324,6 +336,8 @@ export interface CloudStatus {
   offline: boolean;
   /** Le poste vient d'être déconnecté à distance. */
   revoked: boolean;
+  /** Sanction de la modération en cours (la plus forte), ou null. */
+  suspension?: CloudSuspension | null;
   user: CloudUser | null;
   devices: CloudDevice[];
 }
@@ -462,6 +476,8 @@ export type SocialEvent =
   | { type: 'friends' }
   /** Mes réglages ont changé ailleurs (pastille certifiée donnée ou retirée). */
   | { type: 'settings' }
+  /** Mon compte a changé côté modération (sanction donnée ou levée). */
+  | { type: 'account' }
   | { type: 'request'; from: { id: string; name: string } }
   | { type: 'accepted'; from: { id: string; name: string } }
   | { type: 'activity' }

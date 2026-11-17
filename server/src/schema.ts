@@ -242,7 +242,10 @@ export const messages = sqliteTable(
   (t) => [index('messages_convo').on(t.convo, t.at), index('messages_unread').on(t.toId, t.readAt)]
 );
 
-/** Signalements d'un compte ou d'un message, examinés à la main par le développeur. */
+/**
+ * Signalements d'un compte ou d'un message, examinés dans le dashboard d'administration. `status` :
+ * `ouvert`, `traite` (une suite donnée) ou `rejete` (rien à reprocher).
+ */
 export const reports = sqliteTable(
   'reports',
   {
@@ -253,9 +256,34 @@ export const reports = sqliteTable(
     /** Texte du message signalé, copié au moment du signalement (pour l'examen). */
     excerpt: text('excerpt'),
     reason: text('reason').notNull(),
-    at: integer('at').notNull()
+    at: integer('at').notNull(),
+    status: text('status').notNull().default('ouvert'),
+    handledAt: integer('handled_at')
   },
-  (t) => [index('reports_target').on(t.targetId)]
+  (t) => [index('reports_target').on(t.targetId), index('reports_status').on(t.status, t.at)]
+);
+
+/**
+ * Sanctions de la modération. `kind` : `social` (amis coupés, impossible de les réactiver) ou `total`
+ * (compte suspendu : plus de synchro ni d'amis ; export et suppression restent possibles). `reason` :
+ * le motif montré à la personne. `until` : fin (null : définitive). `emailHash` : empreinte de
+ * l'adresse d'une suspension totale, pour qu'un nouveau compte à la même adresse la reprenne ;
+ * gardée même si le compte est supprimé. `liftedAt` : levée avant la fin.
+ */
+export const sanctions = sqliteTable(
+  'sanctions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    kind: text('kind').notNull(),
+    reason: text('reason').notNull(),
+    until: integer('until'),
+    emailHash: text('email_hash'),
+    at: integer('at').notNull(),
+    actor: text('actor').notNull(),
+    liftedAt: integer('lifted_at')
+  },
+  (t) => [index('sanctions_user').on(t.userId), index('sanctions_email').on(t.emailHash)]
 );
 
 /**

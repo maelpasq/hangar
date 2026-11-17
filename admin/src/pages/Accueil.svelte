@@ -22,7 +22,12 @@
           { label: 'Comptes', value: stats.users, note: `+${num(stats.newWeek)} cette semaine` },
           { label: 'Actifs sur 7 jours', value: stats.activeWeek, note: 'au moins un poste connecté' },
           { label: 'Amis activés', value: stats.friendsOn, note: `${num(stats.online)} en ligne maintenant` },
-          { label: 'Signalements', value: stats.reports, note: `${num(stats.reportsWeek)} cette semaine` }
+          {
+            label: 'Signalements à traiter',
+            value: stats.reportsOpen,
+            note: `${num(stats.reportsWeek)} reçu(s) cette semaine`,
+            to: href.signalements()
+          }
         ]
       : []
   );

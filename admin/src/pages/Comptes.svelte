@@ -87,6 +87,9 @@
                   <span class="sr-only">(certifié)</span>
                 {/if}
               </a>
+              {#if u.sanction}
+                <span class="tag">{u.sanction === 'total' ? 'Suspendu' : 'Amis coupés'}</span>
+              {/if}
             </td>
             <td class="soft">{u.email}</td>
             <td class="soft">{date(u.since)}</td>
@@ -170,6 +173,15 @@
 
   .name:hover {
     text-decoration: underline;
+  }
+
+  .tag {
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: var(--danger-text);
   }
 
   .seal {

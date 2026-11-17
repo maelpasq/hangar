@@ -18,8 +18,45 @@ export interface Stats {
   reports: number;
   reportsWeek: number;
   bugsOpen: number;
+  reportsOpen: number;
   signups: { day: number; n: number }[];
   badges: Partial<Record<Badge, number>>;
+}
+
+export type SanctionKind = 'social' | 'total';
+export type ReportStatus = 'ouvert' | 'traite' | 'rejete';
+
+export interface Sanction {
+  id: string;
+  kind: SanctionKind;
+  /** Motif montré à la personne. */
+  reason: string;
+  /** Fin (ms), null : définitive. */
+  until: number | null;
+  at: number;
+  actor: string;
+  liftedAt: number | null;
+  active: boolean;
+}
+
+export interface Report {
+  id: string;
+  reporterId: string;
+  reporterName: string | null;
+  targetId: string;
+  targetName: string | null;
+  targetSanctions: SanctionKind[];
+  reason: string;
+  excerpt: string | null;
+  at: number;
+  status: ReportStatus;
+  handledAt: number | null;
+}
+
+export interface ReportList {
+  reports: Report[];
+  counts: Partial<Record<ReportStatus, number>>;
+  more: boolean;
 }
 
 export type BugStatus = 'nouveau' | 'confirme' | 'en_cours' | 'corrige' | 'rejete' | 'doublon';
@@ -65,6 +102,8 @@ export interface UserRow {
   since: number;
   lastSeen: number | null;
   certified: boolean;
+  /** Sanction en cours (`total` l'emporte). */
+  sanction: SanctionKind | null;
 }
 
 export interface LogRow {
@@ -88,8 +127,9 @@ export interface UserCard {
   social: { enabled: boolean; code: string; findable: boolean; online: boolean; seen: number | null; friends: number } | null;
   library: { entries: number; sessions: number; playMs: number; covers: number };
   badges: Badge[];
-  reportsReceived: { id: string; reporterId: string; reporterName: string | null; reason: string; excerpt: string | null; at: number }[];
+  reportsReceived: { id: string; reporterId: string; reporterName: string | null; reason: string; excerpt: string | null; at: number; status: ReportStatus }[];
   reportsMade: number;
+  sanctions: Sanction[];
   log: LogRow[];
 }
 
@@ -133,7 +173,14 @@ export const api = {
     call<BugList>(`/bugs?statut=${encodeURIComponent(statut)}&q=${encodeURIComponent(q)}${before ? `&before=${before}` : ''}`),
   bug: (id: number) => call<BugCard>(`/bugs/${id}`),
   updateBug: (id: number, change: BugChange) => call<BugRow>(`/bugs/${id}`, { method: 'PUT', body: change }),
-  captureUrl: (id: number) => (demo ? null : `/api/bugs/${id}/capture`)
+  captureUrl: (id: number) => (demo ? null : `/api/bugs/${id}/capture`),
+  reports: (statut: string, before?: number) =>
+    call<ReportList>(`/reports?statut=${encodeURIComponent(statut)}${before ? `&before=${before}` : ''}`),
+  setReport: (id: string, status: ReportStatus) =>
+    call<{ status: ReportStatus }>(`/reports/${encodeURIComponent(id)}`, { method: 'PUT', body: { status } }),
+  sanction: (userId: string, kind: SanctionKind, reason: string, days: number | null) =>
+    call<Sanction>(`/users/${encodeURIComponent(userId)}/sanctions`, { method: 'POST', body: { kind, reason, days } }),
+  lift: (id: string) => call<Sanction>(`/sanctions/${encodeURIComponent(id)}`, { method: 'DELETE', body: null })
 };
 
 /** Environnement d'après l'adresse : `hangar-admin-test…` est celui de Hangar Test. */

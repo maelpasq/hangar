@@ -43,6 +43,13 @@
       "when": 1794952011111,
       "tag": "0005_bugs",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794952743584,
+      "tag": "0006_sanctions",
+      "breakpoints": true
     }
   ]
 }

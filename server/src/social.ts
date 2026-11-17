@@ -956,7 +956,9 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       messageId,
       excerpt,
       reason: note ? `${body.reason} : ${note}` : (body.reason as string),
-      at: now
+      at: now,
+      status: 'ouvert',
+      handledAt: null
     };
     await db.insert(reports).values(row);
     await notifyReport(db, env, row);

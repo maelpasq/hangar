@@ -6,10 +6,11 @@ import { and, count, desc, eq, gt, inArray, lt, or, sql, sum } from 'drizzle-orm
 import { Hono } from 'hono';
 import type { Db, Env } from '../env';
 import { isUserId } from '../profile';
-import { adminLog, badges, bugs, covers, devices, entries, friends, gameSessions, reports, social, user } from '../schema';
+import { adminLog, badges, bugs, covers, sanctions, devices, entries, friends, gameSessions, reports, social, user } from '../schema';
 import { BADGES, type Badge, type Hub, STALE, badgesOf, normCode, setBadge } from '../social';
 import { type Keys, accessKeys, adminFromAccess } from './access';
 import { bugRoutes, openBugs } from './bugs';
+import { moderationRoutes, openReports, sanctionView } from './moderation';
 import { logAction, logView } from './log';
 
 type Vars = { Variables: { admin: string } };
@@ -60,7 +61,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
     const now = Date.now();
     const week = now - 7 * DAY;
     const today = Math.floor(now / DAY);
-    const [[users], [fresh], [active], [friendsOn], [online], [reported], [reportedWeek], perDay, perBadge, bugsOpen] = await Promise.all([
+    const [[users], [fresh], [active], [friendsOn], [online], [reported], [reportedWeek], perDay, perBadge, bugsOpen, reportsOpen] = await Promise.all([
       db.select({ n: count() }).from(user),
       db.select({ n: count() }).from(user).where(gt(user.createdAt, new Date(week))),
       db.select({ n: sql<number>`count(distinct ${devices.userId})` }).from(devices).where(gt(devices.lastSeen, week)),
@@ -74,7 +75,8 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
         .where(gt(user.createdAt, new Date((today - 29) * DAY)))
         .groupBy(sql`day`),
       db.select({ badge: badges.badge, n: count() }).from(badges).groupBy(badges.badge),
-      openBugs(db)
+      openBugs(db),
+      openReports(db)
     ]);
     const byDay = new Map(perDay.map((r) => [Number(r.day), r.n]));
     return c.json({
@@ -85,6 +87,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
       online: online.n,
       reports: reported.n,
       reportsWeek: reportedWeek.n,
+      reportsOpen,
       bugsOpen,
       signups: Array.from({ length: 30 }, (_, i) => {
         const day = today - 29 + i;
@@ -122,6 +125,13 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
           ).map((r) => r.id)
         )
       : new Set<string>();
+    // Comptes sanctionnés en ce moment : `total` l'emporte sur `social`.
+    const punished = new Map<string, string>();
+    if (rows.length) {
+      for (const s of await db.select().from(sanctions).where(inArray(sanctions.userId, rows.map((r) => r.id)))) {
+        if (sanctionView(s).active && punished.get(s.userId) !== 'total') punished.set(s.userId, s.kind);
+      }
+    }
     return c.json({
       users: rows.map((r) => ({
         id: r.id,
@@ -129,7 +139,8 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
         email: r.email,
         since: r.createdAt.getTime(),
         lastSeen: r.lastSeen === null ? null : Number(r.lastSeen),
-        certified: certified.has(r.id)
+        certified: certified.has(r.id),
+        sanction: punished.get(r.id) ?? null
       }))
     });
   });
@@ -139,7 +150,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
     const id = c.req.param('id');
     const [u] = isUserId(id) ? await db.select().from(user).where(eq(user.id, id)) : [];
     if (!u) return c.json({ error: 'introuvable' }, 404);
-    const [posts, [soc], [nFriends], [nEntries], [play], [nCovers], received, [made], log, given] = await Promise.all([
+    const [posts, [soc], [nFriends], [nEntries], [play], [nCovers], received, [made], log, given, punished] = await Promise.all([
       db
         .select({ id: devices.deviceId, name: devices.name, createdAt: devices.createdAt, lastSeen: devices.lastSeen })
         .from(devices)
@@ -159,6 +170,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
           reporterId: reports.reporterId,
           reporterName: user.name,
           reason: reports.reason,
+          status: reports.status,
           excerpt: reports.excerpt,
           at: reports.at
         })
@@ -169,7 +181,8 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
         .limit(PAGE),
       db.select({ n: count() }).from(reports).where(eq(reports.reporterId, id)),
       db.select().from(adminLog).where(eq(adminLog.targetId, id)).orderBy(desc(adminLog.at)).limit(PAGE),
-      badgesOf(db, id)
+      badgesOf(db, id),
+      db.select().from(sanctions).where(eq(sanctions.userId, id)).orderBy(desc(sanctions.at))
     ]);
     return c.json({
       id: u.id,
@@ -193,6 +206,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
       badges: given,
       reportsReceived: received.map((r) => ({ ...r, reporterName: r.reporterName?.trim() || null })),
       reportsMade: made.n,
+      sanctions: punished.map((s) => sanctionView(s)),
       log: log.map(logView)
     });
   });
@@ -252,6 +266,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
   });
 
   api.route('/bugs', bugRoutes(db, env));
+  api.route('/', moderationRoutes(db, env, deps.hub));
 
   app.route('/api', api);
 

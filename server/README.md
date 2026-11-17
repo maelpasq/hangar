@@ -45,6 +45,8 @@ Dashboard d'administration : sur sa propre adresse (`ADMIN_HOST`), derrière Clo
 
 Hors `/login`, `/auth/*`, `/desktop/*` et `/bug`, tout demande `Authorization: Bearer <jeton du poste>`.
 
+Sanctions de la modération (`src/sanctions.ts`, données par le dashboard) : `GET /me` renvoie `suspension` (`{ kind, reason, until }` ou null). Compte suspendu : tout le reste répond 403 `compte_suspendu` (avec `reason`, `until`), sauf l'avatar, `/logout`, `/devices/:id`, `/export` et `DELETE /me`. Amis coupés : `/social/*` répond 403 `amis_suspendus`, sauf `GET /social/me`.
+
 Connexion d'un poste : l'app tire un vérifieur PKCE, ouvre une adresse locale, puis le navigateur
 sur `/login`. Après la connexion, le navigateur revient sur l'adresse locale avec un code (valable
 2 minutes, une seule fois), que l'app échange avec son vérifieur contre un jeton. Le serveur ne
@@ -59,8 +61,7 @@ Social : un Durable Object `Live` par compte (`src/live.ts`, API d'hibernation) 
 WebSocket de ses postes ; l'API y pousse les évènements (présence, demandes, messages, lectures). La
 première connexion ouverte met le compte en ligne, la dernière fermée le met hors ligne (et oublie le
 jeu en cours) ; sans signe de vie depuis 10 minutes, il est hors ligne quoi qu'il arrive. Les
-visibilités sont appliquées par l'API, jamais par l'app. Signalements : table `reports`, à lire à la
-main (`select * from reports order by at desc`).
+visibilités sont appliquées par l'API, jamais par l'app. Signalements : table `reports`, traités dans le dashboard d'administration.
 
 Synchro : un élément par clé (celles de `src/lib/util/sync.ts`), la modification la plus récente
 gagne. Le curseur est un compteur par compte, pas une date : deux horloges décalées ne font rien

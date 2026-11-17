@@ -8,6 +8,7 @@
   import Comptes from './pages/Comptes.svelte';
   import Fiche from './pages/Fiche.svelte';
   import Journal from './pages/Journal.svelte';
+  import Signalements from './pages/Signalements.svelte';
   import { href, router } from './router.svelte';
 
   let me = $state<Me | null>(null);
@@ -28,6 +29,7 @@
   const nav: { id: string; label: string; icon: IconName; to: string }[] = [
     { id: 'accueil', label: 'Accueil', icon: 'home', to: href.accueil },
     { id: 'bugs', label: 'Bugs', icon: 'bug', to: href.bugs() },
+    { id: 'signalements', label: 'Signalements', icon: 'flag', to: href.signalements() },
     { id: 'comptes', label: 'Comptes', icon: 'users', to: href.comptes() },
     { id: 'journal', label: 'Journal', icon: 'layers', to: href.journal }
   ];
@@ -80,6 +82,8 @@
           {#key router.route.id}
             <Bug id={router.route.id} />
           {/key}
+        {:else if router.route.page === 'signalements'}
+          <Signalements statut={router.route.statut} />
         {:else if router.route.page === 'comptes'}
           <Comptes q={router.route.q} />
         {:else if router.route.page === 'compte'}

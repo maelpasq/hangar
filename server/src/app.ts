@@ -28,6 +28,7 @@ import {
   sha256Hex
 } from './profile';
 import { covers, devices, entries, gameSessions, loginCodes, profiles, secrets, session, user } from './schema';
+import { type Suspension, inheritBan, suspensionOf } from './sanctions';
 import { type Hub, exportSocial, socialRoutes } from './social';
 
 /** Changements par envoi ; une page de lecture en contient au plus le double (voir `page`). */
@@ -52,7 +53,10 @@ const LOGO = bytes(LOGO_PNG);
 const BACKGROUND = bytes(BACKGROUND_WEBP);
 
 type Device = typeof devices.$inferSelect;
-type Vars = { Variables: { device: Device } };
+type Vars = { Variables: { device: Device; suspension: Suspension | null } };
+
+/** Routes encore ouvertes à un compte suspendu : le voir, l'exporter, le supprimer, gérer ses postes. */
+const OPEN_WHEN_SUSPENDED = /^(GET \/me|GET \/me\/avatar|POST \/logout|(PUT|DELETE) \/devices\/[^/]+|GET \/export|DELETE \/me)$/;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isTime = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
@@ -230,6 +234,8 @@ export function createApp(
         .values({ userId: row.userId, deviceId, name, tokenHash, createdAt: now, lastSeen: now })
         .onConflictDoUpdate({ target: [devices.userId, devices.deviceId], set: { name, tokenHash, lastSeen: now } })
     ]);
+    // Adresse suspendue (compte supprimé puis recréé) : la suspension suit.
+    await inheritBan(db, row.userId, now);
     return c.json({ token });
   });
 
@@ -248,6 +254,19 @@ export function createApp(
       : [];
     if (!device) return c.json({ error: 'non_connecte' }, 401);
     const now = Date.now();
+    // Sanctions de la modération (src/sanctions.ts).
+    const suspension = await suspensionOf(db, device.userId, now);
+    if (suspension) {
+      const route = `${c.req.method} ${c.req.path}`;
+      const body = { reason: suspension.reason, until: suspension.until };
+      if (suspension.kind === 'total' && !OPEN_WHEN_SUSPENDED.test(route)) {
+        return c.json({ error: 'compte_suspendu', ...body }, 403);
+      }
+      if (c.req.path.startsWith('/social/') && route !== 'GET /social/me') {
+        return c.json({ error: 'amis_suspendus', ...body }, 403);
+      }
+    }
+    c.set('suspension', suspension);
     if (now - device.lastSeen > 3_600_000) {
       await db
         .update(devices)
@@ -281,7 +300,9 @@ export function createApp(
         avatar: await avatarOf(u.image),
         createdAt: u.createdAt.getTime()
       },
-      devices: await deviceList(me)
+      devices: await deviceList(me),
+      // Sanction en cours : l'app l'affiche (motif, fin) et met en pause ce qui est coupé.
+      suspension: c.get('suspension')
     });
   });
 

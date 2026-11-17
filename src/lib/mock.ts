@@ -416,6 +416,12 @@ export function mockApi(): Api {
         connected: true,
         offline: false,
         revoked: false,
+        // `?suspendu` ou `?amis-coupes` : compte sanctionné par la modération.
+        suspension: new URLSearchParams(location.search).has('suspendu')
+          ? { kind: 'total', reason: 'Triche en ligne', until: null }
+          : new URLSearchParams(location.search).has('amis-coupes')
+            ? { kind: 'social', reason: 'Messages insultants', until: Date.now() + 7 * 864e5 }
+            : null,
         user: { id: 'demo-compte-0001', name: 'Alex', email: 'alex@exemple.fr', avatar: null, createdAt: Date.now() - 5000 },
         devices: [
           { id: 'a'.repeat(32), name: 'PC-SALON', createdAt: Date.now() - 864e5 * 30, lastSeen: Date.now(), connected: true, current: true },

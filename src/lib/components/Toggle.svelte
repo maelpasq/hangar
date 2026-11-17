@@ -1,9 +1,14 @@
 <script lang="ts">
   // Interrupteur 44 x 26 (rôle switch).
-  let { on, label, onchange }: { on: boolean; label: string; onchange: (v: boolean) => void } = $props();
+  let {
+    on,
+    label,
+    onchange,
+    disabled = false
+  }: { on: boolean; label: string; onchange: (v: boolean) => void; disabled?: boolean } = $props();
 </script>
 
-<button class="tog" class:on role="switch" aria-checked={on} aria-label={label} onclick={() => onchange(!on)}
+<button class="tog" class:on role="switch" aria-checked={on} aria-label={label} {disabled} onclick={() => onchange(!on)}
 ></button>
 
 <style>
@@ -28,6 +33,11 @@
     background: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     transition: transform 0.3s var(--ease);
+  }
+
+  .tog:disabled {
+    opacity: 0.45;
+    cursor: default;
   }
 
   .tog.on {

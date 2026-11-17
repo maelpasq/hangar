@@ -22,6 +22,7 @@ a {
 
 button,
 textarea,
+select,
 input {
   font: inherit;
   color: inherit;

@@ -1,5 +1,5 @@
 // Données de démo de `npm run admin:dev` : jamais dans la version compilée (import réservé au mode dev).
-import { ApiError, type Badge, type BugCard, type BugChange, type BugStatus, type LogRow, type UserCard, type UserRow } from './api';
+import { ApiError, type Report, type ReportStatus, type Sanction, type SanctionKind, type Badge, type BugCard, type BugChange, type BugStatus, type LogRow, type UserCard, type UserRow } from './api';
 import { OPEN_IDS } from './bug-status';
 
 const DAY = 86_400_000;
@@ -12,13 +12,77 @@ const users: UserRow[] = NAMES.map((name, i) => ({
   email: `${name.toLowerCase()}@exemple.fr`,
   since: now - (i * 9 + 2) * DAY,
   lastSeen: i % 4 === 3 ? null : now - i * 3_600_000,
-  certified: i === 1
+  certified: i === 1,
+  sanction: null
 }));
 const given = new Map<string, Badge[]>([[users[1].id, ['certifie', 'testeur']]]);
 const log: LogRow[] = [
   { id: 'l1', at: now - 2 * DAY, actor: 'admin@exemple.fr', action: 'badge.donner', targetId: users[1].id, targetName: users[1].name, detail: { badge: 'testeur' } },
   { id: 'l2', at: now - 5 * DAY, actor: 'admin@exemple.fr', action: 'badge.donner', targetId: users[1].id, targetName: users[1].name, detail: { badge: 'certifie' } }
 ];
+
+const reports: Report[] = [
+  {
+    id: 'r1',
+    reporterId: users[0].id,
+    reporterName: users[0].name,
+    targetId: users[2].id,
+    targetName: users[2].name,
+    targetSanctions: [],
+    reason: 'harcelement : messages insistants',
+    excerpt: 'Réponds-moi !!!',
+    at: now - DAY,
+    status: 'ouvert',
+    handledAt: null
+  },
+  {
+    id: 'r2',
+    reporterId: users[4].id,
+    reporterName: users[4].name,
+    targetId: users[6].id,
+    targetName: users[6].name,
+    targetSanctions: [],
+    reason: 'pseudo : pseudo injurieux',
+    excerpt: null,
+    at: now - 3 * DAY,
+    status: 'ouvert',
+    handledAt: null
+  }
+];
+const sanctions: (Sanction & { userId: string })[] = [];
+
+function refreshFlags() {
+  for (const u of users) {
+    const on = sanctions.filter((x) => x.userId === u.id && x.active);
+    u.sanction = on.some((x) => x.kind === 'total') ? 'total' : on.length ? 'social' : null;
+  }
+  for (const r of reports) r.targetSanctions = sanctions.filter((x) => x.userId === r.targetId && x.active).map((x) => x.kind);
+}
+
+function mockModeration(seg: string[], url: URL, init?: { method: string; body: unknown }): unknown {
+  if (seg[0] === 'reports' && !seg[1]) {
+    const statut = url.searchParams.get('statut') ?? 'ouvert';
+    const counts: Record<string, number> = {};
+    for (const r of reports) counts[r.status] = (counts[r.status] ?? 0) + 1;
+    return { reports: reports.filter((r) => statut === 'tous' || r.status === statut), counts, more: false };
+  }
+  if (seg[0] === 'reports' && init) {
+    const r = reports.find((x) => x.id === seg[1]);
+    if (!r) throw new ApiError(404);
+    r.status = (init.body as { status: ReportStatus }).status;
+    r.handledAt = r.status === 'ouvert' ? null : Date.now();
+    return { status: r.status };
+  }
+  if (seg[0] === 'sanctions' && init) {
+    const x = sanctions.find((y) => y.id === seg[1]);
+    if (!x) throw new ApiError(404);
+    x.active = false;
+    x.liftedAt = Date.now();
+    refreshFlags();
+    return x;
+  }
+  return null;
+}
 
 function card(u: UserRow): UserCard {
   const i = users.indexOf(u);
@@ -38,9 +102,10 @@ function card(u: UserRow): UserCard {
     badges: given.get(u.id) ?? [],
     reportsReceived:
       i === 2
-        ? [{ id: 'r1', reporterId: users[0].id, reporterName: users[0].name, reason: 'harcelement : messages insistants', excerpt: 'Réponds-moi !!!', at: now - DAY }]
+        ? reports.filter((r) => r.targetId === u.id).map((r) => ({ ...r, reporterName: r.reporterName }))
         : [],
     reportsMade: 0,
+    sanctions: sanctions.filter((x) => x.userId === u.id).map(({ userId: _, ...x }) => x),
     log: log.filter((l) => l.targetId === u.id)
   };
 }
@@ -126,6 +191,7 @@ export async function mock(path: string, init?: { method: string; body: unknown 
       online: 46,
       reports: 9,
       reportsWeek: 2,
+      reportsOpen: reports.filter((r) => r.status === 'ouvert').length,
       bugsOpen: bugs.filter((b) => OPEN_IDS.includes(b.status)).length,
       signups: Array.from({ length: 30 }, (_, k) => ({ day: now - (29 - k) * DAY, n: Math.round(3 + 4 * Math.sin(k / 3) + (k % 5)) })),
       badges: { certifie: 6, equipe: 2, testeur: 14, chasseur: 5 }
@@ -133,12 +199,30 @@ export async function mock(path: string, init?: { method: string; body: unknown 
   }
   if (seg[0] === 'log') return { log, more: false };
   if (seg[0] === 'bugs') return mockBugs(seg, url, init);
+  if (seg[0] === 'reports' || seg[0] === 'sanctions') return mockModeration(seg, url, init);
   if (seg[0] === 'users' && !seg[1]) {
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     return { users: users.filter((u) => !q || u.name.toLowerCase().includes(q) || u.email.includes(q) || u.id === q) };
   }
   const u = users.find((x) => x.id === seg[1]);
   if (!u) throw new Error('introuvable');
+  if (seg[2] === 'sanctions' && init) {
+    const b = init.body as { kind: SanctionKind; reason: string; days: number | null };
+    const x = {
+      id: crypto.randomUUID(),
+      userId: u.id,
+      kind: b.kind,
+      reason: b.reason,
+      until: b.days === null ? null : Date.now() + b.days * DAY,
+      at: Date.now(),
+      actor: 'admin@exemple.fr',
+      liftedAt: null,
+      active: true
+    };
+    sanctions.unshift(x);
+    refreshFlags();
+    return x;
+  }
   if (seg[2] === 'badges' && init) {
     const { badge, on } = init.body as { badge: Badge; on: boolean };
     const set = new Set(given.get(u.id) ?? []);

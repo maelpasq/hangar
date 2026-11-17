@@ -290,3 +290,48 @@ describe('bugs', () => {
     expect(await (await call('/api/bugs/1', { token: await good() })).json()).toMatchObject({ capture: false });
   });
 });
+
+describe('modération', () => {
+  const write = async (path: string, method: string, body?: unknown) =>
+    call(path, { token: await good(), method, body, origin: `https://${HOST}` });
+  const read = async <T = any>(path: string) => (await (await call(path, { token: await good() })).json()) as T;
+
+  it('traite les signalements et les compte', async () => {
+    const open = await read('/api/reports');
+    expect(open.reports).toMatchObject([{ id: 'r1', reporterName: 'Bob', targetName: 'Alice_100%', status: 'ouvert', targetSanctions: [] }]);
+    expect(open.counts).toEqual({ ouvert: 1 });
+    expect((await read('/api/stats')).reportsOpen).toBe(1);
+    expect((await write('/api/reports/r1', 'PUT', { status: 'fini' })).status).toBe(400);
+    expect((await write('/api/reports/r9', 'PUT', { status: 'traite' })).status).toBe(404);
+    expect(await (await write('/api/reports/r1', 'PUT', { status: 'traite' })).json()).toEqual({ status: 'traite' });
+    expect((await read('/api/reports')).reports).toEqual([]);
+    expect((await read('/api/reports?statut=traite')).reports[0].handledAt).toBeGreaterThan(0);
+    expect((await read('/api/stats')).reportsOpen).toBe(0);
+    const fiche = await read(`/api/users/${ALICE}`);
+    expect(fiche.reportsReceived[0].status).toBe('traite');
+  });
+
+  it('sanctionne un compte et lève la sanction, avec le journal', async () => {
+    const give = (body: unknown, id = ALICE) => write(`/api/users/${id}/sanctions`, 'POST', body);
+    expect((await give({ kind: 'social', reason: ' ', days: 7 })).status).toBe(400);
+    expect((await give({ kind: 'social', reason: 'Spam', days: 0 })).status).toBe(400);
+    expect((await give({ kind: 'muet', reason: 'Spam', days: 7 })).status).toBe(400);
+    expect((await give({ kind: 'social', reason: 'Spam', days: 7 }, 'inconnu')).status).toBe(404);
+
+    const s = (await (await give({ kind: 'social', reason: 'Spam', days: 7 })).json()) as { id: string; active: boolean; until: number };
+    expect(s.active).toBe(true);
+    expect(s.until).toBeGreaterThan(Date.now() + 6 * 86_400_000);
+    const [soc] = (await db.select().from(schema.social)).filter((r) => r.userId === ALICE);
+    expect(soc.enabled).toBe(false);
+    const flag = async () => (await read('/api/users')).users.find((u: { id: string }) => u.id === ALICE).sanction;
+    expect(await flag()).toBe('social');
+    expect((await read('/api/reports?statut=tous')).reports[0].targetSanctions).toEqual(['social']);
+    expect((await read(`/api/users/${ALICE}`)).sanctions).toMatchObject([{ kind: 'social', reason: 'Spam', active: true }]);
+
+    expect(await (await write(`/api/sanctions/${s.id}`, 'DELETE')).json()).toMatchObject({ active: false });
+    expect((await write(`/api/sanctions/${s.id}`, 'DELETE')).status).toBe(404);
+    expect(await flag()).toBeNull();
+    const actions = (await read(`/api/users/${ALICE}`)).log.map((l: { action: string }) => l.action);
+    expect(actions).toEqual(expect.arrayContaining(['sanction.donner', 'sanction.lever', 'signalement.statut']));
+  });
+});
