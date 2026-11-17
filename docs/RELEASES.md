@@ -17,7 +17,7 @@ Une version publiée part chez tous les utilisateurs : le bouton « Mettre à jo
    - puis des sections `#### Nouveautés`, `#### Améliorations`, `#### Corrections` (seulement celles qui ont du contenu), chacune en liste à puces : un point par changement visible, concret, du point de vue de l'utilisateur (ce qui change pour lui, où, sur quel système si ce n'est pas partout) ;
    - jamais de `###` dans l'entrée (il marque la version suivante), ni de détail interne (noms de fichiers, refactorisations, CI) sauf s'il a un effet visible.
 
-   Cette même entrée s'affiche **dans Hangar**, dans la fenêtre « Hangar a été mis à jour » au premier démarrage après la mise à jour (et via Paramètres > Général > Nouveautés), pour que chacun comprenne pourquoi il a mis à jour. Elle est lue dans ce fichier au build (`src/lib/util/release-notes.ts`, aucun réseau) : sans entrée, pas de fenêtre. Seuls l'accroche, les titres `####`, les puces et le gras `**...**` sont rendus. Pour une grosse mise à jour, une ligne `<!-- vitrine: social -->` sous l'accroche (invisible sur GitHub) ajoute en tête de la fenêtre une vitrine illustrée et animée (`social` : compte et amis, `src/lib/components/SocialArt.svelte` et `SocialPitch.svelte`, branchés dans `WhatsNew.svelte`). Vérifie le rendu avant de committer : `npm run dev:web`, Paramètres > Général > Nouveautés.
+   Cette même entrée s'affiche **dans Hangar**, dans la fenêtre « Hangar a été mis à jour » au premier démarrage après la mise à jour (et via Paramètres > Général > Nouveautés), pour que chacun comprenne pourquoi il a mis à jour. Elle est lue dans ce fichier au build (`src/lib/util/release-notes.ts`, aucun réseau) : sans entrée, pas de fenêtre. Seuls l'accroche, les titres `####`, les puces et le gras `**...**` sont rendus. Pour une grosse mise à jour, une ligne `<!-- vitrine: social -->` sous l'accroche (invisible sur GitHub) ajoute en tête de la fenêtre une vitrine illustrée et animée (`social` : compte et amis, `src/lib/components/SocialArt.svelte` et `SocialPitch.svelte` ; `badges` : badges du profil, `BadgesArt.svelte` et `BadgesPitch.svelte` ; branchés dans `WhatsNew.svelte`). Vérifie le rendu avant de committer : `npm run dev:web`, Paramètres > Général > Nouveautés.
 
    Puis committer :
    ```bash
@@ -66,6 +66,22 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 ## Historique
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
+
+### 1.2.29 - 17 novembre 2026
+Ton profil Hangar a ses badges : ton ancienneté, ta collection et tes heures de jeu s'affichent à côté de ton pseudo, et tes amis les voient.
+<!-- vitrine: badges -->
+
+#### Nouveautés
+- **Badges du profil** : à droite de ton pseudo, sur ton profil et chez tes amis. Survole un badge pour voir ce qu'il récompense.
+- **Ancienneté** : l'arche de Hangar change de matière avec le temps, du bronze (dès la création du compte) à l'opale (6 ans), en passant par l'argent, l'or, le platine, le diamant, l'émeraude et le rubis. Un clic dessus montre ta date d'arrivée, depuis combien de temps tu es là et la prochaine arche.
+- **Pionnier** : pour les comptes créés avant le 1er décembre 2026.
+- **Collectionneur** (50, 100, 250 puis 500 jeux), **Marathonien** (100, 500 puis 1000 heures de jeu) et **Multi-launchers** (des jeux sur 5 launchers ou plus). Ils suivent ta confidentialité : si tes amis ne voient pas ta bibliothèque ou ton temps de jeu, ces badges restent cachés.
+- **Compte certifié** : pour les comptes certifiés.
+- **Équipe Hangar**, **Testeur** et **Chasseur de bugs** : pour l'équipe, ceux qui testent Hangar avant tout le monde et ceux dont les signalements l'ont amélioré.
+
+#### Améliorations
+- **Profil** : cartes de statistiques réagencées, chacune avec son icône en couleur, la version de Hangar en vert quand elle est à jour, et le code ami copiable d'un clic.
+- **Jeux en commun avec un ami** : un jeu compte maintenant même s'il vient d'un autre launcher chez lui (par exemple Steam chez toi, Epic chez lui), sur tous ses PC connectés.
 
 ### 1.2.28 - 16 novembre 2026
 Hangar devient social : crée ton compte Hangar gratuit, retrouve ta bibliothèque sur tous tes PC, ajoute tes amis et discute avec eux sans quitter Hangar.
