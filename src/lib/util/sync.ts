@@ -134,6 +134,40 @@ export function installChoices(s: PersistedState, g: Game, names: string[]): { s
   return { sites, steam };
 }
 
+/**
+ * Liens proposés pour installer un jeu vu chez un ami et absent d'ici (seuls son identifiant et
+ * son nom sont connus) : le site officiel lu sur sa fiche Steam et celui trouvé sur Wikidata, un
+ * par domaine, puis sa page Steam à part.
+ */
+export function socialInstallChoices(s: PersistedState, name: string, appid: number | null): { sites: string[]; steam: string | null } {
+  const sites: string[] = [];
+  for (const url of [officialOf(s, appid), s.officialSites[wikidataKey(name)]]) {
+    if (url && !isSteamPage(url) && !sites.some((x) => linkDomain(x) === linkDomain(url))) sites.push(url);
+  }
+  return { sites, steam: appid ? `https://store.steampowered.com/app/${appid}` : null };
+}
+
+/** Appid Steam d'un identifiant portable (« steam:620 »), sinon null. */
+export function steamIdFromPortable(id: string): number | null {
+  const m = /^steam:(\d+)$/.exec(id);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Store dont le launcher sait ouvrir la page d'un jeu vu chez un ami (même règle que
+ * `launcher::store_page_uri`, Microsoft Store sous Windows seulement), sinon null.
+ */
+export function storePageOf(id: string, windows: boolean): 'steam' | 'gog' | 'battlenet' | 'xbox' | null {
+  const i = id.indexOf(':');
+  const store = id.slice(0, i);
+  const key = id.slice(i + 1);
+  if (i < 0 || !key || key.length > 200) return null;
+  if ((store === 'steam' || store === 'gog') && /^\d+$/.test(key)) return store;
+  if (store === 'battlenet' && /^[a-z0-9]+$/i.test(key)) return store;
+  if (store === 'xbox' && windows && /^[a-z0-9._-]+$/i.test(key)) return store;
+  return null;
+}
+
 /** Fiche portable à jour d'un jeu local ou manuel (null : pas de signature possible). */
 export function portableOf(s: PersistedState, g: Game): PortableGame | null {
   // Rattaché à la main à un jeu du compte (« J'ai déjà ce jeu ») : il en garde la signature.

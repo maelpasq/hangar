@@ -2,6 +2,8 @@
   // Jeu du compte Hangar absent de ce PC : la personne choisit d'où l'installer. Les sites
   // officiels trouvés automatiquement d'abord (là où se télécharge l'exe officiel), la page
   // Steam à part, son exécutable s'il est déjà là, ou un autre lien saisi à la main.
+  // Jeu vu chez un ami et absent d'ici (`social`) : mêmes choix, plus sa page dans son launcher ;
+  // l'exécutable choisi l'ajoute à la bibliothèque.
   import { untrack } from 'svelte';
   import Icon from '../components/Icon.svelte';
   import Modal from '../components/Modal.svelte';
@@ -9,19 +11,26 @@
   import { api } from '../api';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
-  import type { Game } from '../types';
-  import { linkDomain } from '../util/sync';
+  import { STORES } from '../stores-meta';
+  import type { Game, SocialGame } from '../types';
+  import { manualGameFrom } from '../util/games';
+  import { isLinux, isMac } from '../util/platform';
+  import { linkDomain, storePageOf } from '../util/sync';
 
-  let { game }: { game: Game } = $props();
+  let { game, social }: { game?: Game; social?: SocialGame } = $props();
 
+  const name = $derived(game ? library.name(game) : (social?.name ?? ''));
   // Recalculé quand les recherches remplissent le cache (état réactif de la bibliothèque).
-  const choices = $derived(library.installChoices(game));
+  const choices = $derived(
+    game ? library.installChoices(game) : social ? library.socialInstallChoices(social) : { sites: [], steam: null }
+  );
+  const store = $derived(social ? storePageOf(social.id, !isMac && !isLinux) : null);
+  const storeLabel = $derived(store === 'xbox' ? 'Microsoft Store' : store ? STORES[store].launcher : '');
   let searching = $state(true);
   let failed = $state(false);
   $effect(() => {
-    const g = untrack(() => game);
-    library
-      .findInstallChoices(g)
+    const [g, s] = untrack(() => [game, social] as const);
+    (g ? library.findInstallChoices(g) : s ? library.findSocialInstallChoices(s) : Promise.resolve())
       .catch(() => (failed = true))
       .finally(() => (searching = false));
   });
@@ -30,24 +39,39 @@
     ui.modal = null;
   };
 
+  const fail = (e: unknown) => ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
+
   function open(url: string) {
     close();
-    api.openGameLink(url).catch((e) => ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true }));
+    api.openGameLink(url).catch(fail);
   }
 
-  function chooseExe() {
-    const id = game.id;
+  function openStore() {
+    if (!social) return;
     close();
-    void attachElsewhere(id);
+    api.openStorePage(social.id).catch(fail);
+  }
+
+  async function chooseExe() {
+    close();
+    if (game) return attachElsewhere(game.id);
+    if (!social) return;
+    const path = await api.pickExe().catch(() => null);
+    if (!path) return;
+    const g = manualGameFrom(path, social.name);
+    library.addManual(g);
+    ui.toast(`${g.name} ajouté à ta bibliothèque`, { gameId: g.id });
   }
 
   function otherLink() {
-    ui.modal = { kind: 'installLink', gameId: game.id };
+    if (game) ui.modal = { kind: 'installLink', gameId: game.id };
   }
 </script>
 
-<Modal title="Installer {library.name(game)}" onclose={close} width={480}>
-  <p class="intro">Ce jeu est sur un autre de tes PC. Choisis d'où l'installer ici.</p>
+<Modal title="Installer {name}" onclose={close} width={480}>
+  <p class="intro">
+    {game ? "Ce jeu est sur un autre de tes PC. Choisis d'où l'installer ici." : "Ce jeu n'est pas dans ta bibliothèque. Choisis d'où l'installer."}
+  </p>
   <div class="choices">
     {#each choices.sites as url (url)}
       <button class="opt" onclick={() => open(url)}>
@@ -65,6 +89,12 @@
         </span>
       </div>
     {/each}
+    {#if store}
+      <button class="opt" onclick={openStore}>
+        <span class="ico"><Icon name="download" size={18} /></span>
+        <span class="txt"><strong>{storeLabel}</strong><span class="sub">Ouvrir sa page dans le launcher</span></span>
+      </button>
+    {/if}
     {#if choices.steam}
       <button class="opt" onclick={() => open(choices.steam!)}>
         <span class="ico"><Icon name="globe" size={18} /></span>
@@ -80,7 +110,7 @@
     </button>
   </div>
   {#snippet footer()}
-    <button class="btn" onclick={otherLink}>Autre lien…</button>
+    {#if game}<button class="btn" onclick={otherLink}>Autre lien…</button>{/if}
     <span class="grow"></span>
     <button class="btn" onclick={close}>Annuler</button>
   {/snippet}

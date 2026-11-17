@@ -171,6 +171,8 @@ export interface Api {
   openLink(link: 'steam-api-key' | 'microsoft-link' | 'steamgriddb-api' | 'gamebar-settings' | 'privacy'): Promise<void>;
   /** Ouvre le lien d'installation d'un jeu dans le navigateur (`https://` seulement). */
   openGameLink(url: string): Promise<void>;
+  /** Ouvre la page d'un jeu vu chez un ami dans son launcher (Steam, GOG, Battle.net, Microsoft Store). */
+  openStorePage(id: string): Promise<void>;
   /** Envoie un signalement de bug au développeur (capture : chemin d'une image, facultatif). */
   reportBug(title: string, description: string, screenshot: string | null): Promise<void>;
   /** Ouvre un jeu du catalogue web-games.json dans sa propre fenêtre Hangar. */
@@ -315,6 +317,7 @@ async function tauriApi(): Promise<Api> {
     onSocialLive: (cb) => on<boolean>('social://live', cb),
     openLink: (link) => invoke('open_link', { link }),
     openGameLink: (url) => invoke('open_game_link', { url }),
+    openStorePage: (id) => invoke('open_store_page', { id }),
     reportBug: (title, description, screenshot) => invoke('report_bug', { title, description, screenshot }),
     openWebGame: (id) => invoke('open_web_game', { id }),
     onWebClosed: (cb) => on<string>('web://closed', cb),

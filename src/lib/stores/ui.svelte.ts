@@ -1,7 +1,7 @@
 // État de l'interface : écran courant, recherche, modales, menu contextuel, toasts.
 
 import { api } from '../api';
-import type { DesktopInfo, InstallTarget, StoreId } from '../types';
+import type { DesktopInfo, InstallTarget, SocialGame, StoreId } from '../types';
 import type { CropShape } from '../util/avatar';
 import type { IconName } from '../components/Icon.svelte';
 
@@ -24,6 +24,8 @@ export type Modal =
   | { kind: 'installLink'; gameId: string }
   /** Jeu d'un autre PC : l'installer depuis son site officiel ou choisir son exécutable. */
   | { kind: 'installChoice'; gameId: string }
+  /** Jeu vu chez un ami et absent d'ici : l'installer depuis son site, son launcher ou son exécutable. */
+  | { kind: 'socialInstall'; game: SocialGame }
   | { kind: 'cover'; gameId: string }
   | { kind: 'stop'; gameId: string }
   | { kind: 'uninstall'; gameId: string }

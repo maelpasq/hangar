@@ -390,6 +390,14 @@ pub async fn open_game_link(url: String) -> Result<(), String> {
     blocking(move || launcher::shell_open(&url, "", None, "open")).await?
 }
 
+/// Ouvre la page d'un jeu vu chez un ami dans son launcher (Steam, GOG Galaxy, Battle.net,
+/// Microsoft Store), d'après son identifiant portable.
+#[tauri::command]
+pub async fn open_store_page(id: String) -> Result<(), String> {
+    let uri = launcher::store_page_uri(&id).ok_or("Ce jeu n'a pas de page à ouvrir dans un launcher.")?;
+    blocking(move || launcher::shell_open(&uri, "", None, "open")).await?
+}
+
 /// Le mode manette vient de se fermer : Hangar retourne là où il était si le bouton Xbox
 /// l'avait ramené devant (`restore` : fermé par B, Start, Xbox ou Échap).
 #[tauri::command]

@@ -10,10 +10,39 @@ import {
   portableId,
   portableOf,
   signature,
+  socialInstallChoices,
   stampChanges,
+  steamIdFromPortable,
+  storePageOf,
   syncEntries,
   wikidataKey
 } from './sync';
+
+describe("installer un jeu vu chez un ami", () => {
+  it('propose le site officiel, Wikidata et la page Steam, un par domaine', () => {
+    const s = defaultState();
+    s.officialSites[620] = 'https://www.thinkwithportals.com/';
+    s.officialSites[wikidataKey('Portal 2')] = 'https://thinkwithportals.com/fr';
+    expect(socialInstallChoices(s, 'Portal 2', 620)).toEqual({
+      sites: ['https://www.thinkwithportals.com/'],
+      steam: 'https://store.steampowered.com/app/620'
+    });
+    expect(socialInstallChoices(s, 'Inconnu', null)).toEqual({ sites: [], steam: null });
+  });
+
+  it("lit l'appid et le launcher depuis l'identifiant", () => {
+    expect(steamIdFromPortable('steam:620')).toBe(620);
+    expect(steamIdFromPortable('epic:fn')).toBeNull();
+    expect(storePageOf('steam:620', false)).toBe('steam');
+    expect(storePageOf('gog:1207658924', false)).toBe('gog');
+    expect(storePageOf('battlenet:Pro', false)).toBe('battlenet');
+    expect(storePageOf('xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe', true)).toBe('xbox');
+    expect(storePageOf('xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe', false)).toBeNull();
+    expect(storePageOf('steam:620/../x', true)).toBeNull();
+    expect(storePageOf('epic:fn', true)).toBeNull();
+    expect(storePageOf('@celeste.exe|celeste', true)).toBeNull();
+  });
+});
 
 const local = (over: Partial<Game> = {}): Game => ({
   id: 'local:d:\\jeux\\celeste',

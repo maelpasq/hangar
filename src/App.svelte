@@ -323,6 +323,8 @@
     <InstallLink game={modalGame} />
   {:else if ui.modal?.kind === 'installChoice' && modalGame}
     <InstallChoice game={modalGame} />
+  {:else if ui.modal?.kind === 'socialInstall'}
+    <InstallChoice social={ui.modal.game} />
   {:else if ui.modal?.kind === 'cover' && modalGame}
     <ChangeCover game={modalGame} />
   {:else if ui.modal?.kind === 'stop' && modalGame}

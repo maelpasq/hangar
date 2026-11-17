@@ -2,8 +2,9 @@
 
 import { api } from '../api';
 import { STORE_ORDER } from '../stores-meta';
-import type { Collection, Game, PersistedState, Session, StoreId, Totals } from '../types';
+import type { Collection, Game, PersistedState, Session, SocialGame, StoreId, Totals } from '../types';
 import { dedupe } from '../util/games';
+import { normalize } from '../util/search';
 import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
 import { adoptGhosts, ghostGames, measuredMs, remoteTimes } from '../util/cloud-sync';
 import {
@@ -12,7 +13,9 @@ import {
   isGhostId,
   officialSiteToFind,
   portableOf,
+  socialInstallChoices,
   stampChanges,
+  steamIdFromPortable,
   steamIdOf,
   syncEntries,
   wikidataKey
@@ -357,14 +360,43 @@ class Library {
 
   /** Cherche les sites officiels pas encore cherchés pour la popup « Installer ». Erreur : réseau. */
   async findInstallChoices(g: Game): Promise<void> {
-    const appid = steamIdOf(this.state, g);
+    await this.findSitesFor(steamIdOf(this.state, g), [g.name, this.name(g)]);
+  }
+
+  /**
+   * Appid Steam d'un jeu vu chez un ami (celui de son identifiant, sinon trouvé par son nom exact
+   * sur la recherche Steam) : undefined tant qu'il n'est pas cherché, 0 si Steam ne le connaît pas.
+   * Gardé le temps de la session seulement.
+   */
+  socialSteam = $state<Record<string, number>>({});
+
+  /** Liens proposés pour installer un jeu vu chez un ami (popup « Installer »). */
+  socialInstallChoices(g: SocialGame): { sites: string[]; steam: string | null } {
+    const appid = steamIdFromPortable(g.id) ?? (this.socialSteam[g.id] || null);
+    return socialInstallChoices(this.state, g.name, appid);
+  }
+
+  /** Cherche l'appid Steam puis les sites officiels d'un jeu vu chez un ami. Erreur : réseau. */
+  async findSocialInstallChoices(g: SocialGame): Promise<void> {
+    let appid = steamIdFromPortable(g.id) ?? this.socialSteam[g.id];
+    if (appid === undefined) {
+      const key = (s: string) => normalize(s).replace(/[^a-z0-9]+/g, ' ').trim();
+      const want = key(g.name);
+      const hits = await api.searchSteam(g.name).catch(() => null);
+      if (hits) this.socialSteam[g.id] = appid = hits.find((h) => key(h.name) === want)?.id ?? 0;
+    }
+    await this.findSitesFor(appid || null, [g.name]);
+  }
+
+  /** Cherche le site officiel d'un appid (fiche Steam) et ceux de noms de jeu (Wikidata). */
+  private async findSitesFor(appid: number | null, names: string[]): Promise<void> {
     const jobs: Promise<unknown>[] = [];
     if (appid && !(appid in this.state.officialSites)) {
       if (!this.officialQueue.includes(appid)) this.officialQueue.push(appid);
       this.officialJob ??= this.pumpOfficial().finally(() => (this.officialJob = null));
       jobs.push(this.officialJob);
     }
-    for (const name of new Set([g.name, this.name(g)])) {
+    for (const name of new Set(names)) {
       const key = wikidataKey(name);
       if (!key || key in this.state.officialSites) continue;
       jobs.push(api.wikidataSite(name).then((url) => (this.state.officialSites[key] = url ?? '')));

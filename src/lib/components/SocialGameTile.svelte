@@ -1,7 +1,7 @@
 <script lang="ts">
   // Jeu d'un autre compte (vitrine, jeux en commun, invitation) : sa jaquette s'il est dans la
   // bibliothèque d'ici, sinon celle du CDN Steam (par son ID Steam ou son nom), sinon une
-  // jaquette générée à son nom.
+  // jaquette générée à son nom. Un clic ouvre sa fiche, ou propose de l'installer s'il n'est pas ici.
   import { art, visible } from '../art.svelte';
   import { contextMenu } from '../menus';
   import { social } from '../stores/social.svelte';
@@ -52,7 +52,12 @@
     {@attach contextMenu(() => ({ gameId: local.id }))}>{@render body()}</button
   >
 {:else}
-  <div class="tile" title="Pas dans ta bibliothèque">{@render body()}</div>
+  <button
+    class="tile"
+    title="Pas dans ta bibliothèque"
+    onclick={() => (ui.modal = { kind: 'socialInstall', game: { id: game.id, name: game.name } })}
+    aria-label="{game.name}, pas dans ta bibliothèque : l'installer">{@render body()}</button
+  >
 {/if}
 
 <style>

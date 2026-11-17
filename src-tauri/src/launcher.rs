@@ -235,9 +235,44 @@ pub fn uninstall(g: &crate::model::Game, others: &[std::path::PathBuf]) -> Resul
     Ok(msg)
 }
 
+/// Page d'un jeu dans son launcher, d'après son identifiant portable (jeu vu chez un ami et
+/// absent d'ici) : Steam, GOG Galaxy, Battle.net et Microsoft Store (Windows). None : store sans
+/// page à ouvrir ou identifiant douteux.
+pub fn store_page_uri(id: &str) -> Option<String> {
+    let (store, key) = id.split_once(':')?;
+    let ok = |f: fn(char) -> bool| !key.is_empty() && key.len() <= 200 && key.chars().all(f);
+    match store {
+        "steam" if ok(|c| c.is_ascii_digit()) => Some(format!("steam://store/{key}")),
+        "gog" if ok(|c| c.is_ascii_digit()) => Some(format!("goggalaxy://openGameView/{key}")),
+        "battlenet" if ok(|c| c.is_ascii_alphanumeric()) => Some(format!("battlenet://{key}")),
+        "xbox" if cfg!(windows) && ok(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) => {
+            Some(format!("ms-windows-store://pdp/?PFN={key}"))
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn page_du_jeu_dans_son_launcher() {
+        assert_eq!(store_page_uri("steam:620").as_deref(), Some("steam://store/620"));
+        assert_eq!(store_page_uri("gog:1207658924").as_deref(), Some("goggalaxy://openGameView/1207658924"));
+        assert_eq!(store_page_uri("battlenet:Pro").as_deref(), Some("battlenet://Pro"));
+        assert_eq!(store_page_uri("steam:620/../x"), None);
+        assert_eq!(store_page_uri("steam:"), None);
+        assert_eq!(store_page_uri("epic:Fortnite"), None);
+        assert_eq!(store_page_uri("@celeste.exe|celeste"), None);
+        assert_eq!(store_page_uri("xbox:Bad&Name"), None);
+        if cfg!(windows) {
+            assert_eq!(
+                store_page_uri("xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe").as_deref(),
+                Some("ms-windows-store://pdp/?PFN=Microsoft.624F8B84B80_8wekyb3d8bbwe")
+            );
+        }
+    }
 
     #[test]
     fn desinstallation_par_store() {

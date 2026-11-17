@@ -512,6 +512,7 @@ export function mockApi(): Api {
     },
     openLink: async () => {},
     openGameLink: async () => {},
+    openStorePage: async () => {},
     reportBug: async () => { await wait(800); },
     openWebGame: async () => {},
     onWebClosed: async () => () => {},
