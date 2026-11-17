@@ -122,7 +122,7 @@
       <div class="itxt">
         <div class="nameline">
           <h1 class="ell">{profile.name}</h1>
-          <Badges badges={profile.badges ?? []} />
+          <Badges badges={profile.badges ?? []} since={profile.since} name={profile.name} />
         </div>
         <p class="status">
           {#if live && live.state !== 'hidden'}<span class:playing={live.state === 'playing'}>{presenceLabel(live)}</span>{' · '}{/if}Sur

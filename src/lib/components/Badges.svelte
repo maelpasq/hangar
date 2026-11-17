@@ -15,11 +15,14 @@
 </script>
 
 <script lang="ts">
-  // Badges d'un compte, à droite de son pseudo (profil). Donnés seulement par l'administrateur.
-  let { badges, size = 22 }: { badges: Badge[]; size?: number } = $props();
+  // Badges d'un compte, à droite de son pseudo (profil) : ceux donnés par l'administrateur
+  // (certifié), puis l'ancienneté, calculée d'après la date de création du compte.
+  import SeniorityBadge from './SeniorityBadge.svelte';
+
+  let { badges, since, name, size = 22 }: { badges: Badge[]; since?: number; name: string; size?: number } = $props();
 </script>
 
-{#if badges.length}
+{#if badges.length || since}
   <span class="badges">
     {#each badges as b (b)}
       <span class="badge {b}" role="img" aria-label={BADGE_LABEL[b]} data-tip={BADGE_LABEL[b]}>
@@ -29,6 +32,7 @@
         </svg>
       </span>
     {/each}
+    {#if since}<SeniorityBadge {since} {name} />{/if}
   </span>
 {/if}
 
