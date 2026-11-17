@@ -1,11 +1,4 @@
 <script lang="ts" module>
-  import type { Badge } from '../types';
-
-  /** Nom de chaque badge (bulle au survol, lecteur d'écran). */
-  export const BADGE_LABEL: Record<Badge, string> = {
-    certifie: 'Compte certifié'
-  };
-
   /** Rosette à 10 pointes du badge certifié, centrée dans un carré de 24. */
   export const SEAL = Array.from({ length: 20 }, (_, i) => {
     const a = (i * Math.PI) / 10 - Math.PI / 2;
@@ -15,24 +8,57 @@
 </script>
 
 <script lang="ts">
-  // Badges d'un compte, à droite de son pseudo (profil) : ceux donnés par l'administrateur
-  // (certifié), puis l'ancienneté, calculée d'après la date de création du compte.
+  // Badges d'un compte, à droite de son pseudo (profil) : ceux donnés par l'administrateur,
+  // ceux calculés d'après le profil (`util/badges.ts`, selon sa confidentialité), puis l'ancienneté.
+  import { badgeViews, type BadgeSource } from '../util/badges';
   import SeniorityBadge from './SeniorityBadge.svelte';
 
-  let { badges, since, name, size = 22 }: { badges: Badge[]; since?: number; name: string; size?: number } = $props();
+  let { profile, name, size = 22 }: { profile: BadgeSource; name: string; size?: number } = $props();
+
+  const items = $derived(badgeViews(profile));
 </script>
 
-{#if badges.length || since}
+{#if items.length || profile.since}
   <span class="badges">
-    {#each badges as b (b)}
-      <span class="badge {b}" role="img" aria-label={BADGE_LABEL[b]} data-tip={BADGE_LABEL[b]}>
+    {#each items as b (b.id)}
+      <span class="badge" role="img" aria-label={b.label} data-tip={b.label} style:color={b.color}>
         <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
-          <polygon class="seal" points={SEAL} />
-          <path class="tick" d="M8.1 12.3l2.7 2.7 5.2-5.4" />
+          {#if b.icon === 'seal'}
+            <polygon class="fill" points={SEAL} stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            <path class="mark" d="M8.1 12.3l2.7 2.7 5.2-5.4" />
+          {:else if b.icon === 'shield'}
+            <path class="fill" d="M12 2.2l8 3.1v6.1c0 4.9-3.3 8.9-8 10.4-4.7-1.5-8-5.5-8-10.4V5.3z" />
+            <path class="white" d="M12 7.2l1.4 2.9 3.2.4-2.3 2.2.6 3.1-2.9-1.5-2.9 1.5.6-3.1-2.3-2.2 3.2-.4z" />
+          {:else if b.icon === 'flask'}
+            <path class="fill" d="M9.3 2.8h5.4v5.6l5.2 9a2.3 2.3 0 0 1-2 3.4H6.1a2.3 2.3 0 0 1-2-3.4l5.2-9z" />
+            <path class="mark" d="M7.4 15h9.2" />
+            <circle class="white" cx="10.6" cy="17.6" r="1" /><circle class="white" cx="14" cy="18.2" r=".8" />
+          {:else if b.icon === 'bug'}
+            <path class="leg" d="M4 9.5l3.4 1.6M3.6 14.4h3.6M4.4 19.6l3.2-2.2M20 9.5l-3.4 1.6M20.4 14.4h-3.6M19.6 19.6l-3.2-2.2" />
+            <circle class="fill" cx="12" cy="6.4" r="2.9" />
+            <ellipse class="fill" cx="12" cy="14.4" rx="5.4" ry="6.6" />
+            <path class="mark" d="M12 9.6v10.6" />
+          {:else if b.icon === 'flag'}
+            <path class="leg" d="M5.6 21.2V3" />
+            <path class="fill" d="M6.6 3.6h12.6l-2.9 4.6 2.9 4.6H6.6z" />
+          {:else if b.icon === 'stack'}
+            <rect class="fill back" x="8" y="2.4" width="12.4" height="15.6" rx="2.2" />
+            <rect class="fill" x="3.6" y="6" width="12.4" height="15.6" rx="2.2" />
+            <path class="white" d="M8.3 10.6v6.4l5.2-3.2z" />
+          {:else if b.icon === 'clock'}
+            <circle class="fill" cx="12" cy="13" r="9" />
+            <path class="leg" d="M9.6 2.2h4.8" />
+            <path class="mark" d="M12 8.2V13l3.3 2.1" />
+          {:else}
+            <rect class="fill" x="3" y="3" width="8" height="8" rx="2" />
+            <rect class="fill" x="13" y="3" width="8" height="8" rx="2" />
+            <rect class="fill" x="3" y="13" width="8" height="8" rx="2" />
+            <rect class="fill" x="13" y="13" width="8" height="8" rx="2" />
+          {/if}
         </svg>
       </span>
     {/each}
-    {#if since}<SeniorityBadge {since} {name} />{/if}
+    {#if profile.since}<SeniorityBadge since={profile.since} {name} />{/if}
   </span>
 {/if}
 
@@ -49,19 +75,31 @@
     display: inline-flex;
   }
 
-  .seal {
-    fill: var(--accent);
-    stroke: var(--accent);
-    stroke-width: 1.6;
-    stroke-linejoin: round;
+  .fill {
+    fill: currentColor;
   }
 
-  .tick {
+  .back {
+    opacity: 0.5;
+  }
+
+  .white {
+    fill: #fff;
+  }
+
+  .mark {
     fill: none;
     stroke: #fff;
     stroke-width: 2.2;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  .leg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
   }
 
   /* Bulle au survol, comme les badges de Discord. */

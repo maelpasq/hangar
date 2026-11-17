@@ -13,6 +13,7 @@
   import { ui } from '../stores/ui.svelte';
   import { updater } from '../stores/update.svelte';
   import Badges, { SEAL } from '../components/Badges.svelte';
+  import { GIVEN_BADGES, givenLabel } from '../util/badges';
   import type { Badge, SocialProfile } from '../types';
   import { dateLabel, hoursLabel, plural, timeAgo } from '../util/format';
   import { compareVersions } from '../util/release-notes';
@@ -80,22 +81,35 @@
     }
   }
 
-  // Badge certifié : seul l'administrateur reçoit `canBadge` (le serveur refuse tout autre compte).
+  // Badges donnés par l'administrateur : seul lui reçoit `canBadge` (le serveur refuse tout autre
+  // compte). Le bouton rosette ouvre la liste des badges, chacun à donner ou retirer.
   const certified = $derived(!!profile?.badges?.includes('certifie'));
   let badging = $state(false);
-  async function toggleCertified() {
+  async function setBadge(badge: Badge, on: boolean) {
     if (!profile || badging) return;
-    const on = !certified;
     badging = true;
     try {
-      const res = await api.social<{ badges: Badge[] }>('PUT', `/social/users/${profile.id}/badges`, { badge: 'certifie', on });
+      const res = await api.social<{ badges: Badge[] }>('PUT', `/social/users/${profile.id}/badges`, { badge, on });
       if (profile) profile.badges = res.badges;
-      ui.toast(on ? `Compte de ${name} certifié.` : `Certification de ${name} retirée.`);
+      ui.toast(on ? `Badge « ${givenLabel(badge)} » donné à ${name}.` : `Badge « ${givenLabel(badge)} » retiré à ${name}.`);
     } catch (e) {
       ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
     } finally {
       badging = false;
     }
+  }
+  function badgeMenu(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    ui.menu = {
+      label: `Badges de ${name}`,
+      items: () =>
+        GIVEN_BADGES.map((b) => {
+          const on = !!profile?.badges?.includes(b);
+          return { label: on ? `Retirer : ${givenLabel(b)}` : `Donner : ${givenLabel(b)}`, icon: on ? 'x' : 'plus', run: () => setBadge(b, !on), disabled: badging };
+        }),
+      x: r.left,
+      y: r.bottom + 6
+    };
   }
 
   function confirm(action: 'remove' | 'block') {
@@ -122,7 +136,7 @@
       <div class="itxt">
         <div class="nameline">
           <h1 class="ell">{profile.name}</h1>
-          <Badges badges={profile.badges ?? []} since={profile.since} name={profile.name} />
+          <Badges {profile} name={profile.name} />
         </div>
         <p class="status">
           {#if live && live.state !== 'hidden'}<span class:playing={live.state === 'playing'}>{presenceLabel(live)}</span>{' · '}{/if}Sur
@@ -134,11 +148,11 @@
           <button
             class="ibtn"
             class:on={certified}
-            aria-pressed={certified}
-            aria-label={certified ? `Retirer la certification de ${name}` : `Certifier ${name}`}
-            title={certified ? 'Retirer la certification' : 'Certifier ce compte'}
+            aria-haspopup="menu"
+            aria-label={`Badges de ${name}`}
+            title="Donner ou retirer un badge"
             disabled={badging}
-            onclick={toggleCertified}
+            onclick={badgeMenu}
             ><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" class="sealico"
               ><polygon points={SEAL} /><path d="M8.1 12.3l2.7 2.7 5.2-5.4" /></svg
             ></button

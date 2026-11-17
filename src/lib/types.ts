@@ -397,8 +397,11 @@ export interface ActivityItem {
   userName?: string;
 }
 
-/** Badge affiché à droite du pseudo, donné seulement par l'administrateur (`certifie` : compte certifié). */
-export type Badge = 'certifie';
+/**
+ * Badge affiché à droite du pseudo, donné seulement par l'administrateur : compte certifié,
+ * équipe Hangar, testeur, chasseur de bugs. Les autres sont calculés par l'app (`util/badges.ts`).
+ */
+export type Badge = 'certifie' | 'equipe' | 'testeur' | 'chasseur';
 
 /** Profil vu dans l'app. Un champ null : la personne ne le partage pas avec nous. */
 export interface SocialProfile {
@@ -417,6 +420,8 @@ export interface SocialProfile {
   presence: Presence;
   playMs: number | null;
   games: number | null;
+  /** Nombre de launchers de la bibliothèque, null si elle est cachée (absent : ancien serveur). */
+  stores?: number | null;
   /** Version de Hangar de son dernier poste qui l'a envoyée (null : app d'avant cette info). */
   version: string | null;
   top: (SocialGame & { ms: number })[] | null;

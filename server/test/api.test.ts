@@ -13,7 +13,7 @@ import type { Env } from '../src/env';
 import { DAY, INACTIVE_DAYS, WARN_DAYS, cleanCovers, cleanLogins, expireAccounts } from '../src/lifecycle';
 import { mailHtml, noticeHtml } from '../src/mail';
 import { sha256Hex } from '../src/profile';
-import { STALE, normCode, setOnline } from '../src/social';
+import { STALE, normCode, setOnline, storeCount } from '../src/social';
 import * as schema from '../src/schema';
 
 const BASE = 'http://127.0.0.1:8787';
@@ -768,6 +768,18 @@ describe('badges', () => {
     expect((await json(await call(`/social/users/${adminId}`, { token: admin }))).canBadge).toBe(true);
     expect((await json(await call('/export', { token: other }))).social.badges).toEqual(['certifie']);
 
+    // Plusieurs badges : toujours dans l'ordre d'affichage, quel que soit l'ordre des dons.
+    await set(admin, otherId, { badge: 'chasseur', on: true });
+    expect(await json(await set(admin, otherId, { badge: 'equipe', on: true }))).toEqual({ badges: ['certifie', 'equipe', 'chasseur'] });
+    await set(admin, otherId, { badge: 'equipe', on: false });
+    await set(admin, otherId, { badge: 'chasseur', on: false });
+
     expect(await json(await set(admin, otherId, { badge: 'certifie', on: false }))).toEqual({ badges: [] });
+  });
+
+  it("compte les launchers d'une bibliothèque, sans les jeux locaux", () => {
+    const g = (id: string) => ({ id, name: id });
+    expect(storeCount([g('steam:1'), g('steam:2'), g('epic:a'), g('@jeu.exe|jeu'), g('riot:valorant')])).toBe(3);
+    expect(storeCount([])).toBe(0);
   });
 });

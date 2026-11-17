@@ -60,8 +60,11 @@ const parse = <T>(raw: string | null, fallback: T): T => {
 };
 const newId = () => crypto.randomUUID();
 
-/** Badges connus, dans l'ordre d'affichage (à droite du pseudo). Les prochains s'ajoutent ici. */
-export const BADGES = ['certifie'] as const;
+/**
+ * Badges donnés par l'administrateur, dans l'ordre d'affichage (à droite du pseudo). Les badges
+ * calculés (pionnier, ancienneté, collection, temps de jeu, launchers) le sont par l'app.
+ */
+export const BADGES = ['certifie', 'equipe', 'testeur', 'chasseur'] as const;
 export type Badge = (typeof BADGES)[number];
 
 /** Badges d'un compte, dans l'ordre d'affichage. */
@@ -118,6 +121,11 @@ async function libraryOf(db: Db, userId: string, raw: string | null): Promise<Ga
     }
   }
   return out;
+}
+
+/** Nombre de launchers différents d'une bibliothèque (« steam:123 » : Steam ; « @exe|dossier » : aucun). */
+export function storeCount(games: Game[]): number {
+  return new Set(games.filter((g) => !g.id.startsWith('@') && g.id.includes(':')).map((g) => g.id.split(':')[0])).size;
 }
 
 /** Un jeu tel que l'app le décrit : identifiant portable et nom. */
@@ -421,9 +429,11 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     }
     let common: Game[] | null = null;
     let count: number | null = null;
+    let stores: number | null = null;
     if (lib) {
       const theirs = await libraryOf(db, u.id, vis.games);
       count = theirs.length;
+      stores = storeCount(theirs);
       if (rel !== 'self') {
         const [mine] = await db.select({ games: social.games }).from(social).where(eq(social.userId, me));
         const own = new Set((await libraryOf(db, me, mine?.games ?? null)).map((g) => g.id));
@@ -445,6 +455,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       presence: presence(vis, rel),
       playMs,
       games: count,
+      stores,
       version: showcase.version ?? null,
       top: play ? showcase.top : null,
       favorites: lib ? (showcase.favorites ?? []) : null,

@@ -136,9 +136,14 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
   const card = (p: Person): SocialUser => ({ id: p.id, name: p.name, avatar: null, relation: p.rel, presence: p.rel === 'friend' ? p.presence : { state: 'hidden', game: null }, since: p.since });
   const find = (id: string) => people.find((p) => p.id === id);
   const fail = (m: string) => Promise.reject(m);
-  /** Comptes certifiés (démo : je suis l'administrateur, je peux certifier tout le monde). */
-  const certified = new Set<string>([ME, 'demo-ami-0001']);
-  const badgesOf = (id: string): Badge[] => (certified.has(id) ? ['certifie'] : []);
+  /** Badges donnés (démo : je suis l'administrateur, je peux en donner à tout le monde). */
+  const given = new Map<string, Set<Badge>>([
+    [ME, new Set<Badge>(['certifie', 'equipe'])],
+    ['demo-ami-0001', new Set<Badge>(['certifie', 'chasseur'])]
+  ]);
+  const ORDER: Badge[] = ['certifie', 'equipe', 'testeur', 'chasseur'];
+  const badgesOf = (id: string): Badge[] => ORDER.filter((b) => given.get(id)?.has(b));
+  const storesOf = (games: { id: string }[]) => new Set(games.filter((g) => g.id.includes(':')).map((g) => g.id.split(':')[0])).size;
   /** Mes jeux favoris, tels qu'envoyés par la dernière vitrine. */
   let myFavorites: SocialGame[] = [];
 
@@ -179,8 +184,10 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       return { users: people.filter((p) => p.rel !== 'blocked' && (p.name.toLowerCase().includes(q) || q === 'abcd2345')).map(card) };
     }
     if (head === 'users' && tail === 'badges') {
-      if (body?.on) certified.add(id);
-      else certified.delete(id);
+      const set = given.get(id) ?? new Set<Badge>();
+      given.set(id, set);
+      if (body?.on) set.add(body.badge);
+      else set.delete(body.badge);
       return { badges: badgesOf(id) };
     }
     if (head === 'users') {
@@ -198,6 +205,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
           presence: { state: 'online', game: null },
           playMs: 842 * H,
           games: myGames.size,
+          stores: 6,
           version: DEMO_VERSION,
           top: [
             { ...GAMES.satisfactory, ms: 230 * H },
@@ -227,6 +235,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
         presence: card(p).presence,
         playMs: friend ? p.playMs : null,
         games: friend ? p.games.length : null,
+        stores: friend ? storesOf(p.games) : null,
         version: p.version ?? null,
         top: friend ? p.top : null,
         favorites: friend ? (p.favorites ?? []) : null,
