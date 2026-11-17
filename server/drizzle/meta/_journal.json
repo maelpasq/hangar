@@ -29,6 +29,13 @@
       "when": 1794883759627,
       "tag": "0003_badges",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794946609778,
+      "tag": "0004_admin_log",
+      "breakpoints": true
     }
   ]
 }

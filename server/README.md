@@ -41,6 +41,8 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `POST /social/reports` | `{ userId, reason, messageId?, note? }` : signalement (20 par jour) |
 | `GET /social/live` | WebSocket du temps réel (Durable Object `Live`, un par compte) |
 
+Dashboard d'administration : sur sa propre adresse (`ADMIN_HOST`), derrière Cloudflare Access, voir `docs/ADMIN.md`.
+
 Hors `/login`, `/auth/*`, `/desktop/*` et `/bug`, tout demande `Authorization: Bearer <jeton du poste>`.
 
 Connexion d'un poste : l'app tire un vérifieur PKCE, ouvre une adresse locale, puis le navigateur
@@ -102,7 +104,8 @@ puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` e
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Discord |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Google |
 | `BUG_WEBHOOK` | facultatif : webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`) ; sans lui, `POST /bug` répond 503 |
-| `ADMIN_EMAIL` | facultatif : adresse (vérifiée) du compte administrateur, le seul à pouvoir donner ou retirer les badges ; sans lui, personne |
+| `ADMIN_EMAIL` | facultatif : adresse (vérifiée) du compte administrateur, le seul à pouvoir donner ou retirer les badges et à entrer dans le dashboard ; sans lui, personne |
+| `ACCESS_TEAM`, `ACCESS_AUD` | facultatif : équipe Cloudflare Access (`https://<équipe>.cloudflareaccess.com`) et étiquette AUD de l'application qui protège le dashboard d'administration ; sans eux, le dashboard refuse tout (docs/ADMIN.md) |
 
 Adresses de retour à déclarer chez Discord et Google : `<BASE_URL>/auth/callback/discord` et
 `<BASE_URL>/auth/callback/google`.

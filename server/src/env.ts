@@ -23,6 +23,14 @@ export interface Env {
   BUG_WEBHOOK?: string;
   /** Adresse e-mail du compte administrateur : lui seul donne ou retire les badges. Absent : personne. */
   ADMIN_EMAIL?: string;
+  /** Adresse du dashboard d'administration (`wrangler.toml`), sans protocole. Absent : pas de dashboard. */
+  ADMIN_HOST?: string;
+  /** Équipe Cloudflare Access qui protège le dashboard (`https://<équipe>.cloudflareaccess.com`). */
+  ACCESS_TEAM?: string;
+  /** Étiquette « Application Audience (AUD) » de l'application Access du dashboard. */
+  ACCESS_AUD?: string;
+  /** Fichiers du dashboard (`admin/dist`, `assets` de `wrangler.toml`). */
+  ASSETS?: { fetch(request: Request): Promise<Response> };
   /** Bucket R2 des avatars (`wrangler.toml`). Absent : pas d'avatar. */
   AVATARS?: AvatarStore;
   /** Durable Objects du temps réel (`wrangler.toml`, classe `Live`). Absent : pas de temps réel. */

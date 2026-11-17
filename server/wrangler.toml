@@ -9,6 +9,9 @@ compatibility_date = "2026-11-01"
 compatibility_flags = ["nodejs_compat"]
 # Pas de télémétrie de l'outil.
 send_metrics = false
+# Dashboard d'administration (docs/ADMIN.md) : compilé dans admin/dist (`npm run admin:build` à la
+# racine), servi par le Worker sur ADMIN_HOST seulement. Secrets en plus : ACCESS_TEAM, ACCESS_AUD.
+assets = { directory = "../admin/dist", binding = "ASSETS", run_worker_first = true, not_found_handling = "single-page-application" }
 
 # Temps réel du social (src/live.ts) : un Durable Object par compte, stockage SQLite.
 [[migrations]]
@@ -18,8 +21,11 @@ new_sqlite_classes = ["Live"]
 [env.prod]
 name = "hangar-api"
 workers_dev = false
-routes = [{ pattern = "hangar-api.pamalstudio.fr", custom_domain = true }]
-vars = { BASE_URL = "https://hangar-api.pamalstudio.fr", MAIL_FROM = "Hangar <connexion@pamalstudio.fr>" }
+routes = [
+  { pattern = "hangar-api.pamalstudio.fr", custom_domain = true },
+  { pattern = "hangar-admin.pamalstudio.fr", custom_domain = true }
+]
+vars = { BASE_URL = "https://hangar-api.pamalstudio.fr", ADMIN_HOST = "hangar-admin.pamalstudio.fr", MAIL_FROM = "Hangar <connexion@pamalstudio.fr>" }
 # Avatars du profil et jaquettes envoyées par l'app (privés : servis seulement par l'API).
 r2_buckets = [{ binding = "AVATARS", bucket_name = "hangar-avatars" }]
 # Ménage quotidien : jaquettes plus utilisées, comptes inactifs depuis 2 ans (src/lifecycle.ts).
@@ -30,8 +36,11 @@ durable_objects = { bindings = [{ name = "LIVE", class_name = "Live" }] }
 [env.test]
 name = "hangar-api-test"
 workers_dev = false
-routes = [{ pattern = "hangar-api-test.pamalstudio.fr", custom_domain = true }]
-vars = { BASE_URL = "https://hangar-api-test.pamalstudio.fr", MAIL_FROM = "Hangar Test <connexion@pamalstudio.fr>" }
+routes = [
+  { pattern = "hangar-api-test.pamalstudio.fr", custom_domain = true },
+  { pattern = "hangar-admin-test.pamalstudio.fr", custom_domain = true }
+]
+vars = { BASE_URL = "https://hangar-api-test.pamalstudio.fr", ADMIN_HOST = "hangar-admin-test.pamalstudio.fr", MAIL_FROM = "Hangar Test <connexion@pamalstudio.fr>" }
 r2_buckets = [{ binding = "AVATARS", bucket_name = "hangar-avatars-test" }]
 triggers = { crons = ["17 3 * * *"] }
 durable_objects = { bindings = [{ name = "LIVE", class_name = "Live" }] }

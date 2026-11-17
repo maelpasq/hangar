@@ -75,6 +75,24 @@ export async function badgesOf(db: Db, id: string): Promise<Badge[]> {
   return BADGES.filter((b) => has.has(b));
 }
 
+/**
+ * Donne (`on`) ou retire un badge à un compte existant (app de l'administrateur ou dashboard) ;
+ * rend ses badges. La pastille « certifié » suit le pseudo partout : prévient ceux qui ont un lien.
+ */
+export async function setBadge(db: Db, hub: Hub, id: string, badge: Badge, on: boolean): Promise<Badge[]> {
+  if (on) {
+    await db.insert(badges).values({ userId: id, badge, at: Date.now() }).onConflictDoNothing();
+  } else {
+    await db.delete(badges).where(and(eq(badges.userId, id), eq(badges.badge, badge)));
+  }
+  if (badge === 'certifie') {
+    const linked = await db.select({ id: friends.userId }).from(friends).where(eq(friends.otherId, id));
+    await hub(linked.map((x) => x.id), { type: 'friends' });
+    await hub([id], { type: 'settings' });
+  }
+  return badgesOf(db, id);
+}
+
 /** Comptes certifiés parmi `ids` : la pastille à côté de leur pseudo, partout dans l'app. */
 export async function certifiedAmong(db: Db, ids: string[]): Promise<Set<string>> {
   if (!ids.length) return new Set();
@@ -575,18 +593,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     const id = c.req.param('id');
     const [u] = isUserId(id) ? await db.select({ id: user.id }).from(user).where(eq(user.id, id)) : [];
     if (!u) return c.json({ error: 'introuvable' }, 404);
-    if (body.on) {
-      await db.insert(badges).values({ userId: id, badge: body.badge as Badge, at: Date.now() }).onConflictDoNothing();
-    } else {
-      await db.delete(badges).where(and(eq(badges.userId, id), eq(badges.badge, body.badge as string)));
-    }
-    if (body.badge === 'certifie') {
-      // La pastille suit le pseudo partout : listes de ceux qui ont un lien avec lui, et ses réglages.
-      const linked = await db.select({ id: friends.userId }).from(friends).where(eq(friends.otherId, id));
-      await hub(linked.map((x) => x.id), { type: 'friends' });
-      await hub([id], { type: 'settings' });
-    }
-    return c.json({ badges: await badgesOf(db, id) });
+    return c.json({ badges: await setBadge(db, hub, id, body.badge as Badge, body.on) });
   });
 
   r.get('/users/:id/avatar', async (c) => {

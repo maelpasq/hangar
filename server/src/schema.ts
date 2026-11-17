@@ -271,3 +271,20 @@ export const badges = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.badge] })]
 );
+
+/**
+ * Journal des actions du dashboard d'administration : qui (`actor`, e-mail Cloudflare Access), quoi
+ * (`action`, par exemple `badge.donner`), sur quel compte (`targetId`), précisions (`detail`, JSON).
+ */
+export const adminLog = sqliteTable(
+  'admin_log',
+  {
+    id: text('id').primaryKey(),
+    at: integer('at').notNull(),
+    actor: text('actor').notNull(),
+    action: text('action').notNull(),
+    targetId: text('target_id'),
+    detail: text('detail')
+  },
+  (t) => [index('admin_log_at').on(t.at), index('admin_log_target').on(t.targetId, t.at)]
+);

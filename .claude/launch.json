@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "hangar-web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:web"], "port": 1420 },
-    { "name": "hangar-compte", "runtimeExecutable": "node", "runtimeArgs": ["server/scripts/preview.mjs"], "port": 8788 }
+    { "name": "hangar-compte", "runtimeExecutable": "node", "runtimeArgs": ["server/scripts/preview.mjs"], "port": 8788 },
+    { "name": "hangar-admin", "runtimeExecutable": "npm", "runtimeArgs": ["run", "admin:dev"], "port": 1430 }
   ]
 }

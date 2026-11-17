@@ -11,6 +11,7 @@ Ne lis pas ces docs d'office. Quand la tâche en a besoin, cherche le titre de l
 - `docs/ARCHITECTURE.md` : stack, modèle de données, commandes Tauri.
 - `docs/RELEASES.md` : procédure de publication (début du fichier) et historique des versions. À lire seulement pour publier.
 - `docs/COMPTE.md` : plan du compte Hangar facultatif (synchro, sauvegarde, temps de jeu, profil).
+- `docs/ADMIN.md` : dashboard d'administration (`admin/`, `server/src/admin/`), accès par Cloudflare Access.
 - `docs/DECISIONS.md` : choix passés, à chercher par mot-clé, ajouter en fin de fichier sans le relire.
 - `docs/PLAN.md` : historique de la construction initiale, à ignorer.
 

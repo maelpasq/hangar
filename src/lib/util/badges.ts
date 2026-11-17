@@ -44,6 +44,11 @@ export function givenLabel(b: Badge): string {
   return GIVEN[b].label;
 }
 
+/** Nom, emblème et couleur d'un badge donné par l'administrateur (aussi pour le dashboard admin). */
+export function givenView(b: Badge): BadgeView {
+  return { id: b, ...GIVEN[b] };
+}
+
 /** Indice du plus haut palier atteint, -1 si aucun. */
 function tierOf(value: number, tiers: number[]): number {
   let i = -1;

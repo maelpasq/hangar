@@ -5,6 +5,8 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createAuth, providers, resendMailer } from './auth';
 import { BACKGROUND_WEBP } from './background';
+import { type Keys } from './admin/access';
+import { adminRoutes } from './admin/routes';
 import { bugRoute } from './bug';
 import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
@@ -78,9 +80,25 @@ function page<T extends { seq: number }>(rows: T[], current: number): { rows: T[
   return { rows: kept, cursor: kept[kept.length - 1].seq, more: true };
 }
 
-export function createApp(db: Db, env: Env, sendMail: Mailer = resendMailer(env), hub: Hub = async () => {}) {
+export function createApp(
+  db: Db,
+  env: Env,
+  sendMail: Mailer = resendMailer(env),
+  hub: Hub = async () => {},
+  accessKeys?: Keys
+) {
   const auth = createAuth(db, env, sendMail);
   const app = new Hono<Vars>();
+
+  // Dashboard d'administration : sa propre adresse, rien d'autre n'y répond (src/admin/routes.ts).
+  let admin: ReturnType<typeof adminRoutes> | undefined;
+  app.use('*', async (c, next) => {
+    if (env.ADMIN_HOST && new URL(c.req.url).hostname === env.ADMIN_HOST) {
+      admin ??= adminRoutes(db, env, { hub, loadAvatar, keys: accessKeys });
+      return admin.fetch(c.req.raw);
+    }
+    await next();
+  });
 
   app.onError((err, c) => {
     console.error('[hangar]', err);
