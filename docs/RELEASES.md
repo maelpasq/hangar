@@ -262,6 +262,11 @@ Première version publique de Hangar 2 : interface Svelte fidèle à la maquette
 
 Une entrée par correctif (4e chiffre), le plus récent en haut, écrite avant `npm run correctif`. Ce n'est pas une patch note : la release du correctif reprend toutes les entrées de sa version de base, et Hangar les montre (celles plus récentes que la version installée) dans une fenêtre avant d'installer. Une puce par correction, courte, pour les utilisateurs.
 
+### 1.2.29.2 - 17 novembre 2026
+
+- Une pastille certifiée s'affiche à côté du pseudo des comptes certifiés, partout dans Hangar : amis, demandes, recherche, discussion, activité et votre propre pseudo.
+- Le bouton Actualiser rafraîchit tout (comptes des launchers, mises à jour des jeux, amis, jaquettes, taille et succès des jeux, profil) et montre chaque élément rafraîchi en infobulle.
+
 ### 1.2.29.1 - 17 novembre 2026
 
 - Sur le profil d'un ami, un jeu que vous n'avez pas s'ouvre d'un clic : site officiel, page du jeu dans son launcher, ou ajout d'un exécutable déjà sur ce PC.
