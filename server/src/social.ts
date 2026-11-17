@@ -136,6 +136,40 @@ function game(v: unknown): Game | null {
   return id && name ? { id, name } : null;
 }
 
+/** Nom comparable d'un launcher à l'autre : sans accents, symboles (™, ®, :, -...) ni casse. */
+export function gameKey(name: string): string {
+  return name
+    .replace(/[™®©℠]/g, '')
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Jeux en commun, quel que soit le launcher : même identifiant (même store) ou même nom
+ * normalisé (Steam chez l'un, Epic, GOG ou dossier local chez l'autre). Renvoie la version
+ * de `mine` (jaquette et lancement depuis la bibliothèque de celui qui regarde), sans doublon.
+ */
+export function commonGames(mine: Game[], theirs: Game[]): Game[] {
+  const byId = new Map(mine.map((g) => [g.id, g]));
+  const byName = new Map<string, Game>();
+  for (const g of mine) {
+    const k = gameKey(g.name);
+    if (k && !byName.has(k)) byName.set(k, g);
+  }
+  const out: Game[] = [];
+  const seen = new Set<string>();
+  for (const g of theirs) {
+    const k = gameKey(g.name);
+    const m = byId.get(g.id) ?? (k ? byName.get(k) : undefined);
+    if (!m || seen.has(m.id) || (k && seen.has(`#${k}`))) continue;
+    seen.add(m.id);
+    if (k) seen.add(`#${k}`);
+    out.push(m);
+  }
+  return out;
+}
+
 export function newCode(): string {
   const b = crypto.getRandomValues(new Uint8Array(8));
   return [...b].map((x) => CODE_CHARS[x % CODE_CHARS.length]).join('');
@@ -436,8 +470,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       stores = storeCount(theirs);
       if (rel !== 'self') {
         const [mine] = await db.select({ games: social.games }).from(social).where(eq(social.userId, me));
-        const own = new Set((await libraryOf(db, me, mine?.games ?? null)).map((g) => g.id));
-        common = theirs.filter((g) => own.has(g.id)).slice(0, 60);
+        common = commonGames(await libraryOf(db, me, mine?.games ?? null), theirs).slice(0, 60);
       }
     }
     const recent = await db.select().from(activity).where(eq(activity.userId, u.id)).orderBy(desc(activity.at)).limit(20);

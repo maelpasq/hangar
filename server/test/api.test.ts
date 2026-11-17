@@ -13,7 +13,7 @@ import type { Env } from '../src/env';
 import { DAY, INACTIVE_DAYS, WARN_DAYS, cleanCovers, cleanLogins, expireAccounts } from '../src/lifecycle';
 import { mailHtml, noticeHtml } from '../src/mail';
 import { sha256Hex } from '../src/profile';
-import { STALE, normCode, setOnline, storeCount } from '../src/social';
+import { STALE, commonGames, normCode, setOnline, storeCount } from '../src/social';
 import * as schema from '../src/schema';
 
 const BASE = 'http://127.0.0.1:8787';
@@ -514,6 +514,24 @@ describe('social', () => {
     expect(row.playing).toBeNull();
   });
 
+  it('trouve les jeux en commun quel que soit le launcher', () => {
+    const mine = [
+      { id: 'steam:1174180', name: 'Red Dead Redemption 2' },
+      { id: '@witcher3.exe|the witcher 3', name: 'The Witcher 3: Wild Hunt' },
+      { id: 'steam:620', name: 'Portal 2' },
+      { id: 'xbox:abc', name: 'Forza Horizon 5' }
+    ];
+    const theirs = [
+      { id: 'epic:heather', name: 'Red Dead Redemption 2' },
+      { id: 'gog:1207664663', name: 'The Witcher® 3 - Wild Hunt' },
+      { id: 'steam:620', name: 'Portal 2' },
+      { id: 'epic:portal2', name: 'PORTAL 2' },
+      { id: 'steam:1551360', name: 'Forza Horizon 4' },
+      { id: 'local:x', name: '™' }
+    ];
+    expect(commonGames(mine, theirs)).toEqual([mine[0], mine[1], mine[2]]);
+  });
+
   it('montre le profil dans l\'app : temps de jeu, vitrine, jeux en commun', async () => {
     await call('/sync', { token: b.token, body: { changes: [{ key: `time:${D('2')}:steam:620`, value: JSON.stringify({ ms: 7_200_000, h: 3_600_000 }), updatedAt: 1 }] } });
     const showcase = {
@@ -537,6 +555,15 @@ describe('social', () => {
     // Vitrine envoyée par une app d'avant les jeux favoris et la version : liste vide, pas de version.
     expect(await get(b, `/social/users/${a.id}`)).toMatchObject({ favorites: [], version: null });
     expect(p.common).toEqual([{ id: 'steam:620', name: 'Portal 2' }]);
+    // Jeux en commun d'un launcher à l'autre (Steam ici, Epic ou dossier local là-bas) : par le
+    // nom, en renvoyant la version de celui qui regarde.
+    expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: 'steam:1', name: 'Fortnite™' }, { id: 'gog:2', name: 'Portal 2' }] })).status).toBe(200);
+    expect((await get(a, `/social/users/${b.id}`)).common).toEqual([
+      { id: 'gog:2', name: 'Portal 2' },
+      { id: 'steam:1', name: 'Fortnite™' }
+    ]);
+    // Bibliothèque de départ remise pour les tests suivants.
+    expect((await put(a, '/social/showcase', { top: [], collections: [], games: [{ id: 'steam:620', name: 'Portal 2' }] })).status).toBe(200);
     expect(p).not.toHaveProperty('email');
     // Un inconnu ne voit pas ce qui est réservé aux amis.
     const stranger = await get(c, `/social/users/${b.id}`);
