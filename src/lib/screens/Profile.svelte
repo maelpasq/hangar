@@ -70,6 +70,15 @@
   const latest = $derived(updater.phase === 'available' && updater.version ? updater.version : mine);
   const upToDate = $derived(!!version && !!latest && compareVersions(version, latest) >= 0);
 
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(prettyCode(code));
+      ui.toast('Code ami copié.');
+    } catch {
+      ui.toast('Copie impossible.', { error: true });
+    }
+  }
+
   function confirm(action: 'remove' | 'block') {
     if (profile) ui.modal = { kind: 'socialConfirm', action, userId: profile.id, name: profile.name };
   }
@@ -132,22 +141,41 @@
 
     <div class="stats">
       {#if profile.playMs !== null}
-        <div class="stat"><span class="sv num">{hoursLabel(profile.playMs)}</span><span class="sl">de jeu avec Hangar</span></div>
+        <div class="stat" style="--c: var(--accent)">
+          <span class="ico" aria-hidden="true"><Icon name="play" size={18} /></span>
+          <span class="txt"><span class="sv num">{hoursLabel(profile.playMs)}</span><span class="sl">de jeu avec Hangar</span></span>
+        </div>
       {/if}
       {#if profile.games !== null}
-        <div class="stat"><span class="sv num">{profile.games}</span><span class="sl">{profile.games > 1 ? 'jeux' : 'jeu'} dans la bibliothèque</span></div>
+        <div class="stat" style="--c: var(--star)">
+          <span class="ico" aria-hidden="true"><Icon name="gamepad" size={18} /></span>
+          <span class="txt">
+            <span class="sv num">{profile.games}</span>
+            <span class="sl">{profile.games > 1 ? 'jeux' : 'jeu'} dans la bibliothèque</span>
+          </span>
+        </div>
       {/if}
       {#if version}
-        <div class="stat">
-          <span class="sv num vrow">{version}{#if upToDate}<span class="tag ok">Hangar à jour</span>{/if}</span>
-          <span class="sl">version de Hangar</span>
+        <div class="stat" style="--c: {upToDate ? 'var(--success)' : 'var(--muted)'}">
+          <span class="ico" aria-hidden="true"><Icon name={upToDate ? 'check' : 'package'} size={18} /></span>
+          <span class="txt">
+            <span class="sv num">{version}</span>
+            <span class="sl" class:ok={upToDate}>{upToDate ? 'Hangar à jour' : 'version de Hangar'}</span>
+          </span>
         </div>
       {/if}
       {#if since}
-        <div class="stat"><span class="sv">{dateLabel(since)}</span><span class="sl">début de votre amitié</span></div>
+        <div class="stat" style="--c: var(--danger)">
+          <span class="ico" aria-hidden="true"><Icon name="users" size={18} /></span>
+          <span class="txt"><span class="sv">{dateLabel(since)}</span><span class="sl">début de votre amitié</span></span>
+        </div>
       {/if}
       {#if self && profile.code}
-        <div class="stat"><span class="sv mono">{prettyCode(profile.code)}</span><span class="sl">ton code ami</span></div>
+        <button class="stat code" style="--c: var(--accent)" title="Copier ton code ami" onclick={() => copyCode(profile!.code!)}>
+          <span class="ico" aria-hidden="true"><Icon name="userPlus" size={18} /></span>
+          <span class="txt"><span class="sv mono">{prettyCode(profile.code)}</span><span class="sl">ton code ami</span></span>
+          <span class="cp" aria-hidden="true"><Icon name="copy" size={15} /></span>
+        </button>
       {/if}
     </div>
 
@@ -392,28 +420,56 @@
     color: var(--text);
   }
 
+  /* Cartes de même largeur, sur toute la largeur du profil. */
   .stats {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
     gap: 12px;
-    flex-wrap: wrap;
     margin: 26px 0 8px;
   }
 
   .stat {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 15px 16px;
+    border-radius: 16px;
+    background:
+      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--c) 9%, transparent), transparent 60%),
+      var(--surface-1);
+    border: 1px solid var(--border-1);
+    overflow: hidden;
+    text-align: left;
+    color: var(--text);
+    font: inherit;
+  }
+
+  .ico {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+    color: var(--c);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
+  }
+
+  .txt {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 14px 18px;
-    border-radius: 16px;
-    background: var(--surface-1);
-    border: 1px solid var(--border-1);
-    min-width: 150px;
+    gap: 3px;
+    min-width: 0;
   }
 
   .sv {
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 750;
     letter-spacing: -0.3px;
+    line-height: 1.1;
+    white-space: nowrap;
   }
 
   .sv.mono {
@@ -425,29 +481,48 @@
   .sl {
     font-size: 12.5px;
     color: var(--muted);
+    line-height: 1.3;
   }
 
-  .vrow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .tag {
-    height: 22px;
-    padding: 0 9px;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 650;
-    letter-spacing: 0;
-    white-space: nowrap;
-  }
-
-  .tag.ok {
-    background: color-mix(in srgb, var(--success) 14%, transparent);
+  .sl.ok {
     color: var(--success-text);
+    font-weight: 600;
+  }
+
+  /* Code ami : la carte entière copie le code. */
+  .stat.code {
+    cursor: pointer;
+    transition:
+      border-color 0.18s,
+      background-color 0.18s;
+  }
+
+  .stat.code:hover {
+    border-color: var(--border-2);
+    background-color: var(--surface-2);
+  }
+
+  .cp {
+    margin-left: auto;
+    flex: none;
+    color: var(--muted);
+    opacity: 0.55;
+    transition:
+      opacity 0.18s,
+      color 0.18s;
+  }
+
+  .stat.code:hover .cp,
+  .stat.code:focus-visible .cp {
+    opacity: 1;
+    color: var(--accent-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stat.code,
+    .cp {
+      transition: none;
+    }
   }
 
   .sec {
