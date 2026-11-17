@@ -158,18 +158,25 @@ export function steamIdFromPortable(id: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+export type StorePage = 'steam' | 'gog' | 'battlenet' | 'xbox' | 'epic' | 'ubisoft' | 'ea' | 'riot' | 'rockstar';
+
 /**
  * Store dont le launcher sait ouvrir la page d'un jeu vu chez un ami (même règle que
- * `launcher::store_page_uri`, Microsoft Store sous Windows seulement), sinon null.
+ * `launcher::store_page` : Steam, GOG et Battle.net partout, les autres sous Windows
+ * seulement), sinon null.
  */
-export function storePageOf(id: string, windows: boolean): 'steam' | 'gog' | 'battlenet' | 'xbox' | null {
+export function storePageOf(id: string, windows: boolean): StorePage | null {
   const i = id.indexOf(':');
   const store = id.slice(0, i);
   const key = id.slice(i + 1);
   if (i < 0 || !key || key.length > 200) return null;
   if ((store === 'steam' || store === 'gog') && /^\d+$/.test(key)) return store;
   if (store === 'battlenet' && /^[a-z0-9]+$/i.test(key)) return store;
-  if (store === 'xbox' && windows && /^[a-z0-9._-]+$/i.test(key)) return store;
+  if (!windows) return null;
+  if (store === 'xbox' && /^[a-z0-9._-]+$/i.test(key)) return store;
+  if (store === 'ubisoft' && /^\d+$/.test(key)) return store;
+  if (store === 'riot' && /^[a-z0-9_]+$/i.test(key)) return store;
+  if (store === 'epic' || store === 'ea' || store === 'rockstar') return store;
   return null;
 }
 

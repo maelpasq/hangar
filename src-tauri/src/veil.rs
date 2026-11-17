@@ -130,6 +130,64 @@ pub fn bring_front(pids: &[u32]) -> bool {
     }
 }
 
+/// Durée pendant laquelle les fenêtres d'un launcher ouvert par Hangar sont ramenées devant :
+/// un démarrage de Steam avec mise à jour et connexion peut être long.
+const FRONT: Duration = Duration::from_secs(90);
+
+/// Hangar vient d'ouvrir un launcher (page d'un jeu, installation) : le voile est levé et la
+/// fenêtre du launcher, que Windows ouvre derrière Hangar, passe au premier plan dès qu'elle
+/// apparaît. Tant que Hangar ou ce launcher est devant, chaque nouvelle fenêtre principale du
+/// launcher (écran de démarrage, puis fenêtre principale) est ramenée ; la surveillance s'arrête
+/// dès que l'utilisateur passe à une autre app. `names` : processus du launcher, en minuscules.
+pub fn front_launcher(names: &'static [&'static str]) {
+    lift();
+    if !cfg!(windows) || names.is_empty() {
+        return;
+    }
+    let spawned = std::thread::Builder::new().name("hangar-launcher-devant".into()).spawn(move || {
+        let me = std::process::id();
+        let mut sys = sysinfo::System::new();
+        let mut known = std::collections::HashMap::<u32, bool>::new();
+        let mut is_launcher = |pid: u32| {
+            *known.entry(pid).or_insert_with(|| {
+                let p = sysinfo::Pid::from_u32(pid);
+                sys.refresh_processes_specifics(
+                    sysinfo::ProcessesToUpdate::Some(&[p]),
+                    true,
+                    sysinfo::ProcessRefreshKind::nothing(),
+                );
+                sys.process(p).is_some_and(|p| names.contains(&p.name().to_string_lossy().to_lowercase().as_str()))
+            })
+        };
+        let start = Instant::now();
+        let mut last = None;
+        while start.elapsed() < FRONT {
+            std::thread::sleep(Duration::from_millis(250));
+            let fg = win::foreground_pid();
+            if fg != 0 && fg != me && !is_launcher(fg) {
+                log::info!("launcher : une autre app est passée devant, surveillance arrêtée");
+                return;
+            }
+            let best = win::visible_windows()
+                .into_iter()
+                .filter(|&(h, pid)| !win::title(h).is_empty() && is_launcher(pid))
+                .max_by_key(|&(h, _)| win::area(h))
+                .map(|(h, _)| h);
+            if best.is_some() && best != last {
+                last = best;
+                if let Some(h) = best {
+                    let ok = win::restore_front(h);
+                    log::info!("launcher : fenêtre « {} » ramenée devant ({})", win::title(h), if ok { "ok" } else { "refusé par Windows" });
+                }
+            }
+        }
+        log::info!("launcher : fin de la surveillance du premier plan");
+    });
+    if let Err(e) = spawned {
+        log::warn!("launcher au premier plan impossible : {e}");
+    }
+}
+
 /// Réponse à une question posée dans Hangar : `show` montre la boîte du launcher au-dessus de
 /// Hangar (le choix se fait dedans), sinon elle est fermée, ce qui l'annule.
 pub fn answer(hwnd: i64, show: bool) -> Result<(), String> {
@@ -315,14 +373,14 @@ mod win {
         i64::from(r.right - r.left) * i64::from(r.bottom - r.top)
     }
 
-    /// Restaure la fenêtre si elle est réduite et la passe au premier plan.
-    pub fn restore_front(h: isize) {
+    /// Restaure la fenêtre si elle est réduite et la passe au premier plan (faux : refusé).
+    pub fn restore_front(h: isize) -> bool {
         // SAFETY : un HWND fermé est refusé par Windows sans effet.
         unsafe {
             if IsIconic(h as HWND) != 0 {
                 ShowWindow(h as HWND, SW_RESTORE);
             }
-            SetForegroundWindow(h as HWND);
+            SetForegroundWindow(h as HWND) != 0
         }
     }
 
@@ -363,6 +421,14 @@ mod win {
         // SAFETY : message posté, sans effet sur une fenêtre fermée.
         unsafe { PostMessageW(h as HWND, WM_CLOSE, 0, 0) };
     }
+
+    /// Processus de la fenêtre au premier plan (0 : aucune).
+    pub fn foreground_pid() -> u32 {
+        let mut pid = 0u32;
+        // SAFETY : un HWND nul donne un pid nul, sans effet.
+        unsafe { GetWindowThreadProcessId(GetForegroundWindow(), &mut pid) };
+        pid
+    }
 }
 
 #[cfg(not(windows))]
@@ -381,12 +447,17 @@ mod win {
     pub fn area(_: isize) -> i64 {
         0
     }
-    pub fn restore_front(_: isize) {}
+    pub fn restore_front(_: isize) -> bool {
+        false
+    }
     pub fn title(_: isize) -> String {
         String::new()
     }
     pub fn reveal_over_hangar(_: isize) {}
     pub fn close(_: isize) {}
+    pub fn foreground_pid() -> u32 {
+        0
+    }
 }
 
 #[cfg(test)]

@@ -393,12 +393,23 @@ pub async fn open_game_link(url: String) -> Result<(), String> {
     blocking(move || launcher::shell_open(&url, "", None, "open")).await?
 }
 
-/// Ouvre la page d'un jeu vu chez un ami dans son launcher (Steam, GOG Galaxy, Battle.net,
-/// Microsoft Store), d'après son identifiant portable.
+/// Ouvre la page d'un jeu vu chez un ami dans son launcher, d'après son identifiant portable :
+/// le launcher démarre s'il ne tourne pas, puis sa fenêtre passe devant Hangar.
 #[tauri::command]
-pub async fn open_store_page(id: String) -> Result<(), String> {
-    let uri = launcher::store_page_uri(&id).ok_or("Ce jeu n'a pas de page à ouvrir dans un launcher.")?;
-    blocking(move || launcher::shell_open(&uri, "", None, "open")).await?
+pub async fn open_store_page(id: String, name: String) -> Result<(), String> {
+    let store = id.split_once(':').map(|(s, _)| s.to_string()).unwrap_or_default();
+    log::info!("page du jeu dans son launcher demandée : {id}");
+    let page = blocking(move || launcher::store_page(&id, &name)).await?;
+    let Some(page) = page else {
+        log::warn!("page du jeu : aucun lien pour le store « {store} »");
+        return Err("Ce jeu n'a pas de page à ouvrir dans un launcher, ou son launcher n'est pas installé.".into());
+    };
+    log::info!("page du jeu : ouverture de {} {}", page.target, page.args);
+    blocking(move || launcher::shell_open(&page.target, &page.args, None, "open"))
+        .await?
+        .inspect_err(|e| log::warn!("page du jeu impossible à ouvrir : {e}"))?;
+    crate::veil::front_launcher(launcher::launcher_windows(&store));
+    Ok(())
 }
 
 /// Le mode manette vient de se fermer : Hangar retourne là où il était si le bouton Xbox
@@ -630,6 +641,7 @@ pub async fn install_game(ctx: Ctxs<'_>, game_id: String, dir: Option<String>) -
     let msg = format!("Installation de {} ouverte dans {}", game.name, game.launcher_name);
     let launch = game.launch.clone();
     blocking(move || launcher::launch(&launch)).await??;
+    crate::veil::front_launcher(launcher::launcher_windows(&game.store));
     Ok(msg)
 }
 

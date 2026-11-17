@@ -39,7 +39,14 @@ describe("installer un jeu vu chez un ami", () => {
     expect(storePageOf('xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe', true)).toBe('xbox');
     expect(storePageOf('xbox:Microsoft.624F8B84B80_8wekyb3d8bbwe', false)).toBeNull();
     expect(storePageOf('steam:620/../x', true)).toBeNull();
-    expect(storePageOf('epic:fn', true)).toBeNull();
+    expect(storePageOf('epic:fn', true)).toBe('epic');
+    expect(storePageOf('epic:fn', false)).toBeNull();
+    expect(storePageOf('ubisoft:635', true)).toBe('ubisoft');
+    expect(storePageOf('ubisoft:1&x', true)).toBeNull();
+    expect(storePageOf('riot:valorant', true)).toBe('riot');
+    expect(storePageOf('ea:fifa', true)).toBe('ea');
+    expect(storePageOf('rockstar:gta5', true)).toBe('rockstar');
+    expect(storePageOf('local:x', true)).toBeNull();
     expect(storePageOf('@celeste.exe|celeste', true)).toBeNull();
   });
 });

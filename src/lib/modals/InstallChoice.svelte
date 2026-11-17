@@ -47,19 +47,34 @@
     api.openGameLink(url).catch(fail);
   }
 
+  // Les props (`game`, `social`) se lisent AVANT `close()` : une fois la popup fermée, `social`
+  // relit `ui.modal.game` sur une popup nulle et l'appel s'arrête sur une erreur muette.
   function openStore() {
-    if (!social) return;
+    const s = social;
+    if (!s) return;
     close();
-    api.openStorePage(social.id).catch(fail);
+    api.openStorePage(s.id, s.name).catch(fail);
+  }
+
+  // Page Steam du jeu : dans le client Steam (démarré au besoin), le navigateur en secours.
+  function openSteam() {
+    const url = choices.steam;
+    if (!url) return;
+    const appid = /\/app\/(\d+)/.exec(url)?.[1];
+    if (!appid) return open(url);
+    const n = name;
+    close();
+    api.openStorePage(`steam:${appid}`, n).catch(() => api.openGameLink(url).catch(fail));
   }
 
   async function chooseExe() {
+    const [g0, s] = [game, social];
     close();
-    if (game) return attachElsewhere(game.id);
-    if (!social) return;
+    if (g0) return attachElsewhere(g0.id);
+    if (!s) return;
     const path = await api.pickExe().catch(() => null);
     if (!path) return;
-    const g = manualGameFrom(path, social.name);
+    const g = manualGameFrom(path, s.name);
     library.addManual(g);
     ui.toast(`${g.name} ajouté à ta bibliothèque`, { gameId: g.id });
   }
@@ -104,10 +119,10 @@
         <span class="txt"><strong>{storeLabel}</strong><span class="sub">Ouvrir sa page dans le launcher</span></span>
       </button>
     {/if}
-    {#if choices.steam}
-      <button class="opt" onclick={() => open(choices.steam!)}>
-        <span class="ico"><Icon name="globe" size={18} /></span>
-        <span class="txt"><strong>Page Steam</strong><span class="sub">store.steampowered.com</span></span>
+    {#if choices.steam && store !== 'steam'}
+      <button class="opt" onclick={openSteam}>
+        <span class="ico"><Icon name="download" size={18} /></span>
+        <span class="txt"><strong>Steam</strong><span class="sub">Ouvrir sa page dans Steam</span></span>
       </button>
     {/if}
     <button class="opt" onclick={chooseExe}>
