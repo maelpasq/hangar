@@ -211,10 +211,17 @@ pub fn init_tray(app: &AppHandle) -> tauri::Result<()> {
         // Clic gauche : menu Hangar. Clic droit : menu natif (le même, en plus simple).
         .show_menu_on_left_click(false)
         .on_menu_event(|app, e| run_action(app, e.id().as_ref()))
-        .on_tray_icon_event(|tray, e| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, position, .. } = e {
+        .on_tray_icon_event(|tray, e| match e {
+            TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, position, .. } => {
                 toggle_menu(tray.app_handle(), position);
             }
+            // Double-clic gauche (Windows) : ouvre Hangar. Les deux clics simples qui le
+            // précèdent ont ouvert puis refermé le menu ; on le cache au cas où.
+            TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => {
+                hide_menu(tray.app_handle());
+                show_main(tray.app_handle());
+            }
+            _ => {}
         });
     if let Some(icon) = app.default_window_icon() {
         b = b.icon(icon.clone());
