@@ -29,6 +29,12 @@
   applyTheme();
   light.addEventListener('change', applyTheme);
 
+  // Bascule entre les deux dashboards : chacun lit sa propre base (Test ou Prod).
+  const ENVS = [
+    { id: 'Test', url: 'https://hangar-admin-test.pamalstudio.fr' },
+    { id: 'Prod', url: 'https://hangar-admin.pamalstudio.fr' }
+  ];
+
   const host = envName === 'Prod' ? 'hangar-api' : envName === 'Test' ? 'hangar-api-test' : 'démo locale';
 
   const nav = $derived<{ id: string; label: string; icon: IconName; to: string; n?: number }[]>([
@@ -80,10 +86,21 @@
             <span class="mono host">{host}</span>
           </div>
         </div>
-        <div class="who">
-          <span class="env" class:prod={envName === 'Prod'}>{envName}</span>
-          {#if me}<span class="email" title={me.email}>{me.email}</span>{/if}
+        <div class="envs" role="group" aria-label="Environnement">
+          {#each ENVS as e (e.id)}
+            <a
+              href={e.url}
+              class="env"
+              class:prod={e.id === 'Prod'}
+              class:on={envName === e.id}
+              aria-current={envName === e.id ? 'page' : undefined}
+            >
+              {e.id}
+            </a>
+          {/each}
+          {#if envName === 'Démo'}<span class="env on">Démo</span>{/if}
         </div>
+        {#if me}<span class="email" title={me.email}>{me.email}</span>{/if}
       </div>
     </aside>
     {#key router.route.page === 'bug' ? 'bugs' : router.route.page === 'compte' ? 'comptes' : router.route.page}
@@ -261,11 +278,9 @@
     color: var(--muted);
   }
 
-  .who {
+  .envs {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
   }
 
   .env {
@@ -274,13 +289,28 @@
     align-items: center;
     padding: 0 10px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--star) 16%, transparent);
-    color: var(--star);
+    border: 1px solid var(--border-2);
+    color: var(--muted);
     font-size: 11.5px;
     font-weight: 600;
+    text-decoration: none;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
 
-  .env.prod {
+  .env:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  .env.on {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--star) 16%, transparent);
+    color: var(--star);
+  }
+
+  .env.prod.on {
     background: color-mix(in srgb, var(--danger) 16%, transparent);
     color: var(--danger-text);
   }

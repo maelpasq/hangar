@@ -7,6 +7,7 @@ ne change.
 - Code : `admin/` (Svelte, mêmes tokens et icônes que l'app), API dans `server/src/admin/`.
 - Adresses : `https://hangar-admin.pamalstudio.fr` (prod) et `https://hangar-admin-test.pamalstudio.fr`
   (Hangar Test), servies par le Worker du compte (`server/wrangler.toml`), chacune sur sa base.
+- Bascule Test | Prod en bas de la barre latérale : ouvre l'autre adresse (chaque dashboard ne lit que sa base).
 - Essai local : `npm run admin:dev` (http://localhost:1430, données de démo, aucun réseau).
 
 ## Accès
