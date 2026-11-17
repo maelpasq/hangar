@@ -116,10 +116,15 @@ export function wikidataKey(name: string): string {
 /**
  * Liens proposés pour installer un jeu hors store : les sites officiels (lien choisi ou trouvé au
  * scan, lien de la fiche d'un autre PC, fiche Steam, Wikidata d'après ses noms), un par domaine,
- * puis sa page Steam à part.
+ * puis sa page Steam à part. `foundAppid` : appid trouvé d'après son nom, quand il n'est pas connu.
  */
-export function installChoices(s: PersistedState, g: Game, names: string[]): { sites: string[]; steam: string | null } {
-  const appid = steamIdOf(s, g);
+export function installChoices(
+  s: PersistedState,
+  g: Game,
+  names: string[],
+  foundAppid: number | null = null
+): { sites: string[]; steam: string | null } {
+  const appid = steamIdOf(s, g) ?? foundAppid;
   const sites: string[] = [];
   let steam = appid ? `https://store.steampowered.com/app/${appid}` : null;
   const add = (url: string | null | undefined) => {

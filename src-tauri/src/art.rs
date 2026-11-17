@@ -346,31 +346,36 @@ impl Art {
 
     /// Site officiel d'un jeu ou d'un logiciel (Lunar Client...) d'après Wikidata (propriété P856),
     /// seulement pour un élément dont le nom ou un alias est exactement celui du jeu.
+    /// Le nom exact d'abord, puis des variantes plus courtes (« Modrinth App » -> « Modrinth »,
+    /// « Jeu : sous-titre » -> « Jeu ») : le site d'une variante n'est gardé que si son domaine
+    /// contient un mot de ce nom.
     pub fn wikidata_site(&self, name: &str) -> Result<Option<String>, String> {
-        let clean = clean_name(name);
-        let target = crate::scanner::norm(&clean);
-        if target.is_empty() {
-            return Ok(None);
-        }
         let down = |_| "Wikidata injoignable".to_string();
-        let url = format!(
-            "https://www.wikidata.org/w/api.php?action=wbsearchentities&search={}&language=en&uselang=en&type=item&limit=7&format=json",
-            urlencode(clean.trim())
-        );
-        let v = self.get_json(&url, None).map_err(down)?;
-        let ids = wikidata_matches(&v, &target);
-        if ids.is_empty() {
-            return Ok(None);
+        for (i, variant) in site_names(name).iter().enumerate() {
+            let target = crate::scanner::norm(variant);
+            let url = format!(
+                "https://www.wikidata.org/w/api.php?action=wbsearchentities&search={}&language=en&uselang=en&type=item&limit=7&format=json",
+                urlencode(variant)
+            );
+            let v = self.get_json(&url, None).map_err(down)?;
+            let ids = wikidata_matches(&v, &target);
+            if ids.is_empty() {
+                continue;
+            }
+            let url = format!(
+                "https://www.wikidata.org/w/api.php?action=wbgetentities&ids={}&props=claims&format=json",
+                ids.join("%7C")
+            );
+            let v = self.get_json(&url, None).map_err(down)?;
+            let site = ids.iter().find_map(|id| {
+                let claims = v.get("entities")?.get(id)?.get("claims")?.get("P856")?.as_array()?;
+                claims.iter().find_map(|c| website_link(c.get("mainsnak")?.get("datavalue")?.get("value")?.as_str()?))
+            });
+            if let Some(site) = site.filter(|s| i == 0 || site_matches_name(s, variant)) {
+                return Ok(Some(site));
+            }
         }
-        let url = format!(
-            "https://www.wikidata.org/w/api.php?action=wbgetentities&ids={}&props=claims&format=json",
-            ids.join("%7C")
-        );
-        let v = self.get_json(&url, None).map_err(down)?;
-        Ok(ids.iter().find_map(|id| {
-            let claims = v.get("entities")?.get(id)?.get("claims")?.get("P856")?.as_array()?;
-            claims.iter().find_map(|c| website_link(c.get("mainsnak")?.get("datavalue")?.get("value")?.as_str()?))
-        }))
+        Ok(None)
     }
 
     /// 5 premiers résultats de recherche Steam ; un nombre est pris comme ID direct.
@@ -450,6 +455,68 @@ pub fn import_cover(covers: &Path, game_id: &str, src: &str) -> Result<PathBuf, 
 
 fn clean_name(name: &str) -> String {
     name.replace(['™', '®', '©'], "")
+}
+
+/// Mots de fin qui ne font pas partie du nom d'un jeu ou d'un logiciel sur Wikidata.
+const GENERIC_TAIL: &[&str] = &[
+    "app", "launcher", "client", "desktop", "for windows", "pc", "beta", "demo", "playtest", "edition",
+    "definitive edition", "complete edition", "deluxe edition", "goty", "goty edition", "game of the year edition",
+    "remastered", "enhanced edition", "standard edition", "special edition", "ultimate edition", "gold edition",
+    "anniversary edition", "early access",
+];
+
+/// Noms à chercher pour trouver le site officiel d'un jeu, du plus exact au plus court (4 au plus) :
+/// le nom sans ™ ni parenthèses, puis sans sous-titre, puis sans mot de fin générique (« App »...).
+fn site_names(name: &str) -> Vec<String> {
+    let mut out: Vec<String> = vec![];
+    let mut push = |s: &str| {
+        let s = s.split_whitespace().collect::<Vec<_>>().join(" ");
+        let key = crate::scanner::norm(&s);
+        let first = out.is_empty();
+        if !key.is_empty() && (first || key.len() >= 3) && !out.iter().any(|o| crate::scanner::norm(o) == key) {
+            out.push(s);
+        }
+    };
+    let clean = clean_name(name);
+    push(&clean);
+    // Sans ce qui est entre parenthèses ou crochets (« (2019) », « [Beta] »).
+    let mut bare = String::new();
+    let mut depth = 0u32;
+    for c in clean.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => bare.push(c),
+            _ => {}
+        }
+    }
+    push(&bare);
+    // Sans sous-titre (« Jeu : Sous-titre », « Jeu - Sous-titre »).
+    let short = [":", " - ", " – "].iter().filter_map(|sep| bare.find(sep)).min().map_or(bare.as_str(), |i| &bare[..i]);
+    push(short);
+    // Sans mot de fin générique, autant de fois que nécessaire (« Modrinth App » -> « Modrinth »).
+    let mut core = short.trim().to_string();
+    let ends_with = |s: &str, t: &str| {
+        let at = s.len().checked_sub(t.len() + 1);
+        at.is_some_and(|i| s.is_char_boundary(i) && s[i..].starts_with(' ') && s[i + 1..].eq_ignore_ascii_case(t))
+    };
+    while let Some(tail) = GENERIC_TAIL.iter().filter(|t| ends_with(&core, t)).max_by_key(|t| t.len()) {
+        core.truncate(core.len() - tail.len());
+        core = core.trim_end_matches([' ', '-', ':', ',']).to_string();
+    }
+    push(&core);
+    out.truncate(4);
+    out
+}
+
+/// Le domaine d'un site contient-il un mot du nom (4 lettres au moins) ? Garde-fou pour les
+/// variantes raccourcies d'un nom, qui peuvent tomber sur un autre élément Wikidata.
+fn site_matches_name(url: &str, name: &str) -> bool {
+    let host = url.strip_prefix("https://").unwrap_or(url).split(['/', '?', '#']).next().unwrap_or("").to_lowercase();
+    let host = host.replace(['-', '.'], "");
+    let words: Vec<String> = name.split_whitespace().map(crate::scanner::norm).filter(|w| w.len() >= 4).collect();
+    let whole = crate::scanner::norm(name);
+    (whole.len() >= 3 && host.contains(&whole)) || words.iter().any(|w| host.contains(w.as_str()))
 }
 
 /// Choisit le résultat dont le nom normalisé est identique, sinon celui qui partage un préfixe.
@@ -614,6 +681,27 @@ mod tests {
     }
 
     #[test]
+    fn variantes_du_nom() {
+        assert_eq!(site_names("Modrinth App"), vec!["Modrinth App", "Modrinth"]);
+        assert_eq!(site_names("Lunar Client"), vec!["Lunar Client", "Lunar"]);
+        assert_eq!(site_names("The Witcher® 3: Wild Hunt"), vec!["The Witcher 3: Wild Hunt", "The Witcher 3"]);
+        assert_eq!(
+            site_names("Skyrim Special Edition (2016) - Definitive Edition"),
+            vec!["Skyrim Special Edition (2016) - Definitive Edition", "Skyrim Special Edition - Definitive Edition", "Skyrim Special Edition", "Skyrim"]
+        );
+        assert_eq!(site_names("Hades"), vec!["Hades"]);
+        assert_eq!(site_names("  "), Vec::<String>::new());
+        assert_eq!(site_names("Éclair Launcher"), vec!["Éclair Launcher", "Éclair"]);
+    }
+
+    #[test]
+    fn domaine_du_nom() {
+        assert!(site_matches_name("https://modrinth.com", "Modrinth"));
+        assert!(site_matches_name("https://www.thewitcher.com/fr", "The Witcher 3"));
+        assert!(!site_matches_name("https://www.nasa.gov/", "Lunar"));
+    }
+
+    #[test]
     fn hotes_autorises() {
         assert!(allowed_url("https://shared.steamstatic.com/store_item_assets/steam/apps/1/library_hero.jpg"));
         assert!(allowed_url("https://cdn.cloudflare.steamstatic.com/steam/apps/1/header.jpg"));
@@ -704,5 +792,6 @@ mod reseau {
         assert!(art.search_steam("Factorio").iter().any(|h| h.id == 427520));
         assert_eq!(art.official_site(504230), Ok(Some("https://www.celestegame.com".into())));
         assert_eq!(art.wikidata_site("Lunar Client"), Ok(Some("https://www.lunarclient.com/".into())));
+        assert_eq!(art.wikidata_site("Modrinth App"), Ok(Some("https://modrinth.com".into())));
     }
 }

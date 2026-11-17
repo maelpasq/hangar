@@ -26,6 +26,7 @@
   );
   const store = $derived(social ? storePageOf(social.id, !isMac && !isLinux) : null);
   const storeLabel = $derived(store === 'xbox' ? 'Microsoft Store' : store ? STORES[store].launcher : '');
+  const webSearch = $derived(`https://duckduckgo.com/?q=${encodeURIComponent(`${name} site officiel`)}`);
   let searching = $state(true);
   let failed = $state(false);
   $effect(() => {
@@ -79,15 +80,23 @@
         <span class="txt"><strong>Site officiel</strong><span class="sub">{linkDomain(url)}</span></span>
       </button>
     {:else}
-      <div class="opt empty" role="status">
-        <span class="ico"><Icon name="globe" size={18} /></span>
-        <span class="txt">
-          <strong>Site officiel</strong>
-          <span class="sub">
-            {#if searching}Recherche du site officiel…{:else if failed}Recherche impossible pour l'instant (connexion){:else}Aucun site officiel trouvé{/if}
+      {#if searching}
+        <div class="opt empty" role="status">
+          <span class="ico"><Icon name="globe" size={18} /></span>
+          <span class="txt"><strong>Site officiel</strong><span class="sub">Recherche du site officiel…</span></span>
+        </div>
+      {:else}
+        <!-- Rien trouvé automatiquement : recherche web dans le navigateur de la personne. -->
+        <button class="opt" onclick={() => open(webSearch)}>
+          <span class="ico"><Icon name="search" size={18} /></span>
+          <span class="txt">
+            <strong>Chercher le site officiel</strong>
+            <span class="sub">
+              {failed ? 'Recherche automatique impossible (connexion)' : 'Pas trouvé automatiquement'} : recherche web dans ton navigateur
+            </span>
           </span>
-        </span>
-      </div>
+        </button>
+      {/if}
     {/each}
     {#if store}
       <button class="opt" onclick={openStore}>

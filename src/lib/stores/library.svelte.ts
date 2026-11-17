@@ -23,6 +23,9 @@ import {
 
 const EMPTY_TOTALS: Totals = { playMs: 0, launches: 0, lastPlayed: 0 };
 
+/** Nom de jeu comparable à un résultat de la recherche Steam (minuscules, sans accents ni ponctuation). */
+const steamKey = (s: string) => normalize(s).replace(/[^a-z0-9]+/g, ' ').trim();
+
 class Library {
   /** Jeux détectés par le dernier scan (hors ajouts manuels). */
   scanned = $state<Game[]>([]);
@@ -362,38 +365,49 @@ class Library {
    * trouvés (lien choisi ou trouvé au scan, fiche Steam, Wikidata), puis la page Steam à part.
    */
   installChoices(g: Game): { sites: string[]; steam: string | null } {
-    return installChoices(this.state, g, [g.name, this.name(g)]);
-  }
-
-  /** Cherche les sites officiels pas encore cherchés pour la popup « Installer ». Erreur : réseau. */
-  async findInstallChoices(g: Game): Promise<void> {
-    await this.findSitesFor(steamIdOf(this.state, g), [g.name, this.name(g)]);
+    return installChoices(this.state, g, [g.name, this.name(g)], this.steamByName[steamKey(this.name(g))] || null);
   }
 
   /**
-   * Appid Steam d'un jeu vu chez un ami (celui de son identifiant, sinon trouvé par son nom exact
-   * sur la recherche Steam) : undefined tant qu'il n'est pas cherché, 0 si Steam ne le connaît pas.
-   * Gardé le temps de la session seulement.
+   * Cherche les sites officiels pas encore cherchés pour la popup « Installer » ; un jeu dont
+   * l'appid Steam n'est pas connu est cherché sur Steam par son nom exact. Erreur : réseau.
    */
-  socialSteam = $state<Record<string, number>>({});
+  async findInstallChoices(g: Game): Promise<void> {
+    const appid = steamIdOf(this.state, g) ?? (await this.steamIdByName(this.name(g)));
+    await this.findSitesFor(appid, [g.name, this.name(g)]);
+  }
+
+  /**
+   * Appid Steam trouvé d'après le nom exact d'un jeu (clé : `steamKey`) : absent tant qu'il n'est
+   * pas cherché, 0 si Steam ne le connaît pas. Gardé le temps de la session seulement.
+   */
+  steamByName = $state<Record<string, number>>({});
+
+  /** Appid Steam d'un nom de jeu exact (recherche Steam, une fois par session), null : inconnu. */
+  private async steamIdByName(name: string): Promise<number | null> {
+    const want = steamKey(name);
+    if (!want) return null;
+    if (!(want in this.steamByName)) {
+      const hits = await api.searchSteam(name).catch(() => null);
+      if (hits) this.steamByName[want] = hits.find((h) => steamKey(h.name) === want)?.id ?? 0;
+    }
+    return this.steamByName[want] || null;
+  }
 
   /** Liens proposés pour installer un jeu vu chez un ami (popup « Installer »). */
   socialInstallChoices(g: SocialGame): { sites: string[]; steam: string | null } {
-    const appid = steamIdFromPortable(g.id) ?? (this.socialSteam[g.id] || null);
+    const appid = steamIdFromPortable(g.id) ?? (this.steamByName[steamKey(g.name)] || null);
     return socialInstallChoices(this.state, g.name, appid);
   }
 
   /** Cherche l'appid Steam puis les sites officiels d'un jeu vu chez un ami. Erreur : réseau. */
   async findSocialInstallChoices(g: SocialGame): Promise<void> {
-    let appid = steamIdFromPortable(g.id) ?? this.socialSteam[g.id];
-    if (appid === undefined) {
-      const key = (s: string) => normalize(s).replace(/[^a-z0-9]+/g, ' ').trim();
-      const want = key(g.name);
-      const hits = await api.searchSteam(g.name).catch(() => null);
-      if (hits) this.socialSteam[g.id] = appid = hits.find((h) => key(h.name) === want)?.id ?? 0;
-    }
-    await this.findSitesFor(appid || null, [g.name]);
+    const appid = steamIdFromPortable(g.id) ?? (await this.steamIdByName(g.name));
+    await this.findSitesFor(appid, [g.name]);
   }
+
+  /** Noms cherchés sur Wikidata pendant cette session : un « rien trouvé » d'avant est retenté une fois. */
+  private wikidataTried = new Set<string>();
 
   /** Cherche le site officiel d'un appid (fiche Steam) et ceux de noms de jeu (Wikidata). */
   private async findSitesFor(appid: number | null, names: string[]): Promise<void> {
@@ -405,7 +419,8 @@ class Library {
     }
     for (const name of new Set(names)) {
       const key = wikidataKey(name);
-      if (!key || key in this.state.officialSites) continue;
+      if (!key || this.state.officialSites[key] || (key in this.state.officialSites && this.wikidataTried.has(key))) continue;
+      this.wikidataTried.add(key);
       jobs.push(api.wikidataSite(name).then((url) => (this.state.officialSites[key] = url ?? '')));
     }
     if (!jobs.length) return;
