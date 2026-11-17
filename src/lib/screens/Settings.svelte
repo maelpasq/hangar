@@ -2,6 +2,7 @@
   // Paramètres : une navigation par section à gauche, une section à la fois à droite.
   // Chaque section est une suite de groupes (carte) faits de lignes « libellé + aide | réglage ».
   import { addFolder, removeFolder } from '../actions';
+  import { contextMenu, copyText } from '../menus';
   import { api } from '../api';
   import { art } from '../art.svelte';
   import Icon, { type IconName } from '../components/Icon.svelte';
@@ -540,7 +541,23 @@
               <section class="group" aria-label="Postes reliés">
                 <h3>Postes reliés</h3>
                 {#each s.devices as d (d.id)}
-                  <div class="srow" class:off={!d.connected}>
+                  <div
+                    class="srow"
+                    class:off={!d.connected}
+                    {@attach contextMenu(() =>
+                      renaming === d.id || s.offline
+                        ? null
+                        : {
+                            label: d.name,
+                            items: () =>
+                              d.current
+                                ? [{ label: 'Renommer ce poste', icon: 'edit', run: () => ((renaming = d.id), (newName = d.name)) }]
+                                : d.connected
+                                  ? [{ label: 'Déconnecter', icon: 'logout', danger: true, run: () => cloud.forgetDevice(d.id) }]
+                                  : []
+                          }
+                    )}
+                  >
                     <span class="ico"><Icon name="monitor" size={18} /></span>
                     {#if renaming === d.id}
                       <form class="sfield grow" onsubmit={saveName}>
@@ -999,7 +1016,17 @@
               <h3>Dossiers de jeux locaux</h3>
               <p class="gdesc">Chaque sous-dossier devient un jeu. Le launcher du jeu est lancé en priorité.</p>
               {#each library.state.localFolders as f (f)}
-                <div class="srow">
+                <div
+                  class="srow"
+                  {@attach contextMenu(() => ({
+                    label: f,
+                    items: () => [
+                      { label: 'Copier le chemin', icon: 'copy', run: () => copyText(f, 'Chemin copié.') },
+                      'sep',
+                      { label: 'Retirer le dossier', icon: 'trash', danger: true, run: () => removeFolder(f) }
+                    ]
+                  }))}
+                >
                   <span class="ico"><Icon name="folder" size={18} /></span>
                   <span class="txt"><span class="lbl mono ell">{f}</span><span class="hint">{plural(folderCount(f), 'jeu', 'jeux')}</span></span>
                   <button class="btn-s danger" aria-label="Retirer {f}" onclick={() => removeFolder(f)}>Retirer</button>
@@ -1013,7 +1040,18 @@
             <section class="group" aria-label="Jeux ajoutés à la main">
               <h3>Jeux ajoutés à la main</h3>
               {#each library.state.manualGames as g (g.id)}
-                <div class="srow">
+                <div
+                  class="srow"
+                  {@attach contextMenu(() => ({
+                    label: library.name(g),
+                    items: () => [
+                      { label: 'Voir la fiche', icon: 'grid', run: () => ui.open(g.id) },
+                      { label: 'Copier le chemin', icon: 'copy', run: () => copyText(g.launch.target, 'Chemin copié.') },
+                      'sep',
+                      { label: 'Retirer de Hangar', icon: 'trash', danger: true, run: () => library.removeManual(g.id) }
+                    ]
+                  }))}
+                >
                   <span class="txt"><span class="lbl ell">{library.name(g)}</span><span class="hint mono ell">{g.launch.target}</span></span>
                   <button class="btn-s danger" onclick={() => library.removeManual(g.id)}><Icon name="trash" size={15} />Retirer</button>
                 </div>
@@ -1031,7 +1069,13 @@
               <h3>Jeux masqués</h3>
               <p class="gdesc">Ils restent installés, Hangar ne les affiche simplement plus.</p>
               {#each hidden as g (g.id)}
-                <div class="srow">
+                <div
+                  class="srow"
+                  {@attach contextMenu(() => ({
+                    label: library.name(g),
+                    items: () => [{ label: 'Afficher de nouveau', icon: 'eye', run: () => library.unhide(g.id) }]
+                  }))}
+                >
                   <span class="ico"><StoreLogo store={g.store} size={18} /></span>
                   <span class="txt"><span class="lbl ell">{library.name(g)}</span></span>
                   <button class="btn-s" onclick={() => library.unhide(g.id)}><Icon name="eye" size={15} />Afficher</button>

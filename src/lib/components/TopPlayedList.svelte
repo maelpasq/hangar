@@ -1,5 +1,6 @@
 <script lang="ts">
   // « Les plus joués » : lignes avec miniature, heures et barre relative.
+  import { contextMenu } from '../menus';
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { Game } from '../types';
@@ -18,10 +19,7 @@
       class="res rise"
       style:animation-delay="{Math.min(i, 24) * 35}ms"
       onclick={() => ui.open(g.id)}
-      oncontextmenu={(e) => {
-        e.preventDefault();
-        ui.menu = { gameId: g.id, x: e.clientX, y: e.clientY };
-      }}
+      {@attach contextMenu(() => ({ gameId: g.id }))}
     >
       <span class="thumb"><Cover game={g} showName={false} /></span>
       <span class="body">

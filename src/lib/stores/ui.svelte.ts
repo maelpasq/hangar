@@ -3,6 +3,18 @@
 import { api } from '../api';
 import type { DesktopInfo, InstallTarget, StoreId } from '../types';
 import type { CropShape } from '../util/avatar';
+import type { IconName } from '../components/Icon.svelte';
+
+/** Ligne d'un menu contextuel, ou « sep » pour un séparateur. */
+export type MenuItem =
+  | { label: string; icon: IconName; run: () => void; danger?: boolean; disabled?: boolean }
+  | 'sep';
+
+/**
+ * Cible d'un clic droit : un jeu (menu complet du jeu), ou une liste d'actions calculée à
+ * l'ouverture et tenue à jour tant que le menu est ouvert.
+ */
+export type MenuTarget = { gameId: string } | { label: string; items: () => MenuItem[] };
 
 export type Screen = 'home' | 'library' | 'game' | 'web' | 'settings';
 
@@ -98,7 +110,9 @@ class Ui {
   searchOpen = $state(false);
 
   modal = $state<Modal | null>(null);
-  menu = $state<{ gameId: string; x: number; y: number } | null>(null);
+  menu = $state<(MenuTarget & { x: number; y: number }) | null>(null);
+  /** Collection à renommer (menu de la barre latérale), lue puis remise à null par la Bibliothèque. */
+  renameCollection = $state<string | null>(null);
   toasts = $state<Toast[]>([]);
 
   windowFocused = $state(true);

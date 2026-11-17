@@ -3,6 +3,7 @@
   // statut, temps de jeu, jeux favoris, jeux les plus joués, collections mises en avant, jeux en commun,
   // activité. Le serveur ne renvoie que ce que la personne partage avec nous.
   import Icon from '../components/Icon.svelte';
+  import { contextMenu, userItems } from '../menus';
   import SocialAvatar from '../components/SocialAvatar.svelte';
   import SocialGameTile from '../components/SocialGameTile.svelte';
   import { api } from '../api';
@@ -88,7 +89,7 @@
       {#if banner}<img class="bimg" src={banner} alt="" />{/if}
       <div class="shade"></div>
     </header>
-    <div class="ident">
+    <div class="ident" {@attach contextMenu(() => profile && { label: profile.name, items: () => userItems(profile!) })}>
       <span class="avring"><SocialAvatar id={profile.id} name={profile.name} version={profile.avatar} size={112} presence={live} /></span>
       <div class="itxt">
         <h1 class="ell">{profile.name}</h1>

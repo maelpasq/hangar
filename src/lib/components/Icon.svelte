@@ -43,7 +43,8 @@
     | 'gamepad'
     | 'layers'
     | 'package'
-    | 'logout';
+    | 'logout'
+    | 'copy';
 </script>
 
 <script lang="ts">
@@ -172,5 +173,7 @@
     <path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" />
   {:else if name === 'package'}
     <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M9 11l3 3 3-3M12 8v6" />
+  {:else if name === 'copy'}
+    <rect x="9" y="9" width="12" height="12" rx="2.5" /><path d="M15 9V5.5A2.5 2.5 0 0 0 12.5 3h-7A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15H9" />
   {/if}
 </svg>

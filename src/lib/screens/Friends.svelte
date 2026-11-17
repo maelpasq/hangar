@@ -2,6 +2,7 @@
   // Page Amis (docs/COMPTE.md, phase 7) : à gauche la recherche, les demandes et la liste des amis
   // avec leur statut ; à droite la conversation ouverte, sinon le code ami et l'activité des amis.
   import Chat from '../components/Chat.svelte';
+  import { contextMenu, userItems, userTarget } from '../menus';
   import Icon from '../components/Icon.svelte';
   import SocialAvatar from '../components/SocialAvatar.svelte';
   import { cloud } from '../stores/cloud.svelte';
@@ -129,7 +130,7 @@
         {#if results}
           <section class="block" aria-label="Résultats de la recherche" aria-busy={searching}>
             {#each results as u (u.id)}
-              <div class="prow">
+              <div class="prow" {@attach contextMenu(() => ({ label: u.name, items: () => userItems(u, { add: () => add(u) }) }))}>
                 <button class="pmain" onclick={() => ui.profile(u.id)} aria-label="Voir le profil de {u.name}">
                   {@render person(u, u.relation === 'friend' ? 'Déjà ami' : u.relation === 'out' ? 'Demande envoyée' : u.relation === 'in' ? 'T\'a envoyé une demande' : 'Joueur Hangar')}
                 </button>
@@ -149,7 +150,7 @@
           <section class="block" aria-label="Demandes reçues">
             <h2>Demandes reçues <span class="count num">{lists.incoming.length}</span></h2>
             {#each lists.incoming as u (u.id)}
-              <div class="prow">
+              <div class="prow" {@attach contextMenu(() => ({ label: u.name, items: () => userItems(u) }))}>
                 <button class="pmain" onclick={() => ui.profile(u.id)} aria-label="Voir le profil de {u.name}">
                   {@render person(u, u.since ? timeAgo(u.since) : 'Demande reçue')}
                 </button>
@@ -174,6 +175,7 @@
               aria-current={social.chatWith === u.id ? 'true' : undefined}
               aria-label="{u.name}, {presenceLabel(u.presence)}{unread ? `, ${plural(unread, 'message non lu', 'messages non lus')}` : ''}"
               onclick={() => social.openChat(u.id)}
+              {@attach contextMenu(() => ({ label: u.name, items: () => userItems(u) }))}
             >
               {@render person(u, presenceLabel(u.presence))}
               {#if unread}<span class="badge num" aria-hidden="true">{unread}</span>{/if}
@@ -189,7 +191,7 @@
           <section class="block" aria-label="Demandes envoyées">
             <h2>Demandes envoyées <span class="count num">{lists.outgoing.length}</span></h2>
             {#each lists.outgoing as u (u.id)}
-              <div class="prow">
+              <div class="prow" {@attach contextMenu(() => ({ label: u.name, items: () => userItems(u) }))}>
                 <button class="pmain" onclick={() => ui.profile(u.id)} aria-label="Voir le profil de {u.name}">
                   {@render person(u, 'En attente')}
                 </button>
@@ -208,7 +210,7 @@
             >
             {#if showBlocked}
               {#each lists.blocked as u (u.id)}
-                <div class="prow">
+                <div class="prow" {@attach contextMenu(() => ({ label: u.name, items: () => userItems(u) }))}>
                   <span class="pmain">{@render person(u, 'Bloqué')}</span>
                   <button class="btn-s" onclick={() => social.unblock(u)}>Débloquer</button>
                 </div>
@@ -223,7 +225,18 @@
           {#key social.chatWith}<Chat id={social.chatWith} />{/key}
         {:else}
           <div class="overview scroll">
-            <section class="card code" aria-label="Ton code ami">
+            <section
+              class="card code"
+              aria-label="Ton code ami"
+              {@attach contextMenu(() => ({
+                label: 'Ton code ami',
+                items: () => [
+                  { label: 'Copier le code ami', icon: 'copy', run: copyCode },
+                  { label: 'Voir mon profil', icon: 'user', run: () => ui.profile(social.me) },
+                  { label: 'Confidentialité', icon: 'eyeOff', run: () => ui.settings('friends') }
+                ]
+              }))}
+            >
               <div>
                 <h2>Ton code ami</h2>
                 <p>Donne-le à un ami : il te trouvera même si ton pseudo est caché.</p>
@@ -237,7 +250,7 @@
               <h2>Activité de tes amis</h2>
               {#each social.activity as a (a.id)}
                 {@const u = social.user(a.userId ?? null)}
-                <div class="act">
+                <div class="act" {@attach contextMenu(() => userTarget(a.userId, a.userName ?? 'Joueur'))}>
                   <button class="aav" onclick={() => a.userId && ui.profile(a.userId)} aria-label="Profil de {a.userName}">
                     <SocialAvatar id={a.userId ?? ''} name={a.userName ?? '?'} version={u?.avatar ?? null} size={34} />
                   </button>

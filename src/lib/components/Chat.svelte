@@ -2,6 +2,8 @@
   // Conversation privée avec un ami (page Amis) : messages, invitations sur un jeu, envoi.
   // Entrée envoie, Maj+Entrée va à la ligne. Les messages reçus sont lus dès qu'ils s'affichent.
   import { tick } from 'svelte';
+  import { contextMenu, copyText, userTarget } from '../menus';
+  import type { MenuItem } from '../stores/ui.svelte';
   import { presenceLabel, social } from '../stores/social.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -78,6 +80,30 @@
     list.scrollTop = list.scrollHeight - before;
   }
 
+  /** Clic droit sur un message : copier, lancer le jeu proposé, signaler. */
+  function messageItems(m: ChatMessage): MenuItem[] {
+    const local = m.kind === 'invite' ? social.localGame(m.game) : undefined;
+    return [
+      ...(local
+        ? [{ label: local.notInstalled ? 'Voir le jeu' : 'Lancer', icon: 'play', run: () => play(m) } satisfies MenuItem]
+        : []),
+      ...(m.kind === 'text' && m.text
+        ? [{ label: 'Copier le message', icon: 'copy', run: () => copyText(m.text, 'Message copié.') } satisfies MenuItem]
+        : []),
+      ...(m.from !== social.me
+        ? [
+            'sep' as const,
+            {
+              label: 'Signaler ce message',
+              icon: 'flag',
+              danger: true,
+              run: () => (ui.modal = { kind: 'socialReport', userId: id, name, messageId: m.id })
+            } satisfies MenuItem
+          ]
+        : [])
+    ];
+  }
+
   function play(m: ChatMessage) {
     const g = social.localGame(m.game);
     if (!g) return;
@@ -88,7 +114,12 @@
 
 <section class="chat" aria-label="Conversation avec {name}">
   <header>
-    <button class="who" onclick={() => ui.profile(id)} aria-label="Voir le profil de {name}">
+    <button
+      class="who"
+      onclick={() => ui.profile(id)}
+      aria-label="Voir le profil de {name}"
+      {@attach contextMenu(() => userTarget(id, name))}
+    >
       <SocialAvatar {id} {name} version={who?.avatar ?? null} size={40} presence={friend?.presence} />
       <span class="txt">
         <span class="nm ell">{name}</span>
@@ -116,7 +147,7 @@
     {/if}
     {#each messages as m (m.id)}
       {@const mine = m.from === social.me}
-      <div class="row" class:mine>
+      <div class="row" class:mine {@attach contextMenu(() => ({ label: 'Message', items: () => messageItems(m) }))}>
         {#if m.kind === 'invite' && m.game}
           {@const local = social.localGame(m.game)}
           <div class="invite">

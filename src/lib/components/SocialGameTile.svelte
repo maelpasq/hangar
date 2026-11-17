@@ -3,6 +3,7 @@
   // bibliothèque d'ici, sinon celle du CDN Steam (par son ID Steam ou son nom), sinon une
   // jaquette générée à son nom.
   import { art, visible } from '../art.svelte';
+  import { contextMenu } from '../menus';
   import { social } from '../stores/social.svelte';
   import { ui } from '../stores/ui.svelte';
   import type { SocialGame } from '../types';
@@ -44,7 +45,12 @@
 {/snippet}
 
 {#if local}
-  <button class="tile" onclick={() => ui.open(local.id)} aria-label="{game.name}, ouvrir la fiche">{@render body()}</button>
+  <button
+    class="tile"
+    onclick={() => ui.open(local.id)}
+    aria-label="{game.name}, ouvrir la fiche"
+    {@attach contextMenu(() => ({ gameId: local.id }))}>{@render body()}</button
+  >
 {:else}
   <div class="tile" title="Pas dans ta bibliothèque">{@render body()}</div>
 {/if}

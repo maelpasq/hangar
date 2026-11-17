@@ -228,6 +228,16 @@
     return el instanceof HTMLElement && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
   }
 
+  /**
+   * Pas de menu du navigateur (Actualiser, Imprimer...) dans l'app : seuls les menus de Hangar
+   * s'ouvrent (src/lib/menus.ts). Il reste dans les champs de texte et sur une sélection (copier).
+   */
+  function oncontextmenu(e: MouseEvent) {
+    if (e.defaultPrevented || isTextField(e.target)) return;
+    if (window.getSelection()?.toString().trim()) return;
+    e.preventDefault();
+  }
+
   function onkeydown(e: KeyboardEvent) {
     if (ui.modal || runner.launching || ui.big) return;
     const inField = isTextField(e.target);
@@ -258,7 +268,7 @@
   }
 </script>
 
-<svelte:window {onkeydown} bind:innerWidth={width} />
+<svelte:window {onkeydown} {oncontextmenu} bind:innerWidth={width} />
 
 <div class="app">
   <div class="ambient" aria-hidden="true">
@@ -302,7 +312,7 @@
   {/if}
 
   {#if ui.menu}
-    <ContextMenu gameId={ui.menu.gameId} x={ui.menu.x} y={ui.menu.y} />
+    <ContextMenu target={ui.menu} x={ui.menu.x} y={ui.menu.y} />
   {/if}
 
   {#if ui.modal?.kind === 'add'}

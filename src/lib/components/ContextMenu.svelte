@@ -1,14 +1,12 @@
 <script lang="ts">
-  // Menu contextuel d'un jeu (clic droit).
+  // Menu contextuel (clic droit) : un jeu, ou toute liste d'actions (src/lib/menus.ts).
   import { onMount } from 'svelte';
-  import { hideGame, openFolder, uninstallGame, updateGame } from '../actions';
-  import { attachElsewhere, hideElsewhere } from '../ghosts';
+  import { gameItems } from '../menus';
   import { library } from '../stores/library.svelte';
-  import { runner } from '../stores/runner.svelte';
-  import { ui } from '../stores/ui.svelte';
-  import Icon, { type IconName } from './Icon.svelte';
+  import { ui, type MenuItem, type MenuTarget } from '../stores/ui.svelte';
+  import Icon from './Icon.svelte';
 
-  let { gameId, x, y }: { gameId: string; x: number; y: number } = $props();
+  let { target, x, y }: { target: MenuTarget; x: number; y: number } = $props();
 
   let menu: HTMLDivElement;
   let pos = $state({ left: -9999, top: -9999 });
@@ -22,49 +20,31 @@
       left: Math.max(8, Math.min(x, window.innerWidth - w - 8)),
       top: Math.max(8, Math.min(y, window.innerHeight - h - 8))
     };
-    menu.querySelector<HTMLElement>('button')?.focus();
+    menu.querySelector<HTMLElement>('button:not([disabled])')?.focus();
   });
 
-  const game = $derived(library.get(gameId));
-  const fav = $derived(library.isFav(gameId));
+  const label = $derived.by(() => {
+    if ('label' in target) return target.label;
+    const g = library.get(target.gameId);
+    return g ? library.name(g) : 'Menu';
+  });
 
-  type Item = { label: string; icon: IconName; run: () => void; danger?: boolean; disabled?: boolean };
-  /** Jeu du compte Hangar introuvable sur ce PC : l'installer, le rattacher, le masquer ici. */
-  const elsewhereItems = $derived<Item[]>(
-    game?.elsewhere
-      ? [
-          { label: 'Installer', icon: 'download', run: () => runner.play(gameId) },
-          { label: "J'ai déjà ce jeu : choisir l'exécutable", icon: 'folder', run: () => attachElsewhere(gameId) },
-          { label: fav ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: 'star', run: () => library.toggleFav(gameId) },
-          { label: 'Collections', icon: 'layers', run: () => { ui.modal = { kind: 'collections', gameId }; } },
-          { label: 'Renommer', icon: 'edit', run: () => { ui.modal = { kind: 'rename', gameId }; } },
-          { label: 'Changer la jaquette', icon: 'image', run: () => { ui.modal = { kind: 'cover', gameId }; } },
-          { label: 'Masquer sur ce PC', icon: 'eyeOff', run: () => hideElsewhere(gameId), danger: true }
-        ]
-      : []
-  );
+  // Séparateurs nettoyés : jamais en tête, en fin ni deux de suite.
+  const items = $derived.by(() => {
+    const raw: MenuItem[] = 'gameId' in target ? gameItems(target.gameId) : target.items();
+    const out: MenuItem[] = [];
+    for (const it of raw) {
+      if (it === 'sep' && (!out.length || out.at(-1) === 'sep')) continue;
+      out.push(it);
+    }
+    if (out.at(-1) === 'sep') out.pop();
+    return out;
+  });
 
-  const items = $derived<Item[]>(game?.elsewhere ? elsewhereItems : [
-    game?.notInstalled
-      ? { label: 'Installer', icon: 'download', run: () => runner.play(gameId) }
-      : { label: runner.isRunning(gameId) ? 'En cours' : 'Jouer', icon: 'play', run: () => runner.play(gameId) },
-    {
-      label: fav ? 'Retirer des favoris' : 'Ajouter aux favoris',
-      icon: 'star',
-      run: () => library.toggleFav(gameId)
-    },
-    { label: 'Collections', icon: 'layers', run: () => { ui.modal = { kind: 'collections', gameId }; } },
-    { label: 'Renommer', icon: 'edit', run: () => { ui.modal = { kind: 'rename', gameId }; } },
-    { label: 'Changer la jaquette', icon: 'image', run: () => { ui.modal = { kind: 'cover', gameId }; } },
-    { label: 'Ouvrir le dossier', icon: 'folder', run: () => openFolder(gameId), disabled: !game?.installDir },
-    ...(game && !game.notInstalled
-      ? [
-          { label: game.updatePending ? 'Mettre à jour' : 'Mises à jour', icon: 'refresh' as const, run: () => updateGame(gameId) },
-          { label: 'Désinstaller', icon: 'package' as const, run: () => uninstallGame(gameId) }
-        ]
-      : []),
-    { label: 'Masquer', icon: 'eyeOff', run: () => hideGame(gameId), danger: true }
-  ]);
+  // Plus rien à proposer (jeu masqué, ami retiré...) : le menu se ferme.
+  $effect(() => {
+    if (!items.length) ui.menu = null;
+  });
 
   onMount(() => {
     // La cible est la fenêtre elle-même pour « blur » : ce n'est pas un nœud, on ferme.
@@ -108,24 +88,28 @@
   bind:this={menu}
   role="menu"
   tabindex="-1"
-  aria-label={game ? library.name(game) : 'Menu'}
+  aria-label={label}
   style:left="{pos.left}px"
   style:top="{pos.top}px"
   {onkeydown}
 >
-  {#each items as it (it.label)}
+  {#each items as it, i (it === 'sep' ? `sep${i}` : it.label)}
+    {#if it === 'sep'}
+      <div class="sep" role="separator"></div>
+    {:else}
     <button
       role="menuitem"
       class:danger={it.danger}
       disabled={it.disabled}
       onclick={() => {
-        // L'action d'abord : fermer le menu rend `gameId` indisponible.
-        it.run();
+        // Le menu se ferme d'abord : l'action peut en ouvrir un autre ou une modale.
         ui.menu = null;
+        it.run();
       }}
     >
       <Icon name={it.icon} size={16} />{it.label}
     </button>
+    {/if}
   {/each}
 </div>
 
@@ -162,6 +146,12 @@
     background: var(--surface-3);
     color: var(--strong);
     outline: none;
+  }
+
+  .sep {
+    height: 1px;
+    margin: 5px 8px;
+    background: var(--border-3);
   }
 
   button:disabled {

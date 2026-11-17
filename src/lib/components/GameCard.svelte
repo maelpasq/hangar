@@ -3,6 +3,7 @@
   // Jeu non installé : jaquette atténuée, bouton « Installer ».
   import { STORES } from '../stores-meta';
   import { updateGame } from '../actions';
+  import { contextMenu } from '../menus';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -76,22 +77,11 @@
     primary();
   }
 
-  function oncontextmenu(e: MouseEvent) {
-    e.preventDefault();
-    ui.menu = { gameId: game.id, x: e.clientX, y: e.clientY };
-  }
-
-  function onkeydown(e: KeyboardEvent) {
-    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
-      e.preventDefault();
-      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      ui.menu = { gameId: game.id, x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    }
-  }
 </script>
 
 <div
   class="card"
+  {@attach contextMenu(() => ({ gameId: game.id }))}
   class:rise={animate}
   class:fixed={!!width}
   style:width={width ? `${width}px` : null}
@@ -105,8 +95,6 @@
       title={name}
       {onclick}
       {ondblclick}
-      {oncontextmenu}
-      {onkeydown}
     >
       <Cover {game} fontSize={gen.f} padding={gen.p} />
       <span class="ov"></span>

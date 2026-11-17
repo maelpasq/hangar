@@ -1,6 +1,7 @@
 <script lang="ts">
   // Carrousel de l'accueil : fondu entre bannières, Ken Burns, défilement auto toutes les 6,5 s.
   import { art } from '../art.svelte';
+  import { contextMenu } from '../menus';
   import { STORES } from '../stores-meta';
   import { library } from '../stores/library.svelte';
   import { runner } from '../stores/runner.svelte';
@@ -102,7 +103,14 @@
   {#each games as g, i (g.id)}
     {@const t = library.totals(g.id)}
     {@const st = STORES[g.store]}
-    <div class="copy" class:on={i === idx} aria-hidden={i !== idx} inert={i !== idx} style:max-width="{copyMax}px">
+    <div
+      class="copy"
+      class:on={i === idx}
+      aria-hidden={i !== idx}
+      inert={i !== idx}
+      style:max-width="{copyMax}px"
+      {@attach contextMenu(() => ({ gameId: g.id }))}
+    >
       <div class="pill">
         <StoreLogo store={g.store} size={14} />{st.label} · {!t.lastPlayed
           ? 'À découvrir'
@@ -129,6 +137,7 @@
         aria-selected={i === idx}
         aria-label={library.name(g)}
         onclick={() => pick(i)}
+        {@attach contextMenu(() => ({ gameId: g.id }))}
       >
         <Cover game={g} showName={false} eager />
         <span class="bar"></span>

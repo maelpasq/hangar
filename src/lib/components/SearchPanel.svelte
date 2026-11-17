@@ -1,6 +1,7 @@
 <script lang="ts">
   // Panneau de résultats de recherche (sous le champ).
   import { STORES } from '../stores-meta';
+  import { contextMenu } from '../menus';
   import { library } from '../stores/library.svelte';
   import type { Game } from '../types';
   import { hoursLabel } from '../util/format';
@@ -35,6 +36,7 @@
       onmousedown={(e) => e.preventDefault()}
       onmouseenter={() => onhover(i)}
       onclick={(e) => onpick(g, e.ctrlKey || e.metaKey)}
+      {@attach contextMenu(() => ({ gameId: g.id }))}
     >
       <span class="thumb"><Cover game={g} showName={false} eager /></span>
       <span class="txt">

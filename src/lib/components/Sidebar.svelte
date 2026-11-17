@@ -13,6 +13,8 @@
   import AccountMenu from './AccountMenu.svelte';
   import { cloud } from '../stores/cloud.svelte';
   import { presenceLabel, social } from '../stores/social.svelte';
+  import { collectionItems, contextMenu, navItems, storeItems } from '../menus';
+  import { runner } from '../stores/runner.svelte';
 
   cloud.load();
 
@@ -83,6 +85,10 @@
         class="navb"
         class:on={current === n.key}
         class:soon={n.soon}
+        {@attach contextMenu(() => {
+          const items = navItems(n.key);
+          return items && { label: n.label, items: () => items };
+        })}
         aria-current={current === n.key ? 'page' : undefined}
         aria-label={rail || alertOn(n.key)
           ? n.soon
@@ -127,6 +133,7 @@
           aria-label={rail ? `${c.name}, ${plural(c.count, 'jeu', 'jeux')}` : undefined}
           title={rail ? c.name : undefined}
           onclick={() => ui.collectionView(c.id)}
+          {@attach contextMenu(() => ({ label: c.name, items: () => collectionItems(c.id) }))}
         >
           <span class="ic" aria-hidden="true"><Icon name="layers" size={16} /></span>
           {#if !rail}
@@ -155,6 +162,7 @@
         aria-label={rail ? `${STORES[s].label}, ${plural(library.counts[s] ?? 0, 'jeu', 'jeux')}` : undefined}
         title={rail ? STORES[s].label : undefined}
         onclick={() => ui.storeFilter(s)}
+        {@attach contextMenu(() => ({ label: STORES[s].label, items: () => storeItems(s) }))}
       >
         <span class="ic" aria-hidden="true"><StoreLogo store={s} size={17} glow /></span>
         {#if !rail}
@@ -165,7 +173,10 @@
     {/each}
   </nav>
 
-  <RunningCard {rail} />
+  <!-- Clic droit sur la carte « En jeu » : le menu du jeu lancé. -->
+  <div style:display="contents" {@attach contextMenu(() => (runner.current && library.get(runner.current) ? { gameId: runner.current } : null))}>
+    <RunningCard {rail} />
+  </div>
   <button
     class="navb add"
     onclick={() => { ui.modal = { kind: 'add' }; }}
@@ -186,6 +197,14 @@
       aria-label={rail || badge ? `Amis${badge ? `, ${badge} nouveauté${badge > 1 ? 's' : ''}` : ''}` : undefined}
       title={rail ? 'Amis' : undefined}
       onclick={() => social.openFriends()}
+      {@attach contextMenu(() => ({
+        label: 'Amis',
+        items: () => [
+          { label: 'Ouvrir les amis', icon: 'users', run: () => social.openFriends() },
+          { label: 'Mon profil', icon: 'user', run: () => ui.profile(social.me) },
+          { label: 'Confidentialité', icon: 'eyeOff', run: () => ui.settings('friends') }
+        ]
+      }))}
     >
       <span class="ic"><Icon name="users" /></span>
       {#if !rail}
@@ -202,6 +221,12 @@
       class:open={accountOpen}
       bind:this={accountBtn}
       onclick={() => (accountOpen = !accountOpen)}
+      oncontextmenu={(e) => {
+        // Clic droit : le même menu du compte.
+        e.preventDefault();
+        e.stopPropagation();
+        accountOpen = true;
+      }}
       aria-haspopup="menu"
       aria-expanded={accountOpen}
       aria-controls={accountOpen ? 'account-menu' : undefined}

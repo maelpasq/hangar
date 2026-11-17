@@ -1,6 +1,7 @@
 <script lang="ts">
   // Bibliothèque / Favoris / À installer / Mises à jour / collection / filtre store : tri, filtres, grille (virtualisée au-delà de 150 jeux).
   import Chip from '../components/Chip.svelte';
+  import { deleteCollection } from '../menus';
   import Dropdown from '../components/Dropdown.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import GameCard from '../components/GameCard.svelte';
@@ -111,20 +112,17 @@
     renaming = false;
   }
   function deleteColl() {
-    if (!coll) return;
-    const c = $state.snapshot(coll);
-    library.deleteCollection(c.id);
-    ui.libraryAll();
-    ui.toast(`Collection « ${c.name} » supprimée`, {
-      action: {
-        label: 'Annuler',
-        run: () => {
-          library.state.collections = [...library.state.collections, c];
-          library.save();
-        }
-      }
-    });
+    if (coll) deleteCollection(coll.id);
   }
+
+  // « Renommer » du clic droit sur une collection (barre latérale).
+  $effect(() => {
+    if (coll && ui.renameCollection === coll.id) {
+      ui.renameCollection = null;
+      startRename();
+    }
+  });
+
   const totalHours = $derived(hours(list.reduce((a, g) => a + library.totals(g.id).playMs, 0)));
 
   function setSort(s: SortKey) {

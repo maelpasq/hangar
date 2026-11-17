@@ -1,6 +1,7 @@
 <script lang="ts">
   // Jeux web : catalogue fixe (web-games.json), chaque jeu s'ouvre dans sa propre fenêtre Hangar.
   import { api } from '../api';
+  import { contextMenu } from '../menus';
   import Chip from '../components/Chip.svelte';
   import Icon, { type IconName } from '../components/Icon.svelte';
   import { library } from '../stores/library.svelte';
@@ -65,7 +66,18 @@
   <div class="grid">
     {#each list as g, i (g.id)}
       {@const src = cover(g.id)}
-      <button class="card rise" style:animation-delay="{Math.min(i, 24) * 35}ms" onclick={() => play(g.id)}>
+      <button
+        class="card rise"
+        style:animation-delay="{Math.min(i, 24) * 35}ms"
+        onclick={() => play(g.id)}
+        {@attach contextMenu(() => ({
+          label: g.name,
+          items: () => [
+            { label: 'Jouer', icon: 'play', run: () => play(g.id) },
+            { label: `Voir les jeux : ${g.genre}`, icon: icon(g.genre), run: () => (genre = g.genre) }
+          ]
+        }))}
+      >
         <span class="art" style:background={src ? null : generatedBackground(g.id)}>
           {#if src}
             <img {src} alt="" loading="lazy" decoding="async" />
