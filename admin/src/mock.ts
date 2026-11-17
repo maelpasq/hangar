@@ -1,5 +1,6 @@
 // Données de démo de `npm run admin:dev` : jamais dans la version compilée (import réservé au mode dev).
-import type { Badge, LogRow, UserCard, UserRow } from './api';
+import { ApiError, type Badge, type BugCard, type BugChange, type BugStatus, type LogRow, type UserCard, type UserRow } from './api';
+import { OPEN_IDS } from './bug-status';
 
 const DAY = 86_400_000;
 const now = Date.now();
@@ -44,6 +45,73 @@ function card(u: UserRow): UserCard {
   };
 }
 
+const TITLES = [
+  'Le jeu ne se lance pas depuis Epic',
+  'Jaquette floue sur les jeux GOG',
+  'La fenêtre clignote au démarrage',
+  'Temps de jeu compté deux fois',
+  'Crash en ouvrant les paramètres',
+  'Le scan ne trouve pas Battle.net',
+  'Texte coupé dans la fiche du jeu'
+];
+const STATUS_CYCLE: BugStatus[] = ['nouveau', 'nouveau', 'confirme', 'en_cours', 'corrige', 'rejete', 'doublon'];
+const bugs: BugCard[] = TITLES.map((title, i) => ({
+  id: 41 - i,
+  title,
+  description: i === 0 ? 'Quand je clique sur Jouer, rien ne se passe.\nLe launcher Epic s\'ouvre puis se ferme.' : '',
+  version: i < 3 ? '1.2.29' : '1.2.28',
+  os: i === 5 ? 'linux' : 'windows',
+  status: STATUS_CYCLE[i],
+  fixedIn: STATUS_CYCLE[i] === 'corrige' ? '1.2.29' : null,
+  duplicateOf: STATUS_CYCLE[i] === 'doublon' ? 41 : null,
+  note: null,
+  capture: i % 2 === 0,
+  discord: true,
+  createdAt: now - (i * 2 + 1) * 3_600_000 * 7,
+  updatedAt: now,
+  closedAt: STATUS_CYCLE[i] === 'corrige' || STATUS_CYCLE[i] === 'rejete' || STATUS_CYCLE[i] === 'doublon' ? now : null,
+  log: []
+}));
+
+function mockBugs(seg: string[], url: URL, init?: { method: string; body: unknown }): unknown {
+  if (!seg[1]) {
+    const statut = url.searchParams.get('statut') ?? 'ouverts';
+    const q = (url.searchParams.get('q') ?? '').toLowerCase().replace(/^#/, '');
+    const counts: Record<string, number> = {};
+    for (const b of bugs) counts[b.status] = (counts[b.status] ?? 0) + 1;
+    const list = bugs.filter(
+      (b) =>
+        (statut === 'tous' || (statut === 'ouverts' ? OPEN_IDS.includes(b.status) : b.status === statut)) &&
+        (!q || String(b.id) === q || b.title.toLowerCase().includes(q))
+    );
+    return { bugs: list, counts, more: false };
+  }
+  const b = bugs.find((x) => x.id === Number(seg[1]));
+  if (!b) throw new ApiError(404);
+  if (init) {
+    const c = init.body as BugChange;
+    const de = b.status;
+    if (c.status) b.status = c.status;
+    b.fixedIn = b.status === 'corrige' ? (c.fixedIn as string) || null : null;
+    b.duplicateOf = b.status === 'doublon' && c.duplicateOf ? Number(String(c.duplicateOf).replace('#', '')) : null;
+    b.note = c.note ?? null;
+    b.closedAt = OPEN_IDS.includes(b.status) ? null : (b.closedAt ?? Date.now());
+    const entry: LogRow = {
+      id: crypto.randomUUID(),
+      at: Date.now(),
+      actor: 'admin@exemple.fr',
+      action: 'bug.statut',
+      targetId: `bug:${b.id}`,
+      targetName: `#${b.id} ${b.title}`,
+      detail: { bug: b.id, de, vers: b.status, ...(b.fixedIn ? { fixedIn: b.fixedIn } : {}) }
+    };
+    b.log.unshift(entry);
+    log.unshift(entry);
+    return b;
+  }
+  return b;
+}
+
 export async function mock(path: string, init?: { method: string; body: unknown }): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 150));
   const url = new URL(path, 'http://demo');
@@ -58,11 +126,13 @@ export async function mock(path: string, init?: { method: string; body: unknown 
       online: 46,
       reports: 9,
       reportsWeek: 2,
+      bugsOpen: bugs.filter((b) => OPEN_IDS.includes(b.status)).length,
       signups: Array.from({ length: 30 }, (_, k) => ({ day: now - (29 - k) * DAY, n: Math.round(3 + 4 * Math.sin(k / 3) + (k % 5)) })),
       badges: { certifie: 6, equipe: 2, testeur: 14, chasseur: 5 }
     };
   }
   if (seg[0] === 'log') return { log, more: false };
+  if (seg[0] === 'bugs') return mockBugs(seg, url, init);
   if (seg[0] === 'users' && !seg[1]) {
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     return { users: users.filter((u) => !q || u.name.toLowerCase().includes(q) || u.email.includes(q) || u.id === q) };

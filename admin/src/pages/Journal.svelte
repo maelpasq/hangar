@@ -46,7 +46,7 @@
             {actionLabel(l)}
             {#if l.targetId}
               ·
-              <a href={href.compte(l.targetId)}>{l.targetName ?? 'compte supprimé'}</a>
+              <a href={href.target(l.targetId)}>{l.targetName ?? (l.targetId.startsWith('bug:') ? 'bug supprimé' : 'compte supprimé')}</a>
             {/if}
           </span>
           <span class="actor muted">{l.actor}</span>

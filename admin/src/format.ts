@@ -1,6 +1,7 @@
 // Mise en forme : dates, durées, libellés du journal.
 import { givenLabel } from '../../src/lib/util/badges';
 import type { Badge, LogRow } from './api';
+import { statusOf } from './bug-status';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const dateTimeFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -32,6 +33,14 @@ export function actionLabel(l: LogRow): string {
       return `Badge donné : ${badge}`;
     case 'badge.retirer':
       return `Badge retiré : ${badge}`;
+    case 'bug.statut': {
+      const d = l.detail ?? {};
+      const to = statusOf(String(d.vers)).label;
+      const more = d.fixedIn ? ` dans ${d.fixedIn}` : d.duplicateOf ? ` du #${d.duplicateOf}` : '';
+      return d.de === d.vers ? `Statut précisé : ${to}${more}` : `Statut : ${statusOf(String(d.de)).label} → ${to}${more}`;
+    }
+    case 'bug.note':
+      return 'Note interne modifiée';
     default:
       return l.action;
   }

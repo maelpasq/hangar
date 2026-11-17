@@ -6,9 +6,11 @@ import { and, count, desc, eq, gt, inArray, lt, or, sql, sum } from 'drizzle-orm
 import { Hono } from 'hono';
 import type { Db, Env } from '../env';
 import { isUserId } from '../profile';
-import { adminLog, badges, covers, devices, entries, friends, gameSessions, reports, social, user } from '../schema';
+import { adminLog, badges, bugs, covers, devices, entries, friends, gameSessions, reports, social, user } from '../schema';
 import { BADGES, type Badge, type Hub, STALE, badgesOf, normCode, setBadge } from '../social';
 import { type Keys, accessKeys, adminFromAccess } from './access';
+import { bugRoutes, openBugs } from './bugs';
+import { logAction, logView } from './log';
 
 type Vars = { Variables: { admin: string } };
 
@@ -24,18 +26,6 @@ const PAGE = 50;
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 /** `%` et `_` pris à la lettre dans un `like`. */
 const likeOf = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-
-/** Inscrit une action au journal. */
-export async function logAction(db: Db, actor: string, action: string, targetId: string | null, detail?: unknown) {
-  await db.insert(adminLog).values({
-    id: crypto.randomUUID(),
-    at: Date.now(),
-    actor,
-    action,
-    targetId,
-    detail: detail === undefined ? null : JSON.stringify(detail)
-  });
-}
 
 export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
   const app = new Hono<Vars>();
@@ -70,7 +60,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
     const now = Date.now();
     const week = now - 7 * DAY;
     const today = Math.floor(now / DAY);
-    const [[users], [fresh], [active], [friendsOn], [online], [reported], [reportedWeek], perDay, perBadge] = await Promise.all([
+    const [[users], [fresh], [active], [friendsOn], [online], [reported], [reportedWeek], perDay, perBadge, bugsOpen] = await Promise.all([
       db.select({ n: count() }).from(user),
       db.select({ n: count() }).from(user).where(gt(user.createdAt, new Date(week))),
       db.select({ n: sql<number>`count(distinct ${devices.userId})` }).from(devices).where(gt(devices.lastSeen, week)),
@@ -83,7 +73,8 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
         .from(user)
         .where(gt(user.createdAt, new Date((today - 29) * DAY)))
         .groupBy(sql`day`),
-      db.select({ badge: badges.badge, n: count() }).from(badges).groupBy(badges.badge)
+      db.select({ badge: badges.badge, n: count() }).from(badges).groupBy(badges.badge),
+      openBugs(db)
     ]);
     const byDay = new Map(perDay.map((r) => [Number(r.day), r.n]));
     return c.json({
@@ -94,6 +85,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
       online: online.n,
       reports: reported.n,
       reportsWeek: reportedWeek.n,
+      bugsOpen,
       signups: Array.from({ length: 30 }, (_, i) => {
         const day = today - 29 + i;
         return { day: day * DAY, n: byDay.get(day) ?? 0 };
@@ -240,11 +232,26 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
       .where(Number.isSafeInteger(before) && before > 0 ? lt(adminLog.at, before) : undefined)
       .orderBy(desc(adminLog.at))
       .limit(PAGE);
+    // Bugs visés : leur titre en guise de nom.
+    const bugIds = rows.flatMap((r) => (r.log.targetId?.startsWith('bug:') ? [Number(r.log.targetId.slice(4))] : []));
+    const titles = new Map(
+      bugIds.length
+        ? (await db.select({ id: bugs.id, title: bugs.title }).from(bugs).where(inArray(bugs.id, bugIds))).map((b) => [
+            `bug:${b.id}`,
+            `#${b.id} ${b.title}`
+          ])
+        : []
+    );
     return c.json({
-      log: rows.map((r) => ({ ...logView(r.log), targetName: r.name?.trim() || null })),
+      log: rows.map((r) => ({
+        ...logView(r.log),
+        targetName: r.name?.trim() || titles.get(r.log.targetId ?? '') || null
+      })),
       more: rows.length === PAGE
     });
   });
+
+  api.route('/bugs', bugRoutes(db, env));
 
   app.route('/api', api);
 
@@ -263,12 +270,4 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
   });
 
   return app;
-}
-
-function logView(r: typeof adminLog.$inferSelect) {
-  let detail: unknown = null;
-  try {
-    detail = r.detail ? JSON.parse(r.detail) : null;
-  } catch {}
-  return { id: r.id, at: r.at, actor: r.actor, action: r.action, targetId: r.targetId, detail };
 }

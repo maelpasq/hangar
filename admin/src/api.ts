@@ -17,8 +17,45 @@ export interface Stats {
   online: number;
   reports: number;
   reportsWeek: number;
+  bugsOpen: number;
   signups: { day: number; n: number }[];
   badges: Partial<Record<Badge, number>>;
+}
+
+export type BugStatus = 'nouveau' | 'confirme' | 'en_cours' | 'corrige' | 'rejete' | 'doublon';
+
+export interface BugRow {
+  id: number;
+  title: string;
+  version: string;
+  os: string;
+  status: BugStatus;
+  fixedIn: string | null;
+  duplicateOf: number | null;
+  capture: boolean;
+  discord: boolean;
+  createdAt: number;
+  updatedAt: number;
+  closedAt: number | null;
+}
+
+export interface BugCard extends BugRow {
+  description: string;
+  note: string | null;
+  log: LogRow[];
+}
+
+export interface BugList {
+  bugs: BugRow[];
+  counts: Partial<Record<BugStatus, number>>;
+  more: boolean;
+}
+
+export interface BugChange {
+  status?: BugStatus;
+  fixedIn?: string | null;
+  duplicateOf?: string | number | null;
+  note?: string | null;
 }
 
 export interface UserRow {
@@ -57,7 +94,11 @@ export interface UserCard {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number) {
+  /** `code` : le champ `error` de la réponse (`version`, `doublon`...), si elle en a un. */
+  constructor(
+    public status: number,
+    public code = ''
+  ) {
     super(`Erreur ${status}`);
   }
 }
@@ -72,7 +113,10 @@ async function call<T>(path: string, init?: { method: string; body: unknown }): 
     body: init ? JSON.stringify(init.body) : undefined,
     credentials: 'same-origin'
   });
-  if (!res.ok) throw new ApiError(res.status);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    throw new ApiError(res.status, typeof body?.error === 'string' ? body.error : '');
+  }
   return res.json() as Promise<T>;
 }
 
@@ -84,7 +128,12 @@ export const api = {
   setBadge: (id: string, badge: Badge, on: boolean) =>
     call<{ badges: Badge[] }>(`/users/${encodeURIComponent(id)}/badges`, { method: 'PUT', body: { badge, on } }),
   log: (before?: number) => call<{ log: LogRow[]; more: boolean }>(`/log${before ? `?before=${before}` : ''}`),
-  avatarUrl: (id: string) => (demo ? null : `/api/users/${encodeURIComponent(id)}/avatar`)
+  avatarUrl: (id: string) => (demo ? null : `/api/users/${encodeURIComponent(id)}/avatar`),
+  bugs: (statut: string, q: string, before?: number) =>
+    call<BugList>(`/bugs?statut=${encodeURIComponent(statut)}&q=${encodeURIComponent(q)}${before ? `&before=${before}` : ''}`),
+  bug: (id: number) => call<BugCard>(`/bugs/${id}`),
+  updateBug: (id: number, change: BugChange) => call<BugRow>(`/bugs/${id}`, { method: 'PUT', body: change }),
+  captureUrl: (id: number) => (demo ? null : `/api/bugs/${id}/capture`)
 };
 
 /** Environnement d'après l'adresse : `hangar-admin-test…` est celui de Hangar Test. */

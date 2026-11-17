@@ -12,7 +12,7 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `GET /login?port&challenge&state` | page de connexion, ouverte dans le navigateur par l'app |
 | `/auth/*` | Better Auth : code par e-mail, Discord, Google |
 | `GET /desktop/finish?port&challenge&state` | connectée : renvoie un code à usage unique à `http://127.0.0.1:<port>` |
-| `POST /bug` | signalement de bug de l'app, sans compte (`multipart` : `title`, `description`, `version`, `os`, `capture` facultative) : relayé au webhook `BUG_WEBHOOK`, 5 par heure et par adresse IP, 200 par jour |
+| `POST /bug` | signalement de bug de l'app, sans compte (`multipart` : `title`, `description`, `version`, `os`, `capture` facultative) : rangé dans la table `bugs` (capture dans R2, `bugs/<numéro>`, effacée 90 jours après la clôture) et relayé au webhook `BUG_WEBHOOK` (message modifié quand le statut change dans le dashboard), 5 par heure et par adresse IP, 200 par jour |
 | `POST /desktop/token` | `{ code, verifier, deviceId, deviceName }` : rend le jeton du poste |
 | `GET /me` | compte (pseudo, version de l'avatar, visibilité) et liste des postes |
 | `PUT /me` | `{ name }` : pseudo (2 à 32 caractères) |
@@ -103,7 +103,7 @@ puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` e
 | `RESEND_API_KEY` | envoi des codes par e-mail |
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Discord |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Google |
-| `BUG_WEBHOOK` | facultatif : webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`) ; sans lui, `POST /bug` répond 503 |
+| `BUG_WEBHOOK` | facultatif : webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`) ; sans lui, les bugs sont seulement gardés pour le dashboard |
 | `ADMIN_EMAIL` | facultatif : adresse (vérifiée) du compte administrateur, le seul à pouvoir donner ou retirer les badges et à entrer dans le dashboard ; sans lui, personne |
 | `ACCESS_TEAM`, `ACCESS_AUD` | facultatif : équipe Cloudflare Access (`https://<équipe>.cloudflareaccess.com`) et étiquette AUD de l'application qui protège le dashboard d'administration ; sans eux, le dashboard refuse tout (docs/ADMIN.md) |
 

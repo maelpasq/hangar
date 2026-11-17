@@ -274,7 +274,8 @@ export const badges = sqliteTable(
 
 /**
  * Journal des actions du dashboard d'administration : qui (`actor`, e-mail Cloudflare Access), quoi
- * (`action`, par exemple `badge.donner`), sur quel compte (`targetId`), précisions (`detail`, JSON).
+ * (`action`, par exemple `badge.donner`), sur quoi (`targetId` : un compte, ou `bug:<numéro>`),
+ * précisions (`detail`, JSON).
  */
 export const adminLog = sqliteTable(
   'admin_log',
@@ -287,4 +288,31 @@ export const adminLog = sqliteTable(
     detail: text('detail')
   },
   (t) => [index('admin_log_at').on(t.at), index('admin_log_target').on(t.targetId, t.at)]
+);
+
+/**
+ * Signalements de bug (bouton insecte de Hangar, sans compte : aucun lien avec un compte, ni adresse
+ * IP). `status` : voir `BUG_STATUSES` (src/bug.ts). `capture` : type de l'image rangée dans R2
+ * (`bugs/<id>`), effacée 90 jours après la clôture. `discordId` : message du webhook, modifié quand
+ * le statut change.
+ */
+export const bugs = sqliteTable(
+  'bugs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    version: text('version').notNull(),
+    os: text('os').notNull(),
+    status: text('status').notNull().default('nouveau'),
+    note: text('note'),
+    fixedIn: text('fixed_in'),
+    duplicateOf: integer('duplicate_of'),
+    capture: text('capture'),
+    discordId: text('discord_id'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    closedAt: integer('closed_at')
+  },
+  (t) => [index('bugs_status').on(t.status, t.createdAt), index('bugs_closed').on(t.closedAt)]
 );

@@ -4,6 +4,7 @@
   import { GIVEN_BADGES, givenView } from '../../../src/lib/util/badges';
   import { api, type Stats } from '../api';
   import { date, num } from '../format';
+  import { href } from '../router.svelte';
 
   let stats = $state<Stats | null>(null);
   let failed = $state(false);
@@ -14,9 +15,10 @@
     .then((s) => (stats = s))
     .catch(() => (failed = true));
 
-  const tiles = $derived(
+  const tiles = $derived<{ label: string; value: number; note: string; to?: string }[]>(
     stats
       ? [
+          { label: 'Bugs ouverts', value: stats.bugsOpen, note: 'nouveaux, confirmés ou en cours', to: href.bugs() },
           { label: 'Comptes', value: stats.users, note: `+${num(stats.newWeek)} cette semaine` },
           { label: 'Actifs sur 7 jours', value: stats.activeWeek, note: 'au moins un poste connecté' },
           { label: 'Amis activés', value: stats.friendsOn, note: `${num(stats.online)} en ligne maintenant` },
@@ -41,11 +43,11 @@
 {:else}
   <section class="tiles" aria-label="Chiffres clés">
     {#each tiles as t (t.label)}
-      <div class="card tile">
+      <svelte:element this={t.to ? 'a' : 'div'} href={t.to} class="card tile" class:link={!!t.to}>
         <span class="label">{t.label}</span>
         <span class="value">{num(t.value)}</span>
         <span class="note">{t.note}</span>
-      </div>
+      </svelte:element>
     {/each}
   </section>
 
@@ -120,6 +122,16 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    text-decoration: none;
+  }
+
+  .tile.link {
+    transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+  }
+
+  .tile.link:hover {
+    border-color: var(--accent-ring);
+    background: var(--surface-2);
   }
 
   .label {

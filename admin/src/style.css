@@ -21,6 +21,7 @@ a {
 }
 
 button,
+textarea,
 input {
   font: inherit;
   color: inherit;

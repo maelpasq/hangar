@@ -3,6 +3,8 @@
   import Icon, { type IconName } from '../../src/lib/components/Icon.svelte';
   import { ApiError, api, envName, type Me } from './api';
   import Accueil from './pages/Accueil.svelte';
+  import Bug from './pages/Bug.svelte';
+  import Bugs from './pages/Bugs.svelte';
   import Comptes from './pages/Comptes.svelte';
   import Fiche from './pages/Fiche.svelte';
   import Journal from './pages/Journal.svelte';
@@ -25,10 +27,13 @@
 
   const nav: { id: string; label: string; icon: IconName; to: string }[] = [
     { id: 'accueil', label: 'Accueil', icon: 'home', to: href.accueil },
+    { id: 'bugs', label: 'Bugs', icon: 'bug', to: href.bugs() },
     { id: 'comptes', label: 'Comptes', icon: 'users', to: href.comptes() },
     { id: 'journal', label: 'Journal', icon: 'layers', to: href.journal }
   ];
-  const current = $derived(router.route.page === 'compte' ? 'comptes' : router.route.page);
+  const current = $derived(
+    router.route.page === 'compte' ? 'comptes' : router.route.page === 'bug' ? 'bugs' : router.route.page
+  );
 
   $effect(() => {
     document.title = `${nav.find((n) => n.id === current)?.label ?? 'Admin'} - Hangar Admin`;
@@ -69,6 +74,12 @@
       {#if me}
         {#if router.route.page === 'accueil'}
           <Accueil />
+        {:else if router.route.page === 'bugs'}
+          <Bugs statut={router.route.statut} q={router.route.q} />
+        {:else if router.route.page === 'bug'}
+          {#key router.route.id}
+            <Bug id={router.route.id} />
+          {/key}
         {:else if router.route.page === 'comptes'}
           <Comptes q={router.route.q} />
         {:else if router.route.page === 'compte'}

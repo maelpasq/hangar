@@ -8,6 +8,7 @@ import { migrate } from 'drizzle-orm/libsql/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { adminFromAccess } from '../src/admin/access';
 import { createApp } from '../src/app';
+import { cleanBugCaptures } from '../src/bug';
 import { b64url } from '../src/crypto';
 import type { Env } from '../src/env';
 import * as schema from '../src/schema';
@@ -31,8 +32,19 @@ const env: Env = {
       assets.push(new URL(req.url).pathname);
       return new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } });
     }
+  },
+  AVATARS: {
+    get: async (k) => {
+      const v = bucket.get(k);
+      return v ? { arrayBuffer: async () => v.slice().buffer } : null;
+    },
+    put: async (k, v) => void bucket.set(k, v.slice()),
+    delete: async (k) => {
+      for (const key of Array.isArray(k) ? k : [k]) bucket.delete(key);
+    }
   }
 };
+const bucket = new Map<string, Uint8Array>();
 
 const dir = mkdtempSync(join(tmpdir(), 'hangar-admin-'));
 const client = createClient({ url: `file:${join(dir, 'test.db')}` });
@@ -181,5 +193,100 @@ describe('comptes', () => {
     expect(stats).toMatchObject({ users: 2, newWeek: 1, activeWeek: 1, friendsOn: 1, reports: 1, reportsWeek: 1 });
     expect(stats.signups).toHaveLength(30);
     expect(stats.signups.reduce((n: number, d: { n: number }) => n + d.n, 0)).toBe(1);
+  });
+});
+
+describe('bugs', () => {
+  const HOOK = 'https://discord.com/api/webhooks/123/jeton-de-test';
+  const now = Date.now();
+  const put = async (id: number, body: unknown) =>
+    call(`/api/bugs/${id}`, { token: await good(), method: 'PUT', body, origin: `https://${HOST}` });
+  type List = { bugs: { id: number; status: string }[]; counts: Record<string, number> };
+  const list = async (query = '') => (await (await call(`/api/bugs${query}`, { token: await good() })).json()) as List;
+
+  beforeAll(async () => {
+    const row = { description: 'Détails', version: '1.2.29', os: 'windows', createdAt: now, updatedAt: now };
+    await db.insert(schema.bugs).values([
+      { ...row, title: 'Plantage au lancement', capture: 'image/png', discordId: '555' },
+      { ...row, title: 'Jaquette floue', os: 'linux' },
+      { ...row, title: 'Plantage encore', status: 'rejete', closedAt: now }
+    ]);
+    bucket.set('bugs/1', new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
+  });
+
+  it('liste les bugs par statut, avec leur nombre, et cherche par numéro ou mot', async () => {
+    const open = await list();
+    expect(open.bugs.map((b) => b.id)).toEqual([2, 1]);
+    expect(open.counts).toEqual({ nouveau: 2, rejete: 1 });
+    expect((await list('?statut=tous')).bugs).toHaveLength(3);
+    expect((await list('?statut=rejete')).bugs.map((b) => b.id)).toEqual([3]);
+    expect((await list('?statut=tous&q=plantage')).bugs.map((b) => b.id)).toEqual([3, 1]);
+    expect((await list('?statut=tous&q=%232')).bugs.map((b) => b.id)).toEqual([2]);
+    expect((await call('/api/bugs?statut=bizarre', { token: await good() })).status).toBe(400);
+    const stats = (await (await call('/api/stats', { token: await good() })).json()) as { bugsOpen: number };
+    expect(stats.bugsOpen).toBe(2);
+  });
+
+  it('montre la fiche et la capture', async () => {
+    const res = await call('/api/bugs/1', { token: await good() });
+    expect(await res.json()).toMatchObject({ id: 1, title: 'Plantage au lancement', capture: true, discord: true, log: [] });
+    const shot = await call('/api/bugs/1/capture', { token: await good() });
+    expect(shot.headers.get('content-type')).toBe('image/png');
+    expect((await call('/api/bugs/2/capture', { token: await good() })).status).toBe(404);
+    expect((await call('/api/bugs/99', { token: await good() })).status).toBe(404);
+  });
+
+  it('suit un bug, le note au journal et repeint son message Discord', async () => {
+    env.BUG_WEBHOOK = HOOK;
+    const real = globalThis.fetch;
+    const sent: { url: string; method?: string; body: string }[] = [];
+    globalThis.fetch = (async (u: string, init: RequestInit) => {
+      sent.push({ url: String(u), method: init.method, body: String(init.body) });
+      return Response.json({});
+    }) as typeof fetch;
+    try {
+      expect((await put(1, { status: 'corrige', fixedIn: '1.0 <b>' })).status).toBe(400);
+      expect((await put(1, { status: 'doublon', duplicateOf: 1 })).status).toBe(400);
+      expect((await put(1, { status: 'fini' })).status).toBe(400);
+      expect(sent).toEqual([]);
+
+      const fixed = await put(1, { status: 'corrige', fixedIn: '1.2.30', note: 'Pilote audio' });
+      expect(await fixed.json()).toMatchObject({ status: 'corrige', fixedIn: '1.2.30', note: 'Pilote audio' });
+      const [row] = (await db.select().from(schema.bugs)).filter((b) => b.id === 1);
+      expect(row.closedAt).toBeGreaterThan(0);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({ url: `${HOOK}/messages/555`, method: 'PATCH' });
+      const embed = JSON.parse(sent[0].body).embeds[0];
+      expect(embed).toMatchObject({ title: '🐛 #1 Plantage au lancement', url: `https://${HOST}/#/bugs/1`, color: 0x34d399 });
+      expect(embed.fields[2]).toEqual({ name: 'Statut', value: 'Corrigé dans Hangar 1.2.30', inline: true });
+      expect(embed.image).toEqual({ url: 'attachment://capture.png' });
+
+      // Note seule : journal, mais Discord ne change pas.
+      await put(1, { note: 'Pilote audio Realtek' });
+      expect(sent).toHaveLength(1);
+
+      // Rouvert : plus de date de clôture ni de version de correction.
+      expect(await (await put(1, { status: 'en_cours' })).json()).toMatchObject({ status: 'en_cours', fixedIn: null, closedAt: null });
+      // Doublon d'un autre : précisé dans Discord ; un bug sans message Discord n'en envoie pas.
+      expect(await (await put(2, { status: 'doublon', duplicateOf: '#1' })).json()).toMatchObject({ duplicateOf: 1 });
+      expect(sent).toHaveLength(2);
+    } finally {
+      globalThis.fetch = real;
+      env.BUG_WEBHOOK = undefined;
+    }
+    const fiche = (await (await call('/api/bugs/1', { token: await good() })).json()) as { log: { action: string; detail: unknown }[] };
+    // Ordre non comparé : plusieurs lignes peuvent tomber dans la même milliseconde.
+    expect(fiche.log.map((l) => l.action).sort()).toEqual(['bug.note', 'bug.note', 'bug.statut', 'bug.statut']);
+    expect(fiche.log.map((l) => l.detail)).toContainEqual({ bug: 1, de: 'nouveau', vers: 'corrige', fixedIn: '1.2.30' });
+    const log = (await (await call('/api/log', { token: await good() })).json()) as { log: { targetName: string }[] };
+    expect(log.log[0].targetName).toBe('#2 Jaquette floue');
+  });
+
+  it('efface la capture 90 jours après la clôture', async () => {
+    await put(1, { status: 'rejete' });
+    expect(await cleanBugCaptures(db, env.AVATARS, Date.now() + 89 * 86_400_000)).toBe(0);
+    expect(await cleanBugCaptures(db, env.AVATARS, Date.now() + 91 * 86_400_000)).toBe(1);
+    expect(bucket.has('bugs/1')).toBe(false);
+    expect(await (await call('/api/bugs/1', { token: await good() })).json()).toMatchObject({ capture: false });
   });
 });

@@ -30,14 +30,15 @@ Le dashboard ne répond que sur `ADMIN_HOST` ; l'API de l'app n'y répond pas, e
    l'« Application Audience (AUD) Tag » et le nom d'équipe (Settings > Custom Pages : `<équipe>.cloudflareaccess.com`).
 2. Secrets du Worker : `npx wrangler secret put ACCESS_TEAM --env <prod|test>` (`https://<équipe>.cloudflareaccess.com`)
    et `ACCESS_AUD` (l'étiquette AUD). `ADMIN_EMAIL` existe déjà.
-3. Migration `server/drizzle/0004_admin_log.sql` à appliquer sur la base (`npm run db:migrate`, voir server/README.md).
+3. Migrations `server/drizzle/0004_admin_log.sql` et `0005_bugs.sql` à appliquer sur la base (`npm run db:migrate`, voir server/README.md).
 4. `npm run deploy:test` ou `npm run deploy:prod` dans `server/` (compile `admin/` d'abord).
 
 ## Écrans
 
 | Écran | Contenu |
 |---|---|
-| Accueil | comptes (+ nouveaux sur 7 jours), actifs sur 7 jours, amis activés (en ligne), signalements, inscriptions par jour sur 30 jours, badges donnés |
+| Accueil | bugs ouverts, comptes (+ nouveaux sur 7 jours), actifs sur 7 jours, amis activés (en ligne), signalements, inscriptions par jour sur 30 jours, badges donnés |
+| Bugs | signalements du bouton insecte : filtre par statut (ouverts, nouveau, confirmé, en cours, corrigé, rejeté, doublon, tous) avec leur nombre, recherche par numéro ou mots ; fiche avec description, capture, suivi (statut, version de correction, doublon, note interne) et historique |
 | Comptes | recherche par pseudo, e-mail, code ami ou identifiant (50 au plus, récents d'abord) |
 | Fiche | identité, badges (donner / retirer), amis, bibliothèque synchronisée, postes, signalements reçus, journal du compte |
 | Journal | toutes les actions du dashboard (qui, quoi, quel compte, quand) |
@@ -53,10 +54,12 @@ Les messages privés restent chiffrés : seule la copie gardée au moment d'un s
 | `GET /api/users?q=` | recherche |
 | `GET /api/users/:id` (+ `/avatar`) | fiche d'un compte |
 | `PUT /api/users/:id/badges` | `{ badge, on }`, noté au journal (`badge.donner`, `badge.retirer`) |
+| `GET /api/bugs?statut=&q=&before=` | bugs (50 par page) et leur nombre par statut |
+| `GET /api/bugs/:id` (+ `/capture`) | fiche d'un bug et son historique |
+| `PUT /api/bugs/:id` | `{ status, fixedIn, duplicateOf, note }`, noté au journal (`bug.statut`, `bug.note`) ; un changement de statut repeint le message Discord |
 | `GET /api/log?before=` | journal, 50 lignes par page |
 
 ## Suite prévue
 
-2. Signalements de bug gardés en base (statuts, capture dans R2, embed Discord mis à jour).
 3. Statut des signalements de comptes, bannissement social ou total (release de l'app nécessaire).
 4. Badges créés depuis le dashboard (`badge_defs`, icônes embarquées dans l'app, compatibilité des anciennes versions).

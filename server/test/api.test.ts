@@ -708,8 +708,26 @@ describe('signalement de bug', () => {
   };
   const ok = { title: 'Ça plante <@everyone>', description: 'Au lancement @here', version: '1.2.28', os: 'windows' };
 
+  it('garde le bug même sans webhook ou si Discord refuse', async () => {
+    expect((await send(ok, undefined, '198.51.100.9')).status).toBe(200);
+    env.BUG_WEBHOOK = HOOK;
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(null, { status: 500 })) as typeof fetch;
+    try {
+      expect((await send(ok, undefined, '198.51.100.9')).status).toBe(200);
+    } finally {
+      globalThis.fetch = real;
+      env.BUG_WEBHOOK = undefined;
+    }
+    const rows = await db.select().from(schema.bugs);
+    expect(rows.map((b) => [b.id, b.status, b.discordId])).toEqual([
+      [1, 'nouveau', null],
+      [2, 'nouveau', null]
+    ]);
+    expect(JSON.stringify(rows)).not.toContain('198.51.100');
+  });
+
   it('relaie vers le webhook du serveur, sans mention ni adresse IP, avec une limite par adresse', async () => {
-    expect((await send(ok)).status).toBe(503);
     env.BUG_WEBHOOK = HOOK;
     const real = globalThis.fetch;
     const sent: { url: string; body: FormData }[] = [];
@@ -717,19 +735,24 @@ describe('signalement de bug', () => {
       // Cloudflare Workers n'accepte que `follow` ou `manual` (`error` lève une exception).
       expect(init.redirect).toBe('manual');
       sent.push({ url: String(u), body: init.body as FormData });
-      return new Response(null, { status: 204 });
+      return Response.json({ id: '987654321' });
     }) as typeof fetch;
     try {
       expect((await send(ok, PNG)).status).toBe(200);
-      expect(sent[0].url).toBe(HOOK);
+      expect(sent[0].url).toBe(`${HOOK}?wait=true`);
       const payload = JSON.parse(String(sent[0].body.get('payload_json')));
       expect(payload.allowed_mentions).toEqual({ parse: [] });
-      expect(payload.embeds[0]).toMatchObject({ title: '🐛 Ça plante <@everyone>', image: { url: 'attachment://capture.png' } });
+      expect(payload.embeds[0]).toMatchObject({ title: '🐛 #3 Ça plante <@everyone>', image: { url: 'attachment://capture.png' } });
       expect(payload.embeds[0].fields).toEqual([
         { name: 'Version', value: 'Hangar 1.2.28', inline: true },
-        { name: 'Système', value: 'Windows', inline: true }
+        { name: 'Système', value: 'Windows', inline: true },
+        { name: 'Statut', value: 'Nouveau', inline: true }
       ]);
       expect(JSON.stringify(payload)).not.toContain('198.51.100.7');
+      // Gardé en base avec sa capture (R2) et le message Discord à modifier plus tard.
+      const [bug] = await db.select().from(schema.bugs).where(eq(schema.bugs.id, 3));
+      expect(bug).toMatchObject({ title: 'Ça plante <@everyone>', os: 'windows', capture: 'image/png', discordId: '987654321' });
+      expect(bucket.has('bugs/3')).toBe(true);
       // Requêtes mal formées : refusées sans rien relayer.
       expect((await send({ ...ok, title: ' ' })).status).toBe(400);
       expect((await send({ ...ok, os: 'amiga' })).status).toBe(400);
