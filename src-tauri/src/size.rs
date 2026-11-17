@@ -46,15 +46,15 @@ impl Sizes {
         f(map)
     }
 
-    /// Taille en octets (cache 24 h). `None` si le dossier n'existe pas.
-    pub fn get(&self, path: &str) -> Option<u64> {
+    /// Taille en octets (cache 24 h, ignoré si `fresh`). `None` si le dossier n'existe pas.
+    pub fn get(&self, path: &str, fresh: bool) -> Option<u64> {
         let p = Path::new(path);
         if !p.is_dir() {
             return None;
         }
         let key = path.to_lowercase();
         let now = crate::tracker::now_ms();
-        if let Some((bytes, at)) = self.with_cache(|m| m.get(&key).copied()) {
+        if let Some((bytes, at)) = self.with_cache(|m| m.get(&key).copied()).filter(|_| !fresh) {
             if now.saturating_sub(at) < TTL_MS {
                 return Some(bytes);
             }
@@ -83,10 +83,12 @@ mod tests {
         fs::write(d.join("a.bin"), vec![0u8; 1000]).unwrap();
         fs::write(d.join("sous").join("b.bin"), vec![0u8; 500]).unwrap();
         let s = Sizes::new(t.path());
-        assert_eq!(s.get(&d.to_string_lossy()), Some(1500));
+        assert_eq!(s.get(&d.to_string_lossy(), false), Some(1500));
         fs::write(d.join("c.bin"), vec![0u8; 10]).unwrap();
         // Toujours la valeur en cache pendant 24 h.
-        assert_eq!(Sizes::new(t.path()).get(&d.to_string_lossy()), Some(1500));
-        assert_eq!(s.get(&t.path().join("absent").to_string_lossy()), None);
+        assert_eq!(Sizes::new(t.path()).get(&d.to_string_lossy(), false), Some(1500));
+        // Sauf au bouton Actualiser : recalculée.
+        assert_eq!(Sizes::new(t.path()).get(&d.to_string_lossy(), true), Some(1510));
+        assert_eq!(s.get(&t.path().join("absent").to_string_lossy(), false), None);
     }
 }

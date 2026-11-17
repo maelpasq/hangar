@@ -34,6 +34,8 @@ pub const CONNECTABLE: &[&str] = &["steam", "gog", "epic"];
 const ALL_STORES: &[&str] = &["steam", "epic", "gog", "ubisoft", "ea", "battlenet", "riot", "rockstar", "xbox"];
 /// Resynchronisation automatique au plus toutes les 6 h (au moment d'un scan).
 const SYNC_EVERY_MS: u64 = 6 * 3_600_000;
+/// Écart minimal entre deux synchros demandées par le bouton Actualiser (évite de marteler les services).
+const FORCED_EVERY_MS: u64 = 60_000;
 /// Format des listes gardées : une liste plus ancienne est resynchronisée au prochain scan
 /// (2 : infos Xbox, succès, studio, sortie, jeux vus par la Game Bar).
 const FORMAT: u32 = 2;
@@ -410,13 +412,15 @@ impl Accounts {
 
     /// Succès Steam d'un jeu, seulement avec le compte Steam connecté. `None` : pas de compte,
     /// pas de succès ou service injoignable (rien à afficher).
-    pub fn achievements(&self, app_id: u32) -> Option<Achievements> {
+    /// `fresh` : ignore le cache (bouton Actualiser), sauf réponse de moins d'une minute.
+    pub fn achievements(&self, app_id: u32, fresh: bool) -> Option<Achievements> {
         if !lock(&self.data).contains_key("steam") {
             return None;
         }
         let now = now_ms();
         if let Some((at, v)) = lock(&self.achievements).get(&app_id) {
-            if now.saturating_sub(*at) < ACHIEVEMENTS_EVERY_MS {
+            let every = if fresh { FORCED_EVERY_MS } else { ACHIEVEMENTS_EVERY_MS };
+            if now.saturating_sub(*at) < every {
                 return *v;
             }
         }
@@ -460,10 +464,12 @@ impl Accounts {
         lock(&self.gains).insert("xbox".into(), gain);
     }
 
-    /// Vrai si des jeux GOG installés n'ont pas été vérifiés depuis 6 h.
-    pub fn gog_stale(&self, games: &[Game]) -> bool {
+    /// Vrai si des jeux GOG installés n'ont pas été vérifiés depuis 6 h (1 min si `forced` :
+    /// bouton Actualiser).
+    pub fn gog_stale(&self, games: &[Game], forced: bool) -> bool {
+        let every = if forced { FORCED_EVERY_MS } else { SYNC_EVERY_MS };
         games.iter().any(|g| g.store == "gog" && g.version.is_some())
-            && now_ms().saturating_sub(lock(&self.gog).checked_at) > SYNC_EVERY_MS
+            && now_ms().saturating_sub(lock(&self.gog).checked_at) > every
     }
 
     /// Vérifie les versions GOG (une vérification à la fois). Vrai si elle a eu lieu.
@@ -522,10 +528,12 @@ impl Accounts {
             .collect()
     }
 
-    /// Vrai si un compte connecté n'a pas été synchronisé depuis 6 h.
-    pub fn stale(&self) -> bool {
+    /// Vrai si un compte connecté n'a pas été synchronisé depuis 6 h (1 min si `forced` :
+    /// bouton Actualiser).
+    pub fn stale(&self, forced: bool) -> bool {
+        let every = if forced { FORCED_EVERY_MS } else { SYNC_EVERY_MS };
         let now = now_ms();
-        lock(&self.data).values().any(|s| now.saturating_sub(s.synced_at) > SYNC_EVERY_MS)
+        lock(&self.data).values().any(|s| now.saturating_sub(s.synced_at) > every)
     }
 
     fn fetch(&self, store: &str, secret: &str) -> Result<Fetched, String> {

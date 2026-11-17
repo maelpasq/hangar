@@ -18,7 +18,8 @@ export interface WindowApi {
 
 export interface Api {
   isTauri: boolean;
-  scanGames(localFolders: string[]): Promise<Game[]>;
+  /** `force` (bouton Actualiser) : resynchronise aussi les comptes et les versions GOG. */
+  scanGames(localFolders: string[], force?: boolean): Promise<Game[]>;
   loadState(): Promise<unknown>;
   saveState(state: PersistedState): Promise<void>;
   loadLibrary(): Promise<Game[]>;
@@ -85,11 +86,12 @@ export interface Api {
   image(url: string): Promise<string | null>;
   /** Icône 256 px d'un exécutable (ou d'un logo Xbox), source affichable ou null. */
   exeIcon(path: string): Promise<string | null>;
-  folderSize(path: string): Promise<number | null>;
+  /** `fresh` : recalculée sans le cache de 24 h. */
+  folderSize(path: string, fresh?: boolean): Promise<number | null>;
   /** Genre en français (Steam), en cache côté backend. */
   gameInfo(gameId: string): Promise<{ genre: string | null }>;
   /** Succès Steam d'un jeu, seulement avec le compte Steam relié (null sinon). */
-  steamAchievements(gameId: string): Promise<Achievements | null>;
+  steamAchievements(gameId: string, fresh?: boolean): Promise<Achievements | null>;
   setAutostart(on: boolean): Promise<void>;
   /** Lancé avec le système : remet la fenêtre devant et répond vrai (une fois par lancement). */
   padAtLogin(): Promise<boolean>;
@@ -213,7 +215,7 @@ async function tauriApi(): Promise<Api> {
 
   return {
     isTauri: true,
-    scanGames: (localFolders) => invoke('scan_games', { localFolders }),
+    scanGames: (localFolders, force = false) => invoke('scan_games', { localFolders, force }),
     loadState: () => invoke('load_state'),
     saveState: (state) => invoke('save_state', { state }),
     loadLibrary: () => invoke('load_library'),
@@ -257,9 +259,9 @@ async function tauriApi(): Promise<Api> {
       const p = await invoke<string | null>('exe_icon', { path });
       return p ? convertFileSrc(p) : null;
     },
-    folderSize: (path) => invoke('folder_size', { path }),
+    folderSize: (path, fresh = false) => invoke('folder_size', { path, fresh }),
     gameInfo: (gameId) => invoke('game_info', { gameId }),
-    steamAchievements: (gameId) => invoke('steam_achievements', { gameId }),
+    steamAchievements: (gameId, fresh = false) => invoke('steam_achievements', { gameId, fresh }),
     setAutostart: (on) => invoke('set_autostart', { on }),
     padAtLogin: () => invoke('pad_at_login'),
     importCover: (gameId, path) => invoke('import_cover', { gameId, path }),

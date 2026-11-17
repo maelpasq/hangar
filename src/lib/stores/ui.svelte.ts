@@ -7,7 +7,13 @@ import type { IconName } from '../components/Icon.svelte';
 
 /** Ligne d'un menu contextuel, ou « sep » pour un séparateur. */
 export type MenuItem =
-  | { label: string; icon: IconName; run: () => void; danger?: boolean; disabled?: boolean }
+  | {
+      label: string;
+      icon: IconName;
+      run: () => void;
+      danger?: boolean;
+      disabled?: boolean;
+    }
   | 'sep';
 
 /**
@@ -41,14 +47,29 @@ export type Modal =
   /** Compte Hangar tout juste créé : bienvenue, pseudo, avatar et bannière. */
   | { kind: 'cloudWelcome' }
   /** Recadrer l'avatar ou la bannière ; `save` envoie l'image (vrai : la fenêtre se ferme). */
-  | { kind: 'crop'; file: File; shape: CropShape; save: (bytes: Uint8Array) => Promise<boolean> }
+  | {
+      kind: 'crop';
+      file: File;
+      shape: CropShape;
+      save: (bytes: Uint8Array) => Promise<boolean>;
+    }
   /** Amis : signaler un compte (ou un de ses messages), l'inviter sur un jeu, retirer ou bloquer. */
   | { kind: 'socialReport'; userId: string; name: string; messageId?: string }
   | { kind: 'socialInvite'; userId: string; name: string }
-  | { kind: 'socialConfirm'; action: 'remove' | 'block'; userId: string; name: string }
+  | {
+      kind: 'socialConfirm';
+      action: 'remove' | 'block';
+      userId: string;
+      name: string;
+    }
   | { kind: 'profileGames' }
   /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
-  | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
+  | {
+      kind: 'whatsNew';
+      version: string;
+      since: string | null;
+      manual?: boolean;
+    }
   | { kind: 'bug' }
   | { kind: 'updateFixes' }
   | { kind: 'mcSoon' }
@@ -63,6 +84,8 @@ export interface Toast {
   /** Miniature (jeu concerné). */
   gameId?: string;
   action?: { label: string; run: () => void };
+  /** Petites infobulles en ligne sous le toast (ce que le bouton Actualiser a rafraîchi). */
+  chips?: string[];
   leaving?: boolean;
 }
 
@@ -118,6 +141,9 @@ class Ui {
   toasts = $state<Toast[]>([]);
 
   windowFocused = $state(true);
+  /** Compteur du bouton Actualiser : les écrans qui chargent leurs propres données (page de
+   *  jeu, profil) le lisent pour les recharger. */
+  refreshes = $state(0);
   /** Page de jeu défilée : la barre du haut (transparente sur la bannière) prend un fond. */
   pageScrolled = $state(false);
   /** Image de la lumière d'ambiance. */
@@ -139,7 +165,8 @@ class Ui {
   }
 
   private go(p: Partial<Place> & { screen: Screen | SocialScreen }, push = true): void {
-    if (push && (this.screen === 'game' || this.screen === 'profile')) this.history = [...this.history.slice(-20), this.place()];
+    if (push && (this.screen === 'game' || this.screen === 'profile'))
+      this.history = [...this.history.slice(-20), this.place()];
     else if (push) this.history = [this.place()];
     this.screen = p.screen;
     this.favOnly = p.favOnly ?? false;
@@ -228,10 +255,22 @@ class Ui {
     this.go({ screen: 'profile', profileId: id });
   }
 
-  toast(text: string, opts: Omit<Toast, 'id' | 'text'> = {}): void {
+  /** `hold` : reste affiché jusqu'à `release` (des infobulles vont encore arriver). */
+  toast(text: string, opts: Omit<Toast, 'id' | 'text'> & { hold?: boolean } = {}): number {
+    const { hold, ...rest } = opts;
     const id = ++this.toastSeq;
-    this.toasts = [...this.toasts.slice(-2), { id, text, ...opts }];
-    const ms = opts.error || opts.action ? 5000 : 3200;
+    this.toasts = [...this.toasts.slice(-2), { id, text, ...rest }];
+    if (!hold) this.release(id, opts.error || opts.action ? 5000 : 3200);
+    return id;
+  }
+
+  /** Ajoute une infobulle à la rangée d'un toast encore affiché. */
+  chip(id: number, text: string): void {
+    this.toasts = this.toasts.map((t) => (t.id === id && !t.leaving ? { ...t, chips: [...(t.chips ?? []), text] } : t));
+  }
+
+  /** Ferme le toast dans `ms` millisecondes. */
+  release(id: number, ms = 3200): void {
     setTimeout(() => this.dismiss(id), ms);
   }
 

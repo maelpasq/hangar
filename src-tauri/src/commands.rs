@@ -38,8 +38,11 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 }
 
 /// Scan complet en parallèle. Xbox (PowerShell, lent) répond plus tard via `scan://partial`.
+/// `force` (bouton Actualiser) : resynchronise aussi les comptes et les versions GOG sans
+/// attendre les 6 h habituelles.
 #[tauri::command]
-pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String>) -> Result<Vec<Game>, String> {
+pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String>, force: Option<bool>) -> Result<Vec<Game>, String> {
+    let force = force.unwrap_or(false);
     // Seuls les dossiers que l'utilisateur a choisis lui-même.
     let local_folders: Vec<String> = local_folders.into_iter().filter(|f| ctx.granted.has(f)).collect();
     let mut games = blocking(move || scanner::scan_fast(&local_folders)).await?;
@@ -54,10 +57,10 @@ pub async fn scan_games(app: AppHandle, ctx: Ctxs<'_>, local_folders: Vec<String
     ctx.accounts.apply_updates(&mut games);
     simulate_updates(&app, &mut games);
     ctx.known.replace_scanned(&games);
-    if ctx.accounts.stale() {
+    if ctx.accounts.stale(force) {
         sync_in_background(&app, ctx.accounts.clone());
     }
-    if ctx.accounts.gog_stale(&games) {
+    if ctx.accounts.gog_stale(&games, force) {
         let (app, accounts, list) = (app.clone(), ctx.accounts.clone(), games.clone());
         std::thread::spawn(move || {
             // Même événement que la synchro des comptes : le frontend rescanne.
@@ -818,12 +821,14 @@ pub async fn game_info(ctx: Ctxs<'_>, game_id: String) -> Result<GameInfo, Strin
     blocking(move || info.get(&game)).await
 }
 
-/// Succès Steam d'un jeu (compte Steam connecté seulement, en cache 1 h). Jamais d'erreur.
+/// Succès Steam d'un jeu (compte Steam connecté seulement, en cache 1 h ; `fresh` : bouton
+/// Actualiser). Jamais d'erreur.
 #[tauri::command]
-pub async fn steam_achievements(ctx: Ctxs<'_>, game_id: String) -> Result<Option<accounts::Achievements>, String> {
+pub async fn steam_achievements(ctx: Ctxs<'_>, game_id: String, fresh: Option<bool>) -> Result<Option<accounts::Achievements>, String> {
+    let fresh = fresh.unwrap_or(false);
     let Some(app_id) = ctx.known.get(&game_id).and_then(|g| g.steam_app_id) else { return Ok(None) };
     let acc = ctx.accounts.clone();
-    blocking(move || acc.achievements(app_id)).await
+    blocking(move || acc.achievements(app_id, fresh)).await
 }
 
 #[tauri::command]
@@ -835,13 +840,15 @@ pub async fn exe_icon(ctx: Ctxs<'_>, path: String) -> Result<Option<String>, Str
     blocking(move || art.exe_icon(&path).map(|p| p.to_string_lossy().into_owned())).await
 }
 
+/// Taille d'un dossier de jeu (cache 24 h ; `fresh` : recalculée, bouton Actualiser).
 #[tauri::command]
-pub async fn folder_size(ctx: Ctxs<'_>, path: String) -> Result<Option<u64>, String> {
+pub async fn folder_size(ctx: Ctxs<'_>, path: String, fresh: Option<bool>) -> Result<Option<u64>, String> {
+    let fresh = fresh.unwrap_or(false);
     if known_path(&ctx, &path).is_err() {
         return Ok(None);
     }
     let sizes = ctx.sizes.clone();
-    blocking(move || sizes.get(&path)).await
+    blocking(move || sizes.get(&path, fresh)).await
 }
 
 #[tauri::command]

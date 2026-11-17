@@ -40,10 +40,12 @@
     return `${has(l.friends)}${has(l.incoming)}${has(l.outgoing)}${has(l.blocked)}${social.settings?.banner ?? ''}`;
   });
 
-  // Au changement de profil, puis quand le lien change (demande acceptée, ami retiré...).
+  // Au changement de profil, quand le lien change (demande acceptée, ami retiré...) et au bouton
+  // Actualiser.
   $effect(() => {
     void id;
     void link;
+    void ui.refreshes;
     if (cloud.status.connected) void load();
   });
 

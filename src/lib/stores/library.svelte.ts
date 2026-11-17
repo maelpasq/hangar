@@ -248,24 +248,31 @@ class Library {
    * pendant un scan, il en relance un seul après lui, que tous les demandeurs attendent :
    * ils lisent donc une bibliothèque à jour (fin d'installation, dossier ajouté).
    */
-  scan(): Promise<number> {
+  scan(force = false): Promise<number> {
     if (!this.scanJob) {
-      this.scanJob = this.runScan().finally(() => (this.scanJob = null));
+      this.scanJob = this.runScan(force).finally(() => (this.scanJob = null));
       return this.scanJob;
     }
+    // Bouton Actualiser pendant un scan : le scan suivant force la synchro des comptes.
+    if (force) this.forceNext = true;
     this.scanNext ??= this.scanJob
       .catch(() => {})
       .then(() => {
         this.scanNext = null;
-        return this.scan();
+        const f = this.forceNext;
+        this.forceNext = false;
+        return this.scan(f);
       });
     return this.scanNext;
   }
 
-  private async runScan(): Promise<number> {
+  private forceNext = false;
+
+  /** `force` : comptes et versions GOG resynchronisés sans attendre les 6 h (bouton Actualiser). */
+  private async runScan(force: boolean): Promise<number> {
     this.scanning = true;
     try {
-      const games = await api.scanGames($state.snapshot(this.state.localFolders));
+      const games = await api.scanGames($state.snapshot(this.state.localFolders), force);
       // Les jeux Xbox arrivent plus tard (scan://partial) : on garde ceux du cache en attendant.
       const xbox = this.scanned.filter((g) => g.store === 'xbox');
       this.scanned = dedupe([...games, ...xbox]);

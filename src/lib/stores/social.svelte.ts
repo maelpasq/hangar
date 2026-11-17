@@ -227,6 +227,25 @@ class Social {
     this.loaded = true;
   }
 
+  /** Bouton Actualiser : réglages, listes, conversations, activité et discussion ouverte ;
+   *  la connexion temps réel est relancée si elle est coupée. */
+  async reloadAll(): Promise<void> {
+    if (!this.enabled) return;
+    if (!this.live) api.socialLive(true).catch(() => {});
+    // Les autres discussions seront relues à leur ouverture ; l'ouverte est remplacée sans clignoter.
+    const open = this.chatWith;
+    for (const id of Object.keys(this.threads)) if (id !== open) delete this.threads[id];
+    const thread = open
+      ? api
+          .social<{ messages: ChatMessage[]; more: boolean }>('GET', `/social/messages/${open}`)
+          .then((page) => {
+            if (this.chatWith === open) this.threads[open] = { messages: page.messages, more: page.more };
+          })
+          .catch((e) => console.error('social messages', message(e)))
+      : null;
+    await Promise.all([this.loadSettings(), this.refresh(), thread]);
+  }
+
   async refreshLists(): Promise<void> {
     try {
       this.lists = await api.social<FriendLists>('GET', '/social/friends');

@@ -61,9 +61,15 @@
 
   let size = $state<number | null | undefined>(undefined);
 
+  // Bouton Actualiser : taille et succès redemandés sans cache, l'ancienne valeur reste affichée.
+  let sizeTick = ui.refreshes;
+  let achTick = ui.refreshes;
+
   $effect(() => {
     const dir = game.installDir;
-    size = undefined;
+    const fresh = ui.refreshes !== sizeTick;
+    sizeTick = ui.refreshes;
+    if (!fresh) size = undefined;
     if (game.sizeBytes) {
       size = game.sizeBytes;
       return;
@@ -74,7 +80,7 @@
     }
     let alive = true;
     api
-      .folderSize(dir)
+      .folderSize(dir, fresh)
       .then((b) => alive && (size = b))
       .catch(() => alive && (size = null));
     return () => {
@@ -99,11 +105,13 @@
   });
   $effect(() => {
     const id = game.id;
-    steamAch = null;
+    const fresh = ui.refreshes !== achTick;
+    achTick = ui.refreshes;
+    if (!fresh) steamAch = null;
     if (!game.steamAppId || game.achievements) return;
     let alive = true;
     api
-      .steamAchievements(id)
+      .steamAchievements(id, fresh)
       .then((a) => alive && (steamAch = a))
       .catch(() => {});
     return () => {

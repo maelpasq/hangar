@@ -49,8 +49,9 @@ class Updater {
     }
   }
 
-  /** `quiet` : au démarrage, pas de message si Hangar est à jour ou hors ligne. */
-  async check(quiet = false): Promise<void> {
+  /** `quiet` : au démarrage, pas de message si Hangar est à jour ou hors ligne. `announce` :
+   *  toast quand une version est trouvée (le bouton Actualiser l'annonce en infobulle). */
+  async check(quiet = false, announce = true): Promise<void> {
     if (this.phase === 'checking' || this.phase === 'installing') return;
     this.phase = 'checking';
     try {
@@ -59,7 +60,7 @@ class Updater {
       this.notes = u?.notes ?? '';
       this.current = await api.appVersion().catch(() => '');
       this.phase = u ? 'available' : 'uptodate';
-      if (u && quiet) ui.toast(`Hangar ${u.version} est disponible`);
+      if (u && quiet && announce) ui.toast(`Hangar ${u.version} est disponible`);
     } catch (e) {
       this.phase = 'idle';
       if (!quiet) ui.toast(`Impossible de vérifier les mises à jour : ${String(e)}`, { error: true });

@@ -59,6 +59,7 @@ class Art {
   /** Recherche multi-sources du backend, une seule par jeu. */
   private auto = new Map<string, Promise<Artwork>>();
   private refreshNext = new Set<string>();
+  private lastRetry = 0;
 
   /** ID Steam effectif d'un jeu (jaquette choisie, natif, ou connu). */
   steamId(g: Game): number | null {
@@ -111,7 +112,12 @@ class Art {
     const key = this.coverKey(g);
     if (!key) return null;
     if (key in this.covers) return this.covers[key];
-    this.load(`c|${key}`, async () => {
+    this.loadCover(g, key);
+    return undefined;
+  }
+
+  private loadCover(g: Game, key: string): Promise<void> | undefined {
+    return this.load(`c|${key}`, async () => {
       let r: CoverResult | null = null;
       if (key.startsWith('file:')) r = { src: api.localSrc(key.slice(5)), landscape: false };
       else if (key.startsWith('steam:')) {
@@ -121,7 +127,6 @@ class Art {
       } else r = (await this.findAuto(g)).cover;
       this.covers[key] = r;
     });
-    return undefined;
   }
 
   /**
@@ -154,14 +159,22 @@ class Art {
   hero(g: Game): string | null | undefined {
     const id = this.steamId(g);
     if (!id && !this.autoOn(g)) return null;
-    const key = `${id ?? 'auto'}|${g.id}|${library.state.prefs.steamGridDb ? 'k' : ''}`;
+    const key = this.heroKey(g, id);
     if (key in this.heroes) return this.heroes[key];
-    this.load(`h|${key}`, async () => {
+    this.loadHero(g, key, id);
+    return undefined;
+  }
+
+  private heroKey(g: Game, id: number | null): string {
+    return `${id ?? 'auto'}|${g.id}|${library.state.prefs.steamGridDb ? 'k' : ''}`;
+  }
+
+  private loadHero(g: Game, key: string, id: number | null): Promise<void> | undefined {
+    return this.load(`h|${key}`, async () => {
       let h = id ? await firstImage(heroUrls(id)) : null;
       if (!h && this.autoOn(g)) h = (await this.findAuto(g)).hero;
       this.heroes[key] = h;
     });
-    return undefined;
   }
 
   /** Icône 256 px de l'exe (ou logo Xbox) pour la jaquette générée. */
@@ -197,12 +210,76 @@ class Art {
     for (const k of [...this.pending]) if (k.includes(g.id)) this.pending.delete(k);
   }
 
-  private load(key: string, fn: () => Promise<void>): void {
+  /**
+   * Bouton Actualiser : relance la recherche des jaquettes et bannières introuvables (et des
+   * icônes d'exe), en ignorant le cache « introuvable » du backend. Les images trouvées restent.
+   * Rend le nombre de jeux relancés et de jaquettes trouvées (null : relance trop rapprochée).
+   */
+  async retryMissing(): Promise<{ tried: number; found: number } | null> {
+    // Une fois par minute au plus : chaque relance interroge les sources d'images.
+    if (Date.now() - this.lastRetry < 60_000) return null;
+    this.lastRetry = Date.now();
+    const jobs: Promise<void>[] = [];
+    const covers: string[] = [];
+    // Le résultat « introuvable » reste affiché (jaquette générée) jusqu'à la nouvelle réponse.
+    for (const g of library.all) {
+      const key = this.coverKey(g);
+      const retryCover = !!key && !key.startsWith('file:') && this.covers[key] === null;
+      const id = this.steamId(g);
+      const hk = this.heroKey(g, id);
+      const retryHero = this.heroes[hk] === null && (!!id || this.autoOn(g));
+      if (!retryCover && !retryHero) continue;
+      this.forget(g.id);
+      if (retryCover && key) {
+        this.pending.delete(`c|${key}`);
+        covers.push(key);
+        const p = this.loadCover(g, key);
+        if (p) jobs.push(p);
+      }
+      if (retryHero) {
+        this.pending.delete(`h|${hk}`);
+        const p = this.loadHero(g, hk, id);
+        if (p) jobs.push(p);
+      }
+    }
+    // Jaquettes des jeux d'amis : relues à leur prochain affichage.
+    for (const [k, v] of Object.entries(this.covers)) {
+      if (v === null && k.startsWith('social:')) {
+        delete this.covers[k];
+        this.pending.delete(`c|${k}`);
+      }
+    }
+    for (const [path, v] of Object.entries(this.icons)) {
+      if (v !== null) continue;
+      this.pending.delete(`i|${path}`);
+      this.load(`i|${path}`, async () => {
+        this.icons[path] = await api.exeIcon(path).catch(() => null);
+      });
+    }
+    await Promise.all(jobs);
+    return {
+      tried: covers.length,
+      found: covers.filter((k) => this.covers[k]).length
+    };
+  }
+
+  /** Oublie la recherche automatique d'un jeu ; la suivante ignore le cache du backend. */
+  private forget(id: string): void {
+    this.refreshNext.add(id);
+    for (const m of [...this.auto.keys()]) if (m.startsWith(`${id}|`)) this.auto.delete(m);
+  }
+
+  /** Lance `fn` une seule fois par clé ; la promesse se termine avec lui (undefined : déjà lancé). */
+  private load(key: string, fn: () => Promise<void>): Promise<void> | undefined {
     if (this.pending.has(key)) return;
     this.pending.add(key);
-    queueMicrotask(() => {
-      fn().catch((e) => console.warn('image', key, e));
-    });
+    return new Promise((done) =>
+      queueMicrotask(() => {
+        fn()
+          .catch((e) => console.warn('image', key, e))
+          .finally(done);
+      })
+    );
   }
 }
 
