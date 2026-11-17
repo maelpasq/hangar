@@ -5,6 +5,7 @@
   import { presenceLabel, social } from '../stores/social.svelte';
   import { ui } from '../stores/ui.svelte';
   import Icon, { type IconName } from './Icon.svelte';
+  import UserName from './UserName.svelte';
 
   let { anchor, onclose }: { anchor: HTMLElement; onclose: (refocus: boolean) => void } = $props();
 
@@ -79,7 +80,7 @@
       {#if cloud.avatar}<img src={cloud.avatar} alt="" />{:else}{cloud.initial}{/if}
     </span>
     <span class="id">
-      <span class="name ell">{cloud.name}</span>
+      <span class="name"><UserName name={cloud.name} certified={social.settings?.certified} /></span>
       <span class="state ell">{presenceLabel(social.myPresence)}</span>
     </span>
   </div>
@@ -149,6 +150,7 @@
   }
 
   .name {
+    min-width: 0;
     font-size: 13.5px;
     font-weight: 600;
     color: var(--strong);

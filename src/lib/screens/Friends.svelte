@@ -4,7 +4,9 @@
   import Chat from '../components/Chat.svelte';
   import { contextMenu, userItems, userTarget } from '../menus';
   import Icon from '../components/Icon.svelte';
+  import CertifiedMark from '../components/CertifiedMark.svelte';
   import SocialAvatar from '../components/SocialAvatar.svelte';
+  import UserName from '../components/UserName.svelte';
   import { cloud } from '../stores/cloud.svelte';
   import { prettyCode, presenceLabel, social } from '../stores/social.svelte';
   import { ui } from '../stores/ui.svelte';
@@ -67,7 +69,7 @@
 {#snippet person(u: SocialUser, sub: string)}
   <SocialAvatar id={u.id} name={u.name} version={u.avatar} size={38} presence={u.relation === 'friend' ? u.presence : null} />
   <span class="ptxt">
-    <span class="pn ell">{u.name}</span>
+    <span class="pn"><UserName name={u.name} certified={u.certified} /></span>
     <span class="ps ell" class:playing={u.presence.state === 'playing' && u.relation === 'friend'}>{sub}</span>
   </span>
 {/snippet}
@@ -254,7 +256,7 @@
                   <button class="aav" onclick={() => a.userId && ui.profile(a.userId)} aria-label="Profil de {a.userName}">
                     <SocialAvatar id={a.userId ?? ''} name={a.userName ?? '?'} version={u?.avatar ?? null} size={34} />
                   </button>
-                  <p class="atxt"><strong>{a.userName}</strong> {describe(a)}</p>
+                  <p class="atxt"><strong>{a.userName}</strong>{#if u?.certified}<CertifiedMark size={13} />{/if} {describe(a)}</p>
                   <span class="when">{timeAgo(a.at)}</span>
                 </div>
               {:else}
@@ -448,6 +450,7 @@
   }
 
   .pn {
+    min-width: 0;
     font-weight: 600;
     font-size: 14px;
   }

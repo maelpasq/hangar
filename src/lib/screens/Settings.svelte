@@ -13,6 +13,7 @@
   import SteamGridSetup from '../components/SteamGridSetup.svelte';
   import StoreLogo from '../components/StoreLogo.svelte';
   import Toggle from '../components/Toggle.svelte';
+  import UserName from '../components/UserName.svelte';
   import { ACCENTS, STORE_ORDER, STORES } from '../stores-meta';
   import { accounts } from '../stores/accounts.svelte';
   import { cloud } from '../stores/cloud.svelte';
@@ -417,7 +418,7 @@
                   {:else}
                     <span class="txt">
                       <span class="lbl">Pseudo</span>
-                      <span class="hint ell">{cloud.name}</span>
+                      <span class="hint ell"><UserName name={cloud.name} certified={social.settings?.certified} size={13} /></span>
                     </span>
                     <button
                       class="btn-s"

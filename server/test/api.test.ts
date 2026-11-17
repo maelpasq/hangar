@@ -795,6 +795,14 @@ describe('badges', () => {
     expect((await json(await call(`/social/users/${adminId}`, { token: admin }))).canBadge).toBe(true);
     expect((await json(await call('/export', { token: other }))).social.badges).toEqual(['certifie']);
 
+    // La pastille certifiée suit le compte : ses réglages (son propre pseudo) et les listes (recherche, amis).
+    expect((await json(await call('/social/me', { token: other }))).certified).toBe(true);
+    expect((await json(await call('/social/me', { token: admin }))).certified).toBe(false);
+    for (const t of [admin, other]) await call('/social/me', { method: 'PUT', token: t, body: { enabled: true } });
+    const { code } = await json(await call('/social/me', { token: other }));
+    const found = await json(await call(`/social/search?q=${code}`, { token: admin }));
+    expect(found.users.map((u: { id: string; certified: boolean }) => [u.id, u.certified])).toEqual([[otherId, true]]);
+
     // Plusieurs badges : toujours dans l'ordre d'affichage, quel que soit l'ordre des dons.
     await set(admin, otherId, { badge: 'chasseur', on: true });
     expect(await json(await set(admin, otherId, { badge: 'equipe', on: true }))).toEqual({ badges: ['certifie', 'equipe', 'chasseur'] });

@@ -11,6 +11,7 @@
   import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
   import AccountMenu from './AccountMenu.svelte';
+  import UserName from './UserName.svelte';
   import { cloud } from '../stores/cloud.svelte';
   import { presenceLabel, social } from '../stores/social.svelte';
   import { collectionItems, contextMenu, navItems, storeItems } from '../menus';
@@ -239,7 +240,7 @@
           class:syncing={cloud.syncState === 'syncing'}
         ></span>
       </span>
-      {#if !rail}<span class="ell">{cloud.name}</span>{/if}
+      {#if !rail}<span class="ell"><UserName name={cloud.name} certified={social.settings?.certified} size={13} /></span>{/if}
     </button>
     {#if accountOpen && accountBtn}
       <AccountMenu

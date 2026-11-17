@@ -359,6 +359,8 @@ export interface Presence {
 
 export interface SocialSettings {
   enabled: boolean;
+  /** Mon compte est certifié : pastille à côté de mon pseudo (absent : serveur d'avant). */
+  certified?: boolean;
   /** Code ami, 8 caractères (affiché en deux groupes de 4). */
   code: string;
   /** Trouvable par son pseudo (le code ami marche toujours). */
@@ -372,6 +374,8 @@ export interface SocialSettings {
 export interface SocialUser {
   id: string;
   name: string;
+  /** Compte certifié : pastille à côté du pseudo (absent : serveur d'avant). */
+  certified?: boolean;
   /** Version de l'avatar (null : initiale). */
   avatar: string | null;
   relation: Relation;
@@ -454,6 +458,8 @@ export interface Conversation {
 export type SocialEvent =
   | { type: 'presence'; id: string; presence: Presence }
   | { type: 'friends' }
+  /** Mes réglages ont changé ailleurs (pastille certifiée donnée ou retirée). */
+  | { type: 'settings' }
   | { type: 'request'; from: { id: string; name: string } }
   | { type: 'accepted'; from: { id: string; name: string } }
   | { type: 'activity' }

@@ -74,6 +74,16 @@ export async function badgesOf(db: Db, id: string): Promise<Badge[]> {
   return BADGES.filter((b) => has.has(b));
 }
 
+/** Comptes certifiés parmi `ids` : la pastille à côté de leur pseudo, partout dans l'app. */
+export async function certifiedAmong(db: Db, ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const rows = await db
+    .select({ id: badges.userId })
+    .from(badges)
+    .where(and(inArray(badges.userId, ids), eq(badges.badge, 'certifie')));
+  return new Set(rows.map((r) => r.id));
+}
+
 /**
  * Compte administrateur : son adresse, vérifiée, est celle du secret `ADMIN_EMAIL` du Worker
  * (jamais dans le dépôt). Lui seul donne ou retire les badges ; sans ce secret, personne.
@@ -286,12 +296,14 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     const users = await db.select({ id: user.id, name: user.name, image: user.image }).from(user).where(inArray(user.id, ids));
     const rows = await db.select().from(social).where(inArray(social.userId, ids));
     const byId = new Map(rows.map((x) => [x.userId, x]));
+    const certified = await certifiedAmong(db, ids);
     const out = [];
     for (const u of users) {
       const rel = rels.get(u.id) ?? 'none';
       out.push({
         id: u.id,
         name: u.name.trim() || 'Joueur',
+        certified: certified.has(u.id),
         avatar: await deps.avatarOf(u.image),
         relation: rel,
         presence: presence(byId.get(u.id), rel)
@@ -324,15 +336,17 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
 
   // --- Réglages ---
 
-  const settingsOf = (row: SocialRow) => ({
+  /** Réglages, et la pastille certifiée du compte (à côté de son propre pseudo dans l'app). */
+  const settingsOf = async (row: SocialRow) => ({
     enabled: row.enabled,
+    certified: (await certifiedAmong(db, [row.userId])).size > 0,
     code: row.code,
     findable: row.findable,
     privacy: { status: row.statusVis, game: row.gameVis, play: row.playVis, library: row.libraryVis },
     banner: row.banner
   });
 
-  r.get('/me', async (c) => c.json(settingsOf(await ensureSocial(db, c.get('device').userId))));
+  r.get('/me', async (c) => c.json(await settingsOf(await ensureSocial(db, c.get('device').userId))));
 
   r.put('/me', async (c) => {
     const me = c.get('device').userId;
@@ -360,10 +374,10 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       }
     }
     if (body.newCode === true) set.code = newCode();
-    if (!Object.keys(set).length) return c.json(settingsOf(prev));
+    if (!Object.keys(set).length) return c.json(await settingsOf(prev));
     const [row] = await db.update(social).set(set).where(eq(social.userId, me)).returning();
     await pushPresence(db, hub, me);
-    return c.json(settingsOf(row));
+    return c.json(await settingsOf(row));
   });
 
   /** Vitrine (jeux les plus joués, jeux favoris, collections mises en avant) et bibliothèque, envoyées par l'app. */
@@ -513,6 +527,12 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       await db.insert(badges).values({ userId: id, badge: body.badge as Badge, at: Date.now() }).onConflictDoNothing();
     } else {
       await db.delete(badges).where(and(eq(badges.userId, id), eq(badges.badge, body.badge as string)));
+    }
+    if (body.badge === 'certifie') {
+      // La pastille suit le pseudo partout : listes de ceux qui ont un lien avec lui, et ses réglages.
+      const linked = await db.select({ id: friends.userId }).from(friends).where(eq(friends.otherId, id));
+      await hub(linked.map((x) => x.id), { type: 'friends' });
+      await hub([id], { type: 'settings' });
     }
     return c.json({ badges: await badgesOf(db, id) });
   });

@@ -11,6 +11,7 @@
   import { messageTime } from '../util/format';
   import Icon from './Icon.svelte';
   import SocialAvatar from './SocialAvatar.svelte';
+  import UserName from './UserName.svelte';
 
   let { id }: { id: string } = $props();
 
@@ -122,7 +123,7 @@
     >
       <SocialAvatar {id} {name} version={who?.avatar ?? null} size={40} presence={friend?.presence} />
       <span class="txt">
-        <span class="nm ell">{name}</span>
+        <span class="nm"><UserName {name} certified={who?.certified} size={15} /></span>
         <span class="st ell" class:playing={friend?.presence.state === 'playing'}
           >{friend ? presenceLabel(friend.presence) : "Vous n'êtes plus amis"}</span
         >
@@ -243,6 +244,7 @@
   }
 
   .nm {
+    min-width: 0;
     font-weight: 650;
     font-size: 15px;
   }

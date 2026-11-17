@@ -133,7 +133,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
     { id: 'a5', kind: 'added', at: now - 4 * 24 * H, data: { games: [GAMES.rocket, GAMES.cs2, GAMES.valorant], count: 3 }, userId: 'demo-ami-0002', userName: 'Sam' }
   ];
 
-  const card = (p: Person): SocialUser => ({ id: p.id, name: p.name, avatar: null, relation: p.rel, presence: p.rel === 'friend' ? p.presence : { state: 'hidden', game: null }, since: p.since });
+  const card = (p: Person): SocialUser => ({ id: p.id, name: p.name, certified: !!given.get(p.id)?.has('certifie'), avatar: null, relation: p.rel, presence: p.rel === 'friend' ? p.presence : { state: 'hidden', game: null }, since: p.since });
   const find = (id: string) => people.find((p) => p.id === id);
   const fail = (m: string) => Promise.reject(m);
   /** Badges donnés (démo : je suis l'administrateur, je peux en donner à tout le monde). */
@@ -159,7 +159,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
         if (body.privacy) Object.assign(settings.privacy, body.privacy);
         if (body.newCode) settings.code = 'R3WN8CHP';
       }
-      return structuredClone(settings);
+      return { ...structuredClone(settings), certified: !!given.get(ME)?.has('certifie') };
     }
     if (head === 'showcase' && Array.isArray(body?.favorites)) myFavorites = body.favorites;
     if (head === 'showcase' || head === 'presence' || head === 'activity' && method === 'POST' || head === 'reports') return { ok: true };

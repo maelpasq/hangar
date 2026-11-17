@@ -91,6 +91,8 @@
     try {
       const res = await api.social<{ badges: Badge[] }>('PUT', `/social/users/${profile.id}/badges`, { badge, on });
       if (profile) profile.badges = res.badges;
+      // Pastille certifiée : listes d'amis et mon pseudo à jour tout de suite.
+      if (badge === 'certifie') void (profile?.id === social.me ? social.loadSettings() : social.refreshLists());
       ui.toast(on ? `Badge « ${givenLabel(badge)} » donné à ${name}.` : `Badge « ${givenLabel(badge)} » retiré à ${name}.`);
     } catch (e) {
       ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
