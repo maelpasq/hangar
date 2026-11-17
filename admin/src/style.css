@@ -1,4 +1,5 @@
-/* Dashboard admin : les tokens de l'app (src/lib/styles/tokens.css), mise en page à part. */
+/* Dashboard admin : tokens de l'app (src/lib/styles/tokens.css), composants partagés de la charte
+   (docs/ADMIN-DESIGN.md, section 5). Chaque composant vit ici une seule fois. */
 *,
 *::before,
 *::after {
@@ -17,15 +18,32 @@ body {
 }
 
 a {
-  color: inherit;
+  color: var(--accent-text);
+  transition: color 0.15s var(--ease);
 }
 
-button,
+a:hover {
+  color: color-mix(in srgb, var(--accent-text) 60%, var(--strong));
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
 textarea,
 select,
 input {
   font: inherit;
   color: inherit;
+}
+
+svg {
+  flex-shrink: 0;
 }
 
 :focus-visible {
@@ -35,27 +53,27 @@ input {
 
 h1,
 h2,
-h3 {
+h3,
+p {
   margin: 0;
-  color: var(--strong);
-  letter-spacing: -0.01em;
 }
 
-h1 {
-  font-size: 24px;
-  font-weight: 650;
-}
-
-h2 {
+h2,
+h3 {
   font-size: 15px;
   font-weight: 600;
+  color: var(--strong);
 }
 
-.card {
-  background: var(--surface-1);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-section);
-  padding: 18px 20px;
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+legend {
+  padding: 0;
 }
 
 .muted {
@@ -67,33 +85,486 @@ h2 {
   font-size: 12.5px;
 }
 
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entrée d'écran */
+.screen {
+  animation: haIn 0.5s var(--ease) both;
+}
+
+@keyframes haIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pulse {
+  animation: hgPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes hgPulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--success) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 0%, transparent);
+  }
+}
+
+/* Carte */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-section);
+  min-width: 0;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.card-link {
+  font-size: 13px;
+  text-decoration: none;
+}
+
+/* Chiffre clé */
+.kpi {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    transform 0.3s var(--ease);
+}
+
+.kpi:hover {
+  color: inherit;
+  border-color: var(--border-3);
+  transform: translateY(-2px);
+}
+
+/* Pastille d'icône teintée (chiffres clés, journal, badges) */
+.tint {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--c) 15%, transparent);
+  color: color-mix(in srgb, var(--c) 55%, var(--strong));
+}
+
+/* Boutons */
 .btn {
+  height: 36px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 34px;
-  padding: 0 13px;
+  gap: 8px;
+  padding: 0 14px;
   border-radius: var(--r-btn);
   border: 1px solid var(--border-2);
   background: var(--surface-2);
   color: var(--text-soft);
-  cursor: pointer;
+  font-size: 13px;
   font-weight: 500;
-  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .btn:hover:not(:disabled) {
+  color: var(--text-soft);
   background: var(--surface-3);
   border-color: var(--border-3);
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: default;
 }
 
+.primary {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: var(--r-btn);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 88%, white),
+    color-mix(in srgb, var(--accent) 90%, black)
+  );
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 10px 26px -12px var(--accent-shadow);
+  transition:
+    transform 0.25s var(--ease),
+    filter 0.2s;
+}
+
+.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Chips de filtre */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--ink) / 0.09);
+  background: rgb(var(--ink) / 0.03);
+  font-size: 13px;
+  color: var(--text-3);
+  text-decoration: none;
+  transition: all 0.18s;
+}
+
+.chip:hover {
+  background: var(--surface-3);
+  color: var(--strong);
+}
+
+.chip.on {
+  background: var(--strong);
+  color: var(--bg);
+  border-color: var(--strong);
+}
+
+.chip .n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* Recherche et champs */
+.search {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--muted);
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+
+.search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: var(--surface-3);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.search input::placeholder {
+  color: var(--muted-2);
+}
+
+.field {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.field:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.field:disabled {
+  opacity: 0.45;
+}
+
+.field::placeholder {
+  color: var(--muted-2);
+}
+
+textarea.field {
+  height: 88px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.lbl {
+  display: block;
+  margin: 0 0 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+/* Lignes de liste */
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+a.row:hover,
+button.row:hover {
+  color: inherit;
+  background: rgb(var(--ink) / 0.05);
+}
+
+.row.on,
+.row.on:hover {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.row-num {
+  width: 34px;
+  color: var(--muted-2);
+}
+
+.row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.row-title {
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Puces */
+.pill {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  color: color-mix(in srgb, var(--c) 55%, var(--strong));
+}
+
+.pill i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: block;
+  background: var(--c);
+}
+
+/* Segment de statut */
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seg button {
+  height: 34px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 10px;
+  border: 1px solid var(--border-2);
+  font-size: 13px;
+  color: var(--text-3);
+  transition: all 0.15s;
+}
+
+.seg button:hover:not(:disabled) {
+  background: rgb(var(--ink) / 0.06);
+  color: var(--strong);
+}
+
+.seg button.on {
+  background: rgb(var(--ink) / 0.12);
+  border-color: rgb(var(--ink) / 0.2);
+  color: var(--strong);
+}
+
+.seg button i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Interrupteur */
+.tog {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgb(var(--ink) / 0.14);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.25s;
+}
+
+.tog::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.4);
+  transition: transform 0.3s var(--ease);
+}
+
+.tog[aria-checked='true'] {
+  background: var(--accent);
+}
+
+.tog[aria-checked='true']::after {
+  transform: translateX(18px);
+}
+
+.tog:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Tableau */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  padding: 0 16px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+td {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-1);
+  vertical-align: middle;
+}
+
+tbody tr {
+  transition: background 0.15s;
+}
+
+tbody tr:hover {
+  background: rgb(var(--ink) / 0.03);
+}
+
+/* Barre de défilement des listes */
+.scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--ink) / 0.1);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Sur-titre (11 px majuscules) */
+.over {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* États */
 .empty {
-  padding: 28px 0;
+  padding: 32px 16px;
   text-align: center;
   color: var(--muted);
 }

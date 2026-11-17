@@ -3,20 +3,21 @@
 export type Route =
   | { page: 'accueil' }
   | { page: 'bugs'; statut: string; q: string }
-  | { page: 'bug'; id: number }
+  | { page: 'bug'; id: number; statut: string; q: string }
   | { page: 'signalements'; statut: string }
   | { page: 'comptes'; q: string }
-  | { page: 'compte'; id: string }
+  | { page: 'compte'; id: string; q: string }
   | { page: 'journal' };
 
 function parse(hash: string): Route {
   const [path, query = ''] = hash.replace(/^#\/?/, '').split('?');
   const seg = path.split('/').filter(Boolean).map(decodeURIComponent);
   const params = new URLSearchParams(query);
-  if (seg[0] === 'bugs' && seg[1] && Number(seg[1]) > 0) return { page: 'bug', id: Number(seg[1]) };
+  if (seg[0] === 'bugs' && seg[1] && Number(seg[1]) > 0)
+    return { page: 'bug', id: Number(seg[1]), statut: params.get('statut') ?? 'ouverts', q: params.get('q') ?? '' };
   if (seg[0] === 'bugs') return { page: 'bugs', statut: params.get('statut') ?? 'ouverts', q: params.get('q') ?? '' };
   if (seg[0] === 'signalements') return { page: 'signalements', statut: params.get('statut') ?? 'ouvert' };
-  if (seg[0] === 'comptes' && seg[1]) return { page: 'compte', id: seg[1] };
+  if (seg[0] === 'comptes' && seg[1]) return { page: 'compte', id: seg[1], q: params.get('q') ?? '' };
   if (seg[0] === 'comptes') return { page: 'comptes', q: params.get('q') ?? '' };
   if (seg[0] === 'journal') return { page: 'journal' };
   return { page: 'accueil' };
@@ -28,19 +29,29 @@ addEventListener('hashchange', () => {
   router.route = parse(location.hash);
 });
 
-export const href = {
+export const href: {
+  accueil: string;
+  bugs: (statut?: string, q?: string, id?: number) => string;
+  bug: (id: number, statut?: string, q?: string) => string;
+  signalements: (statut?: string) => string;
+  comptes: (q?: string) => string;
+  compte: (id: string, q?: string) => string;
+  target: (id: string) => string;
+  journal: string;
+} = {
   accueil: '#/',
-  bugs: (statut = 'ouverts', q = '') => {
+  bugs: (statut = 'ouverts', q = '', id?: number) => {
     const p = new URLSearchParams();
     if (statut !== 'ouverts') p.set('statut', statut);
     if (q) p.set('q', q);
     const s = p.toString();
-    return s ? `#/bugs?${s}` : '#/bugs';
+    const path = id ? `#/bugs/${id}` : '#/bugs';
+    return s ? `${path}?${s}` : path;
   },
-  bug: (id: number) => `#/bugs/${id}`,
+  bug: (id: number, statut = 'ouverts', q = '') => href.bugs(statut, q, id),
   signalements: (statut = 'ouvert') => (statut === 'ouvert' ? '#/signalements' : `#/signalements?statut=${statut}`),
   comptes: (q = '') => (q ? `#/comptes?q=${encodeURIComponent(q)}` : '#/comptes'),
-  compte: (id: string) => `#/comptes/${encodeURIComponent(id)}`,
+  compte: (id: string, q = '') => `#/comptes/${encodeURIComponent(id)}${q ? `?q=${encodeURIComponent(q)}` : ''}`,
   /** Cible d'une ligne du journal : un compte ou `bug:<numéro>`. */
   target: (id: string) => (id.startsWith('bug:') ? `#/bugs/${id.slice(4)}` : `#/comptes/${encodeURIComponent(id)}`),
   journal: '#/journal'

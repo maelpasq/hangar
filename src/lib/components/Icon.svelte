@@ -44,7 +44,14 @@
     | 'layers'
     | 'package'
     | 'logout'
-    | 'copy';
+    | 'copy'
+    | 'list'
+    | 'clock'
+    | 'heart'
+    | 'shieldCheck'
+    | 'external'
+    | 'chevronRight'
+    | 'discord';
 </script>
 
 <script lang="ts">
@@ -175,5 +182,21 @@
     <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M9 11l3 3 3-3M12 8v6" />
   {:else if name === 'copy'}
     <rect x="9" y="9" width="12" height="12" rx="2.5" /><path d="M15 9V5.5A2.5 2.5 0 0 0 12.5 3h-7A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15H9" />
+  {:else if name === 'list'}
+    <path d="M8 6h12M8 12h12M8 18h12" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" />
+  {:else if name === 'clock'}
+    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+  {:else if name === 'heart'}
+    <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+  {:else if name === 'shieldCheck'}
+    <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" />
+  {:else if name === 'external'}
+    <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  {:else if name === 'chevronRight'}
+    <path d="m9 6 6 6-6 6" />
+  {:else if name === 'discord'}
+    <path
+      d="M8 8.5c2.6-1 5.4-1 8 0M7 16c3 1.4 7 1.4 10 0M7.5 6 6 6.5C4.3 9.4 3.6 12.3 4 15.4 5.5 17 7 17.8 8.5 18l1-1.6M16.5 6l1.5.5c1.7 2.9 2.4 5.8 2 8.9-1.5 1.6-3 2.4-4.5 2.6l-1-1.6"
+    /><circle cx="9.5" cy="12.5" r="1" /><circle cx="14.5" cy="12.5" r="1" />
   {/if}
 </svg>

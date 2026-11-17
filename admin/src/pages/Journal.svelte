@@ -1,7 +1,10 @@
 <script lang="ts">
   // Journal : toutes les actions du dashboard, des plus récentes aux plus anciennes.
+  import Icon from '../../../src/lib/components/Icon.svelte';
   import { api, type LogRow } from '../api';
-  import { actionLabel, dateTime } from '../format';
+  import PageHeader from '../components/PageHeader.svelte';
+  import Pill from '../components/Pill.svelte';
+  import { actionColor, logDetail, when } from '../format';
   import { href } from '../router.svelte';
 
   let rows = $state<LogRow[] | null>(null);
@@ -23,98 +26,112 @@
     }
   }
   load();
+
+  const targetLabel = (l: LogRow) =>
+    l.targetName ?? (l.targetId?.startsWith('bug:') ? `#${l.targetId.slice(4)} (supprimé)` : 'Compte supprimé');
 </script>
 
-<header>
-  <h1>Journal</h1>
-  <p class="muted">Chaque action faite depuis ce dashboard.</p>
-</header>
+<PageHeader title="Journal" sub="Toutes les actions faites depuis le dashboard : qui, quoi, sur quel compte, quand.">
+  {#snippet actions()}
+    <button class="btn" type="button" disabled={loading} onclick={() => load()}><Icon name="refresh" size={16} />Actualiser</button>
+  {/snippet}
+</PageHeader>
 
 {#if failed && !rows}
   <p class="error">Impossible de charger le journal.</p>
-{:else if !rows}
-  <p class="muted">Chargement…</p>
-{:else if !rows.length}
-  <p class="empty">Aucune action pour l'instant.</p>
 {:else}
-  <div class="card list">
-    <ul>
-      {#each rows as l (l.id)}
-        <li>
-          <span class="when muted">{dateTime(l.at)}</span>
-          <span class="what">
-            {actionLabel(l)}
-            {#if l.targetId}
-              ·
-              <a href={href.target(l.targetId)}>{l.targetName ?? (l.targetId.startsWith('bug:') ? 'bug supprimé' : 'compte supprimé')}</a>
-            {/if}
-          </span>
-          <span class="actor muted">{l.actor}</span>
-        </li>
-      {/each}
-    </ul>
-  </div>
-  {#if more}
-    <button class="btn more" type="button" disabled={loading} onclick={() => load(rows?.at(-1)?.at)}>
-      {loading ? 'Chargement…' : 'Plus ancien'}
-    </button>
-  {/if}
-  {#if failed}<p class="error">Impossible de charger la suite.</p>{/if}
+  <section class="card log">
+    {#if !rows}
+      <p class="empty">Chargement…</p>
+    {:else if !rows.length}
+      <p class="empty">Aucune action pour l’instant.</p>
+    {:else}
+      <div class="wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Quand</th>
+              <th scope="col">Action</th>
+              <th scope="col">Cible</th>
+              <th scope="col">Détail</th>
+              <th scope="col">Par</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each rows as l (l.id)}
+              <tr>
+                <td class="when">{when(l.at)}</td>
+                <td><Pill color={actionColor(l.action)} label={l.action} dot={false} /></td>
+                <td>
+                  {#if l.targetId}
+                    <a class="target" href={href.target(l.targetId)}>{targetLabel(l)}</a>
+                  {/if}
+                </td>
+                <td class="detail">{logDetail(l)}</td>
+                <td class="actor">{l.actor}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      {#if more || failed}
+        <div class="foot">
+          {#if failed}<p class="error">Impossible de charger la suite.</p>{/if}
+          {#if more}
+            <button class="btn" type="button" disabled={loading} onclick={() => load(rows?.at(-1)?.at)}>
+              {loading ? 'Chargement…' : 'Charger 50 lignes de plus'}
+            </button>
+          {/if}
+        </div>
+      {/if}
+    {/if}
+  </section>
 {/if}
 
 <style>
-  header {
-    margin-bottom: 20px;
+  .log {
+    padding: 18px 8px 8px;
   }
 
-  header p {
-    margin: 6px 0 0;
+  .wrap {
+    overflow-x: auto;
   }
 
-  .list {
-    padding: 4px 18px;
+  table {
+    min-width: 760px;
   }
 
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+  .when {
+    white-space: nowrap;
+    color: var(--text-3);
+    font-size: 13px;
   }
 
-  li {
-    display: grid;
-    grid-template-columns: 170px minmax(0, 1fr) auto;
-    gap: 16px;
-    padding: 11px 0;
-    border-top: 1px solid var(--border-1);
+  .target {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
   }
 
-  li:first-child {
-    border-top: 0;
+  .target:hover {
+    color: var(--accent-text);
   }
 
-  .what {
-    color: var(--text-soft);
+  .detail {
+    color: var(--text-2);
+    font-size: 13.5px;
   }
 
-  .what a {
-    color: var(--strong);
-    font-weight: 550;
-  }
-
-  .when,
   .actor {
-    font-size: 12.5px;
+    color: var(--muted);
+    font-size: 13px;
   }
 
-  .more {
-    margin-top: 14px;
-  }
-
-  @media (max-width: 760px) {
-    li {
-      grid-template-columns: 1fr;
-      gap: 2px;
-    }
+  .foot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0 8px;
   }
 </style>

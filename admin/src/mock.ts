@@ -17,7 +17,13 @@ const users: UserRow[] = NAMES.map((name, i) => ({
 }));
 const given = new Map<string, Badge[]>([[users[1].id, ['certifie', 'testeur']]]);
 const log: LogRow[] = [
+  { id: 'l4', at: now - 3 * 3_600_000, actor: 'admin@exemple.fr', action: 'bug.statut', targetId: 'bug:37', targetName: '#37 Crash en ouvrant les paramètres', detail: { bug: 37, de: 'en_cours', vers: 'corrige', fixedIn: '1.2.29' } },
+  { id: 'l5', at: now - 3.5 * 3_600_000, actor: 'admin@exemple.fr', action: 'bug.note', targetId: 'bug:39', targetName: '#39 La fenêtre clignote au démarrage', detail: { bug: 39 } },
+  { id: 'l3', at: now - 26 * 3_600_000, actor: 'admin@exemple.fr', action: 'bug.statut', targetId: 'bug:38', targetName: '#38 Temps de jeu compté deux fois', detail: { bug: 38, de: 'confirme', vers: 'en_cours' } },
+  { id: 'l6', at: now - 27 * 3_600_000, actor: 'admin@exemple.fr', action: 'bug.statut', targetId: 'bug:35', targetName: '#35 Texte coupé dans la fiche du jeu', detail: { bug: 35, de: 'nouveau', vers: 'doublon', duplicateOf: 41 } },
   { id: 'l1', at: now - 2 * DAY, actor: 'admin@exemple.fr', action: 'badge.donner', targetId: users[1].id, targetName: users[1].name, detail: { badge: 'testeur' } },
+  { id: 'l7', at: now - 3 * DAY, actor: 'admin@exemple.fr', action: 'bug.statut', targetId: 'bug:36', targetName: '#36 Le scan ne trouve pas Battle.net', detail: { bug: 36, de: 'nouveau', vers: 'rejete' } },
+  { id: 'l8', at: now - 4 * DAY, actor: 'admin@exemple.fr', action: 'badge.retirer', targetId: users[4].id, targetName: users[4].name, detail: { badge: 'chasseur' } },
   { id: 'l2', at: now - 5 * DAY, actor: 'admin@exemple.fr', action: 'badge.donner', targetId: users[1].id, targetName: users[1].name, detail: { badge: 'certifie' } }
 ];
 

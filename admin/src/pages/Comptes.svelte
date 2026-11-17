@@ -1,16 +1,21 @@
 <script lang="ts">
-  // Recherche de comptes : pseudo, e-mail, code ami ou identifiant. Vide : les plus récents.
+  // Comptes : recherche (pseudo, e-mail, code ami ou identifiant ; vide : les plus récents) et fiche
+  // du compte choisi à côté (le premier de la liste tant qu'aucun n'est choisi).
   import { untrack } from 'svelte';
-  import BadgeIcon from '../../../src/lib/components/BadgeIcon.svelte';
   import Icon from '../../../src/lib/components/Icon.svelte';
-  import { api, type UserRow } from '../api';
-  import { ago, date } from '../format';
-  import { href, replace } from '../router.svelte';
+  import { api, type Badge, type UserRow } from '../api';
+  import Avatar from '../components/Avatar.svelte';
+  import PageHeader from '../components/PageHeader.svelte';
+  import Pill from '../components/Pill.svelte';
+  import { ago, num } from '../format';
+  import { href, replace, type Route } from '../router.svelte';
+  import { stats } from '../stats.svelte';
+  import Fiche from './Fiche.svelte';
 
-  let { q }: { q: string } = $props();
+  let { route, badgeIds }: { route: Extract<Route, { page: 'comptes' | 'compte' }>; badgeIds: Badge[] } = $props();
 
   // Valeur de départ seulement : ensuite, la saisie mène l'adresse.
-  const initial = untrack(() => q);
+  const initial = untrack(() => route.q);
   let text = $state(initial);
   let rows = $state<UserRow[] | null>(null);
   let failed = $state(false);
@@ -37,164 +42,141 @@
   }
 
   load(initial.trim());
+
+  const selected = $derived(route.page === 'compte' ? route.id : (rows?.[0]?.id ?? null));
+  const ONLINE = 10 * 60_000;
+  const sub = $derived(
+    `${stats.data ? `${num(stats.data.users)} comptes. ` : ''}Recherche par pseudo, e-mail, code ami ou identifiant.`
+  );
 </script>
 
-<header>
-  <h1>Comptes</h1>
-</header>
+<PageHeader title="Comptes" {sub} />
 
-<form class="search" role="search" onsubmit={(e) => e.preventDefault()}>
-  <label for="q" class="sr-only">Chercher un compte</label>
-  <Icon name="search" size={17} />
-  <!-- svelte-ignore a11y_autofocus -->
-  <input
-    id="q"
-    type="search"
-    placeholder="Pseudo, e-mail, code ami ou identifiant"
-    autocomplete="off"
-    spellcheck="false"
-    autofocus
-    bind:value={text}
-    oninput={onInput}
-  />
-</form>
-
-{#if failed}
-  <p class="error">Recherche impossible.</p>
-{:else if !rows}
-  <p class="muted">Chargement…</p>
-{:else if !rows.length}
-  <p class="empty">Aucun compte trouvé.</p>
-{:else}
-  <div class="card list">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Pseudo</th>
-          <th scope="col">E-mail</th>
-          <th scope="col">Inscrit le</th>
-          <th scope="col">Dernière connexion</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each rows as u (u.id)}
-          <tr>
-            <td>
-              <a href={href.compte(u.id)} class="name">
-                {u.name}
-                {#if u.certified}
-                  <span class="seal" title="Compte certifié"><BadgeIcon icon="seal" size={15} /></span>
-                  <span class="sr-only">(certifié)</span>
-                {/if}
-              </a>
-              {#if u.sanction}
-                <span class="tag">{u.sanction === 'total' ? 'Suspendu' : 'Amis coupés'}</span>
+<div class="split">
+  <section class="card list scroll" aria-label="Résultats">
+    <form class="search" role="search" onsubmit={(e) => e.preventDefault()}>
+      <Icon name="search" size={17} />
+      <label for="q" class="sr-only">Rechercher un compte</label>
+      <input
+        id="q"
+        type="search"
+        placeholder="Pseudo, e-mail, code ami…"
+        autocomplete="off"
+        spellcheck="false"
+        bind:value={text}
+        oninput={onInput}
+      />
+    </form>
+    <p class="over">{route.q ? 'Résultats' : 'Récents d’abord'}</p>
+    {#if failed}
+      <p class="error">Recherche impossible.</p>
+    {:else if !rows}
+      <p class="empty">Chargement…</p>
+    {:else}
+      {#each rows as u (u.id)}
+        <a
+          class="row"
+          class:on={u.id === selected}
+          href={href.compte(u.id, route.q)}
+          aria-current={u.id === selected ? 'true' : undefined}
+        >
+          <Avatar name={u.name} seed={u.id} size={38} online={u.lastSeen !== null && Date.now() - u.lastSeen < ONLINE} />
+          <span class="row-body">
+            <span class="name">
+              {u.name}
+              {#if u.certified}
+                <span class="seal" title="Certifié"><Icon name="shieldCheck" size={14} stroke={2} /></span>
+                <span class="sr-only">(certifié)</span>
               {/if}
-            </td>
-            <td class="soft">{u.email}</td>
-            <td class="soft">{date(u.since)}</td>
-            <td class="soft">{ago(u.lastSeen)}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-    {#if rows.length >= 50}<p class="more muted">50 premiers résultats : précise la recherche.</p>{/if}
-  </div>
-{/if}
+              {#if u.sanction}
+                <Pill color="var(--danger)" label={u.sanction === 'total' ? 'Suspendu' : 'Amis coupés'} dot={false} />
+              {/if}
+            </span>
+            <span class="email">{u.email}</span>
+          </span>
+          <span class="seen">{ago(u.lastSeen)}</span>
+        </a>
+      {:else}
+        <p class="empty">Aucun compte trouvé.</p>
+      {/each}
+      {#if rows.length >= 50}<p class="empty">50 premiers résultats : précise la recherche.</p>{/if}
+    {/if}
+  </section>
+
+  <section class="fiche" aria-label="Fiche du compte">
+    {#if selected}
+      {#key selected}
+        <Fiche id={selected} {badgeIds} q={route.q} />
+      {/key}
+    {/if}
+  </section>
+</div>
 
 <style>
-  header {
-    margin-bottom: 18px;
-  }
-
-  .search {
+  .split {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 560px;
-    height: 42px;
-    padding: 0 14px;
-    margin-bottom: 18px;
-    border-radius: var(--r-btn);
-    background: var(--surface-2);
-    border: 1px solid var(--border-2);
-    color: var(--muted);
-  }
-
-  .search:focus-within {
-    border-color: var(--accent-ring);
-  }
-
-  .search input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    background: none;
-    outline: none;
-    color: var(--text);
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
   }
 
   .list {
-    padding: 6px 8px;
-    overflow-x: auto;
+    flex: 1 1 340px;
+    max-width: 440px;
+    padding: 14px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
+  .search {
+    margin: 0 4px 6px;
   }
 
-  th {
-    text-align: left;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
+  .over {
+    padding: 0 10px 4px;
+  }
+
+  .list .row {
     padding: 10px 12px;
-  }
-
-  td {
-    padding: 10px 12px;
-    border-top: 1px solid var(--border-1);
-    white-space: nowrap;
-  }
-
-  tbody tr:hover {
-    background: var(--surface-1);
   }
 
   .name {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 6px;
-    color: var(--strong);
-    font-weight: 550;
-    text-decoration: none;
-  }
-
-  .name:hover {
-    text-decoration: underline;
-  }
-
-  .tag {
-    margin-left: 8px;
-    padding: 1px 8px;
-    border-radius: 99px;
-    font-size: 11.5px;
-    background: color-mix(in srgb, var(--danger) 16%, transparent);
-    color: var(--danger-text);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
   }
 
   .seal {
     display: inline-flex;
-    color: var(--accent);
+    color: var(--accent-text);
   }
 
-  .soft {
-    color: var(--text-3);
+  .email {
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .more {
-    margin: 8px 12px;
-    font-size: 12.5px;
+  .seen {
+    font-size: 12px;
+    color: var(--muted-2);
+    white-space: nowrap;
+  }
+
+  .fiche {
+    flex: 1.6 1 520px;
+    min-width: 0;
+  }
+
+  @media (max-width: 760px) {
+    .list {
+      max-width: none;
+    }
   }
 </style>

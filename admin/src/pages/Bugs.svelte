@@ -1,15 +1,22 @@
 <script lang="ts">
-  // Bugs signalés depuis Hangar : filtre par statut (avec leur nombre), recherche, liste.
+  // Bugs signalés depuis Hangar : filtre par statut (avec leur nombre), recherche, liste et fiche
+  // du bug choisi à côté (le premier de la liste tant qu'aucun n'est choisi).
   import { untrack } from 'svelte';
   import Icon from '../../../src/lib/components/Icon.svelte';
   import { api, type BugList, type BugRow } from '../api';
   import { FILTERS, OPEN_IDS, SYSTEMS, statusOf } from '../bug-status';
+  import PageHeader from '../components/PageHeader.svelte';
+  import Pill from '../components/Pill.svelte';
   import { ago } from '../format';
-  import { href, replace } from '../router.svelte';
+  import { href, replace, type Route } from '../router.svelte';
+  import { loadStats } from '../stats.svelte';
+  import Bug from './Bug.svelte';
 
-  let { statut, q }: { statut: string; q: string } = $props();
+  let { route }: { route: Extract<Route, { page: 'bugs' | 'bug' }> } = $props();
 
-  let text = $state(untrack(() => q));
+  const statut = $derived(route.statut);
+  const q = $derived(route.q);
+  let text = $state(untrack(() => route.q));
   let rows = $state<BugRow[] | null>(null);
   let counts = $state<BugList['counts']>({});
   let more = $state(false);
@@ -44,7 +51,7 @@
   let timer: ReturnType<typeof setTimeout> | undefined;
   function onInput() {
     clearTimeout(timer);
-    timer = setTimeout(() => replace(href.bugs(statut, text.trim())), 250);
+    timer = setTimeout(() => replace(href.bugs(statut, text.trim(), route.page === 'bug' ? route.id : undefined)), 250);
   }
 
   const countOf = (id: string) =>
@@ -53,252 +60,152 @@
       : id === 'ouverts'
         ? OPEN_IDS.reduce((n, s) => n + (counts[s] ?? 0), 0)
         : (counts[id as keyof typeof counts] ?? 0);
+
+  const selected = $derived(route.page === 'bug' ? route.id : (rows?.[0]?.id ?? null));
+
+  // Après un enregistrement : la liste, les compteurs et la barre latérale suivent.
+  function onSaved() {
+    load(statut, q.trim());
+    loadStats();
+  }
 </script>
 
-<header>
-  <h1>Bugs</h1>
-  <p class="muted">Signalés depuis le bouton insecte de Hangar.</p>
-</header>
+<PageHeader title="Bugs" sub="Signalements envoyés par le bouton insecte de l’app.">
+  {#snippet actions()}
+    <form class="search" role="search" onsubmit={(e) => e.preventDefault()}>
+      <Icon name="search" size={17} />
+      <label for="bq" class="sr-only">Rechercher un bug</label>
+      <input id="bq" type="search" placeholder="Numéro ou mots-clés" autocomplete="off" bind:value={text} oninput={onInput} />
+    </form>
+  {/snippet}
+</PageHeader>
 
-<div class="tools">
-  <div class="filters" role="group" aria-label="Filtrer par statut">
-    {#each FILTERS as f (f.id)}
-      <button
-        type="button"
-        class="chip"
-        class:on={statut === f.id}
-        aria-pressed={statut === f.id}
-        onclick={() => replace(href.bugs(f.id, text.trim()))}
-      >
-        {f.label}
-        <span class="n">{countOf(f.id)}</span>
-      </button>
-    {/each}
-  </div>
-  <form class="search" role="search" onsubmit={(e) => e.preventDefault()}>
-    <label for="bq" class="sr-only">Chercher un bug</label>
-    <Icon name="search" size={16} />
-    <input id="bq" type="search" placeholder="Numéro ou mots" autocomplete="off" bind:value={text} oninput={onInput} />
-  </form>
+<div class="chips" role="tablist" aria-label="Filtrer par statut">
+  {#each FILTERS as f (f.id)}
+    <button
+      type="button"
+      role="tab"
+      class="chip"
+      class:on={statut === f.id}
+      aria-selected={statut === f.id}
+      onclick={() => replace(href.bugs(f.id, text.trim()))}
+    >
+      {f.label}<span class="n">{countOf(f.id)}</span>
+    </button>
+  {/each}
 </div>
 
 {#if failed && !rows}
   <p class="error">Impossible de charger les bugs.</p>
-{:else if !rows}
-  <p class="muted">Chargement…</p>
-{:else if !rows.length}
-  <p class="empty">Aucun bug ici.</p>
 {:else}
-  <div class="card list">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">N°</th>
-          <th scope="col">Titre</th>
-          <th scope="col">Statut</th>
-          <th scope="col">Version</th>
-          <th scope="col">Système</th>
-          <th scope="col">Signalé</th>
-        </tr>
-      </thead>
-      <tbody>
+  <div class="split">
+    <section class="card list" aria-label="Liste des bugs">
+      {#if !rows}
+        <p class="empty">Chargement…</p>
+      {:else}
         {#each rows as b (b.id)}
           {@const s = statusOf(b.status)}
-          <tr>
-            <td class="num">#{b.id}</td>
-            <td class="title">
-              <a href={href.bug(b.id)}>{b.title}</a>
-              {#if b.capture}
-                <span class="shot" title="Capture jointe"><Icon name="image" size={14} /></span>
-                <span class="sr-only">(capture jointe)</span>
-              {/if}
-            </td>
-            <td>
-              <span class="pill" style:--c={s.color}>{s.label}{b.fixedIn ? ` · ${b.fixedIn}` : ''}</span>
-            </td>
-            <td class="soft">{b.version}</td>
-            <td class="soft">{SYSTEMS[b.os] ?? b.os}</td>
-            <td class="soft">{ago(b.createdAt)}</td>
-          </tr>
+          <a
+            class="row"
+            class:on={b.id === selected}
+            href={href.bug(b.id, statut, q)}
+            aria-current={b.id === selected ? 'true' : undefined}
+          >
+            <span class="mono num">#{b.id}</span>
+            <span class="row-body">
+              <span class="row-title">{b.title}</span>
+              <span class="meta">
+                <span>{b.version}</span><span aria-hidden="true">·</span><span>{SYSTEMS[b.os] ?? b.os}</span><span
+                  aria-hidden="true">·</span
+                ><span>{ago(b.createdAt)}</span>
+                {#if b.capture}
+                  <span class="shot" title="Capture jointe"><Icon name="image" size={13} /></span>
+                  <span class="sr-only">(capture jointe)</span>
+                {/if}
+              </span>
+            </span>
+            <Pill color={s.color} label={s.label} />
+          </a>
+        {:else}
+          <p class="empty">Aucun bug pour ce filtre.</p>
         {/each}
-      </tbody>
-    </table>
+        {#if more}
+          <button class="btn more" type="button" disabled={loading} onclick={() => load(statut, q.trim(), rows?.at(-1)?.id)}>
+            {loading ? 'Chargement…' : 'Charger les plus anciens'}
+          </button>
+        {/if}
+        {#if failed}<p class="error">Impossible de charger la suite.</p>{/if}
+      {/if}
+    </section>
+
+    <section class="card fiche" aria-label="Fiche du bug">
+      {#if selected !== null}
+        {#key selected}
+          <Bug id={selected} {onSaved} />
+        {/key}
+      {:else if rows}
+        <p class="empty">Aucun bug à afficher.</p>
+      {/if}
+    </section>
   </div>
-  {#if more}
-    <button class="btn more" type="button" disabled={loading} onclick={() => load(statut, q.trim(), rows?.at(-1)?.id)}>
-      {loading ? 'Chargement…' : 'Plus anciens'}
-    </button>
-  {/if}
-  {#if failed}<p class="error">Impossible de charger la suite.</p>{/if}
 {/if}
 
 <style>
-  header {
-    margin-bottom: 18px;
-  }
-
-  header p {
-    margin: 6px 0 0;
-  }
-
-  .tools {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    height: 32px;
-    padding: 0 12px;
-    border-radius: 99px;
-    border: 1px solid var(--border-2);
-    background: var(--surface-1);
-    color: var(--text-3);
-    cursor: pointer;
-    font-weight: 500;
-  }
-
-  .chip:hover {
-    background: var(--surface-3);
-    color: var(--text);
-  }
-
-  .chip.on {
-    background: var(--accent-soft);
-    border-color: var(--accent-ring);
-    color: var(--strong);
-  }
-
-  .n {
-    font-size: 12px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-
   .search {
+    width: 300px;
+    max-width: 100%;
+  }
+
+  .split {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 260px;
-    height: 36px;
-    padding: 0 12px;
-    border-radius: var(--r-btn);
-    background: var(--surface-2);
-    border: 1px solid var(--border-2);
-    color: var(--muted);
-  }
-
-  .search:focus-within {
-    border-color: var(--accent-ring);
-  }
-
-  .search input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    background: none;
-    outline: none;
-    color: var(--text);
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
   }
 
   .list {
-    padding: 6px 8px;
-    overflow-x: auto;
+    flex: 1 1 400px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th {
-    text-align: left;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-    padding: 10px 12px;
-  }
-
-  td {
-    padding: 10px 12px;
-    border-top: 1px solid var(--border-1);
-    white-space: nowrap;
-  }
-
-  tbody tr:hover {
-    background: var(--surface-1);
+  .fiche {
+    flex: 1.25 1 460px;
+    padding: 24px;
   }
 
   .num {
+    width: 36px;
+    color: var(--muted-2);
+  }
+
+  .list .row-body {
+    gap: 4px;
+  }
+
+  .list .row-title {
+    font-weight: 500;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 8px;
+    white-space: nowrap;
+    font-size: 12px;
     color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .title {
-    white-space: normal;
-    min-width: 260px;
-  }
-
-  .title a {
-    color: var(--strong);
-    font-weight: 550;
-    text-decoration: none;
-  }
-
-  .title a:hover {
-    text-decoration: underline;
   }
 
   .shot {
     display: inline-flex;
-    vertical-align: -2px;
-    margin-left: 6px;
-    color: var(--muted);
-  }
-
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 9px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 550;
-    color: var(--text-soft);
-    background: color-mix(in srgb, var(--c) 16%, transparent);
-  }
-
-  .pill::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--c);
-  }
-
-  .soft {
     color: var(--text-3);
   }
 
   .more {
-    margin-top: 14px;
-  }
-
-  @media (max-width: 760px) {
-    .search {
-      width: 100%;
-    }
+    align-self: center;
+    margin: 8px 0 4px;
   }
 </style>

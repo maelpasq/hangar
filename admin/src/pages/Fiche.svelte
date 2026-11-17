@@ -1,22 +1,23 @@
 <script lang="ts">
-  // Fiche d'un compte : identité, postes, amis, bibliothèque, badges (modifiables), signalements, journal.
-  import BadgeIcon from '../../../src/lib/components/BadgeIcon.svelte';
-  import Icon from '../../../src/lib/components/Icon.svelte';
-  import { givenView } from '../../../src/lib/util/badges';
-  import { ApiError, api, type Badge, type UserCard } from '../api';
-  import { actionLabel, ago, date, dateTime, hours, num } from '../format';
+  // Fiche d'un compte (à droite de la liste) : identité, chiffres, badges (modifiables), amis et
+  // postes, signalements reçus, sanctions, journal.
+  import Icon, { type IconName } from '../../../src/lib/components/Icon.svelte';
+  import { ApiError, api, type Badge, type SanctionKind, type UserCard } from '../api';
+  import { BADGES } from '../badges';
+  import Avatar, { avatarColor } from '../components/Avatar.svelte';
+  import Pill from '../components/Pill.svelte';
+  import ReportBox from '../components/ReportBox.svelte';
+  import { actionLabel, ago, date, hours, num } from '../format';
   import { DURATIONS, KINDS, kindLabel, reportStatusOf, untilLabel } from '../moderation';
-  import type { SanctionKind } from '../api';
   import { href } from '../router.svelte';
 
-  let { id, badgeIds }: { id: string; badgeIds: Badge[] } = $props();
+  let { id, badgeIds, q = '' }: { id: string; badgeIds: Badge[]; q?: string } = $props();
 
   let u = $state<UserCard | null>(null);
   let missing = $state(false);
   let failed = $state(false);
   let busy = $state<Badge | null>(null);
   let badgeError = $state(false);
-  let avatarOk = $state(true);
   let copied = $state(false);
 
   // Nouvelle sanction.
@@ -36,20 +37,20 @@
       reason = '';
       await load();
     } catch {
-      punishError = "La sanction n'a pas été appliquée.";
+      punishError = 'La sanction n’a pas été appliquée.';
     } finally {
       punishing = false;
     }
   }
 
-  async function liftOne(id: string) {
+  async function liftOne(sid: string) {
     punishing = true;
     punishError = '';
     try {
-      await api.lift(id);
+      await api.lift(sid);
       await load();
     } catch {
-      punishError = "La sanction n'a pas été levée.";
+      punishError = 'La sanction n’a pas été levée.';
     } finally {
       punishing = false;
     }
@@ -89,307 +90,340 @@
     setTimeout(() => (copied = false), 1500);
   }
 
-  const avatar = $derived(u?.avatar && avatarOk ? api.avatarUrl(u.id) : null);
+  const longDate = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const givable = $derived(BADGES.filter((b) => badgeIds.includes(b.id)));
+  const figures = $derived<{ label: string; icon: IconName; value: string }[]>(
+    u
+      ? [
+          { label: 'Jeux synchronisés', icon: 'image', value: num(u.library.entries) },
+          { label: 'Sessions', icon: 'clock', value: num(u.library.sessions) },
+          { label: 'Temps de jeu', icon: 'clock', value: hours(u.library.playMs) },
+          { label: 'Amis', icon: 'heart', value: num(u.social?.enabled ? u.social.friends : 0) }
+        ]
+      : []
+  );
 </script>
 
-<a class="back" href={href.comptes()}><Icon name="back" size={16} /> Comptes</a>
-
 {#if missing}
-  <p class="empty">Ce compte n'existe pas (ou plus).</p>
+  <div class="card pad"><p class="empty">Ce compte n’existe pas (ou plus).</p></div>
 {:else if failed}
   <p class="error">Impossible de charger la fiche.</p>
 {:else if !u}
-  <p class="muted">Chargement…</p>
+  <div class="card pad"><p class="empty">Chargement…</p></div>
 {:else}
-  <header class="id">
-    <div class="avatar" aria-hidden="true">
-      {#if avatar}
-        <img src={avatar} alt="" onerror={() => (avatarOk = false)} />
-      {:else}
-        {u.name.slice(0, 1).toUpperCase()}
-      {/if}
-    </div>
-    <div class="who">
-      <h1>
-        {u.name}
-        {#each u.badges as b (b)}
-          {@const v = givenView(b)}
-          <span class="emblem" style:color={v.color} title={v.label}><BadgeIcon icon={v.icon} size={20} /></span>
-        {/each}
-      </h1>
-      <p class="soft">
-        {u.email}
-        {#if !u.emailVerified}<span class="tag warn">non vérifiée</span>{/if}
-        · inscrit le {date(u.since)}
-      </p>
-      <p class="idline">
-        <span class="mono">{u.id}</span>
-        <button class="copy" type="button" onclick={copyId} aria-label="Copier l'identifiant">
-          <Icon name={copied ? 'check' : 'copy'} size={14} />
-        </button>
-      </p>
-    </div>
-  </header>
-
-  <div class="grid">
-    <section class="card">
-      <h2>Badges</h2>
-      <p class="hint muted">Donnés à la main, visibles sur le profil dans l'app.</p>
-      <div class="badges">
-        {#each badgeIds as b (b)}
-          {@const v = givenView(b)}
-          {@const on = u.badges.includes(b)}
-          <button type="button" class="badge" class:on aria-pressed={on} disabled={busy !== null} onclick={() => toggle(b)}>
-            <span class="emblem" style:color={on ? v.color : 'var(--muted-2)'}><BadgeIcon icon={v.icon} size={20} /></span>
-            {v.label}
-            <span class="state">{busy === b ? '…' : on ? 'Retirer' : 'Donner'}</span>
-          </button>
+  <div class="stack">
+    <div class="card hero">
+      <div class="banner" style:--av={avatarColor(u.id)} aria-hidden="true"></div>
+      <div class="ident">
+        <Avatar name={u.name} seed={u.id} size={72} src={u.avatar ? api.avatarUrl(u.id) : null} />
+        <div class="who">
+          <div class="name-line">
+            <h2 class="name">{u.name}</h2>
+            {#each BADGES.filter((b) => u?.badges.includes(b.id)) as b (b.id)}
+              <span class="pill" style:--c={b.color}><Icon name="shieldCheck" size={12} stroke={2} />{b.label}</span>
+            {/each}
+            {#each activeSanctions as s (s.id)}
+              <Pill color="var(--danger)" label={kindLabel(s.kind)} />
+            {/each}
+          </div>
+          <span class="mail">
+            {u.email}
+            {#if u.emailVerified}
+              <span class="verified"><Icon name="shieldCheck" size={13} stroke={2} />vérifié</span>
+            {:else}
+              <span class="unverified">non vérifiée</span>
+            {/if}
+          </span>
+          <span class="since">
+            Inscrit le {longDate.format(u.since)} ·
+            <span class="mono">{u.id}</span>
+            <button class="copy" type="button" onclick={copyId} aria-label="Copier l’identifiant">
+              <Icon name={copied ? 'check' : 'copy'} size={13} />
+            </button>
+          </span>
+        </div>
+      </div>
+      <div class="figures">
+        {#each figures as f (f.label)}
+          <div class="figure">
+            <span class="f-label"><Icon name={f.icon} size={14} />{f.label}</span>
+            <span class="f-value">{f.value}</span>
+          </div>
         {/each}
       </div>
-      {#if badgeError}<p class="error small">Le badge n'a pas été modifié.</p>{/if}
-    </section>
+    </div>
 
-    <section class="card">
-      <h2>Amis</h2>
-      {#if u.social?.enabled}
-        <dl>
-          <dt>État</dt>
-          <dd>
-            <span class="dot" class:online={u.social.online}></span>
-            {u.social.online ? 'En ligne' : `Vu ${ago(u.social.seen)}`}
-          </dd>
-          <dt>Code ami</dt>
-          <dd class="mono">{u.social.code.slice(0, 4)}-{u.social.code.slice(4)}</dd>
-          <dt>Amis</dt>
-          <dd>{num(u.social.friends)}</dd>
-          <dt>Trouvable par pseudo</dt>
-          <dd>{u.social.findable ? 'Oui' : 'Non'}</dd>
-        </dl>
+    <div class="duo">
+      <div class="card block">
+        <div class="titles">
+          <h3>Badges</h3>
+          <p class="card-sub small">Chaque changement est noté au journal.</p>
+        </div>
+        {#each givable as b (b.id)}
+          {@const on = u.badges.includes(b.id)}
+          <div class="line">
+            <span class="tint icon" style:--c={b.color}><Icon name="shieldCheck" size={15} /></span>
+            <span class="text">
+              <span class="t">{b.label}</span>
+              <span class="h">{b.hint}</span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              class="tog"
+              aria-checked={on}
+              aria-label="{on ? 'Retirer' : 'Donner'} le badge {b.label}"
+              disabled={busy !== null}
+              onclick={() => toggle(b.id)}
+            ></button>
+          </div>
+        {/each}
+        {#if badgeError}<p class="error">Le badge n’a pas été modifié.</p>{/if}
+      </div>
+
+      <div class="card block">
+        <h3>Amis et présence</h3>
+        {#if u.social?.enabled}
+          <dl>
+            <div><dt>Code ami</dt><dd class="mono code">{u.social.code}</dd></div>
+            <div><dt>Trouvable par pseudo</dt><dd>{u.social.findable ? 'Oui' : 'Non'}</dd></div>
+            <div>
+              <dt>Présence</dt>
+              <dd class="presence" class:online={u.social.online}>
+                <i></i>{u.social.online ? 'En ligne' : `Vu ${ago(u.social.seen)}`}
+              </dd>
+            </div>
+          </dl>
+        {:else}
+          <p class="quiet">Amis désactivés sur ce compte.</p>
+        {/if}
+        <h3 class="devices-title">Postes</h3>
+        {#each u.devices as d (d.id)}
+          <div class="line">
+            <span class="icon neutral"><Icon name="monitor" size={15} /></span>
+            <span class="t grow">{d.name}</span>
+            <span class="h">{ago(d.lastSeen)}</span>
+          </div>
+        {:else}
+          <p class="quiet">Aucun poste connecté.</p>
+        {/each}
+      </div>
+    </div>
+
+    <div class="card block">
+      <div class="head">
+        <h3>Signalements reçus</h3>
+        <Pill color={u.reportsReceived.length ? 'var(--danger)' : 'var(--muted-2)'} label={num(u.reportsReceived.length)} dot={false} />
+      </div>
+      {#each u.reportsReceived as r (r.id)}
+        {@const st = reportStatusOf(r.status)}
+        <ReportBox reason={r.reason} excerpt={r.excerpt}>
+          {#snippet meta()}
+            par <a href={href.compte(r.reporterId, q)}>{r.reporterName ?? 'compte supprimé'}</a> · {ago(r.at)}
+          {/snippet}
+          <Pill color={st.color} label={st.label} />
+        </ReportBox>
       {:else}
-        <p class="muted">Amis désactivés.</p>
-      {/if}
-    </section>
+        <p class="quiet">
+          Aucun signalement. Les messages privés restent chiffrés : seule la copie gardée au moment d’un signalement
+          est visible.
+        </p>
+      {/each}
+      {#if u.reportsMade}<p class="card-sub small">A lui-même signalé {num(u.reportsMade)} fois.</p>{/if}
+    </div>
 
-    <section class="card">
-      <h2>Bibliothèque synchronisée</h2>
-      <dl>
-        <dt>Éléments</dt>
-        <dd>{num(u.library.entries)}</dd>
-        <dt>Sessions de jeu</dt>
-        <dd>{num(u.library.sessions)}</dd>
-        <dt>Temps de jeu</dt>
-        <dd>{hours(u.library.playMs)}</dd>
-        <dt>Jaquettes envoyées</dt>
-        <dd>{num(u.library.covers)}</dd>
-      </dl>
-    </section>
-
-    <section class="card">
-      <h2>Postes</h2>
-      {#if u.devices.length}
-        <ul class="plain">
-          {#each u.devices as d (d.id)}
-            <li>
-              <Icon name="monitor" size={16} />
-              <span class="grow">{d.name}</span>
-              <span class="muted">{ago(d.lastSeen)}</span>
-            </li>
-          {/each}
-        </ul>
+    <div class="card block">
+      <h3>Sanctions</h3>
+      {#each activeSanctions as s (s.id)}
+        <div class="line sanction">
+          <span class="text">
+            <span class="t">{kindLabel(s.kind)}, {untilLabel(s.until)}</span>
+            <span class="h">Motif : {s.reason} · depuis le {date(s.at)}</span>
+          </span>
+          <button class="btn" type="button" disabled={punishing} onclick={() => liftOne(s.id)}>Lever</button>
+        </div>
       {:else}
-        <p class="muted">Aucun poste connecté.</p>
-      {/if}
-    </section>
-
-    <section class="card wide" aria-labelledby="mod-title">
-      <h2 id="mod-title">Sanctions</h2>
-      {#if activeSanctions.length}
-        <ul class="sanctions">
-          {#each activeSanctions as s (s.id)}
-            <li class="on">
-              <span class="grow">
-                <b>{kindLabel(s.kind)}</b>, {untilLabel(s.until)}
-                <span class="muted">· depuis le {date(s.at)}</span><br />
-                <span class="soft">Motif : {s.reason}</span>
-              </span>
-              <button class="btn" type="button" disabled={punishing} onclick={() => liftOne(s.id)}>Lever</button>
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p class="muted">Aucune sanction en cours.</p>
-      {/if}
+        <p class="quiet">Aucune sanction en cours.</p>
+      {/each}
 
       <form class="punish" onsubmit={punish}>
         <fieldset>
-          <legend class="label">Nouvelle sanction</legend>
-          <div class="kinds">
+          <legend class="lbl">Nouvelle sanction</legend>
+          <div class="seg">
             {#each KINDS as k (k.id)}
-              <label class="kind" class:sel={kind === k.id}>
-                <input type="radio" name="kind" value={k.id} bind:group={kind} />
-                <span><b>{k.label}</b><br /><span class="muted">{k.help}</span></span>
-              </label>
+              <button type="button" class:on={kind === k.id} aria-pressed={kind === k.id} onclick={() => (kind = k.id)}>
+                <i style:background={k.id === 'total' ? 'var(--danger)' : 'var(--star)'}></i>{k.label}
+              </button>
             {/each}
           </div>
+          <p class="card-sub small help">{KINDS.find((k) => k.id === kind)?.help}</p>
         </fieldset>
-        <div class="row2">
-          <label class="field">
-            <span class="label">Durée</span>
-            <select bind:value={days}>
+        <div class="pair">
+          <div class="dur">
+            <label class="lbl" for="days">Durée</label>
+            <select id="days" class="field" bind:value={days}>
               {#each DURATIONS as d (d.label)}
                 <option value={d.days === null ? 'def' : String(d.days)}>{d.label}</option>
               {/each}
             </select>
-          </label>
-          <label class="field grow">
-            <span class="label">Motif (montré à la personne dans Hangar)</span>
-            <input type="text" maxlength="500" placeholder="Par exemple : messages insultants" bind:value={reason} />
-          </label>
+          </div>
+          <div class="why">
+            <label class="lbl" for="reason">Motif (montré à la personne dans Hangar)</label>
+            <input id="reason" class="field" maxlength="500" placeholder="Par exemple : messages insultants" bind:value={reason} />
+          </div>
         </div>
-        {#if punishError}<p class="error small" role="alert">{punishError}</p>{/if}
-        <button class="btn danger" type="submit" disabled={punishing || !reason.trim()}>
-          {punishing ? 'Application…' : 'Appliquer la sanction'}
-        </button>
+        {#if punishError}<p class="error" role="alert">{punishError}</p>{/if}
+        <div>
+          <button class="btn" type="submit" disabled={punishing || !reason.trim()}>
+            <Icon name="ban" size={16} />{punishing ? 'Application…' : 'Appliquer la sanction'}
+          </button>
+        </div>
       </form>
 
       {#if pastSanctions.length}
-        <details class="past">
+        <details>
           <summary>Anciennes sanctions ({pastSanctions.length})</summary>
-          <ul class="plain">
+          <ol class="hist">
             {#each pastSanctions as s (s.id)}
               <li>
-                <span class="grow">{kindLabel(s.kind)} : {s.reason}</span>
-                <span class="muted">{date(s.at)}{s.liftedAt ? `, levée le ${date(s.liftedAt)}` : ', terminée'}</span>
+                <span class="dot"></span>
+                <span class="text">
+                  <span class="t small">{kindLabel(s.kind)} : {s.reason}</span>
+                  <span class="h">{date(s.at)}{s.liftedAt ? `, levée le ${date(s.liftedAt)}` : ', terminée'}</span>
+                </span>
               </li>
             {/each}
-          </ul>
+          </ol>
         </details>
       {/if}
-    </section>
+    </div>
 
-    <section class="card wide">
-      <h2>Signalements reçus <span class="muted">({num(u.reportsReceived.length)})</span></h2>
-      {#if u.reportsMade}<p class="hint muted">A lui-même signalé {num(u.reportsMade)} fois.</p>{/if}
-      {#if u.reportsReceived.length}
-        <ul class="reports">
-          {#each u.reportsReceived as r (r.id)}
-            <li>
-              <div class="line">
-                <b>{r.reason}</b>
-                <span class="pill" style:--c={reportStatusOf(r.status).color}>{reportStatusOf(r.status).label}</span>
-                <span class="muted">
-                  par
-                  <a href={href.compte(r.reporterId)}>{r.reporterName ?? 'compte supprimé'}</a>,
-                  {dateTime(r.at)}
-                </span>
-              </div>
-              {#if r.excerpt}<blockquote>{r.excerpt}</blockquote>{/if}
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p class="muted">Aucun signalement.</p>
-      {/if}
-    </section>
-
-    <section class="card wide">
-      <h2>Journal</h2>
+    <div class="card block">
+      <h3>Journal</h3>
       {#if u.log.length}
-        <ul class="plain">
+        <ol class="hist">
           {#each u.log as l (l.id)}
             <li>
-              <span class="grow">{actionLabel(l)}</span>
-              <span class="muted">{dateTime(l.at)}</span>
+              <span
+                class="dot"
+                style:background={l.action === 'badge.donner' ? 'var(--success)' : l.action === 'badge.retirer' || l.action.startsWith('sanction') ? 'var(--danger)' : 'var(--accent)'}
+              ></span>
+              <span class="text">
+                <span class="t small">{actionLabel(l)}</span>
+                <span class="h">{l.actor} · {ago(l.at)}</span>
+              </span>
             </li>
           {/each}
-        </ul>
+        </ol>
       {:else}
-        <p class="muted">Aucune action sur ce compte.</p>
+        <p class="quiet">Aucune action sur ce compte.</p>
       {/if}
-    </section>
+    </div>
   </div>
 {/if}
 
 <style>
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 18px;
-    color: var(--text-3);
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  .back:hover {
-    color: var(--text);
-  }
-
-  .id {
+  .stack {
     display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pad {
+    padding: 24px;
+  }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .banner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 110px;
+    background: linear-gradient(120deg, var(--av), transparent 70%);
+    opacity: 0.35;
+  }
+
+  .ident {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 18px;
-    margin-bottom: 22px;
-  }
-
-  .avatar {
-    flex: none;
-    width: 68px;
-    height: 68px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    background: var(--accent-soft);
-    color: var(--accent-text);
-    font-size: 26px;
-    font-weight: 650;
-  }
-
-  .avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
   }
 
   .who {
-    min-width: 0;
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
-  h1 {
+  .name-line {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .name {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+
+  .mail {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .emblem {
-    display: inline-flex;
-  }
-
-  .soft {
-    margin: 4px 0 0;
+    font-size: 13px;
     color: var(--text-3);
   }
 
-  .idline {
+  .verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--success-text);
+  }
+
+  .unverified {
+    color: var(--star);
+  }
+
+  .since {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin: 6px 0 0;
+    font-size: 12.5px;
     color: var(--muted);
+  }
+
+  .since .mono {
+    font-size: 12px;
   }
 
   .copy {
     display: inline-grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    border: 0;
-    background: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
     color: var(--muted);
-    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
 
   .copy:hover {
@@ -397,306 +431,242 @@
     color: var(--text);
   }
 
-  .tag {
-    margin-left: 6px;
-    padding: 1px 7px;
-    border-radius: 99px;
-    font-size: 11.5px;
+  .figures {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
-  .warn {
-    background: color-mix(in srgb, var(--star) 18%, transparent);
-    color: var(--star);
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .wide {
-    grid-column: 1 / -1;
-  }
-
-  h2 {
-    margin-bottom: 12px;
-  }
-
-  .hint {
-    margin: -6px 0 12px;
-    font-size: 12.5px;
-  }
-
-  .badges {
-    display: grid;
+  .figure {
+    flex: 1 1 130px;
+    min-width: 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgb(var(--glass) / 0.26);
+    border: 1px solid var(--border-1);
+    display: flex;
+    flex-direction: column;
     gap: 6px;
   }
 
-  .badge {
+  .f-label {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 9px 11px;
-    border-radius: var(--r-btn);
-    border: 1px solid var(--border-2);
-    background: var(--surface-1);
-    color: var(--text-3);
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
   }
 
-  .badge:hover:not(:disabled) {
-    background: var(--surface-3);
-  }
-
-  .badge.on {
-    border-color: var(--accent-ring);
-    background: var(--accent-soft);
+  .f-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
     color: var(--strong);
+    font-variant-numeric: tabular-nums;
   }
 
-  .badge:disabled {
-    cursor: default;
+  .duo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 16px;
   }
 
-  .state {
-    margin-left: auto;
+  .block {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .titles {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .small {
+    font-size: 12.5px;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .neutral {
+    background: rgb(var(--ink) / 0.06);
+    color: var(--text-2);
+  }
+
+  .text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .t {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .t.small {
+    font-size: 13.5px;
+    color: var(--text-soft);
+  }
+
+  .grow {
+    flex: 1;
+  }
+
+  .h {
     font-size: 12px;
     color: var(--muted);
   }
 
   dl {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 9px 18px;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13.5px;
   }
 
   dt {
-    color: var(--muted);
+    color: var(--text-3);
   }
 
   dd {
     margin: 0;
-    color: var(--text-soft);
-    display: flex;
+    color: var(--strong);
+  }
+
+  .code {
+    letter-spacing: 1px;
+  }
+
+  .presence {
+    display: inline-flex;
     align-items: center;
     gap: 7px;
-  }
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--muted-2);
-  }
-
-  .dot.online {
-    background: var(--success);
-  }
-
-  .plain {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .plain li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 0;
-    border-top: 1px solid var(--border-1);
-    color: var(--text-soft);
-  }
-
-  .plain li:first-child {
-    border-top: 0;
-  }
-
-  .grow {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .reports {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .reports li {
-    padding: 11px 13px;
-    border-radius: var(--r-btn);
-    background: var(--surface-1);
-    border: 1px solid var(--border-1);
-  }
-
-  .line {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    align-items: baseline;
-  }
-
-  .line b {
-    color: var(--text);
-    font-weight: 550;
-  }
-
-  blockquote {
-    margin: 8px 0 0;
-    padding-left: 10px;
-    border-left: 2px solid var(--border-3);
     color: var(--text-3);
-    white-space: pre-wrap;
   }
 
-  .sanctions {
-    list-style: none;
-    margin: 0 0 16px;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  .presence i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
   }
 
-  .sanctions li {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 11px 13px;
-    border-radius: var(--r-btn);
-    background: color-mix(in srgb, var(--danger) 10%, transparent);
-    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
-    color: var(--text-soft);
+  .presence.online {
+    color: var(--success-text);
+  }
+
+  .devices-title {
+    margin-top: 6px;
+  }
+
+  .quiet {
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  .sanction {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 22%, transparent);
   }
 
   .punish {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border-1);
+    gap: 14px;
+    padding-top: 16px;
+    border-top: 1px solid rgb(var(--ink) / 0.06);
   }
 
-  .punish fieldset {
-    margin: 0;
-    padding: 0;
-    border: 0;
+  .help {
+    margin-top: 8px;
   }
 
-  .label {
-    display: block;
-    margin-bottom: 8px;
-    padding: 0;
-    font-size: 12.5px;
+  .pair {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .dur {
+    flex: 0 1 160px;
+  }
+
+  .why {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  select.field {
+    appearance: auto;
+  }
+
+  summary {
+    cursor: pointer;
+    font-size: 13px;
     color: var(--muted);
   }
 
-  .kinds {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .kind {
-    position: relative;
+  .hist {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
     display: flex;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: var(--r-btn);
-    border: 1px solid var(--border-2);
-    background: var(--surface-1);
-    color: var(--text-soft);
-    cursor: pointer;
-    font-size: 13px;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  .kind input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
+  .block > .hist {
+    margin: 0;
   }
 
-  .kind:has(input:focus-visible) {
-    outline: 2px solid var(--accent-ring);
-    outline-offset: 2px;
-  }
-
-  .kind.sel {
-    border-color: color-mix(in srgb, var(--danger) 60%, transparent);
-    background: color-mix(in srgb, var(--danger) 10%, transparent);
-  }
-
-  .row2 {
+  .hist li {
     display: flex;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 12px;
   }
 
-  .field select,
-  .field input {
-    width: 100%;
-    height: 36px;
-    padding: 0 10px;
-    border-radius: 10px;
-    border: 1px solid var(--border-2);
-    background: var(--surface-2);
-    color: var(--text);
-    outline: none;
-  }
-
-  .field select:focus,
-  .field input:focus {
-    border-color: var(--accent-ring);
-  }
-
-  .danger {
-    align-self: flex-start;
-    background: color-mix(in srgb, var(--danger) 22%, transparent);
-    border-color: color-mix(in srgb, var(--danger) 50%, transparent);
-    color: var(--danger-text);
-  }
-
-  .danger:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--danger) 32%, transparent);
-  }
-
-  .past {
-    margin-top: 14px;
-    color: var(--text-3);
-  }
-
-  .past summary {
-    cursor: pointer;
-    margin-bottom: 6px;
-  }
-
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 1px 8px;
-    border-radius: 99px;
-    font-size: 11.5px;
-    color: var(--text-soft);
-    background: color-mix(in srgb, var(--c) 16%, transparent);
-  }
-
-  .small {
-    margin: 10px 0 0;
-    font-size: 12.5px;
-  }
-
-  @media (max-width: 900px) {
-    .grid,
-    .kinds {
-      grid-template-columns: 1fr;
-    }
+  .dot {
+    width: 9px;
+    height: 9px;
+    margin-top: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--muted-2);
+    box-shadow: 0 0 0 4px rgb(var(--ink) / 0.04);
   }
 </style>

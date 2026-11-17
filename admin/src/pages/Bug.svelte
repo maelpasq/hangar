@@ -1,13 +1,14 @@
 <script lang="ts">
-  // Fiche d'un bug : signalement (texte, version, système, capture) et suivi (statut, version de
-  // correction, doublon, note interne), avec son historique.
+  // Fiche d'un bug (à droite de la liste) : signalement (texte, version, système, capture) et suivi
+  // (statut, version de correction, doublon, note interne), avec son historique.
   import Icon from '../../../src/lib/components/Icon.svelte';
-  import { ApiError, api, type BugCard, type BugStatus } from '../api';
+  import { ApiError, api, type BugCard, type BugStatus, type LogRow } from '../api';
+  import { TINTS } from '../badges';
   import { STATUSES, SYSTEMS, statusOf } from '../bug-status';
-  import { actionLabel, dateTime } from '../format';
-  import { href } from '../router.svelte';
+  import Pill from '../components/Pill.svelte';
+  import { actionLabel, ago } from '../format';
 
-  let { id }: { id: number } = $props();
+  let { id, onSaved }: { id: number; onSaved?: () => void } = $props();
 
   let bug = $state<BugCard | null>(null);
   let missing = $state(false);
@@ -26,7 +27,7 @@
     bug = b;
     status = b.status;
     fixedIn = b.fixedIn ?? '';
-    duplicateOf = b.duplicateOf ? String(b.duplicateOf) : '';
+    duplicateOf = b.duplicateOf ? `#${b.duplicateOf}` : '';
     note = b.note ?? '';
   }
 
@@ -40,11 +41,13 @@
   }
   load();
 
+  const dupId = (v: string) => v.trim().replace(/^#/, '');
+
   const changed = $derived(
     !!bug &&
       (status !== bug.status ||
         (status === 'corrige' && fixedIn.trim() !== (bug.fixedIn ?? '')) ||
-        (status === 'doublon' && duplicateOf.trim().replace(/^#/, '') !== (bug.duplicateOf ? String(bug.duplicateOf) : '')) ||
+        (status === 'doublon' && dupId(duplicateOf) !== (bug.duplicateOf ? String(bug.duplicateOf) : '')) ||
         note.trim() !== (bug.note ?? ''))
   );
 
@@ -58,11 +61,12 @@
       await api.updateBug(bug.id, {
         status,
         fixedIn: status === 'corrige' ? fixedIn.trim() || null : null,
-        duplicateOf: status === 'doublon' ? duplicateOf.trim() || null : null,
+        duplicateOf: status === 'doublon' ? dupId(duplicateOf) || null : null,
         note: note.trim() || null
       });
       fill(await api.bug(bug.id));
       saved = true;
+      onSaved?.();
       setTimeout(() => (saved = false), 2000);
     } catch (err) {
       const code = err instanceof ApiError ? err.code : '';
@@ -71,369 +75,383 @@
           ? 'Version invalide (par exemple 1.2.30).'
           : code === 'doublon'
             ? 'Numéro de bug introuvable (ou celui-ci).'
-            : 'Le suivi n\'a pas été enregistré.';
+            : 'Le suivi n’a pas été enregistré.';
     } finally {
       saving = false;
     }
   }
 
   const capture = $derived(bug?.capture ? api.captureUrl(bug.id) : null);
+  const dotOf = (l: LogRow) =>
+    l.action === 'bug.statut' ? statusOf(String(l.detail?.vers)).color : l.action === 'bug.note' ? TINTS.info : 'var(--accent)';
 </script>
 
-<a class="back" href={href.bugs()}><Icon name="back" size={16} /> Bugs</a>
-
 {#if missing}
-  <p class="empty">Ce bug n'existe pas.</p>
+  <p class="empty">Ce bug n’existe pas.</p>
 {:else if failed}
   <p class="error">Impossible de charger le bug.</p>
 {:else if !bug}
-  <p class="muted">Chargement…</p>
+  <p class="empty">Chargement…</p>
 {:else}
   {@const s = statusOf(bug.status)}
-  <header>
-    <p class="num">Bug #{bug.id}</p>
-    <h1>{bug.title}</h1>
-    <p class="meta">
-      <span class="pill" style:--c={s.color}>{s.label}</span>
-      Hangar {bug.version} · {SYSTEMS[bug.os] ?? bug.os} · signalé le {dateTime(bug.createdAt)}
-    </p>
-  </header>
-
-  <div class="layout">
-    <div class="main">
-      <section class="card">
-        <h2>Description</h2>
-        {#if bug.description}
-          <p class="desc">{bug.description}</p>
-        {:else}
-          <p class="muted">Pas de description.</p>
+  <div class="fiche">
+    <div class="head">
+      <div class="tags">
+        <span class="mono num">#{bug.id}</span>
+        <Pill color={s.color} label={s.label} />
+        <span class="pill neutral"><Icon name="monitor" size={13} />{SYSTEMS[bug.os] ?? bug.os}</span>
+        <span class="pill neutral">Hangar {bug.version}</span>
+        {#if bug.discord}
+          <span class="pill discord" style:--c={TINTS.discord}><Icon name="discord" size={13} />Sur Discord</span>
         {/if}
-      </section>
-
-      <section class="card">
-        <h2>Capture</h2>
-        {#if capture}
-          <a class="shot" href={capture} target="_blank" rel="noreferrer">
-            <img src={capture} alt={`Capture jointe au bug #${bug.id}`} />
-          </a>
-        {:else if bug.capture}
-          <p class="muted">Capture jointe (non affichée en démo).</p>
-        {:else}
-          <p class="muted">Aucune capture{bug.closedAt ? ' (effacée 90 jours après la clôture)' : ''}.</p>
-        {/if}
-      </section>
-
-      <section class="card">
-        <h2>Historique</h2>
-        {#if bug.log.length}
-          <ul class="plain">
-            {#each bug.log as l (l.id)}
-              <li>
-                <span class="grow">{actionLabel(l)}</span>
-                <span class="muted">{dateTime(l.at)}</span>
-              </li>
-            {/each}
-          </ul>
-        {:else}
-          <p class="muted">Pas encore suivi.</p>
-        {/if}
-      </section>
+      </div>
+      <h2 class="title">{bug.title}</h2>
+      <p class="sub">Reçu {ago(bug.createdAt)}{bug.fixedIn ? ` · corrigé dans ${bug.fixedIn}` : ''}</p>
     </div>
 
-    <form class="card side" onsubmit={save}>
-      <h2>Suivi</h2>
+    <div class="report">
+      <div class="desc-col">
+        <span class="lbl">Description</span>
+        <p class="desc">{bug.description || 'Pas de description.'}</p>
+      </div>
+      <div class="shot-col">
+        <span class="lbl">Capture</span>
+        {#if capture}
+          <a class="shot" href={capture} target="_blank" rel="noreferrer" aria-label="Ouvrir la capture">
+            <img src={capture} alt={`Capture jointe au bug #${bug.id}`} />
+            <span class="grow"><Icon name="external" size={13} />Agrandir</span>
+          </a>
+        {:else if bug.capture}
+          <!-- Démo : pas de vraie image, un aperçu figuré. -->
+          <div class="shot fake" role="img" aria-label="Capture jointe (non affichée en démo)">
+            <span class="bar"></span>
+            <span class="tile a"></span>
+            <span class="tile b"></span>
+            <span class="tile c"></span>
+            <span class="grow"><Icon name="external" size={13} />Agrandir</span>
+          </div>
+        {:else}
+          <div class="noshot">{bug.closedAt ? 'Capture effacée' : 'Pas de capture'}</div>
+        {/if}
+      </div>
+    </div>
+
+    <form class="block" onsubmit={save}>
+      <h3>Suivi</h3>
       <fieldset>
-        <legend class="label">Statut</legend>
-        <div class="statuses">
+        <legend class="lbl">Statut</legend>
+        <div class="seg">
           {#each STATUSES as st (st.id)}
-            <label class="status" class:on={status === st.id} style:--c={st.color}>
-              <input type="radio" name="status" value={st.id} bind:group={status} />
-              <span class="dot"></span>
-              {st.label}
-            </label>
+            <button type="button" class:on={status === st.id} aria-pressed={status === st.id} onclick={() => (status = st.id)}>
+              <i style:background={st.color}></i>{st.label}
+            </button>
           {/each}
         </div>
       </fieldset>
-
-      {#if status === 'corrige'}
-        <label class="field">
-          <span class="label">Corrigé dans la version</span>
-          <input type="text" placeholder="1.2.30" bind:value={fixedIn} autocomplete="off" spellcheck="false" />
-        </label>
-      {:else if status === 'doublon'}
-        <label class="field">
-          <span class="label">Doublon du bug n°</span>
-          <input type="text" inputmode="numeric" placeholder="12" bind:value={duplicateOf} autocomplete="off" />
-        </label>
-      {/if}
-
-      <label class="field">
-        <span class="label">Note interne</span>
-        <textarea rows="5" maxlength="2000" placeholder="Pistes, cause, lien vers le commit…" bind:value={note}></textarea>
-      </label>
-
-      {#if error}<p class="error small" role="alert">{error}</p>{/if}
-
-      <div class="actions">
-        <button class="btn primary" type="submit" disabled={!changed || saving}>
-          {saving ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-        <span class="status-line muted" aria-live="polite">{saved ? 'Enregistré' : ''}</span>
+      <div class="pair">
+        <div>
+          <label class="lbl" for="fixed">Corrigé dans la version</label>
+          <input
+            id="fixed"
+            class="field mono"
+            placeholder="1.2.30"
+            autocomplete="off"
+            spellcheck="false"
+            bind:value={fixedIn}
+            disabled={status !== 'corrige'}
+          />
+        </div>
+        <div>
+          <label class="lbl" for="dup">Doublon de</label>
+          <input
+            id="dup"
+            class="field mono"
+            placeholder="#41"
+            autocomplete="off"
+            bind:value={duplicateOf}
+            disabled={status !== 'doublon'}
+          />
+        </div>
       </div>
-      <p class="hint muted">
-        {bug.discord
-          ? 'Le message Discord du bug suit le statut.'
-          : 'Pas de message Discord pour ce bug.'}
-      </p>
+      <div>
+        <label class="lbl" for="note">Note interne</label>
+        <textarea
+          id="note"
+          class="field"
+          maxlength="2000"
+          placeholder="Visible seulement ici, jamais par l’utilisateur."
+          bind:value={note}
+        ></textarea>
+      </div>
+      {#if error}<p class="error" role="alert">{error}</p>{/if}
+      <div class="actions">
+        <button type="submit" class="primary" disabled={!changed || saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+        <span class="hint">{bug.discord ? 'Le message Discord sera mis à jour.' : 'Pas de message Discord pour ce bug.'}</span>
+        <span class="ok" aria-live="polite">{saved ? 'Enregistré' : ''}</span>
+      </div>
     </form>
+
+    <div class="block hist">
+      <h3>Historique</h3>
+      <ol>
+        {#each bug.log as l (l.id)}
+          <li>
+            <span class="dot" style:background={dotOf(l)}></span>
+            <span class="what">
+              <span class="text">{actionLabel(l)}</span>
+              <span class="when">{l.actor} · {ago(l.at)}</span>
+            </span>
+          </li>
+        {/each}
+        <li>
+          <span class="dot" style:background="var(--accent)"></span>
+          <span class="what">
+            <span class="text">Signalement reçu{bug.discord ? ', message posté sur Discord' : ''}</span>
+            <span class="when">{ago(bug.createdAt)}</span>
+          </span>
+        </li>
+      </ol>
+    </div>
   </div>
 {/if}
 
 <style>
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 18px;
-    color: var(--text-3);
-    text-decoration: none;
-    font-weight: 500;
+  .fiche {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
   }
 
-  .back:hover {
-    color: var(--text);
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  header {
-    margin-bottom: 22px;
-  }
-
-  .num {
-    margin: 0 0 4px;
-    color: var(--muted);
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .meta {
+  .tags {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    margin: 10px 0 0;
-    color: var(--text-3);
+    gap: 8px;
   }
 
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 9px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 550;
-    color: var(--text-soft);
-    background: color-mix(in srgb, var(--c) 16%, transparent);
+  .num {
+    color: var(--muted-2);
   }
 
-  .pill::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--c);
+  .neutral {
+    background: rgb(var(--ink) / 0.06);
+    color: var(--text-2);
   }
 
-  .layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 14px;
-    align-items: start;
+  .discord {
+    margin-left: auto;
   }
 
-  .main {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    min-width: 0;
+  .title {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
   }
 
-  h2 {
-    margin-bottom: 12px;
-  }
-
-  .desc {
-    margin: 0;
-    white-space: pre-wrap;
-    color: var(--text-soft);
-    line-height: 1.55;
-    user-select: text;
-  }
-
-  .shot {
-    display: block;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid var(--border-2);
-  }
-
-  .shot img {
-    display: block;
-    width: 100%;
-    max-height: 520px;
-    object-fit: contain;
-    background: var(--bg-deep);
-  }
-
-  .plain {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .plain li {
-    display: flex;
-    gap: 10px;
-    padding: 9px 0;
-    border-top: 1px solid var(--border-1);
-    color: var(--text-soft);
-  }
-
-  .plain li:first-child {
-    border-top: 0;
-  }
-
-  .grow {
-    flex: 1;
-  }
-
-  .side {
-    position: sticky;
-    top: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .side h2 {
-    margin: 0;
-  }
-
-  fieldset {
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-
-  .label {
-    display: block;
-    margin-bottom: 8px;
-    padding: 0;
+  .sub {
     font-size: 12.5px;
     color: var(--muted);
   }
 
-  .statuses {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-
-  .status {
-    position: relative;
+  .report {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .desc-col,
+  .shot-col {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    padding: 8px 10px;
-    border-radius: 10px;
+  }
+
+  .desc-col {
+    flex: 1 1 240px;
+  }
+
+  .shot-col {
+    flex: 0 1 200px;
+  }
+
+  .desc-col .lbl,
+  .shot-col .lbl {
+    margin: 0;
+  }
+
+  .desc {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgb(var(--glass) / 0.3);
+    border: 1px solid var(--border-1);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-soft);
+    white-space: pre-line;
+    min-height: 96px;
+  }
+
+  .shot {
+    position: relative;
+    display: block;
+    height: 124px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--cover-bg), var(--panel));
     border: 1px solid var(--border-2);
-    background: var(--surface-1);
-    color: var(--text-3);
-    cursor: pointer;
+    text-decoration: none;
   }
 
-  .status input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .status:has(input:focus-visible) {
-    outline: 2px solid var(--accent-ring);
-    outline-offset: 2px;
-  }
-
-  .status:hover {
-    background: var(--surface-3);
-  }
-
-  .status.on {
-    border-color: color-mix(in srgb, var(--c) 70%, transparent);
-    background: color-mix(in srgb, var(--c) 14%, transparent);
-    color: var(--strong);
-  }
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--c);
-  }
-
-  .field input,
-  .field textarea {
+  .shot img {
     width: 100%;
-    padding: 9px 11px;
-    border-radius: 10px;
-    border: 1px solid var(--border-2);
-    background: var(--surface-2);
-    color: var(--text);
-    outline: none;
-    resize: vertical;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
-  .field input:focus,
-  .field textarea:focus {
-    border-color: var(--accent-ring);
+  .fake span:not(.grow) {
+    position: absolute;
+    border-radius: 6px;
+    background: rgb(var(--ink) / 0.08);
+  }
+
+  .fake .bar {
+    left: 12px;
+    top: 12px;
+    right: 40px;
+    height: 10px;
+    border-radius: 4px;
+  }
+
+  .fake .tile {
+    top: 32px;
+    width: 46px;
+    height: 64px;
+  }
+
+  .fake .a {
+    left: 12px;
+    background: color-mix(in srgb, var(--accent) 28%, transparent) !important;
+  }
+
+  .fake .b {
+    left: 66px;
+  }
+
+  .fake .c {
+    left: 120px;
+  }
+
+  .grow {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 9px;
+    border-radius: 8px;
+    background: rgb(0 0 0 / 0.6);
+    color: white;
+    font-size: 12px;
+  }
+
+  .noshot {
+    height: 124px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    border: 1px dashed rgb(var(--ink) / 0.12);
+    color: var(--muted-2);
+    font-size: 13px;
+  }
+
+  .block {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 20px;
+    border-top: 1px solid rgb(var(--ink) / 0.06);
+  }
+
+  .pair {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .pair > div {
+    flex: 1 1 180px;
+    min-width: 0;
   }
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
   }
 
-  .primary {
-    background: var(--accent);
-    border-color: transparent;
-    color: #fff;
-  }
-
-  .primary:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent) 85%, #fff);
-  }
-
-  .status-line {
-    font-size: 12.5px;
-  }
-
   .hint {
-    margin: 0;
-    font-size: 12px;
-  }
-
-  .small {
-    margin: 0;
     font-size: 12.5px;
+    color: var(--muted);
   }
 
-  @media (max-width: 980px) {
-    .layout {
-      grid-template-columns: 1fr;
-    }
+  .ok {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--success-text);
+  }
 
-    .side {
-      position: static;
-    }
+  .hist {
+    gap: 12px;
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    margin-top: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgb(var(--ink) / 0.04);
+  }
+
+  .what {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .text {
+    font-size: 13.5px;
+    color: var(--text-soft);
+  }
+
+  .when {
+    font-size: 12px;
+    color: var(--muted);
   }
 </style>

@@ -2,14 +2,14 @@
   // Coquille du dashboard : barre latérale, page courante, accès refusé.
   import Icon, { type IconName } from '../../src/lib/components/Icon.svelte';
   import { ApiError, api, envName, type Me } from './api';
+  import { num } from './format';
   import Accueil from './pages/Accueil.svelte';
-  import Bug from './pages/Bug.svelte';
   import Bugs from './pages/Bugs.svelte';
   import Comptes from './pages/Comptes.svelte';
-  import Fiche from './pages/Fiche.svelte';
   import Journal from './pages/Journal.svelte';
   import Signalements from './pages/Signalements.svelte';
   import { href, router } from './router.svelte';
+  import { loadStats, stats } from './stats.svelte';
 
   let me = $state<Me | null>(null);
   let denied = $state(false);
@@ -17,7 +17,10 @@
 
   api
     .me()
-    .then((m) => (me = m))
+    .then((m) => {
+      me = m;
+      loadStats();
+    })
     .catch((e) => (e instanceof ApiError && e.status === 403 ? (denied = true) : (failed = true)));
 
   // Thème du système (les tokens de l'app lisent `data-theme`).
@@ -26,13 +29,15 @@
   applyTheme();
   light.addEventListener('change', applyTheme);
 
-  const nav: { id: string; label: string; icon: IconName; to: string }[] = [
+  const host = envName === 'Prod' ? 'hangar-api' : envName === 'Test' ? 'hangar-api-test' : 'démo locale';
+
+  const nav = $derived<{ id: string; label: string; icon: IconName; to: string; n?: number }[]>([
     { id: 'accueil', label: 'Accueil', icon: 'home', to: href.accueil },
-    { id: 'bugs', label: 'Bugs', icon: 'bug', to: href.bugs() },
-    { id: 'signalements', label: 'Signalements', icon: 'flag', to: href.signalements() },
-    { id: 'comptes', label: 'Comptes', icon: 'users', to: href.comptes() },
-    { id: 'journal', label: 'Journal', icon: 'layers', to: href.journal }
-  ];
+    { id: 'bugs', label: 'Bugs', icon: 'bug', to: href.bugs(), n: stats.data?.bugsOpen },
+    { id: 'signalements', label: 'Signalements', icon: 'flag', to: href.signalements(), n: stats.data?.reportsOpen },
+    { id: 'comptes', label: 'Comptes', icon: 'users', to: href.comptes(), n: stats.data?.users },
+    { id: 'journal', label: 'Journal', icon: 'list', to: href.journal }
+  ]);
   const current = $derived(
     router.route.page === 'compte' ? 'comptes' : router.route.page === 'bug' ? 'bugs' : router.route.page
   );
@@ -42,66 +47,69 @@
   });
 </script>
 
-{#if denied}
+{#if denied || failed}
   <main class="center">
-    <h1>Accès refusé</h1>
-    <p class="muted">Ce dashboard est réservé au compte administrateur de Hangar.</p>
-  </main>
-{:else if failed}
-  <main class="center">
-    <h1>Serveur injoignable</h1>
-    <p class="muted">Réessaie dans un instant.</p>
+    <h1>{denied ? 'Accès refusé' : 'Serveur injoignable'}</h1>
+    <p class="muted">
+      {denied ? 'Ce dashboard est réservé au compte administrateur de Hangar.' : 'Réessaie dans un instant.'}
+    </p>
   </main>
 {:else}
   <div class="shell">
     <aside>
       <a class="brand" href={href.accueil}>
-        <img src="/favicon.svg" alt="" width="26" height="26" />
-        <span>Hangar <b>Admin</b></span>
+        <img src="/favicon.svg" alt="" width="30" height="30" />
+        <span class="name">Hangar</span>
+        <span class="tag">Admin</span>
       </a>
+      <p class="over section">Administration</p>
       <nav aria-label="Sections">
         {#each nav as n (n.id)}
-          <a href={n.to} class:active={current === n.id} aria-current={current === n.id ? 'page' : undefined}>
-            <Icon name={n.icon} size={17} />
-            {n.label}
+          <a href={n.to} class="nav" class:on={current === n.id} aria-current={current === n.id ? 'page' : undefined}>
+            <Icon name={n.icon} size={18} />
+            <span>{n.label}</span>
+            {#if n.n}<span class="count">{num(n.n)}</span>{/if}
           </a>
         {/each}
       </nav>
       <div class="foot">
-        <span class="env" class:prod={envName === 'Prod'}>{envName}</span>
-        {#if me}<span class="who" title={me.email}>{me.email}</span>{/if}
+        <div class="api">
+          <span class="dot" class:pulse={!!me}></span>
+          <div>
+            <span class="state">{me ? 'API en ligne' : 'Connexion…'}</span>
+            <span class="mono host">{host}</span>
+          </div>
+        </div>
+        <div class="who">
+          <span class="env" class:prod={envName === 'Prod'}>{envName}</span>
+          {#if me}<span class="email" title={me.email}>{me.email}</span>{/if}
+        </div>
       </div>
     </aside>
-    <main>
-      {#if me}
-        {#if router.route.page === 'accueil'}
-          <Accueil />
-        {:else if router.route.page === 'bugs'}
-          <Bugs statut={router.route.statut} q={router.route.q} />
-        {:else if router.route.page === 'bug'}
-          {#key router.route.id}
-            <Bug id={router.route.id} />
-          {/key}
-        {:else if router.route.page === 'signalements'}
-          <Signalements statut={router.route.statut} />
-        {:else if router.route.page === 'comptes'}
-          <Comptes q={router.route.q} />
-        {:else if router.route.page === 'compte'}
-          {#key router.route.id}
-            <Fiche id={router.route.id} badgeIds={me.badges} />
-          {/key}
-        {:else}
-          <Journal />
+    {#key router.route.page === 'bug' ? 'bugs' : router.route.page === 'compte' ? 'comptes' : router.route.page}
+      <main class="screen">
+        {#if me}
+          {#if router.route.page === 'accueil'}
+            <Accueil />
+          {:else if router.route.page === 'bugs' || router.route.page === 'bug'}
+            <Bugs route={router.route} />
+          {:else if router.route.page === 'signalements'}
+            <Signalements statut={router.route.statut} />
+          {:else if router.route.page === 'comptes' || router.route.page === 'compte'}
+            <Comptes route={router.route} badgeIds={me.badges} />
+          {:else}
+            <Journal />
+          {/if}
         {/if}
-      {/if}
-    </main>
+      </main>
+    {/key}
   </div>
 {/if}
 
 <style>
   .shell {
     display: grid;
-    grid-template-columns: 228px minmax(0, 1fr);
+    grid-template-columns: 236px minmax(0, 1fr);
     min-height: 100vh;
   }
 
@@ -109,28 +117,49 @@
     position: sticky;
     top: 0;
     height: 100vh;
+    z-index: 2;
     display: flex;
     flex-direction: column;
-    gap: 22px;
-    padding: 20px 14px;
-    background: var(--sidebar);
+    gap: 6px;
+    padding: 18px 12px 18px 26px;
     border-right: 1px solid var(--border-1);
+    background: var(--sidebar);
   }
 
   .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 4px 8px;
+    gap: 11px;
+    padding: 2px 4px 22px;
     text-decoration: none;
     color: var(--strong);
-    font-size: 15px;
-    font-weight: 600;
   }
 
-  .brand b {
+  .brand:hover {
+    color: var(--strong);
+  }
+
+  .name {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  .tag {
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
     color: var(--accent-text);
+    font-size: 11.5px;
     font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .section {
+    padding: 6px 12px 8px;
   }
 
   nav {
@@ -139,57 +168,124 @@
     gap: 2px;
   }
 
-  nav a {
+  .nav {
+    height: 40px;
     display: flex;
     align-items: center;
-    gap: 11px;
-    height: 38px;
-    padding: 0 11px;
+    gap: 12px;
+    padding: 0 12px;
     border-radius: var(--r-btn);
     color: var(--text-nav);
-    text-decoration: none;
+    font-size: 14px;
     font-weight: 500;
-    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+    text-decoration: none;
+    position: relative;
+    transition:
+      background 0.18s,
+      color 0.18s;
   }
 
-  nav a:hover {
-    background: var(--surface-2);
+  .nav:hover {
+    background: rgb(var(--ink) / 0.05);
     color: var(--text);
   }
 
-  nav a.active {
-    background: var(--accent-soft);
+  .nav.on {
+    background: rgb(var(--ink) / 0.08);
     color: var(--strong);
   }
 
-  nav a.active :global(svg) {
+  .nav.on::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: 11px;
+    bottom: 11px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--accent);
+  }
+
+  .nav.on :global(svg) {
     color: var(--accent-text);
+  }
+
+  .count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted-2);
+    font-variant-numeric: tabular-nums;
   }
 
   .foot {
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 0 8px;
+    gap: 12px;
+    padding: 14px 12px 0;
   }
 
-  .env {
-    align-self: flex-start;
-    padding: 3px 9px;
-    border-radius: 99px;
-    font-size: 11.5px;
+  .api {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--surface-1);
+    border: 1px solid rgb(var(--ink) / 0.06);
+  }
+
+  .api > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
+  }
+
+  .state {
+    font-size: 12.5px;
     font-weight: 600;
-    background: color-mix(in srgb, var(--star) 18%, transparent);
-    color: var(--star);
+    color: var(--text);
   }
 
-  .env.prod {
-    background: color-mix(in srgb, var(--danger) 18%, transparent);
-    color: var(--danger-text);
+  .host {
+    font-size: 11.5px;
+    color: var(--muted);
   }
 
   .who {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .env {
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--star) 16%, transparent);
+    color: var(--star);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  .env.prod {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: var(--danger-text);
+  }
+
+  .email {
     font-size: 12px;
     color: var(--muted);
     overflow: hidden;
@@ -198,8 +294,13 @@
   }
 
   main {
-    padding: 32px 36px 48px;
+    position: relative;
+    z-index: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 34px 40px 48px;
   }
 
   .center {
@@ -210,9 +311,16 @@
     text-align: center;
   }
 
+  .center h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    color: var(--strong);
+  }
+
   @media (max-width: 760px) {
     .shell {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
 
     aside {
@@ -221,17 +329,28 @@
       flex-direction: row;
       flex-wrap: wrap;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
+      gap: 6px 10px;
+      padding: 14px 16px;
       border-right: 0;
       border-bottom: 1px solid var(--border-1);
     }
 
-    nav {
-      flex-direction: row;
+    .brand {
+      padding: 2px 4px;
+      width: 100%;
     }
 
+    .section,
     .foot {
+      display: none;
+    }
+
+    nav {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .nav.on::before {
       display: none;
     }
 
