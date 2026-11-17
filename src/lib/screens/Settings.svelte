@@ -770,7 +770,7 @@
                   >
                 {/if}
                 {#if updater.phase === 'available'}
-                  <button class="btn-s primary" onclick={() => updater.install()}>Installer et redémarrer</button>
+                  <button class="btn-s primary" onclick={() => updater.request()}>Installer et redémarrer</button>
                 {:else}
                   <button
                     class="btn-s"

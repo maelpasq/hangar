@@ -42,6 +42,7 @@
   import Onboarding from './lib/modals/Onboarding.svelte';
   import StartPage from './lib/modals/StartPage.svelte';
   import WhatsNew from './lib/modals/WhatsNew.svelte';
+  import UpdateFixes from './lib/modals/UpdateFixes.svelte';
   import { openStartPage } from './lib/start-page';
   import { RELEASES, notesBetween } from './lib/util/release-notes';
   import GamePage from './lib/screens/GamePage.svelte';
@@ -320,6 +321,8 @@
     <ConfirmUninstall game={modalGame} />
   {:else if ui.modal?.kind === 'installDir' && modalGame}
     <InstallDir game={modalGame} targets={ui.modal.targets} />
+  {:else if ui.modal?.kind === 'updateFixes'}
+    <UpdateFixes />
   {:else if ui.modal?.kind === 'bug'}
     <BugReport />
   {:else if ui.modal?.kind === 'mcSoon'}

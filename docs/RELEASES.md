@@ -51,14 +51,15 @@ Fichiers de la release :
 Une simple correction de bug, sans nouveauté à annoncer, ne prend pas le `patch` suivant : elle ajoute un 4e chiffre à la version actuelle (1.2.27 -> 1.2.27.1 -> 1.2.27.2), règle fixée par l'utilisateur. Semver n'accepte que trois nombres : le numéro technique est `1.2.27+1` (métadonnée de build, que la mise à jour de Tauri classe au-dessus de 1.2.27, y compris dans les versions déjà installées), et Hangar l'affiche « 1.2.27.1 » (`displayVersion`).
 
 - **Pas d'entrée** dans l'historique : la fenêtre de notes ne s'ouvre pas pour qui a déjà vu celles de la 1.2.27, et le bouton Nouveautés montre toujours les notes de la 1.2.27. Qui vient d'une version plus ancienne voit les notes de la 1.2.27.
+- **Une entrée dans « ## Correctifs »** (en fin de fichier, le plus récent en haut), avant l'étape 1 : `### 1.2.27.1 - date` puis une puce courte par correction, pour les utilisateurs. Le texte de la release (donc le champ `notes` de latest.json) reprend toutes les entrées de la 1.2.27, et Hangar les montre dans une fenêtre « Mettre à jour / Annuler » quand on clique sur « Mettre à jour Hangar » (seulement celles plus récentes que la version installée). Sans entrée, la fenêtre dit « Corrections de bugs, sans nouveauté ».
 - Étapes 1 et 2 comme ci-dessus, puis à la place des étapes 3 et 4 (avec l'outil Bash) :
   ```bash
   npm run correctif -- "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   ```
-  Le script monte le numéro partout, crée le commit « Version 1.2.27.1 » et le tag annoté `v1.2.27+1`. Puis étapes 5 à 7. La release s'appelle « Hangar v1.2.27.1 », son texte dit « Correctif de la version 1.2.27, sans nouveauté ».
+  Le script monte le numéro partout, crée le commit « Version 1.2.27.1 » et le tag annoté `v1.2.27+1`. Puis étapes 5 à 7. La release s'appelle « Hangar v1.2.27.1 », son texte liste les corrections puis dit « Correctif de la version 1.2.27 ».
 - Le correctif peut compléter l'entrée de sa version de base (changements visibles qui la complètent) : qui vient d'une version plus ancienne voit les notes à jour, qui a déjà vu celles de la 1.2.27 n'a toujours pas de fenêtre.
 - La version suivante avec patch note reprend `npm version patch` : 1.2.27+2 -> 1.2.28.
-- Mot-clé **« PUSH PATCH »** : tout d'un coup, sans redemander. Amener sur `main` les commits de l'app faits sur `dev` depuis la dernière version (cherry-pick, jamais les commits Hangar Test), étapes 1 et 2, `npm run correctif`, push avec le tag, suivi de la construction et vérification de la release (fichiers en `1.2.27+1`, `latest.json` avec la version `1.2.27+1`). Ni site, ni README, ni entrée d'historique. Puis reporter le commit « Version 1.2.27.1 » sur `dev`.
+- Mot-clé **« PUSH PATCH »** : tout d'un coup, sans redemander. Amener sur `main` les commits de l'app faits sur `dev` depuis la dernière version (cherry-pick, jamais les commits Hangar Test), étapes 1 et 2, `npm run correctif`, push avec le tag, suivi de la construction et vérification de la release (fichiers en `1.2.27+1`, `latest.json` avec la version `1.2.27+1`). Ni site, ni README, ni entrée d'historique, mais une entrée dans « ## Correctifs » (les corrections amenées, en une puce chacune). Puis reporter le commit « Version 1.2.27.1 » sur `dev`.
 
 Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne déplace jamais un tag déjà poussé, des utilisateurs ont peut-être déjà la version.
 
@@ -240,3 +241,7 @@ macOS : fenêtre native avec coins arrondis et boutons standards.
 
 ### 1.0.1 - 4 novembre 2026
 Première version publique de Hangar 2 : interface Svelte fidèle à la maquette, détection de tous les stores (Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot, Xbox, jeux hors store, dossiers locaux), vraies jaquettes multi-sources, temps de jeu, dernière session, taille et genre importés des stores, logos des stores, identité visuelle.
+
+## Correctifs
+
+Une entrée par correctif (4e chiffre), le plus récent en haut, écrite avant `npm run correctif`. Ce n'est pas une patch note : la release du correctif reprend toutes les entrées de sa version de base, et Hangar les montre (celles plus récentes que la version installée) dans une fenêtre avant d'installer. Une puce par correction, courte, pour les utilisateurs.

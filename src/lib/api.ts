@@ -180,8 +180,8 @@ export interface Api {
   /** Les comptes ont été synchronisés : rescanner. */
   onAccountsSynced(cb: () => void): Promise<() => void>;
   appVersion(): Promise<string>;
-  /** Nouvelle version publiée sur GitHub, ou null si Hangar est à jour. */
-  checkUpdate(): Promise<{ version: string } | null>;
+  /** Nouvelle version publiée sur GitHub (avec le texte de sa release), ou null si Hangar est à jour. */
+  checkUpdate(): Promise<{ version: string; notes: string } | null>;
   /** Télécharge et installe la version trouvée par checkUpdate, puis redémarre Hangar. */
   installUpdate(onProgress: (ratio: number | null) => void): Promise<void>;
   win: WindowApi;
@@ -323,7 +323,7 @@ async function tauriApi(): Promise<Api> {
     checkUpdate: async () => {
       if ((await getIdentifier()).endsWith('.test')) throw new Error("Mises à jour désactivées dans l'environnement de test.");
       pending = await updater.check();
-      return pending ? { version: displayVersion(pending.version) } : null;
+      return pending ? { version: displayVersion(pending.version), notes: pending.body ?? '' } : null;
     },
     installUpdate: async (onProgress) => {
       if (!pending) throw new Error('Aucune mise à jour à installer.');

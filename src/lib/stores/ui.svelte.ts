@@ -36,6 +36,7 @@ export type Modal =
   /** Notes de version : après une mise à jour (`since` : dernière version vue), ou depuis les Paramètres. */
   | { kind: 'whatsNew'; version: string; since: string | null; manual?: boolean }
   | { kind: 'bug' }
+  | { kind: 'updateFixes' }
   | { kind: 'mcSoon' }
   | { kind: 'collections'; gameId: string }
   /** Nouvelle collection (sans id) ou ajout de jeux à une collection. */

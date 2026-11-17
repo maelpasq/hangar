@@ -2,6 +2,7 @@
 
 import { api } from '../api';
 import { ui } from './ui.svelte';
+import { isSameBaseFix, parseFixes, type Fixes } from '../util/release-notes';
 
 type Phase = 'idle' | 'checking' | 'uptodate' | 'available' | 'installing';
 
@@ -11,6 +12,27 @@ class Updater {
   version = $state('');
   /** Avancement du téléchargement (0 à 1), null si inconnu. */
   progress = $state<number | null>(null);
+  /** Texte de la release de la version disponible. */
+  notes = $state('');
+  /** Version installée, lue à la recherche. */
+  current = $state('');
+
+  /** La version disponible est un correctif de la version installée (même base, 4e chiffre). */
+  get isFix(): boolean {
+    return this.phase !== 'idle' && !!this.version && !!this.current && isSameBaseFix(this.version, this.current);
+  }
+
+  /** Corrections apportées depuis la version installée, la plus récente en premier. */
+  get fixes(): Fixes[] {
+    return this.isFix ? parseFixes(this.notes, this.version, this.current) : [];
+  }
+
+  /** Bouton « Mettre à jour » : un correctif montre d'abord ses corrections, une version s'installe. */
+  request(): void {
+    if (this.phase !== 'available') return;
+    if (this.isFix) ui.modal = { kind: 'updateFixes' };
+    else void this.install();
+  }
 
   get label(): string {
     switch (this.phase) {
@@ -34,6 +56,8 @@ class Updater {
     try {
       const u = await api.checkUpdate();
       this.version = u?.version ?? '';
+      this.notes = u?.notes ?? '';
+      this.current = await api.appVersion().catch(() => '');
       this.phase = u ? 'available' : 'uptodate';
       if (u && quiet) ui.toast(`Hangar ${u.version} est disponible`);
     } catch (e) {

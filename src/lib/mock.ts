@@ -522,7 +522,20 @@ export function mockApi(): Api {
     appVersion: async () => DEMO_VERSION,
     checkUpdate: async () => {
       await new Promise((r) => setTimeout(r, 600));
-      return { version: '1.1.0' };
+      // Correctif de la version de démo, pour voir la fenêtre des corrections.
+      return {
+        version: `${DEMO_VERSION}.2`,
+        notes: [
+          `### ${DEMO_VERSION}.2 - 17 novembre 2026`,
+          '- **Amis** : la liste se met à jour sans relancer Hangar.',
+          '- Le menu du clic droit ne sort plus de la fenêtre.',
+          '',
+          `### ${DEMO_VERSION}.1 - 16 novembre 2026`,
+          "- Les jaquettes Epic s'affichent de nouveau.",
+          '',
+          `Correctif de la version ${DEMO_VERSION}.`
+        ].join('\n')
+      };
     },
     installUpdate: async (onProgress) => {
       for (let i = 1; i <= 10; i++) {

@@ -105,7 +105,7 @@
         class="update"
         disabled={updater.phase === 'installing'}
         title="Installer Hangar {updater.version} et redémarrer"
-        onclick={() => updater.install()}
+        onclick={() => updater.request()}
         >{updater.phase === 'installing' ? updater.label : 'Mettre à jour Hangar'}</button
       >
     {/if}

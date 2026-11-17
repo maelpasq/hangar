@@ -56,7 +56,8 @@ export function parseReleases(md: string): ReleaseNotes[] {
       const v = /^<!--\s*vitrine\s*:\s*([\w-]+)\s*-->$/.exec(line);
       if (v) cur.spotlight = v[1];
     } else if (line.startsWith('## ')) {
-      cur = null;
+      // Fin de l'historique (la section « Correctifs » qui suit n'a pas de notes à montrer).
+      break;
     } else if (line.startsWith('#### ')) {
       section = { title: line.slice(5).trim(), items: [] };
       cur.sections.push(section);
@@ -72,6 +73,55 @@ export function parseReleases(md: string): ReleaseNotes[] {
     }
   }
   return out.sort((a, b) => compareVersions(b.version, a.version));
+}
+
+/** Correctif (4e chiffre, `1.2.27.1`) de la même version de base que `current` : la mise à jour
+ * montre d'abord ses corrections. Une vraie version (ou un saut de version) s'installe directement. */
+export function isSameBaseFix(available: string, current: string): boolean {
+  const a = displayVersion(available).split('.');
+  const c = displayVersion(current).split('.');
+  return a.length === 4 && a.slice(0, 3).join('.') === c.slice(0, 3).join('.');
+}
+
+export interface Fixes {
+  version: string;
+  items: string[];
+}
+
+/**
+ * Corrections listées dans les notes d'un correctif (texte de la release GitHub, champ `notes` de
+ * latest.json) : des titres « ### 1.2.27.2 - date » suivis de puces. Seules les versions plus
+ * récentes que `current` sont gardées, la plus récente en premier. Sans aucun titre, les puces
+ * vont à `available`.
+ */
+export function parseFixes(notes: string, available: string, current: string): Fixes[] {
+  const out: Fixes[] = [];
+  let cur: Fixes | null = null;
+  let headed = false;
+  for (const raw of notes.split(/\r?\n/)) {
+    const line = raw.trim();
+    const head = /^###\s+(\d+(?:\.\d+)*)/.exec(line);
+    if (head) {
+      cur = { version: head[1], items: [] };
+      headed = true;
+      out.push(cur);
+    } else if (/^[-*]\s+/.test(line)) {
+      if (!cur && headed) continue;
+      if (!cur) {
+        cur = { version: displayVersion(available), items: [] };
+        out.push(cur);
+      }
+      cur.items.push(line.replace(/^[-*]\s+/, ''));
+    } else if (line && cur?.items.length && !/^#/.test(line) && raw.startsWith(' ')) {
+      // Suite d'une puce sur la ligne suivante (indentée).
+      cur.items[cur.items.length - 1] += ` ${line}`;
+    } else if (line) {
+      cur = null;
+    }
+  }
+  return out
+    .filter((f) => f.items.length && compareVersions(f.version, displayVersion(current)) > 0)
+    .sort((a, b) => compareVersions(b.version, a.version));
 }
 
 /** Au plus ce nombre de versions dans la fenêtre (qui a sauté beaucoup de mises à jour). */

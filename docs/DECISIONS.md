@@ -386,3 +386,7 @@ Le logo (arche claire) disparaissait sur fond clair. Variante sombre : `design/b
 ## Bannière du profil en 4:1 (16 nov. 2026)
 
 Le cadre de recadrage remplit toute la largeur de la zone (sa hauteur suit), la bannière du profil et l'aperçu de bienvenue ont exactement le ratio du recadrage (rien n'est rogné à l'affichage), sur toute la largeur de la page. Demande de l'utilisateur : bannière moins haute, passée de 1500 × 500 (3:1) à 1600 × 400 (4:1) ; les bannières déjà envoyées sont rognées en haut et en bas.
+
+## Fenêtre des correctifs avant la mise à jour (17 nov. 2026)
+
+Un correctif (4e chiffre) de la version installée ne s'installe plus d'un clic : « Mettre à jour Hangar » (barre du haut ou Paramètres) ouvre une fenêtre (`UpdateFixes.svelte`) qui liste ses corrections, avec « Mettre à jour » et « Annuler ». Une vraie version, ou un saut de version (1.2.27 vers 1.2.28.3), s'installe directement comme avant : ses notes s'ouvrent après. La liste ne peut pas venir du RELEASES.md embarqué (l'app installée ne connaît pas les correctifs futurs) : elle vient du texte de la release, que tauri-action met dans le champ `notes` de latest.json et que l'updater rend dans `Update.body`. La section « ## Correctifs » de RELEASES.md (en fin de fichier, hors historique) porte une entrée par correctif ; la release d'un correctif reprend toutes celles de sa version de base, et l'app garde celles plus récentes que la version installée (`parseFixes`). Correctif sans entrée : « Corrections de bugs, sans nouveauté ».

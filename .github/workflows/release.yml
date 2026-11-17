@@ -79,7 +79,10 @@ jobs:
       - name: frontend (sans secrets)
         run: npm run build:web
       # Notes de la release : la section de cette version dans docs/RELEASES.md. Un correctif
-      # (tag v1.2.27+1, montré « 1.2.27.1 ») n'a pas de notes : une ligne renvoie à sa version.
+      # (tag v1.2.27+1, montré « 1.2.27.1 ») n'a pas de patch note : ses notes sont les entrées
+      # « ### 1.2.27.N » de la section « ## Correctifs » (toutes celles de sa version de base, que
+      # Hangar montre avant d'installer, depuis le champ notes de latest.json), et une ligne renvoie
+      # à sa version.
       - name: notes de version
         id: notes
         shell: bash
@@ -87,11 +90,15 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           base="${v%%+*}"
           echo "name=Hangar v${v/+/.}" >> "$GITHUB_OUTPUT"
-          notes=$(awk -v h="### $v " 'index($0, h) == 1 { f = 1; next } /^### / { f = 0 } f' docs/RELEASES.md | sed '/^$/d')
+          if [ "$v" != "$base" ]; then
+            notes=$(awk -v h="### $base." '/^## / { s = ($0 == "## Correctifs"); f = 0; next } /^### / { f = s && index($0, h) == 1 } f' docs/RELEASES.md)
+          else
+            notes=$(awk -v h="### $v " '/^## / { f = 0; next } index($0, h) == 1 { f = 1; next } /^### / { f = 0 } f' docs/RELEASES.md | sed '/^$/d')
+          fi
           {
             echo 'body<<FIN_DES_NOTES'
             if [ -n "$notes" ]; then printf '%s\n\n' "$notes"; fi
-            if [ "$v" != "$base" ]; then printf 'Correctif de la version %s, sans nouveauté.\n\n' "$base"; fi
+            if [ "$v" != "$base" ]; then printf 'Correctif de la version %s.\n\n' "$base"; fi
             echo 'Télécharge **Hangar-Setup.exe** (Windows), ou le **.dmg** (macOS) ci-dessous. La version Linux est en pause (en cours de refonte). Les versions déjà installées se mettent à jour depuis Hangar.'
             echo 'FIN_DES_NOTES'
           } >> "$GITHUB_OUTPUT"
