@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Hangar Admin - Bugs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080b}
+a{color:#a99bff}a:hover{color:#cfc7ff}
+.ha *{box-sizing:border-box}
+.ha button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+.ha input,.ha textarea{font:inherit;color:inherit}
+.ha svg{flex-shrink:0}
+.ha :focus-visible{outline:2px solid rgba(124,108,255,.85);outline-offset:2px}
+.ha .nav{height:40px;display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:11px;color:#9ea3b5;font-size:14px;font-weight:500;text-decoration:none;transition:background .18s,color .18s;position:relative}
+.ha .nav:hover{background:rgba(255,255,255,.05);color:#eef0f6}
+.ha .nav.on{background:rgba(255,255,255,.08);color:#fff}
+.ha .nav.on::before{content:"";position:absolute;left:-14px;top:11px;bottom:11px;width:3px;border-radius:3px;background:#8b7bff}
+.ha .nav.on svg{color:#b3a9ff}
+.ha .card{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:20px}
+.ha .kpi{transition:border-color .2s,transform .3s cubic-bezier(.2,.8,.2,1)}
+.ha .kpi:hover{border-color:rgba(255,255,255,.14);transform:translateY(-2px)}
+.ha .btn{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:#d7dae4;font-weight:500;font-size:13px;transition:background .15s,border-color .15s}
+.ha .btn:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14)}
+.ha .primary{height:40px;display:inline-flex;align-items:center;gap:8px;padding:0 18px;border-radius:11px;background:linear-gradient(180deg,#8b7bff,#6d5cf5);color:#fff;font-weight:600;font-size:14px;box-shadow:0 10px 26px -12px rgba(124,108,255,.9);transition:transform .25s cubic-bezier(.2,.8,.2,1),filter .2s}
+.ha .primary:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.ha .chip{height:34px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);font-size:13px;color:#a7acbd;transition:all .18s}
+.ha .chip:hover{background:rgba(255,255,255,.07);color:#fff}
+.ha .chip.on{background:#fff;color:#0a0b0f;border-color:#fff}
+.ha .chip .n{font-variant-numeric:tabular-nums;opacity:.7}
+.ha .search{height:40px;display:flex;align-items:center;gap:10px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:#8b90a3;transition:border-color .2s,background .2s,box-shadow .2s}
+.ha .search:focus-within{border-color:rgba(139,123,255,.6);background:rgba(255,255,255,.07);box-shadow:0 0 0 4px rgba(139,123,255,.14)}
+.ha .search input{flex:1;min-width:0;height:100%;border:0;background:none;outline:none;color:#eef0f6;font-size:14px}
+.ha .search input::placeholder{color:#80859a}
+.ha .field{width:100%;height:40px;padding:0 12px;border-radius:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:#eef0f6;outline:none;transition:border-color .2s,box-shadow .2s}
+.ha .field:focus{border-color:rgba(139,123,255,.6);box-shadow:0 0 0 4px rgba(139,123,255,.14)}
+.ha textarea.field{height:88px;padding:10px 12px;resize:vertical;line-height:1.5}
+.ha .lbl{display:block;margin:0 0 7px;font-size:12px;font-weight:600;color:#a7acbd}
+.ha .row{width:100%;display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:13px;text-align:left;text-decoration:none;color:inherit;transition:background .15s}
+.ha .row:hover{background:rgba(255,255,255,.05)}
+.ha .row.on{background:rgba(124,108,255,.14);box-shadow:inset 0 0 0 1px rgba(139,123,255,.35)}
+.ha .pill{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ha .pill i{width:7px;height:7px;border-radius:50%;display:block}
+.ha .seg{display:flex;flex-wrap:wrap;gap:6px}
+.ha .seg button{height:34px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;border-radius:10px;border:1px solid rgba(255,255,255,.08);font-size:13px;color:#a7acbd;transition:all .15s}
+.ha .seg button:hover{background:rgba(255,255,255,.06);color:#fff}
+.ha .seg button.on{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff}
+.ha .seg button i{width:8px;height:8px;border-radius:50%;display:block}
+.ha .tog{width:44px;height:26px;border-radius:999px;background:rgba(255,255,255,.14);position:relative;transition:background .25s}
+.ha .tog::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.ha .tog.on{background:#7c6cff}
+.ha .tog.on::after{transform:translateX(18px)}
+.ha .bar{transition:height .6s cubic-bezier(.2,.8,.2,1),background .15s}
+.ha .barcol:hover .bar{background:#a99bff}
+.ha .barcol .tip{opacity:0;transition:opacity .15s}
+.ha .barcol:hover .tip{opacity:1}
+.ha .screen{animation:haIn .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes haIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.ha .pulse{animation:haPulse 1.6s ease-in-out infinite}
+@keyframes haPulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.7)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.ha .scroll::-webkit-scrollbar{width:10px}
+.ha .scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+.ha .mono{font-family:'Geist Mono',ui-monospace,Consolas,monospace;font-size:12.5px}
+.ha table{width:100%;border-collapse:collapse}
+.ha th{padding:0 16px 12px;text-align:left;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#8b90a3}
+.ha td{padding:14px 16px;border-top:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.ha tbody tr{transition:background .15s}
+.ha tbody tr:hover{background:rgba(255,255,255,.03)}
+@media (max-width:760px){.ha .side{max-width:none !important;flex-basis:100% !important;border-right:0 !important;border-bottom:1px solid rgba(255,255,255,.05)}.ha .side .navs{flex-direction:row !important;flex-wrap:wrap}.ha .side .foot{display:none !important}.ha .main{padding:22px 16px 40px !important}}
+@media (prefers-reduced-motion:reduce){.ha *{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div class="ha" style="width: 100%; min-height: 900px; display: flex; flex-wrap: wrap; position: relative; background: #0a0b0f; color: #eef0f6; font-family: 'Geist', 'Segoe UI Variable Display', system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased">
+
+  <aside class="side" style="position: relative; z-index: 2; flex: 1 1 236px; max-width: 236px; display: flex; flex-direction: column; gap: 6px; padding: 18px 12px 18px 26px; border-right: 1px solid rgba(255,255,255,0.05); background: rgba(10,11,15,0.55)">
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 11px; padding: 2px 4px 22px; text-decoration: none; color: #fff">
+      <svg width="30" height="30" viewBox="0 0 1024 1024" aria-hidden="true"><defs><linearGradient id="hgl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"></stop><stop offset=".55" stop-color="#6366f1"></stop><stop offset="1" stop-color="#22d3ee"></stop></linearGradient></defs><rect x="64" y="64" width="896" height="896" rx="220" fill="url(#hgl)"></rect><path d="M272 760 V470 Q272 300 512 268 Q752 300 752 470 V760" fill="none" stroke="#fff" stroke-width="72" stroke-linecap="round"></path><path d="M452 520 L612 610 L452 700 Z" fill="#fff" stroke="#fff" stroke-width="28" stroke-linejoin="round"></path></svg>
+      <span style="font-size: 17px; font-weight: 700; letter-spacing: -0.2px">Hangar</span>
+      <span style="height: 22px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 7px; background: rgba(124,108,255,0.16); color: #b3a9ff; font-size: 11.5px; font-weight: 600; letter-spacing: 0.3px">Admin</span>
+    </a>
+    <p style="margin: 0; padding: 6px 12px 8px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #8b90a3">Administration</p>
+    <nav class="navs" aria-label="Sections" style="display: flex; flex-direction: column; gap: 2px">
+      <a class="nav" href="Main.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg><span>Accueil</span></a>
+      <a class="nav on" href="Bugs.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="6" width="8" height="14" rx="4"></rect><path d="M9 6a3 3 0 0 1 6 0M4 13h4M16 13h4M5 8l3 2M19 8l-3 2M5 19l3-2M19 19l-3-2M12 11v9"></path></svg><span>Bugs</span><span style="margin-left: auto; font-size: 12px; color: #80859a; font-variant-numeric: tabular-nums">4</span></a>
+      <a class="nav" href="Comptes.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"></path></svg><span>Comptes</span><span style="margin-left: auto; font-size: 12px; color: #80859a; font-variant-numeric: tabular-nums">1 284</span></a>
+      <a class="nav" href="Journal.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"></path><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg><span>Journal</span></a>
+    </nav>
+    <div class="foot" style="margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding: 14px 12px 0">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06)">
+        <span class="pulse" style="width: 8px; height: 8px; border-radius: 50%; background: #34d399"></span>
+        <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-size: 12.5px; font-weight: 600; color: #eef0f6">API en ligne</span>
+          <span class="mono" style="font-size: 11.5px; color: #8b90a3">hangar-api-test</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+        <span style="height: 24px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; background: rgba(251,191,36,0.16); color: #fbbf24; font-size: 11.5px; font-weight: 600">Test</span>
+        <span style="font-size: 12px; color: #8b90a3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="admin@exemple.fr">admin@exemple.fr</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main screen" style="position: relative; z-index: 1; flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 22px; padding: 34px 40px 48px">
+    
+    <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.6px; color: #fff">Bugs</h1>
+        <p style="margin: 0; font-size: 14px; color: #8b90a3">Signalements envoyés par le bouton insecte de l’app.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label class="search" style="width: 300px; max-width: 100%"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span class="sr-only" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Rechercher un bug</span><input type="search" placeholder="Numéro ou mots-clés" value="{{ q }}" onInput="{{ onQ }}"></label></div>
+    </header>
+
+    <div role="tablist" aria-label="Filtrer par statut" style="display: flex; flex-wrap: wrap; gap: 8px">
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="8">
+        <button type="button" role="tab" aria-selected="{{ c.sel }}" class="{{ c.cls }}" onClick="{{ c.pick }}">{{ c.label }}<span class="n">{{ c.n }}</span></button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+      <section class="card" aria-label="Liste des bugs" style="flex: 1 1 400px; min-width: 0; padding: 10px; display: flex; flex-direction: column; gap: 2px">
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 0; padding: 40px 0; text-align: center; color: #8b90a3">Aucun bug pour ce filtre.</p>
+        </sc-if>
+        <sc-for list="{{ rows }}" as="b" hint-placeholder-count="6">
+          <button type="button" class="{{ b.cls }}" onClick="{{ b.pick }}">
+            <span class="mono" style="width: 36px; color: #80859a">#{{ b.id }}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 14px; font-weight: 500; color: #eef0f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ b.title }}</span>
+              <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8b90a3">
+                <span>{{ b.version }}</span><span aria-hidden="true">·</span><span>{{ b.osLabel }}</span><span aria-hidden="true">·</span><span>{{ b.ago }}</span>
+                <sc-if value="{{ b.capture }}" hint-placeholder-val="{{ false }}"><span title="Capture jointe" style="display: inline-flex; color: #a7acbd"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="m21 16-5-5-9 9"></path></svg></span></sc-if>
+              </span>
+            </span>
+            <span class="pill" style="background: {{ b.st.bg }}; color: {{ b.st.fg }}"><i style="background: {{ b.st.dot }}"></i>{{ b.st.label }}</span>
+          </button>
+        </sc-for>
+      </section>
+
+      <section class="card" aria-label="Fiche du bug" style="flex: 1.25 1 460px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 22px">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+            <span class="mono" style="color: #80859a">#{{ bug.id }}</span>
+            <span class="pill" style="background: {{ bug.st.bg }}; color: {{ bug.st.fg }}"><i style="background: {{ bug.st.dot }}"></i>{{ bug.st.label }}</span>
+            <span class="pill" style="background: rgba(255,255,255,0.06); color: #c3c7d4"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>{{ bug.osLabel }}</span>
+            <span class="pill" style="background: rgba(255,255,255,0.06); color: #c3c7d4">Hangar {{ bug.version }}</span>
+            <span class="pill" style="margin-left: auto; background: rgba(88,101,242,0.16); color: #aab3ff"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8.5c2.6-1 5.4-1 8 0M7 16c3 1.4 7 1.4 10 0M7.5 6 6 6.5C4.3 9.4 3.6 12.3 4 15.4 5.5 17 7 17.8 8.5 18l1-1.6M16.5 6l1.5.5c1.7 2.9 2.4 5.8 2 8.9-1.5 1.6-3 2.4-4.5 2.6l-1-1.6"></path><circle cx="9.5" cy="12.5" r="1"></circle><circle cx="14.5" cy="12.5" r="1"></circle></svg>Sur Discord</span>
+          </div>
+          <h2 style="margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.3px; color: #fff">{{ bug.title }}</h2>
+          <p style="margin: 0; font-size: 12.5px; color: #8b90a3">Reçu {{ bug.ago }} · sans compte</p>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 16px">
+          <div style="flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+            <span class="lbl" style="margin: 0">Description</span>
+            <p style="margin: 0; padding: 14px 16px; border-radius: 14px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); font-size: 14px; line-height: 1.6; color: #d7dae4; white-space: pre-line; min-height: 96px">{{ bug.desc }}</p>
+          </div>
+          <div style="flex: 0 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+            <span class="lbl" style="margin: 0">Capture</span>
+            <sc-if value="{{ bug.capture }}" hint-placeholder-val="{{ true }}">
+              <a href="#capture" aria-label="Ouvrir la capture" style="position: relative; display: block; height: 124px; border-radius: 14px; overflow: hidden; background: linear-gradient(135deg, #1b1d27, #12141b); border: 1px solid rgba(255,255,255,0.08); text-decoration: none">
+                <span aria-hidden="true" style="position: absolute; left: 12px; top: 12px; right: 40px; height: 10px; border-radius: 4px; background: rgba(255,255,255,0.08)"></span>
+                <span aria-hidden="true" style="position: absolute; left: 12px; top: 32px; width: 46px; height: 64px; border-radius: 6px; background: rgba(139,123,255,0.28)"></span>
+                <span aria-hidden="true" style="position: absolute; left: 66px; top: 32px; width: 46px; height: 64px; border-radius: 6px; background: rgba(255,255,255,0.08)"></span>
+                <span aria-hidden="true" style="position: absolute; left: 120px; top: 32px; width: 46px; height: 64px; border-radius: 6px; background: rgba(255,255,255,0.08)"></span>
+                <span style="position: absolute; right: 8px; bottom: 8px; height: 26px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; border-radius: 8px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>Agrandir</span>
+              </a>
+            </sc-if>
+            <sc-if value="{{ bug.noCapture }}" hint-placeholder-val="{{ false }}">
+              <div style="height: 124px; display: grid; place-items: center; border-radius: 14px; border: 1px dashed rgba(255,255,255,0.12); color: #80859a; font-size: 13px">Pas de capture</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <form onSubmit="{{ save }}" style="display: flex; flex-direction: column; gap: 18px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06)">
+          <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: #fff">Suivi</h3>
+          <fieldset style="margin: 0; padding: 0; border: 0">
+            <legend class="lbl">Statut</legend>
+            <div class="seg">
+              <sc-for list="{{ statusBtns }}" as="s" hint-placeholder-count="6">
+                <button type="button" class="{{ s.cls }}" aria-pressed="{{ s.sel }}" onClick="{{ s.pick }}"><i style="background: {{ s.dot }}"></i>{{ s.label }}</button>
+              </sc-for>
+            </div>
+          </fieldset>
+          <div style="display: flex; flex-wrap: wrap; gap: 14px">
+            <div style="flex: 1 1 180px; min-width: 0">
+              <label class="lbl" for="fixed">Corrigé dans la version</label>
+              <input id="fixed" class="field mono" placeholder="1.2.30" value="{{ bug.fixedIn }}" disabled="{{ bug.notFixed }}" style="opacity: {{ bug.fixedOpacity }}">
+            </div>
+            <div style="flex: 1 1 180px; min-width: 0">
+              <label class="lbl" for="dup">Doublon de</label>
+              <input id="dup" class="field mono" placeholder="#41" value="{{ bug.dupOf }}" disabled="{{ bug.notDup }}" style="opacity: {{ bug.dupOpacity }}">
+            </div>
+          </div>
+          <div>
+            <label class="lbl" for="note">Note interne</label>
+            <textarea id="note" class="field" placeholder="Visible seulement ici, jamais par l’utilisateur."></textarea>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <button type="submit" class="primary">Enregistrer</button>
+            <span style="font-size: 12.5px; color: #8b90a3">Le message Discord sera mis à jour.</span>
+            <sc-if value="{{ saved }}" hint-placeholder-val="{{ false }}"><span style="margin-left: auto; font-size: 13px; color: #6ee7b7">Enregistré</span></sc-if>
+          </div>
+        </form>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06)">
+          <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: #fff">Historique</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px">
+            <sc-for list="{{ bug.hist }}" as="h" hint-placeholder-count="2">
+              <li style="display: flex; align-items: flex-start; gap: 12px">
+                <span style="width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: {{ h.dot }}; box-shadow: 0 0 0 4px rgba(255,255,255,0.04)"></span>
+                <span style="display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 13.5px; color: #d7dae4">{{ h.text }}</span>
+                  <span style="font-size: 12px; color: #8b90a3">{{ h.when }}</span>
+                </span>
+              </li>
+            </sc-for>
+          </ol>
+        </div>
+      </section>
+    </div>
+  </main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'ouverts', sel: 41, q: '', over: {}, saved: false };
+    this.S = {
+      nouveau: { label: 'Nouveau', dot: '#7c6cff', fg: '#cfc7ff', bg: 'rgba(124,108,255,0.16)', open: true },
+      confirme: { label: 'Confirmé', dot: '#f5a524', fg: '#fbc56b', bg: 'rgba(245,165,36,0.14)', open: true },
+      en_cours: { label: 'En cours', dot: '#3b82f6', fg: '#8fbcff', bg: 'rgba(59,130,246,0.16)', open: true },
+      corrige: { label: 'Corrigé', dot: '#34d399', fg: '#6ee7b7', bg: 'rgba(52,211,153,0.14)', open: false },
+      rejete: { label: 'Rejeté', dot: '#80859a', fg: '#b4b8c6', bg: 'rgba(255,255,255,0.07)', open: false },
+      doublon: { label: 'Doublon', dot: '#80859a', fg: '#b4b8c6', bg: 'rgba(255,255,255,0.07)', open: false }
+    };
+    const T = ['Le jeu ne se lance pas depuis Epic', 'Jaquette floue sur les jeux GOG', 'La fenêtre clignote au démarrage', 'Temps de jeu compté deux fois', 'Crash en ouvrant les paramètres', 'Le scan ne trouve pas Battle.net', 'Texte coupé dans la fiche du jeu'];
+    const C = ['nouveau', 'nouveau', 'confirme', 'en_cours', 'corrige', 'rejete', 'doublon'];
+    const AGO = ['il y a 7 h', 'il y a 21 h', 'il y a 1 j', 'il y a 2 j', 'il y a 2 j', 'il y a 3 j', 'il y a 3 j'];
+    this.BUGS = T.map((title, i) => ({
+      id: 41 - i, title, status: C[i], ago: AGO[i],
+      version: i < 3 ? '1.2.29' : '1.2.28', osLabel: i === 5 ? 'Linux' : 'Windows', capture: i % 2 === 0,
+      desc: i === 0 ? 'Quand je clique sur Jouer, rien ne se passe.\nLe launcher Epic s’ouvre puis se ferme.' : 'Pas de description.',
+      fixedIn: C[i] === 'corrige' ? '1.2.29' : '', dupOf: C[i] === 'doublon' ? '#41' : ''
+    }));
+  }
+  renderVals() {
+    const st = this.state, S = this.S;
+    const status = (b) => st.over[b.id] || b.status;
+    const counts = { ouverts: 0, tous: this.BUGS.length };
+    this.BUGS.forEach((b) => { const s = status(b); counts[s] = (counts[s] || 0) + 1; if (S[s].open) counts.ouverts++; });
+    const F = [['ouverts', 'Ouverts'], ...Object.keys(S).map((k) => [k, S[k].label]), ['tous', 'Tous']];
+    const chips = F.map(([id, label]) => ({ label, n: counts[id] || 0, sel: st.filter === id, cls: 'chip' + (st.filter === id ? ' on' : ''), pick: () => this.setState({ filter: id }) }));
+    const q = st.q.trim().toLowerCase().replace(/^#/, '');
+    const rows = this.BUGS.filter((b) => {
+      const s = status(b);
+      const okF = st.filter === 'tous' || (st.filter === 'ouverts' ? S[s].open : s === st.filter);
+      return okF && (!q || String(b.id) === q || b.title.toLowerCase().includes(q));
+    }).map((b) => ({ ...b, st: S[status(b)], cls: 'row' + (b.id === st.sel ? ' on' : ''), pick: () => this.setState({ sel: b.id, saved: false }) }));
+    const raw = this.BUGS.find((b) => b.id === st.sel) || this.BUGS[0];
+    const cur = status(raw);
+    const hist = [{ text: 'Signalement reçu, message posté sur Discord', when: raw.ago, dot: '#7c6cff' }];
+    if (cur !== 'nouveau') hist.unshift({ text: 'Statut : Nouveau → ' + S[cur].label, when: 'admin@exemple.fr · il y a 3 h', dot: S[cur].dot });
+    const bug = {
+      ...raw, st: S[cur], noCapture: !raw.capture, hist,
+      notFixed: cur !== 'corrige', fixedOpacity: cur === 'corrige' ? 1 : 0.45,
+      notDup: cur !== 'doublon', dupOpacity: cur === 'doublon' ? 1 : 0.45
+    };
+    const statusBtns = Object.keys(S).map((k) => ({ label: S[k].label, dot: S[k].dot, sel: cur === k, cls: cur === k ? 'on' : '', pick: () => this.setState({ over: { ...st.over, [raw.id]: k }, saved: false }) }));
+    return {
+      q: st.q, onQ: (e) => this.setState({ q: e.target.value }),
+      chips, rows, empty: rows.length === 0, bug, statusBtns, saved: st.saved,
+      save: (e) => { e.preventDefault(); this.setState({ saved: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
