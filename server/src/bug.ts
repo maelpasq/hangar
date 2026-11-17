@@ -23,6 +23,10 @@ const SYSTEMS: Record<string, string> = { windows: 'Windows', macos: 'macOS', li
 const VERSION = /^[0-9A-Za-z.+-]{1,40}$/;
 const WEBHOOK = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[\w-]+$/;
 
+/** Adresse du webhook Discord du développeur si elle est bien formée, sinon `null`. */
+export const webhookOf = (env: Env): string | null =>
+  env.BUG_WEBHOOK && WEBHOOK.test(env.BUG_WEBHOOK) ? env.BUG_WEBHOOK : null;
+
 const field = (form: FormData, name: string, max: number): string => {
   const v = form.get(name);
   if (typeof v !== 'string') return '';
@@ -43,7 +47,7 @@ async function hit(db: Db, key: string, now: number): Promise<number> {
 export function bugRoute(db: Db, env: Env) {
   const r = new Hono();
   r.post('/', bodyLimit({ maxSize: BUG_IMAGE_MAX + 64 * 1024, onError: (c) => c.json({ error: 'trop_gros' }, 413) }), async (c) => {
-    const webhook = env.BUG_WEBHOOK && WEBHOOK.test(env.BUG_WEBHOOK) ? env.BUG_WEBHOOK : null;
+    const webhook = webhookOf(env);
     if (!webhook) return c.json({ error: 'indisponible' }, 503);
     const form = await c.req.raw.formData().catch(() => null);
     if (!form) return c.json({ error: 'requete' }, 400);

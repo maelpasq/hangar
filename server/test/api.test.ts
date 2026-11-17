@@ -629,6 +629,37 @@ describe('social', () => {
     expect(r).toMatchObject({ targetId: a.id, excerpt: 'On fait une partie ?', reason: 'spam' });
   });
 
+  it('relaie un signalement au webhook Discord, sans mention, sans bloquer s\'il échoue', async () => {
+    env.BUG_WEBHOOK = 'https://discord.com/api/webhooks/123/abc-DEF';
+    const real = globalThis.fetch;
+    const sent: { url: string; body: string }[] = [];
+    let status = 204;
+    globalThis.fetch = (async (u: string, init: RequestInit) => {
+      expect(init.redirect).toBe('manual');
+      sent.push({ url: String(u), body: String(init.body) });
+      return new Response(null, { status });
+    }) as typeof fetch;
+    try {
+      const report = { userId: a.id, reason: 'harcelement', note: 'Insulte <@everyone>' };
+      expect((await post(b, '/social/reports', report)).status).toBe(200);
+      expect(sent[0].url).toBe(env.BUG_WEBHOOK);
+      const payload = JSON.parse(sent[0].body);
+      expect(payload.allowed_mentions).toEqual({ parse: [] });
+      expect(payload.embeds[0].title).toBe('🚩 Compte signalé');
+      expect(payload.embeds[0].fields).toEqual([
+        { name: 'Signalé', value: `Alice\n\`${a.id}\``, inline: true },
+        { name: 'Par', value: `Bruno\n\`${b.id}\``, inline: true },
+        { name: 'Motif', value: 'Harcèlement : Insulte <@everyone>' }
+      ]);
+      status = 500;
+      expect((await post(b, '/social/reports', report)).status).toBe(200);
+      expect(sent).toHaveLength(2);
+    } finally {
+      globalThis.fetch = real;
+      env.BUG_WEBHOOK = undefined;
+    }
+  });
+
   it('bloque : plus de demande, de recherche ni de profil', async () => {
     await post(c, `/social/friends/${b.id}`);
     await post(b, `/social/blocks/${c.id}`);

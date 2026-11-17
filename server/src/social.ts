@@ -8,6 +8,7 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { webhookOf } from './bug';
 import { seal, unseal } from './crypto';
 import type { AvatarStore, Db, Env } from './env';
 import { imageType, isUserId, totalPlay } from './profile';
@@ -271,6 +272,57 @@ interface Deps {
   /** Version de l'avatar d'un compte (champ `image`), ou null. */
   avatarOf(image: string | null): Promise<string | null>;
   loadAvatar(u: { id: string; image: string | null }): Promise<{ type: string; bytes: Uint8Array<ArrayBuffer> } | null>;
+}
+
+/** Signalement tel qu'il est enregistré. */
+export type ReportRow = typeof reports.$inferSelect;
+
+const REASON_LABELS: Record<string, string> = {
+  spam: 'Spam',
+  harcelement: 'Harcèlement',
+  contenu: 'Contenu inapproprié',
+  autre: 'Autre'
+};
+
+/** Message Discord d'un signalement : noms et identifiants des deux comptes, motif, message cité. */
+export function reportEmbed(r: ReportRow, names: Record<string, string>) {
+  const who = (id: string) => `${names[id] ?? '(compte supprimé)'}\n\`${id}\``;
+  const [code, ...rest] = r.reason.split(' : ');
+  const reason = [REASON_LABELS[code] ?? code, rest.join(' : ')].filter(Boolean).join(' : ');
+  const fields = [
+    { name: 'Signalé', value: who(r.targetId), inline: true },
+    { name: 'Par', value: who(r.reporterId), inline: true },
+    { name: 'Motif', value: reason.slice(0, 1024) }
+  ];
+  if (r.excerpt !== null) fields.push({ name: 'Message', value: (r.excerpt || '*(vide)*').slice(0, 1024) });
+  return {
+    title: r.messageId ? '🚩 Message signalé' : '🚩 Compte signalé',
+    color: 0xe5484d,
+    fields,
+    timestamp: new Date(r.at).toISOString()
+  };
+}
+
+/**
+ * Prévient le développeur sur le webhook Discord (le même que les bugs). Au mieux : un échec est
+ * journalisé (jamais l'adresse) et n'empêche pas le signalement, déjà enregistré.
+ */
+export async function notifyReport(db: Db, env: Env, r: ReportRow): Promise<boolean> {
+  const webhook = webhookOf(env);
+  if (!webhook) return false;
+  const rows = await db
+    .select({ id: user.id, name: user.name })
+    .from(user)
+    .where(inArray(user.id, [r.reporterId, r.targetId]));
+  const names = Object.fromEntries(rows.map((u) => [u.id, u.name]));
+  const res = await fetch(webhook, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ embeds: [reportEmbed(r, names)], allowed_mentions: { parse: [] } }),
+    redirect: 'manual'
+  }).catch(() => null);
+  if (!res?.ok) console.error(`[hangar] signalement de compte non relayé (${res?.status ?? 'réseau'})`);
+  return !!res?.ok;
 }
 
 export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
@@ -890,7 +942,7 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       excerpt = v.kind === 'invite' ? `Invitation : ${v.game?.name ?? ''}` : v.text;
     }
     const note = text(body.note, 500);
-    await db.insert(reports).values({
+    const row = {
       id: newId(),
       reporterId: me,
       targetId: body.userId,
@@ -898,7 +950,9 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       excerpt,
       reason: note ? `${body.reason} : ${note}` : (body.reason as string),
       at: now
-    });
+    };
+    await db.insert(reports).values(row);
+    await notifyReport(db, env, row);
     return c.json({ ok: true });
   });
 
