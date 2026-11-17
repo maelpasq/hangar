@@ -113,43 +113,61 @@ export function wikidataKey(name: string): string {
   return n ? `wd:${n}` : '';
 }
 
+/** Choix de la popup « Installer » : un seul site officiel, le launcher maison, la page Steam. */
+export interface InstallChoices {
+  site: string | null;
+  steam: string | null;
+  /** Launcher exigé par le jeu d'après sa fiche Steam (Ubisoft Connect pour Rainbow Six Siege...). */
+  launcher: StorePage | null;
+}
+
+const LAUNCHER_STORES: readonly string[] = ['ubisoft', 'ea', 'battlenet', 'rockstar', 'riot', 'epic'];
+
+/** Launcher maison d'un appid, lu sur sa fiche Steam (null : aucun, ou pas encore cherché). */
+export function launcherOf(s: PersistedState, appid: number | null): StorePage | null {
+  const l = appid ? s.gameLaunchers[appid] : '';
+  return l && LAUNCHER_STORES.includes(l) ? (l as StorePage) : null;
+}
+
+/** Premier lien https qui n'est pas une page Steam. */
+const firstSite = (urls: (string | null | undefined)[]) => urls.find((u): u is string => !!u && !!httpsLink(u) && !isSteamPage(u)) ?? null;
+
 /**
- * Liens proposés pour installer un jeu hors store : les sites officiels (lien choisi ou trouvé au
- * scan, lien de la fiche d'un autre PC, fiche Steam, Wikidata d'après ses noms), un par domaine,
- * puis sa page Steam à part. `foundAppid` : appid trouvé d'après son nom, quand il n'est pas connu.
+ * Choix pour installer un jeu hors store. Un seul site officiel : le lien choisi par
+ * l'utilisateur ou trouvé au scan (ou celui de la fiche d'un autre PC), sinon Wikidata (tenu à
+ * jour), sinon la fiche Steam (souvent l'adresse d'origine du jeu, parfois périmée). Puis sa
+ * page Steam et son launcher maison. `foundAppid` : appid trouvé d'après son nom.
  */
-export function installChoices(
-  s: PersistedState,
-  g: Game,
-  names: string[],
-  foundAppid: number | null = null
-): { sites: string[]; steam: string | null } {
+export function installChoices(s: PersistedState, g: Game, names: string[], foundAppid: number | null = null): InstallChoices {
   const appid = steamIdOf(s, g) ?? foundAppid;
-  const sites: string[] = [];
-  let steam = appid ? `https://store.steampowered.com/app/${appid}` : null;
-  const add = (url: string | null | undefined) => {
-    if (!url) return;
-    if (isSteamPage(url)) steam ??= url;
-    else if (!sites.some((x) => linkDomain(x) === linkDomain(url))) sites.push(url);
+  const steamSite = officialOf(s, appid);
+  let own: string | null | undefined;
+  if (isGhostId(g.id)) {
+    // Lien de l'autre PC : simple copie du site de la fiche Steam ? Wikidata passe alors devant.
+    own = s.portable[g.id]?.installUrl;
+    if (own && steamSite && linkDomain(own) === linkDomain(steamSite)) own = null;
+  } else if (isPathId(g.id)) {
+    const chosen = s.installLinks[g.id];
+    if (chosen !== undefined) own = chosen ? httpsLink(chosen) : null;
+    else own = g.installUrl;
+  }
+  return {
+    site: firstSite([own, ...names.map((n) => s.officialSites[wikidataKey(n)]), steamSite]),
+    steam: appid ? `https://store.steampowered.com/app/${appid}` : null,
+    launcher: launcherOf(s, appid)
   };
-  add(installLink(s, g));
-  if (isGhostId(g.id)) add(s.portable[g.id]?.installUrl);
-  add(officialOf(s, appid));
-  for (const n of names) add(s.officialSites[wikidataKey(n)]);
-  return { sites, steam };
 }
 
 /**
- * Liens proposés pour installer un jeu vu chez un ami et absent d'ici (seuls son identifiant et
- * son nom sont connus) : le site officiel lu sur sa fiche Steam et celui trouvé sur Wikidata, un
- * par domaine, puis sa page Steam à part.
+ * Choix pour installer un jeu vu chez un ami et absent d'ici (seuls son identifiant et son nom
+ * sont connus) : son site officiel (Wikidata, sinon sa fiche Steam), sa page Steam, son launcher.
  */
-export function socialInstallChoices(s: PersistedState, name: string, appid: number | null): { sites: string[]; steam: string | null } {
-  const sites: string[] = [];
-  for (const url of [officialOf(s, appid), s.officialSites[wikidataKey(name)]]) {
-    if (url && !isSteamPage(url) && !sites.some((x) => linkDomain(x) === linkDomain(url))) sites.push(url);
-  }
-  return { sites, steam: appid ? `https://store.steampowered.com/app/${appid}` : null };
+export function socialInstallChoices(s: PersistedState, name: string, appid: number | null): InstallChoices {
+  return {
+    site: firstSite([s.officialSites[wikidataKey(name)], officialOf(s, appid)]),
+    steam: appid ? `https://store.steampowered.com/app/${appid}` : null,
+    launcher: launcherOf(s, appid)
+  };
 }
 
 /** Appid Steam d'un identifiant portable (« steam:620 »), sinon null. */

@@ -19,6 +19,7 @@ export function defaultState(): PersistedState {
     customCovers: {},
     steamIdCache: {},
     officialSites: {},
+    gameLaunchers: {},
     firstSeen: {},
     webPlayed: {},
     totals: {},
@@ -108,6 +109,9 @@ export function normalizeState(raw: unknown, now = Date.now()): PersistedState {
   s.steamIdCache = numMap(raw.steamIdCache);
   for (const [key, url] of Object.entries(strMap(raw.officialSites))) {
     if (/^(\d+|wd:.{1,200})$/.test(key) && (url === '' || httpsLink(url))) s.officialSites[key] = url;
+  }
+  for (const [key, l] of Object.entries(strMap(raw.gameLaunchers))) {
+    if (/^\d+$/.test(key) && /^[a-z]{0,20}$/.test(l)) s.gameLaunchers[key] = l;
   }
   s.firstSeen = numMap(raw.firstSeen);
   s.webPlayed = numMap(raw.webPlayed);

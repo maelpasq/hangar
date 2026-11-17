@@ -89,6 +89,36 @@ fn website_link(raw: &str) -> Option<String> {
     (!steam).then_some(url)
 }
 
+/// Ce que la fiche Steam d'un jeu dit de son installation hors de Steam.
+#[derive(Debug, Default, PartialEq, serde::Serialize)]
+pub struct SteamFiche {
+    pub website: Option<String>,
+    /// Store du launcher que le jeu exige (`ubisoft`, `ea`, `battlenet`, `rockstar`, `riot`, `epic`).
+    pub launcher: Option<&'static str>,
+}
+
+/// Launcher maison d'après la mention d'un compte tiers ou d'un DRM sur une fiche Steam
+/// (« Ubisoft Connect launcher (Supports Linking to Steam Account) », « EA Account »...).
+fn launcher_of_notice(notice: &str) -> Option<&'static str> {
+    let n = notice.to_lowercase();
+    let has = |w: &str| n.contains(w);
+    if has("ubisoft") || has("uplay") {
+        Some("ubisoft")
+    } else if n.starts_with("ea ") || has("ea app") || has("ea account") || has("origin") {
+        Some("ea")
+    } else if has("battle.net") {
+        Some("battlenet")
+    } else if has("rockstar") {
+        Some("rockstar")
+    } else if has("riot") {
+        Some("riot")
+    } else if has("epic games") {
+        Some("epic")
+    } else {
+        None
+    }
+}
+
 /// Éléments Wikidata (`Q123`) d'une recherche dont le nom ou l'alias trouvé est exactement `target`.
 fn wikidata_matches(v: &serde_json::Value, target: &str) -> Vec<String> {
     let same = |s: Option<&serde_json::Value>| s.and_then(|s| s.as_str()).is_some_and(|s| crate::scanner::norm(s) == target);
@@ -335,13 +365,16 @@ impl Art {
         self.store_search(&clean).into_iter().find(|h| crate::scanner::norm(&h.name) == target).map(|h| h.id)
     }
 
-    /// Site officiel d'un jeu d'après sa fiche Steam (champ `website`), en https.
-    /// Erreur : Steam injoignable (à retenter plus tard, contrairement à `Ok(None)`).
-    pub fn official_site(&self, app_id: u32) -> Result<Option<String>, String> {
+    /// Site officiel d'un jeu d'après sa fiche Steam (champ `website`), en https, et le launcher
+    /// maison qu'elle exige (compte tiers, DRM : Ubisoft Connect, EA app...).
+    /// Erreur : Steam injoignable (à retenter plus tard, contrairement à une fiche vide).
+    pub fn official_site(&self, app_id: u32) -> Result<SteamFiche, String> {
         let url = format!("https://store.steampowered.com/api/appdetails?appids={app_id}&filters=basic&l=english&cc=US");
         let v = self.get_json(&url, None).map_err(|_| "Steam injoignable".to_string())?;
-        let site = v.get(app_id.to_string()).and_then(|a| a.get("data")?.get("website")?.as_str());
-        Ok(site.and_then(website_link))
+        let data = v.get(app_id.to_string()).and_then(|a| a.get("data"));
+        let field = |k: &str| data.and_then(|d| d.get(k)?.as_str());
+        let launcher = [field("ext_user_account_notice"), field("drm_notice")].into_iter().flatten().find_map(launcher_of_notice);
+        Ok(SteamFiche { website: field("website").and_then(website_link), launcher })
     }
 
     /// Site officiel d'un jeu ou d'un logiciel (Lunar Client...) d'après Wikidata (propriété P856),
@@ -669,6 +702,16 @@ mod tests {
     }
 
     #[test]
+    fn launcher_d_une_fiche_steam() {
+        assert_eq!(launcher_of_notice("Ubisoft Connect launcher (Supports Linking to Steam Account)"), Some("ubisoft"));
+        assert_eq!(launcher_of_notice("EA Account (Supports Linking to Steam Account)"), Some("ea"));
+        assert_eq!(launcher_of_notice("Battle.net Account "), Some("battlenet"));
+        assert_eq!(launcher_of_notice("Rockstar Games (Supports Linking to Steam Account)"), Some("rockstar"));
+        assert_eq!(launcher_of_notice("Denuvo Anti-tamper"), None);
+        assert_eq!(launcher_of_notice("Theater account"), None);
+    }
+
+    #[test]
     fn wikidata_nom_exact() {
         let v = serde_json::json!({ "search": [
             { "id": "Q1", "label": "Lunar Client" },
@@ -790,7 +833,8 @@ mod reseau {
         assert!(miss.is_none());
         assert_eq!(art.resolve_steam_id("Hollow Knight"), Some(367520));
         assert!(art.search_steam("Factorio").iter().any(|h| h.id == 427520));
-        assert_eq!(art.official_site(504230), Ok(Some("https://www.celestegame.com".into())));
+        assert_eq!(art.official_site(504230).map(|f| f.website), Ok(Some("https://www.celestegame.com".into())));
+        assert_eq!(art.official_site(359550).map(|f| f.launcher), Ok(Some("ubisoft")));
         assert_eq!(art.wikidata_site("Lunar Client"), Ok(Some("https://www.lunarclient.com/".into())));
         assert_eq!(art.wikidata_site("Modrinth App"), Ok(Some("https://modrinth.com".into())));
     }

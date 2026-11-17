@@ -1,7 +1,8 @@
 <script lang="ts">
-  // Jeu du compte Hangar absent de ce PC : la personne choisit d'où l'installer. Les sites
-  // officiels trouvés automatiquement d'abord (là où se télécharge l'exe officiel), la page
-  // Steam à part, son exécutable s'il est déjà là, ou un autre lien saisi à la main.
+  // Jeu du compte Hangar absent de ce PC : la personne choisit d'où l'installer. Le site
+  // officiel trouvé automatiquement d'abord (un seul), le launcher que le jeu exige (Ubisoft
+  // Connect pour Rainbow Six Siege, d'après sa fiche Steam), la page Steam, son exécutable s'il
+  // est déjà là, ou un autre lien saisi à la main.
   // Jeu vu chez un ami et absent d'ici (`social`) : mêmes choix, plus sa page dans son launcher ;
   // l'exécutable choisi l'ajoute à la bibliothèque.
   import { untrack } from 'svelte';
@@ -15,17 +16,29 @@
   import type { Game, SocialGame } from '../types';
   import { manualGameFrom } from '../util/games';
   import { isLinux, isMac } from '../util/platform';
-  import { linkDomain, storePageOf } from '../util/sync';
+  import { linkDomain, storePageOf, type StorePage } from '../util/sync';
+
+  // Page de téléchargement d'un launcher absent de ce poste (ouverte dans le navigateur).
+  const DOWNLOAD: Partial<Record<StorePage, string>> = {
+    ubisoft: 'https://www.ubisoft.com/fr-fr/ubisoft-connect/download',
+    ea: 'https://www.ea.com/fr/ea-app',
+    battlenet: 'https://download.battle.net/',
+    rockstar: 'https://www.rockstargames.com/fr/downloads',
+    riot: 'https://www.riotgames.com/fr',
+    epic: 'https://store.epicgames.com/fr/download'
+  };
 
   let { game, social }: { game?: Game; social?: SocialGame } = $props();
 
   const name = $derived(game ? library.name(game) : (social?.name ?? ''));
   // Recalculé quand les recherches remplissent le cache (état réactif de la bibliothèque).
   const choices = $derived(
-    game ? library.installChoices(game) : social ? library.socialInstallChoices(social) : { sites: [], steam: null }
+    game ? library.installChoices(game) : social ? library.socialInstallChoices(social) : { site: null, steam: null, launcher: null }
   );
   const store = $derived(social ? storePageOf(social.id, !isMac && !isLinux) : null);
   const storeLabel = $derived(store === 'xbox' ? 'Microsoft Store' : store ? STORES[store].launcher : '');
+  // Launcher exigé par le jeu, quand ce n'est pas déjà celui de l'ami (sa page s'ouvre alors).
+  const home = $derived(choices.launcher && choices.launcher !== store ? choices.launcher : null);
   const webSearch = $derived(`https://duckduckgo.com/?q=${encodeURIComponent(`${name} site officiel`)}`);
   let searching = $state(true);
   let failed = $state(false);
@@ -54,6 +67,23 @@
     if (!s) return;
     close();
     api.openStorePage(s.id, s.name).catch(fail);
+  }
+
+  // Launcher du jeu sur son accueil ; absent de ce poste : sa page de téléchargement.
+  function openHome() {
+    const l = home;
+    if (!l) return;
+    const n = name;
+    close();
+    api
+      .openLauncher(l, n)
+      .then((ok) => {
+        const dl = DOWNLOAD[l];
+        if (ok || !dl) return;
+        ui.toast(`${STORES[l].launcher} n'est pas installé : page de téléchargement ouverte`);
+        return api.openGameLink(dl);
+      })
+      .catch(fail);
   }
 
   // Page Steam du jeu : dans le client Steam (démarré au besoin), le navigateur en secours.
@@ -89,7 +119,8 @@
     {game ? "Ce jeu est sur un autre de tes PC. Choisis d'où l'installer ici." : "Ce jeu n'est pas dans ta bibliothèque. Choisis d'où l'installer."}
   </p>
   <div class="choices">
-    {#each choices.sites as url (url)}
+    {#if choices.site}
+      {@const url = choices.site}
       <button class="opt" onclick={() => open(url)}>
         <span class="ico"><Icon name="globe" size={18} /></span>
         <span class="txt"><strong>Site officiel</strong><span class="sub">{linkDomain(url)}</span></span>
@@ -112,11 +143,20 @@
           </span>
         </button>
       {/if}
-    {/each}
+    {/if}
+    {#if home}
+      <button class="opt" onclick={openHome}>
+        <span class="ico"><Icon name="download" size={18} /></span>
+        <span class="txt"><strong>{STORES[home].launcher}</strong><span class="sub">Le launcher du jeu</span></span>
+      </button>
+    {/if}
     {#if store}
       <button class="opt" onclick={openStore}>
         <span class="ico"><Icon name="download" size={18} /></span>
-        <span class="txt"><strong>{storeLabel}</strong><span class="sub">Ouvrir sa page dans le launcher</span></span>
+        <span class="txt">
+          <strong>{storeLabel}</strong>
+          <span class="sub">{store === choices.launcher ? 'Le launcher du jeu : ouvrir sa page' : 'Ouvrir sa page dans le launcher'}</span>
+        </span>
       </button>
     {/if}
     {#if choices.steam && store !== 'steam'}

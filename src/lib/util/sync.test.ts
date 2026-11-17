@@ -19,15 +19,24 @@ import {
 } from './sync';
 
 describe("installer un jeu vu chez un ami", () => {
-  it('propose le site officiel, Wikidata et la page Steam, un par domaine', () => {
+  it('un seul site officiel (Wikidata avant la fiche Steam), la page Steam et le launcher du jeu', () => {
     const s = defaultState();
-    s.officialSites[620] = 'https://www.thinkwithportals.com/';
-    s.officialSites[wikidataKey('Portal 2')] = 'https://thinkwithportals.com/fr';
-    expect(socialInstallChoices(s, 'Portal 2', 620)).toEqual({
-      sites: ['https://www.thinkwithportals.com/'],
-      steam: 'https://store.steampowered.com/app/620'
+    s.officialSites[359550] = 'https://rainbow6.ubi.com/';
+    expect(socialInstallChoices(s, 'Rainbow Six Siege', 359550)).toEqual({
+      site: 'https://rainbow6.ubi.com/',
+      steam: 'https://store.steampowered.com/app/359550',
+      launcher: null
     });
-    expect(socialInstallChoices(s, 'Inconnu', null)).toEqual({ sites: [], steam: null });
+    s.officialSites[wikidataKey('Rainbow Six Siege')] = 'https://rainbow6.ubisoft.com/';
+    s.gameLaunchers[359550] = 'ubisoft';
+    expect(socialInstallChoices(s, 'Rainbow Six Siege', 359550)).toEqual({
+      site: 'https://rainbow6.ubisoft.com/',
+      steam: 'https://store.steampowered.com/app/359550',
+      launcher: 'ubisoft'
+    });
+    s.gameLaunchers[359550] = 'inconnu';
+    expect(socialInstallChoices(s, 'Rainbow Six Siege', 359550).launcher).toBeNull();
+    expect(socialInstallChoices(s, 'Inconnu', null)).toEqual({ site: null, steam: null, launcher: null });
   });
 
   it("lit l'appid et le launcher depuis l'identifiant", () => {
@@ -99,21 +108,29 @@ describe('lien d\'installation', () => {
     expect(officialSiteToFind(defaultState(), local({ steamAppId: 504230, installUrl: 'https://exok.com/' }))).toBeNull();
   });
 
-  it('popup Installer : sites officiels, page Steam à part', () => {
+  it('popup Installer : un seul site officiel, page Steam à part', () => {
     const s = defaultState();
     const pid = '@lunarclient.exe|lunar client';
     s.portable[pid] = { name: 'Lunar Client', exe: 'lunarclient.exe', dir: 'lunar client' };
     const ghost = { ...local(), id: pid, name: 'Lunar Client', store: 'manual' as const, elsewhere: true, notInstalled: true };
-    expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({ sites: [], steam: null });
-    s.officialSites[wikidataKey(' Lunar  CLIENT ')] = 'https://www.lunarclient.com/';
-    expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({ sites: ['https://www.lunarclient.com/'], steam: null });
-    // Lien de l'autre PC (page Steam) : rangé à part ; site de la fiche Steam en tête, un par domaine.
-    s.portable[pid] = { ...s.portable[pid], steamAppId: 7, installUrl: 'https://store.steampowered.com/app/7' };
+    expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({ site: null, steam: null, launcher: null });
     s.officialSites['7'] = 'https://lunarclient.com/download';
+    // Lien de l'autre PC copié de la fiche Steam : Wikidata passe devant.
+    s.portable[pid] = { ...s.portable[pid], steamAppId: 7, installUrl: 'https://lunarclient.com/old' };
+    expect(installChoices(s, ghost, ['Lunar Client']).site).toBe('https://lunarclient.com/download');
+    s.officialSites[wikidataKey(' Lunar  CLIENT ')] = 'https://www.lunarclient.com/';
     expect(installChoices(s, ghost, ['Lunar Client'])).toEqual({
-      sites: ['https://lunarclient.com/download'],
-      steam: 'https://store.steampowered.com/app/7'
+      site: 'https://www.lunarclient.com/',
+      steam: 'https://store.steampowered.com/app/7',
+      launcher: null
     });
+    // Lien choisi sur l'autre PC (autre domaine) : gardé.
+    s.portable[pid] = { ...s.portable[pid], installUrl: 'https://example.org/lunar' };
+    expect(installChoices(s, ghost, ['Lunar Client']).site).toBe('https://example.org/lunar');
+    // Jeu local : lien choisi par l'utilisateur avant tout.
+    const g = local({ steamAppId: 7 });
+    s.installLinks[g.id] = 'https://example.org/celeste';
+    expect(installChoices(s, g, ['Celeste']).site).toBe('https://example.org/celeste');
   });
 });
 

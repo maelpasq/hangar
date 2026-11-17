@@ -277,6 +277,40 @@ pub fn store_page(id: &str, name: &str) -> Option<Launch> {
     Some(crate::model::uri(target))
 }
 
+/// Lien enregistré sur ce poste pour un protocole (`uplay`...) ; hors Windows, supposé présent.
+fn protocol_known(scheme: &str) -> bool {
+    #[cfg(windows)]
+    {
+        use winreg::{enums::HKEY_CLASSES_ROOT, RegKey};
+        RegKey::predef(HKEY_CLASSES_ROOT).open_subkey(scheme).is_ok()
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = scheme;
+        true
+    }
+}
+
+/// Launcher maison d'un jeu (celui qu'exige sa fiche Steam : Ubisoft Connect pour Rainbow Six
+/// Siege...), ouvert sur son accueil ; Epic sur la recherche du nom du jeu. Battle.net partout,
+/// les autres sous Windows. None : launcher absent de ce poste ou inconnu.
+pub fn launcher_home(store: &str, name: &str) -> Option<Launch> {
+    let uri = |scheme: &str, target: &str| protocol_known(scheme).then(|| crate::model::uri(target));
+    match store {
+        "battlenet" => uri("battlenet", "battlenet://"),
+        _ if !cfg!(windows) => None,
+        "ubisoft" => uri("uplay", "uplay://"),
+        "ea" => uri("origin2", "origin2://library/open"),
+        "epic" if protocol_known("com.epicgames.launcher") => store_page("epic:-", name),
+        "rockstar" => store_page("rockstar:-", name),
+        "riot" => {
+            let client = crate::scanner::riot::client()?;
+            Some(Launch { kind: "exe".into(), target: client, args: String::new(), cwd: None })
+        }
+        _ => None,
+    }
+}
+
 /// Processus qui portent les fenêtres d'un launcher (noms en minuscules), pour les ramener
 /// devant Hangar.
 pub fn launcher_windows(store: &str) -> &'static [&'static str] {

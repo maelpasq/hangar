@@ -9,6 +9,7 @@ import { defaultState, normalizeState, SESSION_DAYS } from '../util/state';
 import { adoptGhosts, ghostGames, measuredMs, remoteTimes } from '../util/cloud-sync';
 import {
   installChoices,
+  type InstallChoices,
   installLink,
   isGhostId,
   officialSiteToFind,
@@ -344,9 +345,11 @@ class Library {
     let found = false;
     while (this.officialQueue.length) {
       const appid = this.officialQueue.shift()!;
-      if (appid in this.state.officialSites) continue;
+      if (appid in this.state.officialSites && appid in this.state.gameLaunchers) continue;
       try {
-        this.state.officialSites[appid] = (await api.officialSite(appid)) ?? '';
+        const fiche = await api.officialSite(appid);
+        this.state.officialSites[appid] = fiche.website ?? '';
+        this.state.gameLaunchers[appid] = fiche.launcher ?? '';
         found = true;
       } catch (e) {
         // Steam injoignable : on réessaiera au prochain scan.
@@ -361,10 +364,10 @@ class Library {
   }
 
   /**
-   * Liens proposés pour installer un jeu hors store (popup « Installer ») : les sites officiels
-   * trouvés (lien choisi ou trouvé au scan, fiche Steam, Wikidata), puis la page Steam à part.
+   * Choix pour installer un jeu hors store (popup « Installer ») : son site officiel (lien choisi
+   * ou trouvé au scan, Wikidata, fiche Steam), sa page Steam et son launcher maison.
    */
-  installChoices(g: Game): { sites: string[]; steam: string | null } {
+  installChoices(g: Game): InstallChoices {
     return installChoices(this.state, g, [g.name, this.name(g)], this.steamByName[steamKey(this.name(g))] || null);
   }
 
@@ -395,7 +398,7 @@ class Library {
   }
 
   /** Liens proposés pour installer un jeu vu chez un ami (popup « Installer »). */
-  socialInstallChoices(g: SocialGame): { sites: string[]; steam: string | null } {
+  socialInstallChoices(g: SocialGame): InstallChoices {
     const appid = steamIdFromPortable(g.id) ?? (this.steamByName[steamKey(g.name)] || null);
     return socialInstallChoices(this.state, g.name, appid);
   }
@@ -412,7 +415,7 @@ class Library {
   /** Cherche le site officiel d'un appid (fiche Steam) et ceux de noms de jeu (Wikidata). */
   private async findSitesFor(appid: number | null, names: string[]): Promise<void> {
     const jobs: Promise<unknown>[] = [];
-    if (appid && !(appid in this.state.officialSites)) {
+    if (appid && !(appid in this.state.officialSites && appid in this.state.gameLaunchers)) {
       if (!this.officialQueue.includes(appid)) this.officialQueue.push(appid);
       this.officialJob ??= this.pumpOfficial().finally(() => (this.officialJob = null));
       jobs.push(this.officialJob);

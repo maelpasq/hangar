@@ -72,7 +72,9 @@ export interface Api {
   openFolder(path: string): Promise<void>;
   resolveSteamId(name: string): Promise<number | null>;
   /** Site officiel d'un jeu d'après sa fiche Steam (null : aucun). */
-  officialSite(appId: number): Promise<string | null>;
+  officialSite(appId: number): Promise<{ website: string | null; launcher: string | null }>;
+  /** Ouvre le launcher maison d'un jeu (ubisoft, ea...) ; faux : absent de ce poste. */
+  openLauncher(store: string, name: string): Promise<boolean>;
   /** Site officiel d'un jeu d'après Wikidata, cherché par son nom exact (null : aucun). */
   wikidataSite(name: string): Promise<string | null>;
   searchSteam(query: string): Promise<SteamHit[]>;
@@ -246,6 +248,7 @@ async function tauriApi(): Promise<Api> {
     openFolder: (path) => invoke('open_folder', { path }),
     resolveSteamId: (name) => invoke('resolve_steam_id', { name }),
     officialSite: (appId) => invoke('official_site', { appId }),
+    openLauncher: (store, name) => invoke('open_launcher', { store, name }),
     wikidataSite: (name) => invoke('wikidata_site', { name }),
     searchSteam: (query) => invoke('search_steam', { query }),
     setSteamGridKey: (key) => invoke('set_steamgriddb_key', { key }),

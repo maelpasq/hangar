@@ -308,7 +308,11 @@ export function mockApi(): Api {
     onTrayLaunch: async () => () => {},
     onPadGuide: async () => () => {},
     resolveSteamId: async () => null,
-    officialSite: async (appId) => ({ 367520: 'https://hollowknight.com', 504230: 'https://www.celestegame.com' })[appId] ?? null,
+    officialSite: async (appId) => ({
+      website: ({ 367520: 'https://hollowknight.com', 504230: 'https://www.celestegame.com', 359550: 'https://rainbow6.ubi.com/' } as Record<number, string>)[appId] ?? null,
+      launcher: appId === 359550 ? 'ubisoft' : null
+    }),
+    openLauncher: async () => true,
     wikidataSite: async (name) => (/lunar client/i.test(name) ? 'https://www.lunarclient.com/' : null),
     searchSteam: async (query) => {
       await wait(250);

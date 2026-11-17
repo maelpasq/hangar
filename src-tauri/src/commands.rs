@@ -412,6 +412,23 @@ pub async fn open_store_page(id: String, name: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Ouvre le launcher maison d'un jeu vu ailleurs (`store` : ubisoft, ea, battlenet...), qui passe
+/// devant Hangar. Faux : launcher absent de ce poste (l'interface propose de le télécharger).
+#[tauri::command]
+pub async fn open_launcher(store: String, name: String) -> Result<bool, String> {
+    let s = store.clone();
+    let Some(home) = blocking(move || launcher::launcher_home(&s, &name)).await? else {
+        log::info!("launcher « {store} » absent de ce poste");
+        return Ok(false);
+    };
+    log::info!("ouverture du launcher « {store} » : {} {}", home.target, home.args);
+    blocking(move || launcher::shell_open(&home.target, &home.args, None, "open"))
+        .await?
+        .inspect_err(|e| log::warn!("launcher impossible à ouvrir : {e}"))?;
+    crate::veil::front_launcher(launcher::launcher_windows(&store));
+    Ok(true)
+}
+
 /// Le mode manette vient de se fermer : Hangar retourne là où il était si le bouton Xbox
 /// l'avait ramené devant (`restore` : fermé par B, Start, Xbox ou Échap).
 #[tauri::command]
@@ -756,7 +773,7 @@ pub async fn resolve_steam_id(ctx: Ctxs<'_>, name: String) -> Result<Option<u32>
 
 /// Site officiel d'un jeu d'après sa fiche Steam (jeu hors store, pour l'installer ailleurs).
 #[tauri::command]
-pub async fn official_site(ctx: Ctxs<'_>, app_id: u32) -> Result<Option<String>, String> {
+pub async fn official_site(ctx: Ctxs<'_>, app_id: u32) -> Result<crate::art::SteamFiche, String> {
     let art = ctx.art.clone();
     blocking(move || art.official_site(app_id)).await?
 }

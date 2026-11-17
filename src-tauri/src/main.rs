@@ -206,6 +206,7 @@ fn main() {
             commands::scan_games,
             commands::open_game_link,
             commands::open_store_page,
+            commands::open_launcher,
             commands::load_state,
             commands::save_state,
             commands::load_library,
