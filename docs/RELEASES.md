@@ -262,6 +262,11 @@ Première version publique de Hangar 2 : interface Svelte fidèle à la maquette
 
 Une entrée par correctif (4e chiffre), le plus récent en haut, écrite avant `npm run correctif`. Ce n'est pas une patch note : la release du correctif reprend toutes les entrées de sa version de base, et Hangar les montre (celles plus récentes que la version installée) dans une fenêtre avant d'installer. Une puce par correction, courte, pour les utilisateurs.
 
+### 1.2.29.4 - 17 novembre 2026
+
+- « Installer » un jeu d'un ami propose un seul site officiel et le launcher exigé par le jeu (Ubisoft Connect, EA app, Battle.net, Rockstar, Riot, Epic) ; s'il manque, sa page de téléchargement s'ouvre.
+- Un double-clic sur l'icône de Hangar près de l'horloge ouvre Hangar.
+
 ### 1.2.29.3 - 17 novembre 2026
 
 - « Installer » un jeu d'un ami trouve plus souvent son site officiel (variantes du nom, recherche Steam), sinon ouvre une recherche web.
