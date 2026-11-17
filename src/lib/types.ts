@@ -397,10 +397,17 @@ export interface ActivityItem {
   userName?: string;
 }
 
+/** Badge affiché à droite du pseudo, donné seulement par l'administrateur (`certifie` : compte certifié). */
+export type Badge = 'certifie';
+
 /** Profil vu dans l'app. Un champ null : la personne ne le partage pas avec nous. */
 export interface SocialProfile {
   id: string;
   name: string;
+  /** Badges, dans l'ordre d'affichage (absent : serveur d'avant les badges). */
+  badges?: Badge[];
+  /** true seulement pour l'administrateur : il peut donner ou retirer les badges. */
+  canBadge?: boolean;
   avatar: string | null;
   banner: string | null;
   since: number;

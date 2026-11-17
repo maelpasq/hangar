@@ -24,6 +24,7 @@ const env: Env = {
   TURSO_URL: '',
   AUTH_SECRET: 'secret-de-test-secret-de-test-secret-de-test',
   SECRETS_KEY: b64url(new Uint8Array(32).fill(7)),
+  ADMIN_EMAIL: ' Admin.Badges@exemple.fr ',
   AVATARS: {
     get: async (k) => {
       const v = bucket.get(k);
@@ -740,5 +741,33 @@ describe('comptes inactifs', () => {
     await expireAccounts(db, env.AVATARS, notice, later + WARN_DAYS * DAY);
     expect(await exists()).toBe(false);
     expect((await call('/me', { token })).status).toBe(401);
+  });
+});
+
+describe('badges', () => {
+  it('seul l\'administrateur donne ou retire un badge, et personne ne peut en demander', async () => {
+    const admin = await login('admin.badges@exemple.fr', 'e'.repeat(32));
+    const other = await login('joueur.badges@exemple.fr', 'f'.repeat(32));
+    const idOf = async (token: string) => (await json(await call('/me', { token }))).user.id as string;
+    const otherId = await idOf(other);
+    const adminId = await idOf(admin);
+    const set = (token: string, id: string, body: unknown) => call(`/social/users/${id}/badges`, { method: 'PUT', token, body });
+
+    // Un compte ordinaire ne peut rien donner, même à lui-même.
+    expect((await set(other, otherId, { badge: 'certifie', on: true })).status).toBe(403);
+    const before = await json(await call(`/social/users/${otherId}`, { token: other }));
+    expect(before.badges).toEqual([]);
+    expect(before.canBadge).toBe(false);
+
+    // L'administrateur : badge inconnu refusé, compte inconnu introuvable.
+    expect((await set(admin, otherId, { badge: 'dieu', on: true })).status).toBe(400);
+    expect((await set(admin, 'x'.repeat(20), { badge: 'certifie', on: true })).status).toBe(404);
+    expect(await json(await set(admin, otherId, { badge: 'certifie', on: true }))).toEqual({ badges: ['certifie'] });
+    expect((await set(admin, otherId, { badge: 'certifie', on: true })).status).toBe(200);
+    expect((await json(await call(`/social/users/${otherId}`, { token: other }))).badges).toEqual(['certifie']);
+    expect((await json(await call(`/social/users/${adminId}`, { token: admin }))).canBadge).toBe(true);
+    expect((await json(await call('/export', { token: other }))).social.badges).toEqual(['certifie']);
+
+    expect(await json(await set(admin, otherId, { badge: 'certifie', on: false }))).toEqual({ badges: [] });
   });
 });

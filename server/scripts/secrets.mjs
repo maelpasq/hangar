@@ -11,7 +11,7 @@ import { join } from 'node:path';
 
 const DIR = '.secrets';
 const OBLIGATOIRES = ['TURSO_URL', 'TURSO_TOKEN', 'AUTH_SECRET', 'SECRETS_KEY', 'RESEND_API_KEY'];
-const FACULTATIFS = ['DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'BUG_WEBHOOK'];
+const FACULTATIFS = ['DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'BUG_WEBHOOK', 'ADMIN_EMAIL'];
 
 const [cmd, env] = process.argv.slice(2);
 const fichier = (e) => join(DIR, `${e}.json`);

@@ -21,6 +21,8 @@ export interface Env {
   MAIL_FROM?: string;
   /** Webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`). Absent : pas de signalement. */
   BUG_WEBHOOK?: string;
+  /** Adresse e-mail du compte administrateur : lui seul donne ou retire les badges. Absent : personne. */
+  ADMIN_EMAIL?: string;
   /** Bucket R2 des avatars (`wrangler.toml`). Absent : pas d'avatar. */
   AVATARS?: AvatarStore;
   /** Durable Objects du temps réel (`wrangler.toml`, classe `Live`). Absent : pas de temps réel. */

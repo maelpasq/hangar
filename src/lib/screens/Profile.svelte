@@ -12,7 +12,8 @@
   import { library } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import { updater } from '../stores/update.svelte';
-  import type { SocialProfile } from '../types';
+  import Badges, { SEAL } from '../components/Badges.svelte';
+  import type { Badge, SocialProfile } from '../types';
   import { dateLabel, hoursLabel, plural, timeAgo } from '../util/format';
   import { compareVersions } from '../util/release-notes';
 
@@ -79,6 +80,24 @@
     }
   }
 
+  // Badge certifié : seul l'administrateur reçoit `canBadge` (le serveur refuse tout autre compte).
+  const certified = $derived(!!profile?.badges?.includes('certifie'));
+  let badging = $state(false);
+  async function toggleCertified() {
+    if (!profile || badging) return;
+    const on = !certified;
+    badging = true;
+    try {
+      const res = await api.social<{ badges: Badge[] }>('PUT', `/social/users/${profile.id}/badges`, { badge: 'certifie', on });
+      if (profile) profile.badges = res.badges;
+      ui.toast(on ? `Compte de ${name} certifié.` : `Certification de ${name} retirée.`);
+    } catch (e) {
+      ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
+    } finally {
+      badging = false;
+    }
+  }
+
   function confirm(action: 'remove' | 'block') {
     if (profile) ui.modal = { kind: 'socialConfirm', action, userId: profile.id, name: profile.name };
   }
@@ -101,13 +120,30 @@
     <div class="ident" {@attach contextMenu(() => profile && { label: profile.name, items: () => userItems(profile!) })}>
       <span class="avring"><SocialAvatar id={profile.id} name={profile.name} version={profile.avatar} size={112} presence={live} /></span>
       <div class="itxt">
-        <h1 class="ell">{profile.name}</h1>
+        <div class="nameline">
+          <h1 class="ell">{profile.name}</h1>
+          <Badges badges={profile.badges ?? []} />
+        </div>
         <p class="status">
           {#if live && live.state !== 'hidden'}<span class:playing={live.state === 'playing'}>{presenceLabel(live)}</span>{' · '}{/if}Sur
           Hangar depuis {dateLabel(profile.since).replace(/^\d+ /, '')}
         </p>
       </div>
       <div class="actions">
+        {#if profile.canBadge}
+          <button
+            class="ibtn"
+            class:on={certified}
+            aria-pressed={certified}
+            aria-label={certified ? `Retirer la certification de ${name}` : `Certifier ${name}`}
+            title={certified ? 'Retirer la certification' : 'Certifier ce compte'}
+            disabled={badging}
+            onclick={toggleCertified}
+            ><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" class="sealico"
+              ><polygon points={SEAL} /><path d="M8.1 12.3l2.7 2.7 5.2-5.4" /></svg
+            ></button
+          >
+        {/if}
         {#if self}
           <button class="btn" onclick={() => ui.settings('account')}><Icon name="edit" size={15} />Modifier mon profil</button>
         {:else if profile.relation === 'friend'}
@@ -344,6 +380,41 @@
     flex: 1;
     min-width: 0;
     padding-bottom: 8px;
+  }
+
+  .nameline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .sealico polygon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linejoin: round;
+  }
+
+  .sealico path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ibtn.on {
+    color: var(--accent-text);
+  }
+
+  .ibtn.on .sealico polygon {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+
+  .ibtn.on .sealico path {
+    stroke: #fff;
   }
 
   h1 {

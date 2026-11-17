@@ -3,6 +3,7 @@
 
 import type {
   ActivityItem,
+  Badge,
   ChatMessage,
   Presence,
   Relation,
@@ -135,6 +136,9 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
   const card = (p: Person): SocialUser => ({ id: p.id, name: p.name, avatar: null, relation: p.rel, presence: p.rel === 'friend' ? p.presence : { state: 'hidden', game: null }, since: p.since });
   const find = (id: string) => people.find((p) => p.id === id);
   const fail = (m: string) => Promise.reject(m);
+  /** Comptes certifiés (démo : je suis l'administrateur, je peux certifier tout le monde). */
+  const certified = new Set<string>([ME, 'demo-ami-0001']);
+  const badgesOf = (id: string): Badge[] => (certified.has(id) ? ['certifie'] : []);
   /** Mes jeux favoris, tels qu'envoyés par la dernière vitrine. */
   let myFavorites: SocialGame[] = [];
 
@@ -174,11 +178,18 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       const q = decodeURIComponent(new URLSearchParams(query).get('q') ?? '').toLowerCase().replace(/[\s-]/g, '');
       return { users: people.filter((p) => p.rel !== 'blocked' && (p.name.toLowerCase().includes(q) || q === 'abcd2345')).map(card) };
     }
+    if (head === 'users' && tail === 'badges') {
+      if (body?.on) certified.add(id);
+      else certified.delete(id);
+      return { badges: badgesOf(id) };
+    }
     if (head === 'users') {
       if (id === ME) {
         const self: SocialProfile = {
           id: ME,
           name: 'Alex',
+          badges: badgesOf(ME),
+          canBadge: true,
           avatar: null,
           banner: settings.banner,
           since: now - 500 * 24 * H,
@@ -206,6 +217,8 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       const prof: SocialProfile = {
         id: p.id,
         name: p.name,
+        badges: badgesOf(p.id),
+        canBadge: true,
         avatar: null,
         banner: null,
         since: p.since,

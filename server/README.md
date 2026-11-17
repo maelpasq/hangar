@@ -29,7 +29,8 @@ Rien de secret n'est dans ce dossier : les jetons et les clés vivent dans les s
 | `GET`, `PUT /social/me` | amis activés, code ami (`newCode: true` en tire un autre), trouvable par pseudo, visibilités (`all`, `friends`, `none`) du statut, du jeu en cours, du temps de jeu et de la bibliothèque |
 | `PUT /social/showcase` | `{ top, collections, games }` : jeux les plus joués, collections mises en avant, bibliothèque (jeux en commun) |
 | `PUT`, `DELETE /social/banner` | bannière du profil (PNG, JPEG ou WebP, 1 Mo au plus), dans R2 |
-| `GET /social/users/:id` (+ `/avatar`, `/banner`) | profil vu dans l'app, filtré selon le lien et les visibilités choisies |
+| `GET /social/users/:id` (+ `/avatar`, `/banner`) | profil vu dans l'app, filtré selon le lien et les visibilités choisies, avec ses badges (`badges`) |
+| `PUT /social/users/:id/badges` | `{ badge: 'certifie', on }` : donne ou retire un badge ; seulement le compte de `ADMIN_EMAIL` (403 sinon) |
 | `GET /social/search?q=` | code ami exact, ou pseudo (comptes qui l'acceptent), 20 au plus |
 | `GET /social/friends` | amis (avec présence), demandes reçues et envoyées, comptes bloqués |
 | `POST`, `DELETE /social/friends/:id` | demande ou acceptation ; retrait, annulation ou refus |
@@ -101,6 +102,7 @@ puis `check`, `migrate` et `push` avec `prod` ou `test`. Supprimer `.secrets/` e
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Discord |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | facultatif : sans eux, pas de bouton Google |
 | `BUG_WEBHOOK` | facultatif : webhook Discord des signalements de bug (`https://discord.com/api/webhooks/...`) ; sans lui, `POST /bug` répond 503 |
+| `ADMIN_EMAIL` | facultatif : adresse (vérifiée) du compte administrateur, le seul à pouvoir donner ou retirer les badges ; sans lui, personne |
 
 Adresses de retour à déclarer chez Discord et Google : `<BASE_URL>/auth/callback/discord` et
 `<BASE_URL>/auth/callback/google`.

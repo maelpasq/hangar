@@ -257,3 +257,17 @@ export const reports = sqliteTable(
   },
   (t) => [index('reports_target').on(t.targetId)]
 );
+
+/**
+ * Badges affichés à droite du pseudo sur le profil. `badge` : identifiant (`certifie`). Seul le
+ * compte administrateur (secret `ADMIN_EMAIL`) peut les donner ou les retirer : aucune demande possible.
+ */
+export const badges = sqliteTable(
+  'badges',
+  {
+    userId: text('user_id').notNull(),
+    badge: text('badge').notNull(),
+    at: integer('at').notNull()
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.badge] })]
+);

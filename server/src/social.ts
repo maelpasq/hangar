@@ -11,7 +11,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { seal, unseal } from './crypto';
 import type { AvatarStore, Db, Env } from './env';
 import { imageType, isUserId, totalPlay } from './profile';
-import { activity, devices, entries, friends, messages, reports, social, user } from './schema';
+import { activity, badges, devices, entries, friends, messages, reports, social, user } from './schema';
 
 /** Envoi d'un évènement aux connexions temps réel de ces comptes (remplacé dans les tests). */
 export type Hub = (userIds: string[], event: Record<string, unknown>) => Promise<void>;
@@ -59,6 +59,28 @@ const parse = <T>(raw: string | null, fallback: T): T => {
   }
 };
 const newId = () => crypto.randomUUID();
+
+/** Badges connus, dans l'ordre d'affichage (à droite du pseudo). Les prochains s'ajoutent ici. */
+export const BADGES = ['certifie'] as const;
+export type Badge = (typeof BADGES)[number];
+
+/** Badges d'un compte, dans l'ordre d'affichage. */
+export async function badgesOf(db: Db, id: string): Promise<Badge[]> {
+  const rows = await db.select({ badge: badges.badge }).from(badges).where(eq(badges.userId, id));
+  const has = new Set(rows.map((r) => r.badge));
+  return BADGES.filter((b) => has.has(b));
+}
+
+/**
+ * Compte administrateur : son adresse, vérifiée, est celle du secret `ADMIN_EMAIL` du Worker
+ * (jamais dans le dépôt). Lui seul donne ou retire les badges ; sans ce secret, personne.
+ */
+export async function isAdmin(db: Db, env: Env, id: string): Promise<boolean> {
+  const admin = env.ADMIN_EMAIL?.trim().toLowerCase();
+  if (!admin) return false;
+  const [u] = await db.select({ email: user.email, verified: user.emailVerified }).from(user).where(eq(user.id, id));
+  return !!u && u.verified && u.email.trim().toLowerCase() === admin;
+}
 
 /**
  * Jeux installés, rangés par poste (`{ [deviceId]: Game[] }`) : chaque poste n'envoie que les siens,
@@ -183,7 +205,8 @@ export async function deleteSocial(db: Db, bucket: AvatarStore | undefined, id: 
     db.delete(friends).where(or(eq(friends.userId, id), eq(friends.otherId, id))),
     db.delete(activity).where(eq(activity.userId, id)),
     db.delete(messages).where(or(eq(messages.fromId, id), eq(messages.toId, id))),
-    db.delete(reports).where(or(eq(reports.reporterId, id), eq(reports.targetId, id)))
+    db.delete(reports).where(or(eq(reports.reporterId, id), eq(reports.targetId, id))),
+    db.delete(badges).where(eq(badges.userId, id))
   ] as const;
 }
 
@@ -411,6 +434,9 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     return c.json({
       id: u.id,
       name: u.name.trim() || 'Joueur',
+      badges: await badgesOf(db, u.id),
+      // Seul l'administrateur le reçoit à true : l'app lui montre alors les boutons des badges.
+      canBadge: await isAdmin(db, env, me),
       avatar: await deps.avatarOf(u.image),
       banner: vis.banner,
       since: u.createdAt.getTime(),
@@ -426,6 +452,25 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       common,
       activity: recent.filter((a) => sees(a.kind === 'play' ? vis.gameVis : vis.libraryVis, rel)).slice(0, 10).map(activityView)
     });
+  });
+
+  /** Donne (`on: true`) ou retire un badge. Administrateur seulement : personne ne peut en demander. */
+  r.put('/users/:id/badges', async (c) => {
+    const me = c.get('device').userId;
+    if (!(await isAdmin(db, env, me))) return c.json({ error: 'interdit' }, 403);
+    const body: unknown = await c.req.json().catch(() => null);
+    if (!isObject(body) || !BADGES.includes(body.badge as Badge) || typeof body.on !== 'boolean') {
+      return c.json({ error: 'requete' }, 400);
+    }
+    const id = c.req.param('id');
+    const [u] = isUserId(id) ? await db.select({ id: user.id }).from(user).where(eq(user.id, id)) : [];
+    if (!u) return c.json({ error: 'introuvable' }, 404);
+    if (body.on) {
+      await db.insert(badges).values({ userId: id, badge: body.badge as Badge, at: Date.now() }).onConflictDoNothing();
+    } else {
+      await db.delete(badges).where(and(eq(badges.userId, id), eq(badges.badge, body.badge as string)));
+    }
+    return c.json({ badges: await badgesOf(db, id) });
   });
 
   r.get('/users/:id/avatar', async (c) => {
@@ -843,6 +888,7 @@ export async function exportSocial(db: Db, env: Env, me: string) {
           showcase: parse(row.showcase, null)
         }
       : null,
+    badges: await badgesOf(db, me),
     friends: links.map((l) => ({ id: l.id, name: l.name, state: l.state, since: l.since })),
     activity: acts.map(activityView),
     messages: opened

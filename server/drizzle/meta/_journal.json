@@ -22,6 +22,13 @@
       "when": 1794783947606,
       "tag": "0002_social",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794883759627,
+      "tag": "0003_badges",
+      "breakpoints": true
     }
   ]
 }
