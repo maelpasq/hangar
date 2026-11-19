@@ -67,6 +67,15 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
+### 1.2.30 - 19 novembre 2026
+De nouveaux badges arrivent sur les profils, et Hangar suit mieux les jeux qui se relancent tout seuls après une mise à jour.
+
+#### Nouveautés
+- **Nouveaux badges** : l'équipe Hangar peut maintenant créer des badges pour des événements, des concours ou la communauté. Ils s'affichent à droite du pseudo, comme les autres, chacun avec sa couleur. Survole-les pour voir leur nom.
+
+#### Corrections
+- **Suivi des parties** : un jeu qui se ferme pour se mettre à jour puis se relance tout seul (par exemple Lunar Client) repasse « En jeu » dans les 2 minutes, et une nouvelle session de jeu commence au lieu de s'arrêter en route.
+
 ### 1.2.29 - 17 novembre 2026
 Ton profil Hangar a ses badges : ton ancienneté, ta collection et tes heures de jeu s'affichent à côté de ton pseudo, et tes amis les voient.
 <!-- vitrine: badges -->
