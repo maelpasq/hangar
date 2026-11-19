@@ -406,10 +406,13 @@
     background: var(--bg);
   }
 
+  /* Le pseudo commence sous la bannière (56 px de chevauchement + 14 px d'air),
+     les actions sur la même ligne que lui. */
   .itxt {
     flex: 1;
     min-width: 0;
-    padding-bottom: 8px;
+    align-self: flex-start;
+    padding-top: 70px;
   }
 
   .nameline {
@@ -492,7 +495,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-bottom: 10px;
+    align-self: flex-start;
+    margin-top: 72px;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
