@@ -450,3 +450,7 @@ Les badges donnés à la main ne sont plus fixés dans le code : table `badge_de
 ## Dashboard admin : choix du thème (19 nov. 2026)
 
 Bouton-icône à droite du logo de la barre latérale (reste visible sous 760 px), même cycle que le bouton de la barre du haut de l'app : sombre, clair, celui de l'appareil (par défaut, comme avant). Le choix est gardé dans le `localStorage` du navigateur (`hangar-admin-theme`), rien côté serveur.
+
+## Mises à jour de Hangar silencieuses (19 nov. 2026)
+
+L'updater lance l'installeur NSIS en mode `quiet` (`/S`) au lieu de `passive` (`/P`, qui montrait la fenêtre de progression de l'installeur) : l'utilisateur ne voit plus aucun setup, Hangar se ferme puis se relance seul (`/R`, passé par le plugin dans les deux modes). Installation par utilisateur (`currentUser`), donc pas d'élévation à demander. La progression du téléchargement reste affichée dans Hangar.
