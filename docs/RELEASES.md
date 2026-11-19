@@ -271,6 +271,10 @@ Première version publique de Hangar 2 : interface Svelte fidèle à la maquette
 
 Une entrée par correctif (4e chiffre), le plus récent en haut, écrite avant `npm run correctif`. Ce n'est pas une patch note : la release du correctif reprend toutes les entrées de sa version de base, et Hangar les montre (celles plus récentes que la version installée) dans une fenêtre avant d'installer. Une puce par correction, courte, pour les utilisateurs.
 
+### 1.2.30.2 - 19 novembre 2026
+
+- Les mises à jour de Hangar s'installent en arrière-plan : plus de fenêtre d'installation, Hangar se relance tout seul une fois à jour.
+
 ### 1.2.30.1 - 19 novembre 2026
 
 - La barre latérale se réduit à ses icônes d'un clic, avec le bouton à droite du logo ; réduite, un clic sur le logo la rouvre. Hangar retient ton choix.
