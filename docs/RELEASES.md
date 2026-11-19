@@ -271,6 +271,11 @@ Première version publique de Hangar 2 : interface Svelte fidèle à la maquette
 
 Une entrée par correctif (4e chiffre), le plus récent en haut, écrite avant `npm run correctif`. Ce n'est pas une patch note : la release du correctif reprend toutes les entrées de sa version de base, et Hangar les montre (celles plus récentes que la version installée) dans une fenêtre avant d'installer. Une puce par correction, courte, pour les utilisateurs.
 
+### 1.2.30.1 - 19 novembre 2026
+
+- La barre latérale se réduit à ses icônes d'un clic, avec le bouton à droite du logo ; réduite, un clic sur le logo la rouvre. Hangar retient ton choix.
+- Profil : le pseudo et les badges passent sous la bannière, et le profil s'adapte aux fenêtres étroites (statistiques par deux, boutons sous le nom).
+
 ### 1.2.29.5 - 17 novembre 2026
 
 - Un compte suspendu, ou dont les amis ont été coupés, le voit dans Hangar : le motif et la durée dans Paramètres > Compte et sur l'écran Amis, la synchronisation en pause et l'interrupteur des amis grisé.
