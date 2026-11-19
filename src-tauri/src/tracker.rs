@@ -2,7 +2,9 @@
 //!
 //! Après un lancement, on cherche toutes les 2 s (90 s max) un processus dont l'exe est
 //! dans le dossier du jeu ou dont le nom est connu. Une fois trouvé, on suit toutes les 5 s ;
-//! la session se termine quand plus aucun processus du jeu n'existe.
+//! la session se termine quand plus aucun processus du jeu n'existe. Le jeu reste ensuite
+//! guetté 2 min sans bruit : s'il revient (relancé par lui-même après une mise à jour,
+//! comme Lunar Client), il est de nouveau « en cours » et une nouvelle session commence.
 
 use crate::model::{Game, Session};
 use serde::Serialize;
@@ -16,6 +18,8 @@ use tauri::{AppHandle, Emitter};
 const SEARCH_EVERY: Duration = Duration::from_secs(2);
 const FOLLOW_EVERY: Duration = Duration::from_secs(5);
 const SEARCH_MAX: Duration = Duration::from_secs(90);
+/// Après la fin d'un jeu : durée pendant laquelle on guette sa relance (mise à jour, redémarrage).
+const RELAUNCH_WATCH: Duration = Duration::from_secs(120);
 /// Aucun passage depuis plus longtemps : le PC était en veille, la session s'arrête là.
 const SLEEP_GAP_MS: u64 = 60_000;
 /// La session en cours est envoyée au frontend au moins chaque minute : fermer Hangar
@@ -198,10 +202,15 @@ impl Tracker {
             .name("hangar-tracker".into())
             .spawn(move || {
                 let mut sys = System::new();
+                // Jeux tout juste terminés, guettés le temps d'une relance (phase Searching,
+                // `since` = la fin). Hors de la liste partagée : ni « en cours » ni arrêtables.
+                let mut watching: Vec<Entry> = vec![];
                 loop {
                     let wait = {
                         let e = shared.lock().unwrap_or_else(|p| p.into_inner());
-                        if e.is_empty() {
+                        if !watching.is_empty() {
+                            Some(SEARCH_EVERY)
+                        } else if e.is_empty() {
                             None
                         } else if e.iter().any(|x| matches!(x.phase, Phase::Searching { .. })) {
                             Some(SEARCH_EVERY)
@@ -225,6 +234,7 @@ impl Tracker {
                     let mut running = vec![];
                     let mut ended = vec![];
                     let mut steps = vec![];
+                    let mut gone = vec![];
                     {
                         let mut list = shared.lock().unwrap_or_else(|p| p.into_inner());
                         list.retain_mut(|e| {
@@ -252,7 +262,9 @@ impl Tracker {
                                         let session =
                                             Session { game_id: e.game_id.clone(), start: *start, end: *last_seen };
                                         ended.push(EndedEvent { game_id: e.game_id.clone(), session: Some(session) });
-                                        false
+                                        gone.push(e.game_id.clone());
+                                        e.phase = Phase::Searching { since: Instant::now() };
+                                        true
                                     } else {
                                         if let Some(session) = follow(&e.game_id, start, last_seen, saved, now) {
                                             steps.push(SessionEvent { game_id: e.game_id.clone(), session });
@@ -263,6 +275,38 @@ impl Tracker {
                                 }
                             }
                         });
+                        // Les jeux terminés passent dans le guet.
+                        let mut i = 0;
+                        while i < list.len() {
+                            if gone.contains(&list[i].game_id) {
+                                watching.push(list.remove(i));
+                            } else {
+                                i += 1;
+                            }
+                        }
+                        // Relancé depuis Hangar entre-temps : le suivi normal a repris la main.
+                        watching.retain(|w| !list.iter().any(|e| e.game_id == w.game_id));
+                        let mut i = 0;
+                        while i < watching.len() {
+                            let w = &watching[i];
+                            let pids: Vec<u32> = procs
+                                .iter()
+                                .filter(|p| w.spec.matches(&p.name, p.exe.as_deref()))
+                                .map(|p| p.pid)
+                                .collect();
+                            let expired = matches!(w.phase, Phase::Searching { since } if since.elapsed() > RELAUNCH_WATCH);
+                            if let Some(&pid) = pids.first() {
+                                let mut w = watching.remove(i);
+                                log::info!("suivi : {} relancé tout seul (mise à jour ?)", w.game_id);
+                                running.push(RunningEvent { game_id: w.game_id.clone(), pid });
+                                w.phase = Phase::Running { start: now, last_seen: now, saved: now, pids };
+                                list.push(w);
+                            } else if expired {
+                                watching.remove(i);
+                            } else {
+                                i += 1;
+                            }
+                        }
                     }
                     if !running.is_empty() {
                         crate::veil::settle();
