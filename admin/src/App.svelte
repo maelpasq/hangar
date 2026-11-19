@@ -26,11 +26,38 @@
     })
     .catch((e) => (e instanceof ApiError && e.status === 403 ? (denied = true) : (failed = true)));
 
-  // Thème du système (les tokens de l'app lisent `data-theme`).
+  // Thème, comme le bouton de la barre du haut de l'app : sombre, clair ou celui de l'appareil
+  // (les tokens de l'app lisent `data-theme`). Le choix reste dans ce navigateur.
+  type Theme = 'dark' | 'light' | 'system';
+  const THEMES: Record<Theme, { label: string; icon: IconName; next: Theme }> = {
+    dark: { label: 'sombre', icon: 'moon', next: 'light' },
+    light: { label: 'clair', icon: 'sun', next: 'system' },
+    system: { label: "celui de l'appareil", icon: 'monitor', next: 'dark' }
+  };
+  const readTheme = (): Theme => {
+    try {
+      const t = localStorage.getItem('hangar-admin-theme');
+      if (t === 'dark' || t === 'light' || t === 'system') return t;
+    } catch {
+      // Stockage indisponible : thème de l'appareil.
+    }
+    return 'system';
+  };
+  let theme = $state<Theme>(readTheme());
   const light = matchMedia('(prefers-color-scheme: light)');
-  const applyTheme = () => (document.documentElement.dataset.theme = light.matches ? 'light' : 'dark');
-  applyTheme();
-  light.addEventListener('change', applyTheme);
+  let systemLight = $state(light.matches);
+  light.addEventListener('change', () => (systemLight = light.matches));
+  $effect(() => {
+    document.documentElement.dataset.theme = theme === 'system' ? (systemLight ? 'light' : 'dark') : theme;
+  });
+  function cycleTheme() {
+    theme = THEMES[theme].next;
+    try {
+      localStorage.setItem('hangar-admin-theme', theme);
+    } catch {
+      // Tant pis : le choix vaut pour cette visite.
+    }
+  }
 
   // Bascule entre les deux dashboards : chacun lit sa propre base (Test ou Prod).
   const ENVS = [
@@ -67,11 +94,19 @@
 {:else}
   <div class="shell">
     <aside>
-      <a class="brand" href={href.accueil}>
-        <img src="/favicon.svg" alt="" width="30" height="30" />
-        <span class="name">Hangar</span>
-        <span class="tag">Admin</span>
-      </a>
+      <div class="top">
+        <a class="brand" href={href.accueil}>
+          <img src="/favicon.svg" alt="" width="30" height="30" />
+          <span class="name">Hangar</span>
+          <span class="tag">Admin</span>
+        </a>
+        <button
+          class="theme"
+          onclick={cycleTheme}
+          aria-label="Thème : {THEMES[theme].label}. Passer en {THEMES[THEMES[theme].next].label}"
+          title="Thème : {THEMES[theme].label}"><Icon name={THEMES[theme].icon} size={18} /></button
+        >
+      </div>
       <p class="over section">Administration</p>
       <nav aria-label="Sections">
         {#each nav as n (n.id)}
@@ -149,12 +184,38 @@
     background: var(--sidebar);
   }
 
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 22px;
+  }
+
   .brand {
     display: flex;
     align-items: center;
     gap: 11px;
-    padding: 2px 4px 22px;
+    padding: 2px 4px;
     text-decoration: none;
+    color: var(--strong);
+  }
+
+  .theme {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 10px;
+    color: var(--muted);
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .theme:hover {
+    background: rgb(var(--ink) / 0.06);
     color: var(--strong);
   }
 
@@ -371,9 +432,9 @@
       border-bottom: 1px solid var(--border-1);
     }
 
-    .brand {
-      padding: 2px 4px;
+    .top {
       width: 100%;
+      padding-bottom: 0;
     }
 
     .section,
