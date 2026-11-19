@@ -362,9 +362,8 @@ describe('badges', () => {
     const res = await send('', 'POST', { name: '  Fan  de la première heure ', icon: 'heart', color: '#f2556b', description: 'Là depuis le début' });
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ id: 'fan-de-la-premiere-heure' });
-    // Une couleur par badge, désactivés compris.
-    expect((await send('', 'POST', { name: 'Autre', icon: 'star', color: 'accent' })).status).toBe(409);
-    expect((await send('/equipe', 'PUT', { color: '#f2556b' })).status).toBe(409);
+    // Plusieurs badges peuvent partager une couleur.
+    expect((await send('/equipe', 'PUT', { color: '#f2556b' })).status).toBe(200);
     expect((await send('/equipe', 'PUT', { color: '#8d70ff', name: 'Équipe Hangar' })).status).toBe(200);
     // Même nom : identifiant suivant.
     expect(await (await send('', 'POST', { name: 'Fan de la première heure', icon: 'star', color: '#123456' })).json()).toEqual({

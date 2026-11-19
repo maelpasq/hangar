@@ -83,7 +83,7 @@ Durée : 1, 3, 7, 30 ou 90 jours, ou définitive. Le motif est montré à la per
 
 ## Badges
 
-Les badges donnés à la main vivent dans `badge_defs` (migration 0007, qui y range les 4 d'origine : `certifie`, `equipe`, `testeur`, `chasseur`). Emblème au choix parmi ceux embarqués dans l'app (`GIVEN_ICONS` de `src/lib/util/badges.ts`, `BADGE_ICONS` de `server/src/badges.ts`, mêmes listes) : en ajouter un demande une version de l'app. Couleur : `#rrggbb` ou `accent`, une par badge (désactivés compris : sinon 409 `couleur`).
+Les badges donnés à la main vivent dans `badge_defs` (migration 0007, qui y range les 4 d'origine : `certifie`, `equipe`, `testeur`, `chasseur`). Emblème au choix parmi ceux embarqués dans l'app (`GIVEN_ICONS` de `src/lib/util/badges.ts`, `BADGE_ICONS` de `server/src/badges.ts`, mêmes listes) : en ajouter un demande une version de l'app. Couleur : `#rrggbb` ou `accent`, plusieurs badges peuvent partager la même (un nouveau badge en propose une encore libre).
 
 Compatibilité : le profil (`GET /social/users/:id`) garde `badges`, limité aux 4 d'origine, pour les versions d'avant la phase 4, et ajoute `badgeDefs` (nom, emblème, couleur de chaque badge actif). Une version qui ne connaît pas un emblème montre l'étoile. L'administrateur reçoit aussi `allBadges` pour le menu de badges de l'app.
 

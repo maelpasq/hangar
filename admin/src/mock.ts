@@ -36,7 +36,6 @@ function mockBadges(seg: string[], init?: { method: string; body: unknown }): un
   if (!seg[1] && method === 'GET') return { badges: badgeList() };
   if (!seg[1] && method === 'POST') {
     const f = init!.body as Required<Pick<BadgeFields, 'name' | 'icon' | 'color'>> & BadgeFields;
-    if (defs.some((d) => d.color === f.color)) throw new ApiError(409, 'couleur');
     const base = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'badge';
     let id = base;
     for (let i = 2; defs.some((d) => d.id === id); i++) id = `${base}-${i}`;
@@ -78,7 +77,6 @@ function mockBadges(seg: string[], init?: { method: string; body: unknown }): un
     return { badges: badgeList() };
   }
   const f = init!.body as BadgeFields;
-  if (f.color && f.color !== d.color && defs.some((x) => x.color === f.color)) throw new ApiError(409, 'couleur');
   const changes = (Object.keys(f) as (keyof BadgeFields)[]).filter((k) => f[k] !== d[k]);
   Object.assign(d, f);
   if (changes.length) logBadge('badge.modifier', d, { changes });

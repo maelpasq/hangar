@@ -43,15 +43,11 @@
     bulkResult = '';
   });
 
-  // Couleurs des autres badges : chaque badge garde la sienne.
-  // Les couleurs des badges calculés par l'app sont prises aussi.
-  const AUTO_COLORS = AUTO_BADGES.flatMap((a) => a.tiers.map((t) => [t.color, a.name] as const));
-  const takenBy = $derived(
-    new Map([...AUTO_COLORS, ...badgeDefs.list.filter((b) => creating || b.id !== current?.id).map((b) => [b.color, b.name] as const)])
-  );
-  const colorTaken = $derived(takenBy.has(color));
+  // Une couleur peut servir à plusieurs badges ; un nouveau badge part quand même d'une
+  // couleur encore inutilisée (badges calculés par l'app compris), modifiable librement.
+  const AUTO_COLORS = AUTO_BADGES.flatMap((a) => a.tiers.map((t) => t.color));
   function freeColor() {
-    const used = new Set([...AUTO_COLORS.map(([c]) => c), ...badgeDefs.list.map((b) => b.color)]);
+    const used = new Set([...AUTO_COLORS, ...badgeDefs.list.map((b) => b.color)]);
     return PALETTE.find((p) => !used.has(p.color))?.color ?? randomColor(used);
   }
   function randomColor(used: Set<string>) {
@@ -78,7 +74,7 @@
 
   async function save(e: SubmitEvent) {
     e.preventDefault();
-    if (saving || !name.trim() || colorTaken) return;
+    if (saving || !name.trim()) return;
     saving = true;
     error = '';
     saved = false;
@@ -318,13 +314,10 @@
           <legend class="lbl">Couleur</legend>
           <div class="seg">
             {#each PALETTE as p (p.color)}
-              {@const owner = takenBy.get(p.color)}
               <button
                 type="button"
                 class:on={color === p.color}
                 aria-pressed={color === p.color}
-                disabled={!!owner}
-                title={owner ? `Déjà prise : ${owner}` : undefined}
                 onclick={() => (color = p.color)}
               >
                 <i style:background={colorOf(p)}></i>{p.label}
@@ -340,15 +333,12 @@
               Libre{#if !PALETTE.some((p) => p.color === color)}<span class="mono">{color}</span>{/if}
             </label>
           </div>
-          {#if colorTaken}
-            <p class="taken" role="status">Déjà la couleur de « {takenBy.get(color)} » : choisis-en une autre.</p>
-          {/if}
         </fieldset>
 
         {#if error}<p class="error" role="alert">{error}</p>{/if}
 
         <div class="actions">
-          <button class="primary" type="submit" disabled={saving || !name.trim() || !dirty || colorTaken}>
+          <button class="primary" type="submit" disabled={saving || !name.trim() || !dirty}>
             {creating ? 'Créer le badge' : 'Enregistrer'}
           </button>
           {#if saved && !dirty}<span class="ok" role="status">Enregistré.</span>{/if}
@@ -587,12 +577,6 @@
 
   .free .mono {
     color: var(--muted);
-  }
-
-  .taken {
-    margin-top: 8px;
-    font-size: 12.5px;
-    color: var(--danger-text);
   }
 
   .actions {

@@ -102,8 +102,6 @@ export function badgeRoutes(db: Db, hub: Hub) {
     const f = isObject(body) ? fieldsOf(body, false) : null;
     if (!f?.name || !f.icon || !f.color) return c.json({ error: 'requete' }, 400);
     const all = await badgeDefsOf(db);
-    // Une couleur par badge (désactivés compris), pour les distinguer d'un coup d'oeil.
-    if (all.some((x) => x.color === f.color)) return c.json({ error: 'couleur' }, 409);
     const base = slugOf(f.name) || 'badge';
     const taken = new Set(all.map((x) => x.id));
     let id = base;
@@ -145,9 +143,6 @@ export function badgeRoutes(db: Db, hub: Hub) {
     const body: unknown = await c.req.json().catch(() => null);
     const f = isObject(body) ? fieldsOf(body, true) : null;
     if (!f) return c.json({ error: 'requete' }, 400);
-    if (f.color && f.color !== d.color && (await badgeDefsOf(db)).some((x) => x.color === f.color)) {
-      return c.json({ error: 'couleur' }, 409);
-    }
     const changed = (Object.keys(f) as (keyof typeof f)[]).filter((k) => f[k] !== d[k]);
     if (changed.length) {
       await db.update(badgeDefs).set(f).where(eq(badgeDefs.id, id));
