@@ -107,6 +107,16 @@ interface Place {
   profileId: string | null;
 }
 
+const FOLD_KEY = 'hangar.sidebar.folded';
+
+function readFolded(): boolean {
+  try {
+    return localStorage.getItem(FOLD_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 class Ui {
   screen = $state<Screen | SocialScreen>('home');
   favOnly = $state(false);
@@ -148,6 +158,16 @@ class Ui {
   pageScrolled = $state(false);
   /** Image de la lumière d'ambiance. */
   ambient = $state<string | null>(null);
+  /** Barre latérale réduite à ses icônes par l'utilisateur (bouton à droite du logo).
+   *  Préférence de l'interface, gardée dans le navigateur de l'app. */
+  sidebarFolded = $state(readFolded());
+
+  toggleSidebar(): void {
+    this.sidebarFolded = !this.sidebarFolded;
+    try {
+      localStorage.setItem(FOLD_KEY, this.sidebarFolded ? '1' : '0');
+    } catch {}
+  }
 
   private toastSeq = 0;
 

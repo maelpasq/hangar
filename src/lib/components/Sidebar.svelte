@@ -19,7 +19,8 @@
 
   cloud.load();
 
-  let { rail = false }: { rail?: boolean } = $props();
+  // `auto` : fenêtre trop étroite, la barre est réduite d'office (pas de bouton pour l'agrandir).
+  let { rail = false, auto = false }: { rail?: boolean; auto?: boolean } = $props();
 
   /** Menu du compte (profil, paramètres du compte, déconnexion). */
   let accountOpen = $state(false);
@@ -74,7 +75,20 @@
     <!-- macOS : bande où se posent les boutons natifs, sert aussi à déplacer la fenêtre -->
     <div class="titlebar" data-tauri-drag-region></div>
   {/if}
-  <div class="logo">
+  <div class="logo" class:folded={rail && !auto}>
+    {#if !auto}
+      <!-- Réduire / agrandir la barre latérale. Réduite, le logo devient ce bouton (icône au survol). -->
+      <button
+        class="fold"
+        aria-label={rail ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+        title={rail ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+        aria-expanded={!rail}
+        onclick={() => ui.toggleSidebar()}
+      >
+        {#if rail}<span class="flogo"><Logo size={30} /></span>{/if}
+        <span class="ficon"><Icon name="sidebar" size={rail ? 19 : 18} /></span>
+      </button>
+    {/if}
     <Logo size={30} />
     {#if !rail}<span>Hangar</span>{/if}
   </div>
@@ -309,6 +323,68 @@
   .rail .logo {
     justify-content: center;
     padding: 2px 0 22px;
+  }
+
+  /* Bouton pour réduire / agrandir la barre latérale, au bout de la ligne du logo
+     (placé à droite par `order`, sans toucher au balisage voisin). */
+  .fold {
+    order: 1;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    margin: 0 -2px 0 auto;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    transition:
+      background 0.18s,
+      color 0.18s;
+  }
+
+  .fold:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  .fold > span {
+    grid-area: 1 / 1;
+    display: grid;
+    place-items: center;
+    transition: opacity 0.18s;
+  }
+
+  /* Réduite : seul le bouton reste, avec le logo ; l'icône apparaît au survol. */
+  .folded > :global(.logo) {
+    display: none;
+  }
+
+  .folded .fold {
+    width: 40px;
+    height: 40px;
+    margin: -5px 0;
+    border-radius: 12px;
+  }
+
+  .folded .ficon {
+    opacity: 0;
+  }
+
+  .folded .fold:hover .flogo,
+  .folded .fold:focus-visible .flogo {
+    opacity: 0;
+  }
+
+  .folded .fold:hover .ficon,
+  .folded .fold:focus-visible .ficon {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fold,
+    .fold > span {
+      transition: none;
+    }
   }
 
   .sec {

@@ -60,7 +60,9 @@
   let search: HTMLInputElement | undefined = $state();
   let width = $state(1440);
 
-  const rail = $derived(width < 1000);
+  // Rail : fenêtre étroite (auto) ou barre réduite par l'utilisateur.
+  const autoRail = $derived(width < 1000);
+  const rail = $derived(autoRail || ui.sidebarFolded);
   const game = $derived(ui.screen === 'game' ? library.get(ui.gameId) : undefined);
   const modalGame = $derived(ui.modal && 'gameId' in ui.modal ? library.get(ui.modal.gameId) : undefined);
   const launchGame = $derived(runner.launching ? library.get(runner.launching.gameId) : undefined);
@@ -280,7 +282,7 @@
     {/if}
   </div>
 
-  <Sidebar {rail} />
+  <Sidebar {rail} auto={autoRail} />
 
   <main>
     <TopBar bind:input={search} onrefresh={() => void refreshAll()} />

@@ -338,6 +338,9 @@
   .wrap {
     max-width: 1100px;
     margin: 0 auto;
+    /* Les points de rupture suivent la largeur du profil, pas celle de la fenêtre
+       (la barre latérale repliée ou non change la place disponible). */
+    container: profil / inline-size;
   }
 
   .gate {
@@ -415,11 +418,17 @@
     padding-top: 70px;
   }
 
+  /* Les badges passent sous le nom plutôt que de l'écraser. */
   .nameline {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 4px 10px;
     min-width: 0;
+  }
+
+  .nameline h1 {
+    max-width: 100%;
   }
 
   .sealico polygon {
@@ -575,6 +584,8 @@
     letter-spacing: -0.3px;
     line-height: 1.1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .sv.mono {
@@ -715,6 +726,30 @@
     font-size: 12px;
     color: var(--muted);
     white-space: nowrap;
+  }
+
+  /* Profil étroit : les cartes de chiffres se rangent par deux (une date comme
+     « 15 octobre 2025 » ne tient pas dans un quart de largeur). */
+  @container profil (max-width: 980px) {
+    .stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Plus étroit : les boutons passent sous le nom, alignés sur le texte. */
+  @container profil (max-width: 880px) {
+    .ident {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+
+    .actions {
+      flex-basis: 100%;
+      margin-top: 0;
+      justify-content: flex-start;
+      /* Avatar 112 + anneau 2 × 5 + espace 22. */
+      padding-left: 144px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

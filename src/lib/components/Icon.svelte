@@ -51,7 +51,8 @@
     | 'shieldCheck'
     | 'external'
     | 'chevronRight'
-    | 'discord';
+    | 'discord'
+    | 'sidebar';
 </script>
 
 <script lang="ts">
@@ -78,7 +79,9 @@
   stroke-linejoin="round"
   aria-hidden="true"
 >
-  {#if name === 'home'}
+  {#if name === 'sidebar'}
+    <rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9.5 4v16" />
+  {:else if name === 'home'}
     <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
   {:else if name === 'grid'}
     <rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect
