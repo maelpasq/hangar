@@ -84,6 +84,15 @@
   });
 </script>
 
+{#snippet themeBtn(extra: string)}
+  <button
+    class="theme {extra}"
+    onclick={cycleTheme}
+    aria-label="Thème : {THEMES[theme].label}. Passer en {THEMES[THEMES[theme].next].label}"
+    title="Thème : {THEMES[theme].label}"><Icon name={THEMES[theme].icon} size={18} /></button
+  >
+{/snippet}
+
 {#if denied || failed}
   <main class="center">
     <h1>{denied ? 'Accès refusé' : 'Serveur injoignable'}</h1>
@@ -100,12 +109,8 @@
           <span class="name">Hangar</span>
           <span class="tag">Admin</span>
         </a>
-        <button
-          class="theme"
-          onclick={cycleTheme}
-          aria-label="Thème : {THEMES[theme].label}. Passer en {THEMES[THEMES[theme].next].label}"
-          title="Thème : {THEMES[theme].label}"><Icon name={THEMES[theme].icon} size={18} /></button
-        >
+        <!-- En étroit seulement : en large, le bouton est en bas (pas la place à côté de la marque). -->
+        {@render themeBtn('narrow')}
       </div>
       <p class="over section">Administration</p>
       <nav aria-label="Sections">
@@ -139,7 +144,10 @@
           {/each}
           {#if envName === 'Démo'}<span class="env on">Démo</span>{/if}
         </div>
-        {#if me}<span class="email" title={me.email}>{me.email}</span>{/if}
+        <div class="me">
+          {#if me}<span class="email" title={me.email}>{me.email}</span>{/if}
+          {@render themeBtn('')}
+        </div>
       </div>
     </aside>
     {#key router.route.page === 'bug' ? 'bugs' : router.route.page === 'compte' ? 'comptes' : router.route.page}
@@ -382,7 +390,20 @@
     color: var(--danger-text);
   }
 
+  .me {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-right: -8px;
+  }
+
+  .theme.narrow {
+    display: none;
+  }
+
   .email {
+    min-width: 0;
     font-size: 12px;
     color: var(--muted);
     overflow: hidden;
@@ -435,6 +456,10 @@
     .top {
       width: 100%;
       padding-bottom: 0;
+    }
+
+    .theme.narrow {
+      display: grid;
     }
 
     .section,
