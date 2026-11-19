@@ -1662,7 +1662,7 @@ dependencies = [
 
 [[package]]
 name = "hangar"
-version = "1.2.30+1"
+version = "1.2.30+2"
 dependencies = [
  "base64 0.22.1",
  "keyring",
