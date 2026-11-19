@@ -4,6 +4,7 @@
 import type {
   ActivityItem,
   Badge,
+  BadgeDef,
   ChatMessage,
   Presence,
   Relation,
@@ -137,12 +138,22 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
   const find = (id: string) => people.find((p) => p.id === id);
   const fail = (m: string) => Promise.reject(m);
   /** Badges donnés (démo : je suis l'administrateur, je peux en donner à tout le monde). */
-  const given = new Map<string, Set<Badge>>([
-    [ME, new Set<Badge>(['certifie', 'equipe'])],
-    ['demo-ami-0001', new Set<Badge>(['certifie', 'chasseur'])]
+  const given = new Map<string, Set<string>>([
+    [ME, new Set(['certifie', 'equipe'])],
+    ['demo-ami-0001', new Set(['certifie', 'chasseur', 'fan'])]
   ]);
-  const ORDER: Badge[] = ['certifie', 'equipe', 'testeur', 'chasseur'];
-  const badgesOf = (id: string): Badge[] => ORDER.filter((b) => given.get(id)?.has(b));
+  /** Badges créés dans le dashboard (démo : les 4 d'origine et un nouveau). */
+  const DEFS: BadgeDef[] = [
+    { id: 'certifie', name: 'Compte certifié', description: '', icon: 'seal', color: 'accent' },
+    { id: 'equipe', name: 'Équipe Hangar', description: '', icon: 'shield', color: '#8d70ff' },
+    { id: 'testeur', name: 'Testeur de Hangar', description: '', icon: 'flask', color: '#22b8a6' },
+    { id: 'chasseur', name: 'Chasseur de bugs', description: '', icon: 'bug', color: '#3fb950' },
+    { id: 'fan', name: 'Fan de la première heure', description: '', icon: 'heart', color: '#f2556b' }
+  ];
+  const LEGACY: string[] = ['certifie', 'equipe', 'testeur', 'chasseur'];
+  const defsOf = (id: string): BadgeDef[] => DEFS.filter((b) => given.get(id)?.has(b.id));
+  const badgesOf = (id: string): Badge[] => defsOf(id).map((b) => b.id).filter((b) => LEGACY.includes(b)) as Badge[];
+  const badgeFields = (id: string) => ({ badges: badgesOf(id), badgeDefs: defsOf(id), canBadge: true, allBadges: DEFS });
   const storesOf = (games: { id: string }[]) => new Set(games.filter((g) => g.id.includes(':')).map((g) => g.id.split(':')[0])).size;
   /** Mes jeux favoris, tels qu'envoyés par la dernière vitrine. */
   let myFavorites: SocialGame[] = [];
@@ -184,19 +195,18 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       return { users: people.filter((p) => p.rel !== 'blocked' && (p.name.toLowerCase().includes(q) || q === 'abcd2345')).map(card) };
     }
     if (head === 'users' && tail === 'badges') {
-      const set = given.get(id) ?? new Set<Badge>();
+      const set = given.get(id) ?? new Set<string>();
       given.set(id, set);
       if (body?.on) set.add(body.badge);
       else set.delete(body.badge);
-      return { badges: badgesOf(id) };
+      return { badges: badgesOf(id), badgeDefs: defsOf(id) };
     }
     if (head === 'users') {
       if (id === ME) {
         const self: SocialProfile = {
           id: ME,
           name: 'Alex',
-          badges: badgesOf(ME),
-          canBadge: true,
+          ...badgeFields(ME),
           avatar: null,
           banner: settings.banner,
           since: now - 500 * 24 * H,
@@ -225,8 +235,7 @@ export function mockSocial(emit: (e: SocialEvent) => void) {
       const prof: SocialProfile = {
         id: p.id,
         name: p.name,
-        badges: badgesOf(p.id),
-        canBadge: true,
+        ...badgeFields(p.id),
         avatar: null,
         banner: null,
         since: p.since,

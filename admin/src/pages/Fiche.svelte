@@ -3,7 +3,8 @@
   // postes, signalements reçus, sanctions, journal.
   import Icon, { type IconName } from '../../../src/lib/components/Icon.svelte';
   import { ApiError, api, type Badge, type SanctionKind, type UserCard } from '../api';
-  import { BADGES } from '../badges';
+  import BadgeIcon from '../../../src/lib/components/BadgeIcon.svelte';
+  import { badgeDefs, colorOf, iconOf, loadBadges } from '../badges.svelte';
   import Avatar, { avatarColor } from '../components/Avatar.svelte';
   import Pill from '../components/Pill.svelte';
   import ReportBox from '../components/ReportBox.svelte';
@@ -11,7 +12,7 @@
   import { DURATIONS, KINDS, kindLabel, reportStatusOf, untilLabel } from '../moderation';
   import { href } from '../router.svelte';
 
-  let { id, badgeIds, q = '' }: { id: string; badgeIds: Badge[]; q?: string } = $props();
+  let { id, q = '' }: { id: string; q?: string } = $props();
 
   let u = $state<UserCard | null>(null);
   let missing = $state(false);
@@ -75,7 +76,7 @@
     badgeError = false;
     try {
       await api.setBadge(u.id, b, !u.badges.includes(b));
-      await load();
+      await Promise.all([load(), loadBadges()]);
     } catch {
       badgeError = true;
     } finally {
@@ -91,7 +92,8 @@
   }
 
   const longDate = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-  const givable = $derived(BADGES.filter((b) => badgeIds.includes(b.id)));
+  // Badges actifs, et ceux désactivés que le compte a encore (pour pouvoir les retirer).
+  const givable = $derived(badgeDefs.list.filter((b) => b.active || u?.badges.includes(b.id)));
   const figures = $derived<{ label: string; icon: IconName; value: string }[]>(
     u
       ? [
@@ -119,8 +121,8 @@
         <div class="who">
           <div class="name-line">
             <h2 class="name">{u.name}</h2>
-            {#each BADGES.filter((b) => u?.badges.includes(b.id)) as b (b.id)}
-              <span class="pill" style:--c={b.color}><Icon name="shieldCheck" size={12} stroke={2} />{b.label}</span>
+            {#each badgeDefs.list.filter((b) => b.active && u?.badges.includes(b.id)) as b (b.id)}
+              <span class="pill" style:--c={colorOf(b)}><BadgeIcon icon={iconOf(b)} size={13} />{b.name}</span>
             {/each}
             {#each activeSanctions as s (s.id)}
               <Pill color="var(--danger)" label={kindLabel(s.kind)} />
@@ -162,17 +164,17 @@
         {#each givable as b (b.id)}
           {@const on = u.badges.includes(b.id)}
           <div class="line">
-            <span class="tint icon" style:--c={b.color}><Icon name="shieldCheck" size={15} /></span>
+            <span class="tint icon" style:--c={colorOf(b)}><BadgeIcon icon={iconOf(b)} size={16} /></span>
             <span class="text">
-              <span class="t">{b.label}</span>
-              <span class="h">{b.hint}</span>
+              <span class="t">{b.name}{#if !b.active}<span class="h"> · désactivé</span>{/if}</span>
+              {#if b.description}<span class="h">{b.description}</span>{/if}
             </span>
             <button
               type="button"
               role="switch"
               class="tog"
               aria-checked={on}
-              aria-label="{on ? 'Retirer' : 'Donner'} le badge {b.label}"
+              aria-label="{on ? 'Retirer' : 'Donner'} le badge {b.name}"
               disabled={busy !== null}
               onclick={() => toggle(b.id)}
             ></button>

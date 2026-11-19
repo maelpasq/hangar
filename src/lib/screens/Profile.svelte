@@ -14,7 +14,7 @@
   import { updater } from '../stores/update.svelte';
   import Badges, { SEAL } from '../components/Badges.svelte';
   import { GIVEN_BADGES, givenLabel } from '../util/badges';
-  import type { Badge, SocialProfile } from '../types';
+  import type { Badge, BadgeDef, SocialProfile } from '../types';
   import { dateLabel, hoursLabel, plural, timeAgo } from '../util/format';
   import { compareVersions } from '../util/release-notes';
 
@@ -87,15 +87,27 @@
   // compte). Le bouton rosette ouvre la liste des badges, chacun à donner ou retirer.
   const certified = $derived(!!profile?.badges?.includes('certifie'));
   let badging = $state(false);
-  async function setBadge(badge: Badge, on: boolean) {
+  // Badges que l'administrateur peut donner : envoyés par le serveur (créés dans le dashboard),
+  // sinon les 4 d'origine (serveur d'avant la phase 4).
+  const givable = $derived<{ id: string; name: string }[]>(
+    profile?.allBadges ?? GIVEN_BADGES.map((b) => ({ id: b, name: givenLabel(b) }))
+  );
+  const holds = (id: string) => !!(profile?.badgeDefs?.some((d) => d.id === id) || profile?.badges?.includes(id as Badge));
+  async function setBadge(badge: { id: string; name: string }, on: boolean) {
     if (!profile || badging) return;
     badging = true;
     try {
-      const res = await api.social<{ badges: Badge[] }>('PUT', `/social/users/${profile.id}/badges`, { badge, on });
-      if (profile) profile.badges = res.badges;
+      const res = await api.social<{ badges: Badge[]; badgeDefs?: BadgeDef[] }>('PUT', `/social/users/${profile.id}/badges`, {
+        badge: badge.id,
+        on
+      });
+      if (profile) {
+        profile.badges = res.badges;
+        profile.badgeDefs = res.badgeDefs;
+      }
       // Pastille certifiée : listes d'amis et mon pseudo à jour tout de suite.
-      if (badge === 'certifie') void (profile?.id === social.me ? social.loadSettings() : social.refreshLists());
-      ui.toast(on ? `Badge « ${givenLabel(badge)} » donné à ${name}.` : `Badge « ${givenLabel(badge)} » retiré à ${name}.`);
+      if (badge.id === 'certifie') void (profile?.id === social.me ? social.loadSettings() : social.refreshLists());
+      ui.toast(on ? `Badge « ${badge.name} » donné à ${name}.` : `Badge « ${badge.name} » retiré à ${name}.`);
     } catch (e) {
       ui.toast(String(e).replace(/^Error:\s*/, ''), { error: true });
     } finally {
@@ -107,9 +119,9 @@
     ui.menu = {
       label: `Badges de ${name}`,
       items: () =>
-        GIVEN_BADGES.map((b) => {
-          const on = !!profile?.badges?.includes(b);
-          return { label: on ? `Retirer : ${givenLabel(b)}` : `Donner : ${givenLabel(b)}`, icon: on ? 'x' : 'plus', run: () => setBadge(b, !on), disabled: badging };
+        givable.map((b) => {
+          const on = holds(b.id);
+          return { label: on ? `Retirer : ${b.name}` : `Donner : ${b.name}`, icon: on ? 'x' : 'plus', run: () => setBadge(b, !on), disabled: badging };
         }),
       x: r.left,
       y: r.bottom + 6

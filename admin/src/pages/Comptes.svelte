@@ -3,7 +3,7 @@
   // du compte choisi à côté (le premier de la liste tant qu'aucun n'est choisi).
   import { untrack } from 'svelte';
   import Icon from '../../../src/lib/components/Icon.svelte';
-  import { api, type Badge, type UserRow } from '../api';
+  import { api, type UserRow } from '../api';
   import Avatar from '../components/Avatar.svelte';
   import PageHeader from '../components/PageHeader.svelte';
   import Pill from '../components/Pill.svelte';
@@ -12,7 +12,7 @@
   import { stats } from '../stats.svelte';
   import Fiche from './Fiche.svelte';
 
-  let { route, badgeIds }: { route: Extract<Route, { page: 'comptes' | 'compte' }>; badgeIds: Badge[] } = $props();
+  let { route }: { route: Extract<Route, { page: 'comptes' | 'compte' }> } = $props();
 
   // Valeur de départ seulement : ensuite, la saisie mène l'adresse.
   const initial = untrack(() => route.q);
@@ -106,7 +106,7 @@
   <section class="fiche" aria-label="Fiche du compte">
     {#if selected}
       {#key selected}
-        <Fiche id={selected} {badgeIds} q={route.q} />
+        <Fiche id={selected} q={route.q} />
       {/key}
     {/if}
   </section>

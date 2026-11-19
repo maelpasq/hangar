@@ -54,7 +54,7 @@ Le thème clair de l'app (`data-theme="light"`) doit continuer à marcher : c'es
 
 ## 3. Couleurs de statut et de badge
 
-Définies une seule fois : statuts dans `admin/src/bug-status.ts` (déjà en place), badges dans un module équivalent. Une puce = point de couleur + texte clair sur fond teinté à 14-16 %.
+Définies une seule fois : statuts dans `admin/src/bug-status.ts` (déjà en place), badges dans `admin/src/badges.svelte.ts`. La couleur d'un badge est celle choisie dans l'écran Badges (gardée sur le serveur, la même que dans l'app), parmi la palette de ce module ou libre ; deux badges n'ont jamais la même. Une puce = point de couleur + texte clair sur fond teinté à 14-16 %.
 
 | Statut | Couleur | Ouvert |
 |---|---|---|
@@ -64,12 +64,12 @@ Définies une seule fois : statuts dans `admin/src/bug-status.ts` (déjà en pla
 | Corrigé | `var(--success)` | non |
 | Rejeté, Doublon | `var(--muted-2)` | non |
 
-| Badge | Couleur |
+| Badge d'origine | Couleur |
 |---|---|
-| Certifié | `var(--accent)` |
-| Équipe | `var(--success)` |
-| Testeur | `#3b82f6` |
-| Chasseur de bugs | `var(--star)` |
+| Compte certifié | `var(--accent)` |
+| Équipe Hangar | `#8d70ff` |
+| Testeur de Hangar | `#22b8a6` |
+| Chasseur de bugs | `#3fb950` |
 
 Actions du journal : `bug.statut` accent, `bug.note` bleu `#3b82f6`, `badge.donner` succès, `badge.retirer` danger. Ne jamais distinguer deux états par la teinte seule : la puce porte toujours son libellé.
 
@@ -102,6 +102,7 @@ Valeurs exactes dans la maquette (`rg -n 'class="nav' design/reference/admin/Mai
 - **Ligne de liste** (`.row`) : `<button>` ou `<a>`, padding `12px 14px`, rayon 13, gap 14. Numéro mono `--muted-2` à gauche, titre 14 px / 500 tronqué + méta 12 px `--muted` (séparateur `·`), puce de statut à droite. Survol `--surface-2`. Sélectionnée : `--accent-soft` + `inset 0 0 0 1px` accent 35 %.
 - **Avatar** : carré arrondi (rayon 12 en liste à 38 px, rayon 22 en fiche à 72 px), initiale blanche, point « en ligne » 11 px `--success` cerclé de la couleur du fond.
 - **Segment de statut** (`.seg`) : boutons 34 px, rayon 10, bord `--border-2`, point de couleur 8 px + libellé 13 px. Actif : fond 12 %, bord 20 %, texte `--strong`. `aria-pressed`. Dans un `<fieldset>` avec `<legend>`.
+- **Choix d'emblème et de couleur** (écran Badges) : `.seg` tel quel. Emblème : bouton carré de 40 px, emblème de l'app 18 px (`BadgeIcon.svelte`), `aria-label` avec son nom, le choisi dans la couleur du badge. Couleur : point de 8 px + nom de la couleur ; celles des autres badges désactivées (infobulle « Déjà prise : <badge> »), plus un bouton « Libre » avec le sélecteur natif de 20 px en guise de point et la valeur hexadécimale.
 - **Interrupteur** (`.tog`) : 44 × 26, pastille 20 px, actif `--accent`. `<button role="switch" aria-checked>` avec `aria-label` « Donner / Retirer le badge X ».
 - **Encart signalement** : fond danger 8 %, bord danger 22 %, rayon 14 ; motif en `--danger-text` / 600 ; extrait cité dans un bloc `rgba(0,0,0,.3)` rayon 10 en italique.
 - **Bloc de texte lu** (description d'un bug) : fond `rgba(0,0,0,.25)`, bord `--border-1`, rayon 14, 14 px / 1,6, `white-space: pre-line`.

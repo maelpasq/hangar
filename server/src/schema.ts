@@ -301,6 +301,23 @@ export const badges = sqliteTable(
 );
 
 /**
+ * Badges que l'administrateur peut donner, créés depuis le dashboard (src/badges.ts). `icon` : un
+ * emblème du jeu embarqué dans l'app (`BADGE_ICONS`), `color` : `#rrggbb` ou `accent` (couleur de
+ * l'app). `position` : ordre d'affichage. Un badge inactif ne s'affiche plus nulle part, sans être
+ * retiré à ceux qui l'ont. Les 4 premiers (`LEGACY_BADGES`) existent depuis la migration 0007.
+ */
+export const badgeDefs = sqliteTable('badge_defs', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  icon: text('icon').notNull(),
+  color: text('color').notNull(),
+  position: integer('position').notNull(),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull()
+});
+
+/**
  * Journal des actions du dashboard d'administration : qui (`actor`, e-mail Cloudflare Access), quoi
  * (`action`, par exemple `badge.donner`), sur quoi (`targetId` : un compte, ou `bug:<numéro>`),
  * précisions (`detail`, JSON).

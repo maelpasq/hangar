@@ -50,6 +50,13 @@
       "when": 1794952743584,
       "tag": "0006_sanctions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1795104962925,
+      "tag": "0007_badge_defs",
+      "breakpoints": true
     }
   ]
 }

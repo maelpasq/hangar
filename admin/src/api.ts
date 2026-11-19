@@ -1,12 +1,36 @@
 // Appels à l'API du dashboard (server/src/admin/routes.ts), sur la même adresse : Cloudflare Access
 // ajoute lui-même le jeton de l'administrateur. En `npm run admin:dev`, des données de démo.
-import type { Badge } from '../../src/lib/types';
+/** Identifiant d'un badge (`certifie`, ou un badge créé dans le dashboard). */
+export type Badge = string;
 
-export type { Badge };
+/** Badge tel que le dashboard le gère (server/src/admin/badges.ts). */
+export interface AdminBadge {
+  id: string;
+  name: string;
+  description: string;
+  /** Emblème de l'app (`GIVEN_ICONS`). */
+  icon: string;
+  /** `#rrggbb` ou `accent`. */
+  color: string;
+  position: number;
+  active: boolean;
+  /** Nombre de comptes qui l'ont. */
+  held: number;
+  /** Un des 4 badges d'origine : ne se supprime pas. */
+  legacy: boolean;
+}
+
+export interface BadgeFields {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  active?: boolean;
+}
 
 export interface Me {
   email: string;
-  badges: Badge[];
+  badges: AdminBadge[];
 }
 
 export interface Stats {
@@ -20,7 +44,7 @@ export interface Stats {
   bugsOpen: number;
   reportsOpen: number;
   signups: { day: number; n: number }[];
-  badges: Partial<Record<Badge, number>>;
+  badges: Record<string, number>;
 }
 
 export type SanctionKind = 'social' | 'total';
@@ -167,6 +191,18 @@ export const api = {
   user: (id: string) => call<UserCard>(`/users/${encodeURIComponent(id)}`),
   setBadge: (id: string, badge: Badge, on: boolean) =>
     call<{ badges: Badge[] }>(`/users/${encodeURIComponent(id)}/badges`, { method: 'PUT', body: { badge, on } }),
+  badges: () => call<{ badges: AdminBadge[] }>('/badges'),
+  createBadge: (fields: BadgeFields) => call<{ id: string }>('/badges', { method: 'POST', body: fields }),
+  updateBadge: (id: string, fields: BadgeFields) =>
+    call<{ badges: AdminBadge[] }>(`/badges/${encodeURIComponent(id)}`, { method: 'PUT', body: fields }),
+  orderBadges: (ids: string[]) => call<{ badges: AdminBadge[] }>('/badges/order', { method: 'PUT', body: { ids } }),
+  deleteBadge: (id: string) => call<{ badges: AdminBadge[] }>(`/badges/${encodeURIComponent(id)}`, { method: 'DELETE', body: null }),
+  /** Donne (`on`) ou retire un badge à plusieurs comptes (identifiant, code ami ou e-mail). */
+  bulkBadge: (id: string, users: string[], on: boolean) =>
+    call<{ found: number; changed: number; missing: string[] }>(`/badges/${encodeURIComponent(id)}/users`, {
+      method: 'POST',
+      body: { users, on }
+    }),
   log: (before?: number) => call<{ log: LogRow[]; more: boolean }>(`/log${before ? `?before=${before}` : ''}`),
   avatarUrl: (id: string) => (demo ? null : `/api/users/${encodeURIComponent(id)}/avatar`),
   bugs: (statut: string, q: string, before?: number) =>

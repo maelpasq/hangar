@@ -1,6 +1,6 @@
 // Libellés de la modération : sanctions, durées, statuts des signalements.
 import type { ReportStatus, SanctionKind } from './api';
-import { TINTS } from './badges';
+import { TINTS } from './badges.svelte';
 import { date } from './format';
 
 export const KINDS: { id: SanctionKind; label: string; help: string }[] = [

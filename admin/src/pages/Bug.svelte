@@ -3,7 +3,7 @@
   // (statut, version de correction, doublon, note interne), avec son historique.
   import Icon from '../../../src/lib/components/Icon.svelte';
   import { ApiError, api, type BugCard, type BugStatus, type LogRow } from '../api';
-  import { TINTS } from '../badges';
+  import { TINTS } from '../badges.svelte';
   import { STATUSES, SYSTEMS, statusOf } from '../bug-status';
   import Pill from '../components/Pill.svelte';
   import { actionLabel, ago } from '../format';

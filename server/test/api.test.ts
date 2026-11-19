@@ -844,10 +844,27 @@ describe('badges', () => {
     // L'administrateur : badge inconnu refusé, compte inconnu introuvable.
     expect((await set(admin, otherId, { badge: 'dieu', on: true })).status).toBe(400);
     expect((await set(admin, 'x'.repeat(20), { badge: 'certifie', on: true })).status).toBe(404);
-    expect(await json(await set(admin, otherId, { badge: 'certifie', on: true }))).toEqual({ badges: ['certifie'] });
+    expect(await json(await set(admin, otherId, { badge: 'certifie', on: true }))).toMatchObject({ badges: ['certifie'] });
     expect((await set(admin, otherId, { badge: 'certifie', on: true })).status).toBe(200);
     expect((await json(await call(`/social/users/${otherId}`, { token: other }))).badges).toEqual(['certifie']);
-    expect((await json(await call(`/social/users/${adminId}`, { token: admin }))).canBadge).toBe(true);
+    const self = await json(await call(`/social/users/${adminId}`, { token: admin }));
+    expect(self.canBadge).toBe(true);
+    expect(self.allBadges.map((b: { id: string }) => b.id)).toEqual(['certifie', 'equipe', 'testeur', 'chasseur']);
+    expect(before.allBadges).toBeUndefined();
+
+    // Un badge créé depuis le dashboard : dans `badgeDefs` seulement (les anciennes versions ne le
+    // connaissent pas), et plus nulle part une fois désactivé.
+    await db.insert(schema.badgeDefs).values({ id: 'fan', name: 'Fan', icon: 'heart', color: '#f2556b', position: 9, createdAt: 1 });
+    const both = await json(await set(admin, otherId, { badge: 'fan', on: true }));
+    expect(both.badges).toEqual(['certifie']);
+    expect(both.badgeDefs).toEqual([
+      { id: 'certifie', name: 'Compte certifié', description: 'Compte vérifié par Hangar', icon: 'seal', color: 'accent' },
+      { id: 'fan', name: 'Fan', description: '', icon: 'heart', color: '#f2556b' }
+    ]);
+    await db.update(schema.badgeDefs).set({ active: false }).where(eq(schema.badgeDefs.id, 'fan'));
+    expect((await json(await call(`/social/users/${otherId}`, { token: other }))).badgeDefs.map((b: { id: string }) => b.id)).toEqual(['certifie']);
+    await set(admin, otherId, { badge: 'fan', on: false });
+    await db.delete(schema.badgeDefs).where(eq(schema.badgeDefs.id, 'fan'));
     expect((await json(await call('/export', { token: other }))).social.badges).toEqual(['certifie']);
 
     // La pastille certifiée suit le compte : ses réglages (son propre pseudo) et les listes (recherche, amis).
@@ -860,11 +877,11 @@ describe('badges', () => {
 
     // Plusieurs badges : toujours dans l'ordre d'affichage, quel que soit l'ordre des dons.
     await set(admin, otherId, { badge: 'chasseur', on: true });
-    expect(await json(await set(admin, otherId, { badge: 'equipe', on: true }))).toEqual({ badges: ['certifie', 'equipe', 'chasseur'] });
+    expect(await json(await set(admin, otherId, { badge: 'equipe', on: true }))).toMatchObject({ badges: ['certifie', 'equipe', 'chasseur'] });
     await set(admin, otherId, { badge: 'equipe', on: false });
     await set(admin, otherId, { badge: 'chasseur', on: false });
 
-    expect(await json(await set(admin, otherId, { badge: 'certifie', on: false }))).toEqual({ badges: [] });
+    expect(await json(await set(admin, otherId, { badge: 'certifie', on: false }))).toMatchObject({ badges: [] });
   });
 
   it("compte les launchers d'une bibliothèque, sans les jeux locaux", () => {

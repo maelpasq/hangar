@@ -42,6 +42,7 @@ Le dashboard ne répond que sur `ADMIN_HOST` ; l'API de l'app n'y répond pas, e
 | Bugs | signalements du bouton insecte : filtre par statut (ouverts, nouveau, confirmé, en cours, corrigé, rejeté, doublon, tous) avec leur nombre, recherche par numéro ou mots ; fiche avec description, capture, suivi (statut, version de correction, doublon, note interne) et historique |
 | Signalements | comptes et messages signalés depuis l'app : filtre ouvert, traité, rejeté, tous ; compte visé (avec ses sanctions en cours), auteur, motif, extrait du message ; marquer traité, rejeter, rouvrir |
 | Comptes | recherche par pseudo, e-mail, code ami ou identifiant (50 au plus, récents d'abord), sanction en cours |
+| Badges | badges automatiques de l'app en lecture seule (règle, paliers) ; badges donnés à la main, dans leur ordre d'affichage dans l'app : créer (nom, description, emblème, couleur), modifier, monter / descendre, désactiver (masqué partout, sans être retiré), supprimer (seulement s'il n'est donné à personne, jamais les 4 d'origine), donner ou retirer à plusieurs comptes d'un coup (identifiant, code ami ou e-mail, 200 au plus) |
 | Fiche | identité, badges (donner / retirer), amis, bibliothèque synchronisée, postes, sanctions (en cours, nouvelle, anciennes), signalements reçus, journal du compte |
 | Journal | toutes les actions du dashboard (qui, quoi, quel compte, quand) |
 
@@ -60,11 +61,17 @@ Durée : 1, 3, 7, 30 ou 90 jours, ou définitive. Le motif est montré à la per
 
 | Route | Rôle |
 |---|---|
-| `GET /api/me` | e-mail de l'administrateur, badges qu'il peut donner |
+| `GET /api/me` | e-mail de l'administrateur, badges (définitions et nombre de comptes) |
 | `GET /api/stats` | chiffres de l'accueil |
 | `GET /api/users?q=` | recherche |
 | `GET /api/users/:id` (+ `/avatar`) | fiche d'un compte |
 | `PUT /api/users/:id/badges` | `{ badge, on }`, noté au journal (`badge.donner`, `badge.retirer`) |
+| `GET /api/badges` | badges, dans l'ordre, avec leur nombre de comptes |
+| `POST /api/badges` | `{ name, description, icon, color }` : nouveau badge (journal : `badge.creer`) |
+| `PUT /api/badges/:id` | `{ name?, description?, icon?, color?, active? }` (journal : `badge.modifier`) |
+| `PUT /api/badges/order` | `{ ids }` : nouvel ordre (journal : `badge.ordre`) |
+| `DELETE /api/badges/:id` | badge donné à personne, pas un des 4 d'origine (journal : `badge.supprimer`) |
+| `POST /api/badges/:id/users` | `{ users, on }` : donne ou retire à plusieurs comptes (journal : un `badge.donner` ou `badge.retirer` par compte changé) |
 | `GET /api/bugs?statut=&q=&before=` | bugs (50 par page) et leur nombre par statut |
 | `GET /api/bugs/:id` (+ `/capture`) | fiche d'un bug et son historique |
 | `PUT /api/bugs/:id` | `{ status, fixedIn, duplicateOf, note }`, noté au journal (`bug.statut`, `bug.note`) ; un changement de statut repeint le message Discord |
@@ -74,6 +81,12 @@ Durée : 1, 3, 7, 30 ou 90 jours, ou définitive. Le motif est montré à la per
 | `DELETE /api/sanctions/:id` | lève une sanction en cours (journal : `sanction.lever`) |
 | `GET /api/log?before=` | journal, 50 lignes par page |
 
+## Badges
+
+Les badges donnés à la main vivent dans `badge_defs` (migration 0007, qui y range les 4 d'origine : `certifie`, `equipe`, `testeur`, `chasseur`). Emblème au choix parmi ceux embarqués dans l'app (`GIVEN_ICONS` de `src/lib/util/badges.ts`, `BADGE_ICONS` de `server/src/badges.ts`, mêmes listes) : en ajouter un demande une version de l'app. Couleur : `#rrggbb` ou `accent`, une par badge (désactivés compris : sinon 409 `couleur`).
+
+Compatibilité : le profil (`GET /social/users/:id`) garde `badges`, limité aux 4 d'origine, pour les versions d'avant la phase 4, et ajoute `badgeDefs` (nom, emblème, couleur de chaque badge actif). Une version qui ne connaît pas un emblème montre l'étoile. L'administrateur reçoit aussi `allBadges` pour le menu de badges de l'app.
+
 ## Suite prévue
 
-4. Badges créés depuis le dashboard (`badge_defs`, icônes embarquées dans l'app, compatibilité des anciennes versions).
+Rien pour l'instant : les 4 phases sont faites.

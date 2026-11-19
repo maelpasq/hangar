@@ -7,7 +7,9 @@ import { Hono } from 'hono';
 import type { Db, Env } from '../env';
 import { isUserId } from '../profile';
 import { adminLog, badges, bugs, covers, sanctions, devices, entries, friends, gameSessions, reports, social, user } from '../schema';
-import { BADGES, type Badge, type Hub, STALE, badgesOf, normCode, setBadge } from '../social';
+import { badgeExists, badgesOf, setBadgeFor } from '../badges';
+import { type Hub, STALE, normCode } from '../social';
+import { badgeList, badgeRoutes } from './badges';
 import { type Keys, accessKeys, adminFromAccess } from './access';
 import { bugRoutes, openBugs } from './bugs';
 import { moderationRoutes, openReports, sanctionView } from './moderation';
@@ -54,7 +56,8 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
   });
   api.notFound((c) => c.json({ error: 'introuvable' }, 404));
 
-  api.get('/me', (c) => c.json({ email: c.get('admin'), badges: BADGES }));
+  /** L'administrateur et les badges (définitions, nombre de comptes qui ont chacun). */
+  api.get('/me', async (c) => c.json({ email: c.get('admin'), badges: await badgeList(db) }));
 
   /** Chiffres de l'accueil, et inscriptions par jour sur 30 jours (jours UTC). */
   api.get('/stats', async (c) => {
@@ -222,17 +225,16 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
   /** `{ badge, on }` : donne ou retire un badge (comme le bouton de l'app de l'administrateur). */
   api.put('/users/:id/badges', async (c) => {
     const body: unknown = await c.req.json().catch(() => null);
-    if (!isObject(body) || !BADGES.includes(body.badge as Badge) || typeof body.on !== 'boolean') {
+    if (!isObject(body) || !(await badgeExists(db, body.badge)) || typeof body.on !== 'boolean') {
       return c.json({ error: 'requete' }, 400);
     }
     const id = c.req.param('id');
     const [u] = isUserId(id) ? await db.select({ id: user.id }).from(user).where(eq(user.id, id)) : [];
     if (!u) return c.json({ error: 'introuvable' }, 404);
-    const before = await badgesOf(db, id);
-    const after = await setBadge(db, deps.hub, id, body.badge as Badge, body.on);
-    if (before.includes(body.badge as Badge) !== body.on) {
-      await logAction(db, c.get('admin'), body.on ? 'badge.donner' : 'badge.retirer', id, { badge: body.badge });
-    }
+    const badge = body.badge as string;
+    const changed = await setBadgeFor(db, deps.hub, [id], badge, body.on);
+    if (changed.length) await logAction(db, c.get('admin'), body.on ? 'badge.donner' : 'badge.retirer', id, { badge });
+    const after = await badgesOf(db, id);
     return c.json({ badges: after });
   });
 
@@ -266,6 +268,7 @@ export function adminRoutes(db: Db, env: Env, deps: AdminDeps) {
   });
 
   api.route('/bugs', bugRoutes(db, env));
+  api.route('/badges', badgeRoutes(db, deps.hub));
   api.route('/', moderationRoutes(db, env, deps.hub));
 
   app.route('/api', api);

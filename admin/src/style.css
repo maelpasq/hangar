@@ -227,6 +227,8 @@ legend {
   color: white;
   font-size: 14px;
   font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
   box-shadow: 0 10px 26px -12px var(--accent-shadow);
   transition:
     transform 0.25s var(--ease),

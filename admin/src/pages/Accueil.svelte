@@ -2,7 +2,8 @@
   // Accueil : chiffres clés, inscriptions des 30 derniers jours, badges donnés, derniers bugs et actions.
   import Icon, { type IconName } from '../../../src/lib/components/Icon.svelte';
   import { api, envName, type BugRow, type LogRow } from '../api';
-  import { BADGES, TINTS } from '../badges';
+  import BadgeIcon from '../../../src/lib/components/BadgeIcon.svelte';
+  import { TINTS, badgeDefs, colorOf, iconOf } from '../badges.svelte';
   import { SYSTEMS, statusOf } from '../bug-status';
   import PageHeader from '../components/PageHeader.svelte';
   import Pill from '../components/Pill.svelte';
@@ -53,7 +54,9 @@
   const PLOT = 158;
   const max = $derived(s ? Math.max(1, ...s.signups.map((d) => d.n)) : 1);
   const total = $derived(s ? s.signups.reduce((n, d) => n + d.n, 0) : 0);
-  const given = $derived(s ? BADGES.map((b) => ({ ...b, n: s.badges[b.id] ?? 0 })).sort((a, b) => b.n - a.n) : []);
+  const given = $derived(
+    s ? badgeDefs.list.filter((b) => b.active).map((b) => ({ ...b, n: s.badges[b.id] ?? 0 })).sort((a, b) => b.n - a.n) : []
+  );
   const givenMax = $derived(Math.max(1, ...given.map((b) => b.n)));
   const givenTotal = $derived(given.reduce((n, b) => n + b.n, 0));
 
@@ -148,11 +151,11 @@
         {#each given as b (b.id)}
           <li>
             <div class="given-line">
-              <span class="tint given-icon" style:--c={b.color}><Icon name="shieldCheck" size={14} /></span>
-              <span class="given-label">{b.label}</span>
+              <span class="tint given-icon" style:--c={colorOf(b)}><BadgeIcon icon={iconOf(b)} size={15} /></span>
+              <span class="given-label">{b.name}</span>
               <span class="given-n">{num(b.n)}</span>
             </div>
-            <div class="track" style:--c={b.color}><div style:width="{Math.round((b.n / givenMax) * 100)}%"></div></div>
+            <div class="track" style:--c={colorOf(b)}><div style:width="{Math.round((b.n / givenMax) * 100)}%"></div></div>
           </li>
         {/each}
       </ul>

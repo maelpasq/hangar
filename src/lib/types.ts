@@ -423,14 +423,30 @@ export interface ActivityItem {
  */
 export type Badge = 'certifie' | 'equipe' | 'testeur' | 'chasseur';
 
+/**
+ * Badge donné par l'administrateur, tel qu'il le crée dans le dashboard : nom (bulle au survol),
+ * emblème (`BadgeIcon.svelte`, l'étoile si l'app ne le connaît pas), couleur (`#rrggbb` ou `accent`).
+ */
+export interface BadgeDef {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+}
+
 /** Profil vu dans l'app. Un champ null : la personne ne le partage pas avec nous. */
 export interface SocialProfile {
   id: string;
   name: string;
-  /** Badges, dans l'ordre d'affichage (absent : serveur d'avant les badges). */
+  /** Badges d'origine, dans l'ordre d'affichage (absent : serveur d'avant les badges). */
   badges?: Badge[];
+  /** Tous ses badges, dans l'ordre d'affichage (absent : serveur d'avant la phase 4 du dashboard). */
+  badgeDefs?: BadgeDef[];
   /** true seulement pour l'administrateur : il peut donner ou retirer les badges. */
   canBadge?: boolean;
+  /** Pour l'administrateur : les badges qu'il peut donner. */
+  allBadges?: BadgeDef[];
   avatar: string | null;
   banner: string | null;
   since: number;

@@ -335,3 +335,85 @@ describe('modération', () => {
     expect(actions).toEqual(expect.arrayContaining(['sanction.donner', 'sanction.lever', 'signalement.statut']));
   });
 });
+
+describe('badges', () => {
+  const origin = `https://${HOST}`;
+  const send = async (path: string, method: string, body: unknown) =>
+    call(`/api/badges${path}`, { token: await good(), method, body, origin });
+
+  it("liste les 4 badges d'origine, dans l'ordre", async () => {
+    const me = (await (await call('/api/me', { token: await good() })).json()) as { badges: { id: string; legacy: boolean; color: string }[] };
+    expect(me.badges.map((b) => b.id)).toEqual(['certifie', 'equipe', 'testeur', 'chasseur']);
+    expect(me.badges.every((b) => b.legacy)).toBe(true);
+    expect(me.badges[0].color).toBe('accent');
+  });
+
+  it('crée, modifie, ordonne et supprime un badge, avec le journal', async () => {
+    // Champs invalides refusés.
+    for (const body of [
+      { name: '', icon: 'star', color: '#ffaa00' },
+      { name: 'X'.repeat(41), icon: 'star', color: '#ffaa00' },
+      { name: 'Ok', icon: 'licorne', color: '#ffaa00' },
+      { name: 'Ok', icon: 'star', color: 'rouge' },
+      { name: 'Ok', icon: 'star', color: '#ffaa00', description: 'd'.repeat(141) }
+    ]) {
+      expect((await send('', 'POST', body)).status).toBe(400);
+    }
+    const res = await send('', 'POST', { name: '  Fan  de la première heure ', icon: 'heart', color: '#f2556b', description: 'Là depuis le début' });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ id: 'fan-de-la-premiere-heure' });
+    // Une couleur par badge, désactivés compris.
+    expect((await send('', 'POST', { name: 'Autre', icon: 'star', color: 'accent' })).status).toBe(409);
+    expect((await send('/equipe', 'PUT', { color: '#f2556b' })).status).toBe(409);
+    expect((await send('/equipe', 'PUT', { color: '#8d70ff', name: 'Équipe Hangar' })).status).toBe(200);
+    // Même nom : identifiant suivant.
+    expect(await (await send('', 'POST', { name: 'Fan de la première heure', icon: 'star', color: '#123456' })).json()).toEqual({
+      id: 'fan-de-la-premiere-heure-2'
+    });
+    const edited = (await (await send('/fan-de-la-premiere-heure', 'PUT', { name: 'Fan', active: false })).json()) as {
+      badges: { id: string; name: string; active: boolean; position: number }[];
+    };
+    expect(edited.badges.find((b) => b.id === 'fan-de-la-premiere-heure')).toMatchObject({ name: 'Fan', active: false, position: 5 });
+    expect((await send('/inconnu', 'PUT', { name: 'X' })).status).toBe(404);
+    expect((await send('/equipe', 'PUT', { color: 'violet' })).status).toBe(400);
+
+    // Ordre : tous les badges, une fois chacun.
+    const ids = edited.badges.map((b) => b.id);
+    expect((await send('/order', 'PUT', { ids: ids.slice(1) })).status).toBe(400);
+    expect((await send('/order', 'PUT', { ids: [ids[0], ...ids.slice(0, -1)] })).status).toBe(400);
+    const order = [ids.at(-1), ...ids.slice(0, -1)];
+    const sorted = (await (await send('/order', 'PUT', { ids: order })).json()) as { badges: { id: string }[] };
+    expect(sorted.badges.map((b) => b.id)).toEqual(order);
+
+    // Suppression : jamais un badge d'origine, jamais un badge donné.
+    expect((await send('/testeur', 'DELETE', null)).status).toBe(409);
+    await send('/fan-de-la-premiere-heure-2/users', 'POST', { users: [BOB], on: true });
+    expect((await send('/fan-de-la-premiere-heure-2', 'DELETE', null)).status).toBe(409);
+    await send('/fan-de-la-premiere-heure-2/users', 'POST', { users: [BOB], on: false });
+    expect((await send('/fan-de-la-premiere-heure-2', 'DELETE', null)).status).toBe(200);
+    expect((await send('/order', 'PUT', { ids: order.filter((i) => i !== 'fan-de-la-premiere-heure-2') })).status).toBe(200);
+
+    const log = (await (await call('/api/log', { token: await good() })).json()) as { log: { action: string }[] };
+    expect(log.log.map((l) => l.action).slice(0, 7)).toEqual([
+      'badge.ordre',
+      'badge.supprimer',
+      'badge.retirer',
+      'badge.donner',
+      'badge.ordre',
+      'badge.modifier',
+      'badge.creer'
+    ]);
+  });
+
+  it('donne un badge à plusieurs comptes par identifiant, code ami ou e-mail', async () => {
+    const res = await send('/testeur/users', 'POST', { users: [BOB, 'abcd-2345', 'ALICE@exemple.fr', 'personne@nulle.part', ''], on: true });
+    expect(await res.json()).toEqual({ found: 2, changed: 2, missing: ['personne@nulle.part'] });
+    expect(await (await send('/testeur/users', 'POST', { users: [BOB], on: true })).json()).toMatchObject({ changed: 0 });
+    const fiche = (await (await call(`/api/users/${BOB}`, { token: await good() })).json()) as { badges: string[] };
+    expect(fiche.badges).toEqual(['testeur']);
+    expect((await send('/testeur/users', 'POST', { users: Array.from({ length: 201 }, (_, i) => `x${i}@a.fr`), on: true })).status).toBe(400);
+    expect((await send('/testeur/users', 'POST', { users: [], on: true })).status).toBe(400);
+    expect((await send('/inconnu/users', 'POST', { users: [BOB], on: true })).status).toBe(404);
+    expect(await (await send('/testeur/users', 'POST', { users: [BOB, ALICE], on: false })).json()).toMatchObject({ changed: 2 });
+  });
+});

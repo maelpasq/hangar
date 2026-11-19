@@ -8,6 +8,7 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { badgeDefsOf, badgeExists, heldBadges, legacyOf, setBadge } from './badges';
 import { webhookOf } from './bug';
 import { seal, unseal } from './crypto';
 import type { AvatarStore, Db, Env } from './env';
@@ -60,38 +61,6 @@ const parse = <T>(raw: string | null, fallback: T): T => {
   }
 };
 const newId = () => crypto.randomUUID();
-
-/**
- * Badges donnés par l'administrateur, dans l'ordre d'affichage (à droite du pseudo). Les badges
- * calculés (pionnier, ancienneté, collection, temps de jeu, launchers) le sont par l'app.
- */
-export const BADGES = ['certifie', 'equipe', 'testeur', 'chasseur'] as const;
-export type Badge = (typeof BADGES)[number];
-
-/** Badges d'un compte, dans l'ordre d'affichage. */
-export async function badgesOf(db: Db, id: string): Promise<Badge[]> {
-  const rows = await db.select({ badge: badges.badge }).from(badges).where(eq(badges.userId, id));
-  const has = new Set(rows.map((r) => r.badge));
-  return BADGES.filter((b) => has.has(b));
-}
-
-/**
- * Donne (`on`) ou retire un badge à un compte existant (app de l'administrateur ou dashboard) ;
- * rend ses badges. La pastille « certifié » suit le pseudo partout : prévient ceux qui ont un lien.
- */
-export async function setBadge(db: Db, hub: Hub, id: string, badge: Badge, on: boolean): Promise<Badge[]> {
-  if (on) {
-    await db.insert(badges).values({ userId: id, badge, at: Date.now() }).onConflictDoNothing();
-  } else {
-    await db.delete(badges).where(and(eq(badges.userId, id), eq(badges.badge, badge)));
-  }
-  if (badge === 'certifie') {
-    const linked = await db.select({ id: friends.userId }).from(friends).where(eq(friends.otherId, id));
-    await hub(linked.map((x) => x.id), { type: 'friends' });
-    await hub([id], { type: 'settings' });
-  }
-  return badgesOf(db, id);
-}
 
 /** Comptes certifiés parmi `ids` : la pastille à côté de leur pseudo, partout dans l'app. */
 export async function certifiedAmong(db: Db, ids: string[]): Promise<Set<string>> {
@@ -558,12 +527,18 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
       }
     }
     const recent = await db.select().from(activity).where(eq(activity.userId, u.id)).orderBy(desc(activity.at)).limit(20);
+    const held = await heldBadges(db, u.id);
+    const admin = await isAdmin(db, env, me);
     return c.json({
       id: u.id,
       name: u.name.trim() || 'Joueur',
-      badges: await badgesOf(db, u.id),
-      // Seul l'administrateur le reçoit à true : l'app lui montre alors les boutons des badges.
-      canBadge: await isAdmin(db, env, me),
+      // `badges` : pour les versions d'avant la phase 4 ; `badgeDefs` : de quoi afficher chacun.
+      badges: legacyOf(held),
+      badgeDefs: held,
+      // Seul l'administrateur le reçoit à true : l'app lui montre alors les boutons des badges,
+      // avec la liste de ceux qu'il peut donner (`allBadges`).
+      canBadge: admin,
+      allBadges: admin ? (await badgeDefsOf(db, true)).map(({ position: _, active: __, ...d }) => d) : undefined,
       avatar: await deps.avatarOf(u.image),
       banner: vis.banner,
       since: u.createdAt.getTime(),
@@ -587,13 +562,15 @@ export function socialRoutes(db: Db, env: Env, hub: Hub, deps: Deps) {
     const me = c.get('device').userId;
     if (!(await isAdmin(db, env, me))) return c.json({ error: 'interdit' }, 403);
     const body: unknown = await c.req.json().catch(() => null);
-    if (!isObject(body) || !BADGES.includes(body.badge as Badge) || typeof body.on !== 'boolean') {
+    if (!isObject(body) || !(await badgeExists(db, body.badge)) || typeof body.on !== 'boolean') {
       return c.json({ error: 'requete' }, 400);
     }
     const id = c.req.param('id');
     const [u] = isUserId(id) ? await db.select({ id: user.id }).from(user).where(eq(user.id, id)) : [];
     if (!u) return c.json({ error: 'introuvable' }, 404);
-    return c.json({ badges: await setBadge(db, hub, id, body.badge as Badge, body.on) });
+    await setBadge(db, hub, id, body.badge as string, body.on);
+    const held = await heldBadges(db, id);
+    return c.json({ badges: legacyOf(held), badgeDefs: held });
   });
 
   r.get('/users/:id/avatar', async (c) => {
@@ -1015,7 +992,7 @@ export async function exportSocial(db: Db, env: Env, me: string) {
           showcase: parse(row.showcase, null)
         }
       : null,
-    badges: await badgesOf(db, me),
+    badges: (await heldBadges(db, me)).map((b) => b.id),
     friends: links.map((l) => ({ id: l.id, name: l.name, state: l.state, since: l.since })),
     activity: acts.map(activityView),
     messages: opened

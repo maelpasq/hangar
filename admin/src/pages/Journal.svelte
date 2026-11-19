@@ -4,6 +4,7 @@
   import { api, type LogRow } from '../api';
   import PageHeader from '../components/PageHeader.svelte';
   import Pill from '../components/Pill.svelte';
+  import { badgeOf } from '../badges.svelte';
   import { actionColor, logDetail, when } from '../format';
   import { href } from '../router.svelte';
 
@@ -28,7 +29,12 @@
   load();
 
   const targetLabel = (l: LogRow) =>
-    l.targetName ?? (l.targetId?.startsWith('bug:') ? `#${l.targetId.slice(4)} (supprimé)` : 'Compte supprimé');
+    l.targetName ??
+    (l.targetId?.startsWith('bug:')
+      ? `#${l.targetId.slice(4)} (supprimé)`
+      : l.targetId?.startsWith('badge:')
+        ? `Badge ${badgeOf(l.targetId.slice(6), typeof l.detail?.name === 'string' ? l.detail.name : undefined).name}`
+        : 'Compte supprimé');
 </script>
 
 <PageHeader title="Journal" sub="Toutes les actions faites depuis le dashboard : qui, quoi, sur quel compte, quand.">

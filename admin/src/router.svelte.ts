@@ -1,5 +1,6 @@
 // Navigation par l'ancre de l'adresse : `#/`, `#/bugs?statut=…&q=…`, `#/bugs/<numéro>`,
-// `#/signalements?statut=…`, `#/comptes?q=…`, `#/comptes/<id>`, `#/journal`.
+// `#/signalements?statut=…`, `#/comptes?q=…`, `#/comptes/<id>`, `#/badges`, `#/badges/<id>`
+// (`nouveau` : création), `#/journal`.
 export type Route =
   | { page: 'accueil' }
   | { page: 'bugs'; statut: string; q: string }
@@ -7,6 +8,7 @@ export type Route =
   | { page: 'signalements'; statut: string }
   | { page: 'comptes'; q: string }
   | { page: 'compte'; id: string; q: string }
+  | { page: 'badges'; id: string | null }
   | { page: 'journal' };
 
 function parse(hash: string): Route {
@@ -19,6 +21,7 @@ function parse(hash: string): Route {
   if (seg[0] === 'signalements') return { page: 'signalements', statut: params.get('statut') ?? 'ouvert' };
   if (seg[0] === 'comptes' && seg[1]) return { page: 'compte', id: seg[1], q: params.get('q') ?? '' };
   if (seg[0] === 'comptes') return { page: 'comptes', q: params.get('q') ?? '' };
+  if (seg[0] === 'badges') return { page: 'badges', id: seg[1] ?? null };
   if (seg[0] === 'journal') return { page: 'journal' };
   return { page: 'accueil' };
 }
@@ -37,6 +40,7 @@ export const href: {
   comptes: (q?: string) => string;
   compte: (id: string, q?: string) => string;
   target: (id: string) => string;
+  badges: (id?: string) => string;
   journal: string;
 } = {
   accueil: '#/',
@@ -52,8 +56,14 @@ export const href: {
   signalements: (statut = 'ouvert') => (statut === 'ouvert' ? '#/signalements' : `#/signalements?statut=${statut}`),
   comptes: (q = '') => (q ? `#/comptes?q=${encodeURIComponent(q)}` : '#/comptes'),
   compte: (id: string, q = '') => `#/comptes/${encodeURIComponent(id)}${q ? `?q=${encodeURIComponent(q)}` : ''}`,
-  /** Cible d'une ligne du journal : un compte ou `bug:<numéro>`. */
-  target: (id: string) => (id.startsWith('bug:') ? `#/bugs/${id.slice(4)}` : `#/comptes/${encodeURIComponent(id)}`),
+  /** Cible d'une ligne du journal : un compte, `bug:<numéro>` ou `badge:<identifiant>`. */
+  target: (id: string) =>
+    id.startsWith('bug:')
+      ? `#/bugs/${id.slice(4)}`
+      : id.startsWith('badge:')
+        ? href.badges(id.slice(6))
+        : `#/comptes/${encodeURIComponent(id)}`,
+  badges: (id?: string) => (id ? `#/badges/${encodeURIComponent(id)}` : '#/badges'),
   journal: '#/journal'
 };
 

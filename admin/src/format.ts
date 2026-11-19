@@ -1,7 +1,6 @@
 // Mise en forme : dates, durées, libellés du journal.
-import { givenLabel } from '../../src/lib/util/badges';
-import type { Badge, LogRow } from './api';
-import { TINTS, badgeOf } from './badges';
+import type { LogRow } from './api';
+import { TINTS, badgeOf } from './badges.svelte';
 import { statusOf } from './bug-status';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -32,14 +31,28 @@ export function ago(ms: number | null, now = Date.now()): string {
 
 export const hours = (ms: number) => `${num(Math.round(ms / 3_600_000))} h`;
 
+/** Nom d'un badge noté au journal (le nom actuel s'il existe encore). */
+const badgeName = (l: LogRow) => badgeOf(String(l.detail?.badge), typeof l.detail?.name === 'string' ? l.detail.name : undefined).name;
+
+const FIELD_LABELS: Record<string, string> = { name: 'nom', description: 'description', icon: 'emblème', color: 'couleur', active: 'affichage' };
+const changesLabel = (c: unknown) => (Array.isArray(c) ? c.map((k) => FIELD_LABELS[String(k)] ?? String(k)).join(', ') : '');
+
 /** Phrase d'une ligne du journal, sans le compte visé. */
 export function actionLabel(l: LogRow): string {
-  const badge = typeof l.detail?.badge === 'string' ? givenLabel(l.detail.badge as Badge) : '';
+  const badge = typeof l.detail?.badge === 'string' ? badgeName(l) : '';
   switch (l.action) {
     case 'badge.donner':
       return `Badge donné : ${badge}`;
     case 'badge.retirer':
       return `Badge retiré : ${badge}`;
+    case 'badge.creer':
+      return `Badge créé : ${badge}`;
+    case 'badge.modifier':
+      return `Badge modifié : ${badge}`;
+    case 'badge.supprimer':
+      return `Badge supprimé : ${badge}`;
+    case 'badge.ordre':
+      return 'Ordre des badges changé';
     case 'bug.statut': {
       const d = l.detail ?? {};
       const to = statusOf(String(d.vers)).label;
@@ -71,9 +84,14 @@ export function logText(l: LogRow): string {
   const who = l.targetName ?? '';
   switch (l.action) {
     case 'badge.donner':
-      return `Badge ${badgeOf(String(d.badge)).label} donné à ${who}`;
+      return `Badge ${badgeName(l)} donné à ${who}`;
     case 'badge.retirer':
-      return `Badge ${badgeOf(String(d.badge)).label} retiré à ${who}`;
+      return `Badge ${badgeName(l)} retiré à ${who}`;
+    case 'badge.creer':
+    case 'badge.modifier':
+    case 'badge.supprimer':
+    case 'badge.ordre':
+      return actionLabel(l);
     case 'bug.statut': {
       const id = l.targetId?.replace(/^bug:/, '') ?? '';
       const more = d.fixedIn ? ` (${d.fixedIn})` : d.duplicateOf ? ` (doublon du #${d.duplicateOf})` : '';
@@ -98,8 +116,9 @@ export function when(ms: number, now = Date.now()): string {
 export function actionColor(action: string): string {
   if (action === 'bug.statut') return 'var(--accent)';
   if (action === 'bug.note') return TINTS.info;
-  if (action === 'badge.donner' || action === 'sanction.lever') return 'var(--success)';
-  if (action === 'badge.retirer' || action === 'sanction.donner') return 'var(--danger)';
+  if (action === 'badge.donner' || action === 'badge.creer' || action === 'sanction.lever') return 'var(--success)';
+  if (action === 'badge.retirer' || action === 'badge.supprimer' || action === 'sanction.donner') return 'var(--danger)';
+  if (action === 'badge.modifier' || action === 'badge.ordre') return 'var(--accent)';
   return TINTS.warn;
 }
 
@@ -109,7 +128,13 @@ export function logDetail(l: LogRow): string {
   switch (l.action) {
     case 'badge.donner':
     case 'badge.retirer':
-      return badgeOf(String(d.badge)).label;
+    case 'badge.creer':
+    case 'badge.supprimer':
+      return badgeName(l);
+    case 'badge.modifier':
+      return `${badgeName(l)} : ${changesLabel(d.changes)}`;
+    case 'badge.ordre':
+      return 'Nouvel ordre d’affichage';
     case 'bug.statut': {
       const to = statusOf(String(d.vers)).label;
       const target = d.duplicateOf ? `Doublon de #${d.duplicateOf}` : to;

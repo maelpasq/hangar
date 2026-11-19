@@ -1,5 +1,5 @@
 // Données de démo de `npm run admin:dev` : jamais dans la version compilée (import réservé au mode dev).
-import { ApiError, type Report, type ReportStatus, type Sanction, type SanctionKind, type Badge, type BugCard, type BugChange, type BugStatus, type LogRow, type UserCard, type UserRow } from './api';
+import { ApiError, type AdminBadge, type BadgeFields, type Report, type ReportStatus, type Sanction, type SanctionKind, type Badge, type BugCard, type BugChange, type BugStatus, type LogRow, type UserCard, type UserRow } from './api';
 import { OPEN_IDS } from './bug-status';
 
 const DAY = 86_400_000;
@@ -15,7 +15,75 @@ const users: UserRow[] = NAMES.map((name, i) => ({
   certified: i === 1,
   sanction: null
 }));
-const given = new Map<string, Badge[]>([[users[1].id, ['certifie', 'testeur']]]);
+const given = new Map<string, Badge[]>([[users[1].id, ['certifie', 'testeur', 'fan']]]);
+/** Badges de démo : les 4 d'origine et un créé dans le dashboard. */
+let defs: Omit<AdminBadge, 'held'>[] = [
+  { id: 'certifie', name: 'Compte certifié', description: 'Compte vérifié par Hangar', icon: 'seal', color: 'accent', position: 1, active: true, legacy: true },
+  { id: 'equipe', name: 'Équipe Hangar', description: 'Membre de pamal Studio', icon: 'shield', color: '#8d70ff', position: 2, active: true, legacy: true },
+  { id: 'testeur', name: 'Testeur de Hangar', description: 'Teste les versions de Hangar Test', icon: 'flask', color: '#22b8a6', position: 3, active: true, legacy: true },
+  { id: 'chasseur', name: 'Chasseur de bugs', description: 'A signalé un bug corrigé', icon: 'bug', color: '#3fb950', position: 4, active: true, legacy: true },
+  { id: 'fan', name: 'Fan de la première heure', description: 'Là depuis la 1.0', icon: 'heart', color: '#f2556b', position: 5, active: true, legacy: false }
+];
+/** Nombre de comptes par badge, en plus des comptes de démo (ceux d'une vraie base). */
+const EXTRA: Record<string, number> = { certifie: 5, equipe: 2, testeur: 13, chasseur: 5, fan: 40 };
+const heldOf = (id: string) => (EXTRA[id] ?? 0) + [...given.values()].filter((b) => b.includes(id)).length;
+const badgeList = (): AdminBadge[] => defs.map((d) => ({ ...d, held: heldOf(d.id) }));
+const logBadge = (action: string, d: { id: string; name: string }, extra: Record<string, unknown> = {}) =>
+  log.unshift({ id: crypto.randomUUID(), at: Date.now(), actor: 'admin@exemple.fr', action, targetId: `badge:${d.id}`, targetName: null, detail: { badge: d.id, name: d.name, ...extra } });
+
+function mockBadges(seg: string[], init?: { method: string; body: unknown }): unknown {
+  const method = init?.method ?? 'GET';
+  if (!seg[1] && method === 'GET') return { badges: badgeList() };
+  if (!seg[1] && method === 'POST') {
+    const f = init!.body as Required<Pick<BadgeFields, 'name' | 'icon' | 'color'>> & BadgeFields;
+    if (defs.some((d) => d.color === f.color)) throw new ApiError(409, 'couleur');
+    const base = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'badge';
+    let id = base;
+    for (let i = 2; defs.some((d) => d.id === id); i++) id = `${base}-${i}`;
+    const d = { id, name: f.name, description: f.description ?? '', icon: f.icon, color: f.color, position: defs.length + 1, active: true, legacy: false };
+    defs.push(d);
+    logBadge('badge.creer', d);
+    return { id };
+  }
+  if (seg[1] === 'order') {
+    const ids = (init!.body as { ids: string[] }).ids;
+    defs = ids.map((id, i) => ({ ...defs.find((d) => d.id === id)!, position: i + 1 }));
+    log.unshift({ id: crypto.randomUUID(), at: Date.now(), actor: 'admin@exemple.fr', action: 'badge.ordre', targetId: null, targetName: null, detail: { ids } });
+    return { badges: badgeList() };
+  }
+  const d = defs.find((x) => x.id === seg[1]);
+  if (!d) throw new ApiError(404, 'introuvable');
+  if (seg[2] === 'users') {
+    const { users: refs, on } = init!.body as { users: string[]; on: boolean };
+    const found = refs.map((r) => users.find((u) => u.id === r || u.email === r.toLowerCase())).filter((u) => !!u);
+    const missing = refs.filter((r) => !users.some((u) => u.id === r || u.email === r.toLowerCase()));
+    let changed = 0;
+    for (const u of found) {
+      const set = new Set(given.get(u.id) ?? []);
+      if (set.has(d.id) === on) continue;
+      if (on) set.add(d.id);
+      else set.delete(d.id);
+      given.set(u.id, [...set]);
+      u.certified = set.has('certifie');
+      changed++;
+      log.unshift({ id: crypto.randomUUID(), at: Date.now(), actor: 'admin@exemple.fr', action: on ? 'badge.donner' : 'badge.retirer', targetId: u.id, targetName: u.name, detail: { badge: d.id, name: d.name } });
+    }
+    return { found: found.length, changed, missing };
+  }
+  if (method === 'DELETE') {
+    if (d.legacy) throw new ApiError(409, 'origine');
+    if (heldOf(d.id)) throw new ApiError(409, 'utilise');
+    defs = defs.filter((x) => x !== d);
+    logBadge('badge.supprimer', d);
+    return { badges: badgeList() };
+  }
+  const f = init!.body as BadgeFields;
+  if (f.color && f.color !== d.color && defs.some((x) => x.color === f.color)) throw new ApiError(409, 'couleur');
+  const changes = (Object.keys(f) as (keyof BadgeFields)[]).filter((k) => f[k] !== d[k]);
+  Object.assign(d, f);
+  if (changes.length) logBadge('badge.modifier', d, { changes });
+  return { badges: badgeList() };
+}
 const log: LogRow[] = [
   { id: 'l4', at: now - 3 * 3_600_000, actor: 'admin@exemple.fr', action: 'bug.statut', targetId: 'bug:37', targetName: '#37 Crash en ouvrant les paramètres', detail: { bug: 37, de: 'en_cours', vers: 'corrige', fixedIn: '1.2.29' } },
   { id: 'l5', at: now - 3.5 * 3_600_000, actor: 'admin@exemple.fr', action: 'bug.note', targetId: 'bug:39', targetName: '#39 La fenêtre clignote au démarrage', detail: { bug: 39 } },
@@ -187,7 +255,8 @@ export async function mock(path: string, init?: { method: string; body: unknown 
   await new Promise((r) => setTimeout(r, 150));
   const url = new URL(path, 'http://demo');
   const seg = url.pathname.split('/').filter(Boolean);
-  if (seg[0] === 'me') return { email: 'admin@exemple.fr', badges: ['certifie', 'equipe', 'testeur', 'chasseur'] };
+  if (seg[0] === 'me') return { email: 'admin@exemple.fr', badges: badgeList() };
+  if (seg[0] === 'badges') return mockBadges(seg, init);
   if (seg[0] === 'stats') {
     return {
       users: 1284,
@@ -200,7 +269,7 @@ export async function mock(path: string, init?: { method: string; body: unknown 
       reportsOpen: reports.filter((r) => r.status === 'ouvert').length,
       bugsOpen: bugs.filter((b) => OPEN_IDS.includes(b.status)).length,
       signups: Array.from({ length: 30 }, (_, k) => ({ day: now - (29 - k) * DAY, n: Math.round(3 + 4 * Math.sin(k / 3) + (k % 5)) })),
-      badges: { certifie: 6, equipe: 2, testeur: 14, chasseur: 5 }
+      badges: Object.fromEntries(defs.map((d) => [d.id, heldOf(d.id)]))
     };
   }
   if (seg[0] === 'log') return { log, more: false };

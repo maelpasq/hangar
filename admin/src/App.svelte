@@ -3,7 +3,9 @@
   import Icon, { type IconName } from '../../src/lib/components/Icon.svelte';
   import { ApiError, api, envName, type Me } from './api';
   import { num } from './format';
+  import { badgeDefs } from './badges.svelte';
   import Accueil from './pages/Accueil.svelte';
+  import Badges from './pages/Badges.svelte';
   import Bugs from './pages/Bugs.svelte';
   import Comptes from './pages/Comptes.svelte';
   import Journal from './pages/Journal.svelte';
@@ -19,6 +21,7 @@
     .me()
     .then((m) => {
       me = m;
+      badgeDefs.list = m.badges;
       loadStats();
     })
     .catch((e) => (e instanceof ApiError && e.status === 403 ? (denied = true) : (failed = true)));
@@ -42,6 +45,7 @@
     { id: 'bugs', label: 'Bugs', icon: 'bug', to: href.bugs(), n: stats.data?.bugsOpen },
     { id: 'signalements', label: 'Signalements', icon: 'flag', to: href.signalements(), n: stats.data?.reportsOpen },
     { id: 'comptes', label: 'Comptes', icon: 'users', to: href.comptes(), n: stats.data?.users },
+    { id: 'badges', label: 'Badges', icon: 'shieldCheck', to: href.badges(), n: badgeDefs.list.filter((b) => b.active).length },
     { id: 'journal', label: 'Journal', icon: 'list', to: href.journal }
   ]);
   const current = $derived(
@@ -113,7 +117,9 @@
           {:else if router.route.page === 'signalements'}
             <Signalements statut={router.route.statut} />
           {:else if router.route.page === 'comptes' || router.route.page === 'compte'}
-            <Comptes route={router.route} badgeIds={me.badges} />
+            <Comptes route={router.route} />
+          {:else if router.route.page === 'badges'}
+            <Badges id={router.route.id} />
           {:else}
             <Journal />
           {/if}
