@@ -111,7 +111,7 @@
         <a class="brand" href={href.accueil}>
           <img src="/favicon.svg" alt="" width="30" height="30" />
           <span class="name" role="img" aria-label="Hangar"></span>
-          <span class="tag">Admin {envName}</span>
+          <span class="tag">{envName}</span>
         </a>
         <!-- En étroit seulement : en large, le bouton est en bas (pas la place à côté de la marque). -->
         {@render themeBtn('narrow')}
@@ -179,7 +179,8 @@
 <style>
   .shell {
     --env: var(--star);
-    --env-text: var(--star);
+    /* Jaune assombri en thème clair, éclairci en sombre : lisible sur son fond teinté. */
+    --env-text: color-mix(in srgb, var(--star) 60%, var(--strong));
     display: grid;
     grid-template-columns: 236px minmax(0, 1fr);
     min-height: 100vh;

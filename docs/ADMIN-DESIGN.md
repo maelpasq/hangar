@@ -87,7 +87,7 @@ Actions du journal : `bug.statut` accent, `bug.note` bleu `#3b82f6`, `badge.donn
 
 Valeurs exactes dans la maquette (`rg -n 'class="nav' design/reference/admin/Main.dc.html`, etc.). Chaque composant existe une fois, en classe globale dans `admin/src/style.css` ou en composant Svelte, et n'est pas redéfini page par page.
 
-- **Logo + « Admin Test / Prod »** : logo de l'app 30 px, logotype « Hangar » de la DA (`admin/src/wordmark.png`, en masque CSS coloré par le thème) 77 x 17 px, puce « Admin <environnement> » 22 px de haut, rayon 7, fond couleur d'environnement à 18 %, texte 11,5 px / 600.
+- **Logo + puce « Test » / « Prod »** : logo de l'app 30 px, logotype « Hangar » de la DA (`admin/src/wordmark.png`, en masque CSS coloré par le thème) 77 x 17 px, puce du nom de l'environnement 22 px de haut, rayon 7, fond couleur d'environnement à 18 %, texte 11,5 px / 600.
 - **Environnement toujours visible** (pour ne pas confondre Test et Prod) : bande fixe de 22 px en haut de l'écran (« Environnement Test », fond `--star` ; « Environnement Prod », fond `--danger`), bord droit de la barre latérale de 2 px dans la même couleur, titre d'onglet préfixé `[TEST]` / `[PROD]`.
 - **Titre de section de barre latérale** : 11 px / 600, majuscules, `letter-spacing: 1px`, `--muted`.
 - **Entrée de nav** (`.nav`) : 40 px, padding 0 12 px, rayon `--r-btn`, gap 12, 14 px / 500, `--text-nav`. Survol `--surface-2` + `--text`. Active : `--surface-4` (8 %), texte `--strong`, icône `--accent-text`, barre de 3 px `--accent` à gauche (`left: -14px; top/bottom: 11px`). Compteur à droite 12 px `--muted-2` chiffres tabulaires.
