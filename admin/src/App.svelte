@@ -65,6 +65,9 @@
     { id: 'Prod', url: 'https://hangar-admin.pamalstudio.fr' }
   ];
 
+  // Couleur de l'environnement, reprise partout (bande du haut, marque, bord de la barre) pour ne pas confondre Test et Prod.
+  const envTone = envName === 'Prod' ? 'prod' : 'test';
+
   const host = envName === 'Prod' ? 'hangar-api' : envName === 'Test' ? 'hangar-api-test' : 'démo locale';
 
   const nav = $derived<{ id: string; label: string; icon: IconName; to: string; n?: number }[]>([
@@ -80,7 +83,7 @@
   );
 
   $effect(() => {
-    document.title = `${nav.find((n) => n.id === current)?.label ?? 'Admin'} - Hangar Admin`;
+    document.title = `[${envName.toUpperCase()}] ${nav.find((n) => n.id === current)?.label ?? 'Admin'} - Hangar Admin`;
   });
 </script>
 
@@ -101,13 +104,14 @@
     </p>
   </main>
 {:else}
-  <div class="shell">
+  <div class="shell {envTone}">
+    <div class="envbar" aria-hidden="true">{envName === 'Démo' ? 'Démo locale' : `Environnement ${envName}`}</div>
     <aside>
       <div class="top">
         <a class="brand" href={href.accueil}>
           <img src="/favicon.svg" alt="" width="30" height="30" />
-          <span class="name">Hangar</span>
-          <span class="tag">Admin</span>
+          <span class="name" role="img" aria-label="Hangar"></span>
+          <span class="tag">Admin {envName}</span>
         </a>
         <!-- En étroit seulement : en large, le bouton est en bas (pas la place à côté de la marque). -->
         {@render themeBtn('narrow')}
@@ -174,22 +178,47 @@
 
 <style>
   .shell {
+    --env: var(--star);
+    --env-text: var(--star);
     display: grid;
     grid-template-columns: 236px minmax(0, 1fr);
     min-height: 100vh;
+    padding-top: 22px;
   }
 
   aside {
     position: sticky;
-    top: 0;
-    height: 100vh;
+    top: 22px;
+    height: calc(100vh - 22px);
     z-index: 2;
     display: flex;
     flex-direction: column;
     gap: 6px;
     padding: 18px 12px 18px 26px;
-    border-right: 1px solid var(--border-1);
+    border-right: 2px solid color-mix(in srgb, var(--env) 55%, transparent);
     background: var(--sidebar);
+  }
+
+  .shell.prod {
+    --env: var(--danger);
+    --env-text: var(--danger-text);
+  }
+
+  /* Bande fixe en haut de l'écran : l'environnement se voit sur toutes les pages. */
+  .envbar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 10;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    background: var(--env);
+    color: color-mix(in srgb, var(--env) 20%, black);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    pointer-events: none;
   }
 
   .top {
@@ -231,10 +260,13 @@
     color: var(--strong);
   }
 
+  /* Logotype de la DA (design/brand/hangar-wordmark.png) en masque : il prend la couleur du thème. */
   .name {
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -0.2px;
+    width: 77px;
+    height: 17px;
+    flex-shrink: 0;
+    background: currentColor;
+    mask: url('./wordmark.png') center / contain no-repeat;
   }
 
   .tag {
@@ -243,8 +275,9 @@
     align-items: center;
     padding: 0 8px;
     border-radius: 7px;
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent-text);
+    background: color-mix(in srgb, var(--env) 18%, transparent);
+    color: var(--env-text);
+    white-space: nowrap;
     font-size: 11.5px;
     font-weight: 600;
     letter-spacing: 0.3px;
