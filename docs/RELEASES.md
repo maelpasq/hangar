@@ -67,15 +67,6 @@ Si un build échoue : corrige, committe, puis publie un nouveau `patch`. Ne dép
 
 Une entrée par version, la plus récente en haut. La description s'adresse aux utilisateurs.
 
-### 1.2.31 - 19 novembre 2026
-Plus de place pour tes jeux : la barre latérale se réduit à ses icônes d'un clic, et ton profil s'adapte à la taille de la fenêtre.
-
-#### Nouveautés
-- **Barre latérale réductible** : le bouton à droite du logo la réduit à ses icônes, pour laisser plus de place à ta bibliothèque. Réduite, clique sur le logo pour la rouvrir. Hangar retient ton choix.
-
-#### Améliorations
-- **Profil** : ton pseudo et tes badges passent sous la bannière, avec les boutons sur leur ligne. Dans une fenêtre étroite, les cartes de statistiques se rangent par deux et les boutons passent sous le nom, sans que les badges ne l'écrasent.
-
 ### 1.2.30 - 19 novembre 2026
 De nouveaux badges arrivent sur les profils, et Hangar suit mieux les jeux qui se relancent tout seuls après une mise à jour.
 
