@@ -128,7 +128,7 @@
       {/key}
     {:else}
       <!-- Ni bannière ni jaquette : le dégradé de la jaquette générée, flouté. -->
-      <div class="fallback" aria-hidden="true" style:background={generatedBackground(game.id)}></div>
+      <div class="fallback" aria-hidden="true" style:background={generatedBackground(game.id, art.tint(game))}></div>
     {/if}
     <div class="shade" aria-hidden="true"></div>
   </section>

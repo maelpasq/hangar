@@ -55,7 +55,7 @@ const field = (form: FormData, name: string, max: number): string => {
 };
 
 /** Compte un envoi dans la fenêtre `key` ; rend le total de la fenêtre. */
-async function hit(db: Db, key: string, now: number): Promise<number> {
+export async function hit(db: Db, key: string, now: number): Promise<number> {
   const [row] = await db
     .insert(rateLimit)
     .values({ id: crypto.randomUUID(), key, count: 1, lastRequest: now })

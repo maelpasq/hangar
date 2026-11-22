@@ -235,6 +235,7 @@ fn main() {
             commands::pick_image,
             commands::game_info,
             commands::exe_icon,
+            commands::presence_icon,
             commands::folder_size,
             commands::set_autostart,
             commands::pad_at_login,

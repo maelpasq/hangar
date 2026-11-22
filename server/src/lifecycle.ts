@@ -5,6 +5,7 @@
 import { and, eq, like, lt, sql } from 'drizzle-orm';
 import type { AvatarStore, Db, Notice } from './env';
 import { cleanBugCaptures } from './bug';
+import { cleanIcons } from './icons';
 import { avatarKey, coverKey } from './profile';
 import { cleanActivity, deleteSocial } from './social';
 import {
@@ -162,6 +163,7 @@ export async function daily(db: Db, bucket: AvatarStore | undefined, notice: Not
   await cleanActivity(db, now);
   const freed = await cleanCovers(db, bucket, now);
   const shots = await cleanBugCaptures(db, bucket, now);
+  const icons = await cleanIcons(db, bucket, now);
   const { warned, deleted } = await expireAccounts(db, bucket, notice, now);
-  console.log(`[hangar] ménage : ${freed} jaquette(s), ${shots} capture(s) de bug, ${warned} rappel(s), ${deleted} compte(s) supprimé(s)`);
+  console.log(`[hangar] ménage : ${freed} jaquette(s), ${shots} capture(s) de bug, ${icons} icône(s),${warned} rappel(s), ${deleted} compte(s) supprimé(s)`);
 }

@@ -340,6 +340,7 @@ export function mockApi(): Api {
       return p;
     },
     exeIcon: async () => null,
+    presenceIcon: async () => false,
     gameInfo: async () => ({ genre: null }),
     steamAchievements: async (gameId) =>
       connected.has('steam') && gameId.startsWith('steam:') ? { unlocked: 34, total: 50 } : null,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Jaquette d'un jeu sans image : dégradé stable + nom + icône de l'exe éventuelle.
+  // Jaquette d'un jeu sans image : dégradé (couleur du logo, sinon stable) + nom + icône de l'exe éventuelle.
   import { art } from '../art.svelte';
   import { library } from '../stores/library.svelte';
   import type { Game } from '../types';
@@ -13,9 +13,11 @@
   }: { game: Game; fontSize?: number; padding?: number; showName?: boolean } = $props();
 
   const icon = $derived(showName ? art.icon(game) : null);
+  // Dégradé dans la couleur du logo du jeu quand il en a un.
+  const tint = $derived(art.tint(game));
 </script>
 
-<span class="gen" style:background={generatedBackground(game.id)} style:padding="{padding}px">
+<span class="gen" style:background={generatedBackground(game.id, tint)} style:padding="{padding}px">
   {#if icon}
     <span class="badge"><img src={icon} alt="" decoding="async" /></span>
   {/if}

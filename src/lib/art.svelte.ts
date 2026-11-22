@@ -3,6 +3,7 @@
 // côté backend dans le store d'origine, sur Steam puis sur SteamGridDB.
 
 import { api } from './api';
+import type { ExeIcon, Tint } from './util/color';
 import { library } from './stores/library.svelte';
 import type { Artwork, Game, SocialGame } from './types';
 
@@ -54,7 +55,7 @@ export async function steamCover(id: number): Promise<CoverResult | null> {
 class Art {
   covers = $state<Record<string, CoverResult | null>>({});
   heroes = $state<Record<string, string | null>>({});
-  icons = $state<Record<string, string | null>>({});
+  icons = $state<Record<string, ExeIcon | null>>({});
   private pending = new Set<string>();
   /** Recherche multi-sources du backend, une seule par jeu. */
   private auto = new Map<string, Promise<Artwork>>();
@@ -77,6 +78,12 @@ class Art {
   /** Peut avoir une bannière (pour le carrousel). */
   mayHaveHero(g: Game): boolean {
     return !!this.steamId(g) || this.autoOn(g);
+  }
+
+  /** Hangar montre la jaquette générée (« Pas de jaquette » choisi, ou aucune image trouvée). */
+  generated(g: Game): boolean {
+    const key = this.coverKey(g);
+    return !key || this.covers[key] === null;
   }
 
   /** Clé de cache de la jaquette, ou null pour une jaquette générée. */
@@ -179,6 +186,16 @@ class Art {
 
   /** Icône 256 px de l'exe (ou logo Xbox) pour la jaquette générée. */
   icon(g: Game): string | null | undefined {
+    const i = this.iconInfo(g);
+    return i && i.src;
+  }
+
+  /** Teinte dominante de cette icône : couleur du dégradé de la jaquette générée (null : aucune). */
+  tint(g: Game): Tint | null {
+    return this.iconInfo(g)?.tint ?? null;
+  }
+
+  private iconInfo(g: Game): ExeIcon | null | undefined {
     const path = g.logo || g.exePath;
     if (!path) return null;
     if (path in this.icons) return this.icons[path];

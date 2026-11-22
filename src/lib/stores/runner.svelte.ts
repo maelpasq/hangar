@@ -2,6 +2,7 @@
 
 import { rescan, showLauncher } from '../actions';
 import { api } from '../api';
+import { art } from '../art.svelte';
 import { playElsewhere } from '../ghosts';
 import type { LaunchEvent, LauncherPrompt } from '../types';
 import { elapsed } from '../util/format';
@@ -256,8 +257,18 @@ class Runner {
     if (!library.state.prefs.discordPresence) return;
     const id = this.current;
     const web = Object.keys(this.web).reduce<string | null>((a, b) => (a && this.web[a] >= this.web[b] ? a : b), null);
-    if (id) api.setPresence(id, this.running[id]).catch(() => {});
-    else api.setPresence(web && `web:${web}`, web ? this.web[web] : 0).catch(() => {});
+    if (id) {
+      api.setPresence(id, this.running[id]).catch(() => {});
+      // Jeu montré sans jaquette (« Pas de jaquette » compris) : l'icône de son exe, hébergée pour
+      // Discord, à la place de toute jaquette trouvée ailleurs, puis la présence renvoyée avec.
+      const g = library.get(id);
+      api
+        .presenceIcon(id, !!g && art.generated(g))
+        .then((ready) => {
+          if (ready && this.current === id && library.state.prefs.discordPresence) api.setPresence(id, this.running[id]).catch(() => {});
+        })
+        .catch(() => {});
+    } else api.setPresence(web && `web:${web}`, web ? this.web[web] : 0).catch(() => {});
   }
 
   webOpened(id: string): void {

@@ -82,6 +82,9 @@ pub struct Artworks {
     file: PathBuf,
     cache: Mutex<CacheFile>,
     epic: OnceLock<HashMap<String, Vec<Value>>>,
+    /// Jeux sans jaquette : adresse publique de l'icône de leur exe pour Discord (`presence_icon`),
+    /// le temps de la session.
+    icons: Mutex<HashMap<String, (String, bool)>>,
 }
 
 /// Erreur d'appel HTTP : code de statut, ou 0 pour une erreur réseau / JSON illisible.
@@ -91,7 +94,7 @@ impl Artworks {
     pub fn new(art: Arc<Art>, cache_dir: &Path) -> Artworks {
         let file = cache_dir.join("artwork.json");
         let cache = fs::read_to_string(&file).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
-        Artworks { art, file, cache: Mutex::new(cache), epic: OnceLock::new() }
+        Artworks { art, file, cache: Mutex::new(cache), epic: OnceLock::new(), icons: Mutex::default() }
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, CacheFile> {
@@ -308,8 +311,14 @@ impl Artworks {
         })
     }
 
-    /// Adresse web de la jaquette d'un jeu déjà résolue (cache seulement, aucun réseau).
+    /// Adresse web de la jaquette d'un jeu déjà résolue (cache seulement, aucun réseau), sinon celle
+    /// de l'icône de son exe hébergée pour Discord (`set_icon`). Jeu montré avec la jaquette générée
+    /// (« Pas de jaquette » choisi) : toujours l'icône, jamais une jaquette du cache.
     pub fn cover_url(&self, game_id: &str) -> Option<String> {
+        let icon = self.icons.lock().unwrap_or_else(|p| p.into_inner()).get(game_id).cloned();
+        if let Some((url, true)) = icon {
+            return Some(url);
+        }
         let prefix = format!("{game_id}|");
         let c = self.lock();
         c.entries
@@ -319,6 +328,18 @@ impl Artworks {
             .filter(|(_, u)| u.starts_with("https://"))
             .max()
             .map(|(_, u)| u)
+            .or(icon.map(|(url, _)| url))
+    }
+
+    /// Retient l'image de la présence Discord d'un jeu : l'adresse publique de l'icône de son exe,
+    /// ou la clé de l'image Hangar. `forced` : à la place de toute jaquette (jaquette générée).
+    pub fn set_icon(&self, game_id: &str, url: String, forced: bool) {
+        self.icons.lock().unwrap_or_else(|p| p.into_inner()).insert(game_id.to_string(), (url, forced));
+    }
+
+    /// Oublie l'image retenue pour la présence d'un jeu ; vrai si elle était imposée.
+    pub fn clear_icon(&self, game_id: &str) -> bool {
+        matches!(self.icons.lock().unwrap_or_else(|p| p.into_inner()).remove(game_id), Some((_, true)))
     }
 
     /// appid Steam retrouvé par le nom (même cache que les jaquettes).

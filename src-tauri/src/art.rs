@@ -686,9 +686,97 @@ fn encode_png(rgba: Vec<u8>, w: u32, h: u32) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// Teinte dominante d'une icône PNG, pour le dégradé de la jaquette générée : `[teinte 0-359,
+/// saturation 0-100]`. Pixels opaques seulement, chacun pesé par sa saturation (le blanc, le gris
+/// et le noir d'un contour comptent peu). Icône sans couleur : saturation basse, dégradé gris.
+pub fn icon_tint(file: &Path) -> Option<[u16; 2]> {
+    let mut dec = png::Decoder::new(std::io::BufReader::new(fs::File::open(file).ok()?));
+    dec.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = dec.read_info().ok()?;
+    let mut buf = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut buf).ok()?;
+    let px = &buf[..info.buffer_size()];
+    let step = match info.color_type {
+        png::ColorType::Rgba => 4,
+        png::ColorType::Rgb => 3,
+        _ => return None,
+    };
+    tint_of(px, step)
+}
+
+fn tint_of(px: &[u8], step: usize) -> Option<[u16; 2]> {
+    // 36 cases de 10° : poids, et somme des couleurs pour la moyenne de la case gagnante.
+    let mut weight = [0f64; 36];
+    let mut sum = [[0f64; 3]; 36];
+    let (mut opaque, mut sat_total) = (0f64, 0f64);
+    for c in px.chunks_exact(step) {
+        if step == 4 && c[3] < 128 {
+            continue;
+        }
+        let (h, s, l) = hsl(c[0], c[1], c[2]);
+        opaque += 1.0;
+        // Presque noir ou presque blanc : pas de vraie teinte.
+        let w = if !(0.08..=0.95).contains(&l) { 0.0 } else { s };
+        sat_total += w;
+        let k = ((h / 10.0) as usize).min(35);
+        weight[k] += w;
+        for i in 0..3 {
+            sum[k][i] += c[i] as f64 * w;
+        }
+    }
+    if opaque == 0.0 {
+        return None;
+    }
+    let best = (0..36).max_by(|&a, &b| weight[a].total_cmp(&weight[b]))?;
+    if weight[best] <= 0.0 {
+        return Some([0, 0]);
+    }
+    let w = weight[best];
+    let (h, s, _) = hsl((sum[best][0] / w) as u8, (sum[best][1] / w) as u8, (sum[best][2] / w) as u8);
+    // Peu de pixels colorés sur l'ensemble : saturation ramenée d'autant.
+    let colored = (sat_total / opaque * 2.5).min(1.0);
+    Some([h.round() as u16 % 360, (s * colored * 100.0).round() as u16])
+}
+
+/// RGB vers (teinte en degrés, saturation 0-1, luminosité 0-1).
+fn hsl(r: u8, g: u8, b: u8) -> (f64, f64, f64) {
+    let (r, g, b) = (r as f64 / 255.0, g as f64 / 255.0, b as f64 / 255.0);
+    let (max, min) = (r.max(g).max(b), r.min(g).min(b));
+    let l = (max + min) / 2.0;
+    let d = max - min;
+    if d == 0.0 {
+        return (0.0, 0.0, l);
+    }
+    let s = d / (1.0 - (2.0 * l - 1.0).abs());
+    let h = if max == r {
+        60.0 * (((g - b) / d).rem_euclid(6.0))
+    } else if max == g {
+        60.0 * ((b - r) / d + 2.0)
+    } else {
+        60.0 * ((r - g) / d + 4.0)
+    };
+    (h, s.min(1.0), l)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn teinte_dominante_d_une_icone() {
+        // Rouge vif majoritaire, contour noir et fond transparent ignorés.
+        let mut px = vec![];
+        px.extend([220, 30, 30, 255].repeat(60));
+        px.extend([0, 0, 0, 255].repeat(30));
+        px.extend([40, 90, 230, 0].repeat(100));
+        px.extend([40, 90, 230, 255].repeat(10));
+        let [h, s] = tint_of(&px, 4).unwrap();
+        assert!(!(10..=350).contains(&h), "teinte {h}");
+        assert!(s > 50, "saturation {s}");
+        // Icône grise : pas de couleur.
+        assert_eq!(tint_of(&[128, 128, 128, 255].repeat(10), 4), Some([0, 0]));
+        assert_eq!(tint_of(&[1, 2, 3, 0].repeat(10), 4), None);
+    }
 
     #[test]
     fn site_officiel_en_https() {

@@ -361,3 +361,20 @@ export const bugs = sqliteTable(
   },
   (t) => [index('bugs_status').on(t.status, t.createdAt), index('bugs_closed').on(t.closedAt)]
 );
+
+/**
+ * Icônes d'exe hébergées pour Discord Rich Presence (src/icons.ts) : un jeu sans jaquette montre
+ * l'icône de son exe sur le profil Discord, qui ne lit que des images en ligne. Rangées dans R2
+ * (`icons/<empreinte>`), publiques, sans lien avec un compte. `usedAt` : dernier envoi ; une icône
+ * plus envoyée depuis 30 jours part au ménage quotidien.
+ */
+export const presenceIcons = sqliteTable(
+  'presence_icons',
+  {
+    hash: text('hash').primaryKey(),
+    size: integer('size').notNull(),
+    createdAt: integer('created_at').notNull(),
+    usedAt: integer('used_at').notNull()
+  },
+  (t) => [index('presence_icons_used').on(t.usedAt)]
+);

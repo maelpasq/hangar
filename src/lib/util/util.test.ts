@@ -16,6 +16,11 @@ describe('couleur', () => {
   it('dégradé à 160 degrés', () => {
     expect(generatedBackground('x')).toMatch(/^linear-gradient\(160deg, hsl\(/);
   });
+  it("dégradé d'après la teinte du logo", () => {
+    expect(generatedBackground('x', [200, 90])).toMatch(/^linear-gradient\(160deg, hsl\(200 75% 50%\), hsl\(215 /);
+    expect(generatedBackground('x', [10, 0])).toContain('hsl(10 0% 50%)');
+    expect(generatedBackground('x', null)).toBe(generatedBackground('x'));
+  });
 });
 
 describe('dates relatives', () => {

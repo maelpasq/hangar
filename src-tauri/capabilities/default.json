@@ -47,6 +47,7 @@
     "allow-pick-image",
     "allow-game-info",
     "allow-exe-icon",
+    "allow-presence-icon",
     "allow-folder-size",
     "allow-set-autostart",
     "allow-pad-at-login",

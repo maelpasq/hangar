@@ -146,13 +146,13 @@ interface PersistedState {
 | `update_game(gameId) -> string` | Ouvre les mises à jour du jeu dans son launcher (Steam, GOG Galaxy, Epic, Microsoft Store), renvoie le message à afficher ; erreur expliquée pour les autres |
 | `set_desktop(closeAction, globalShortcut, padButton) -> DesktopInfo` | Fermeture de la fenêtre (`ask` : question `main://close-ask`, `tray` : zone de notification, `quit`), raccourci global Ctrl+Alt+H ; dit si Discord est disponible et si le raccourci est libre |
 | `set_tray_recents([id, nom][])` | Jeux récents du menu de l'icône (5 au plus, jeux connus seulement) |
-| `set_presence(gameId?, start)` | Discord Rich Presence par l'IPC locale de Discord (aucun réseau) |
+| `set_presence(gameId?, start)` | Discord Rich Presence par l'IPC locale de Discord. Jeu sans jaquette : l'icône de son exe, hébergée par l'API Hangar (`POST /icons`, sans compte, `server/src/icons.ts`) car Discord ne lit que des images en ligne |
 | `pick_exe()` / `pick_folder()` | Via `tauri-plugin-dialog` côté frontend directement |
 | `resolve_steam_id(name) -> number?` | Recherche Steam |
 | `search_steam(name) -> {id,name}[]` | Pour la modale « Changer la jaquette » (5 résultats) |
 | `find_artwork(gameId, steamGridKey, refresh) -> {cover, hero, source}` | Jaquette et bannière d'un jeu : image native du store (Epic, GOG, Xbox), puis Steam, puis SteamGridDB ; résultat mis en cache (`cache\artwork.json`) |
 | `image(url) -> string` | Renvoie un chemin local en cache (servi via le protocole `asset:`), télécharge si absent |
-| `exe_icon(path) -> string?` | Icône d'exe extraite en PNG 256 px (IShellItemImageFactory), en cache |
+| `exe_icon(path) -> {path, tint}?` | Icône d'exe extraite en PNG 256 px (IShellItemImageFactory), en cache, avec sa teinte dominante `[teinte, saturation]` (dégradé de la jaquette générée) |
 | `folder_size(path) -> number` | Taille en octets, calculée en tâche de fond et mise en cache 24 h |
 | `set_autostart(on)` | Plugin autostart |
 

@@ -860,13 +860,52 @@ pub async fn steam_achievements(ctx: Ctxs<'_>, game_id: String, fresh: Option<bo
     blocking(move || acc.achievements(app_id, fresh)).await
 }
 
+/// Discord Rich Presence d'un jeu montré sans vraie jaquette : héberge l'icône de son exe (comme
+/// la jaquette générée) par l'API Hangar, Discord ne lisant que des images en ligne, et la retient
+/// comme image de la présence (`cover_url`). `generated` : Hangar montre la jaquette générée
+/// (« Pas de jaquette » choisi, ou rien trouvé) ; l'icône remplace alors toute jaquette du cache et
+/// le portrait Steam, sinon le logo Hangar. Vrai si l'image a changé : le frontend renvoie alors la
+/// présence. Discord fermé : rien n'est envoyé.
 #[tauri::command]
-pub async fn exe_icon(ctx: Ctxs<'_>, path: String) -> Result<Option<String>, String> {
+pub async fn presence_icon(ctx: Ctxs<'_>, game_id: String, generated: bool) -> Result<bool, String> {
+    let Some(g) = ctx.known.get(&game_id) else { return Ok(false) };
+    if !generated {
+        // Une jaquette est montrée : plus d'image imposée.
+        if ctx.artwork.clear_icon(&g.id) {
+            return Ok(true);
+        }
+        if g.steam_app_id.is_some() || ctx.artwork.cover_url(&g.id).is_some() {
+            return Ok(false);
+        }
+    }
+    let path = g.logo.clone().or(g.exe_path.clone());
+    let (art, artwork, p) = (ctx.art.clone(), ctx.artwork.clone(), ctx.presence.clone());
+    blocking(move || {
+        let url = path.and_then(|path| art.exe_icon(&path)).and_then(|file| p.icon_url(&file));
+        match url {
+            Some(u) => artwork.set_icon(&g.id, u, generated),
+            // Pas d'icône : le logo Hangar plutôt qu'une jaquette que l'utilisateur a écartée.
+            None if generated => artwork.set_icon(&g.id, crate::presence::LOGO_KEY.into(), true),
+            None => return false,
+        }
+        true
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn exe_icon(ctx: Ctxs<'_>, path: String) -> Result<Option<serde_json::Value>, String> {
     if known_path(&ctx, &path).is_err() {
         return Ok(None);
     }
     let art = ctx.art.clone();
-    blocking(move || art.exe_icon(&path).map(|p| p.to_string_lossy().into_owned())).await
+    // Fichier de l'icône et sa teinte dominante (dégradé de la jaquette générée).
+    blocking(move || {
+        art.exe_icon(&path).map(|p| {
+            serde_json::json!({ "path": p.to_string_lossy(), "tint": crate::art::icon_tint(&p) })
+        })
+    })
+    .await
 }
 
 /// Taille d'un dossier de jeu (cache 24 h ; `fresh` : recalculée, bouton Actualiser).

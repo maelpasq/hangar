@@ -11,6 +11,7 @@ import { createApp } from '../src/app';
 import { b64url, pkceChallenge, randomToken } from '../src/crypto';
 import type { Env } from '../src/env';
 import { DAY, INACTIVE_DAYS, WARN_DAYS, cleanCovers, cleanLogins, expireAccounts } from '../src/lifecycle';
+import { ICON_MAX, cleanIcons } from '../src/icons';
 import { mailHtml, noticeHtml } from '../src/mail';
 import { sha256Hex } from '../src/profile';
 import { lift, sanction } from '../src/sanctions';
@@ -938,5 +939,52 @@ describe('sanctions', () => {
     await sanction(db, hub, { userId: id, kind: 'total', reason: 'Pause', days: 1, actor: 'admin' }, Date.now() - 2 * DAY);
     expect((await json(await call('/me', { token }))).suspension).toBeNull();
     expect((await call('/sync?since=0', { token })).status).toBe(200);
+  });
+});
+
+describe('icônes de Discord Rich Presence', () => {
+  /** PNG minimal : signature + en-tête IHDR de `w` × `h`, puis un octet `tag`. */
+  const png = (w: number, h: number, tag = 0) => {
+    const b = new Uint8Array(34);
+    b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+    const v = new DataView(b.buffer);
+    v.setUint32(16, w);
+    v.setUint32(20, h);
+    b[33] = tag;
+    return b;
+  };
+  const send = (body: Uint8Array, from = '203.0.113.200') =>
+    app.request(`${BASE}/icons`, { method: 'POST', headers: { 'cf-connecting-ip': from }, body: body.slice() });
+
+  it('héberge une icône sans compte, une seule fois, à une adresse publique', async () => {
+    const icon = png(256, 256, 7);
+    const res = await send(icon);
+    expect(res.status).toBe(200);
+    const { url } = await json(res);
+    const hash = await sha256Hex(icon);
+    expect(url).toBe(`${BASE}/icons/${hash}.png`);
+    expect((await json(await send(icon))).url).toBe(url);
+    expect(await db.select().from(schema.presenceIcons).where(eq(schema.presenceIcons.hash, hash))).toHaveLength(1);
+    const got = await app.request(url);
+    expect(got.status).toBe(200);
+    expect(got.headers.get('content-type')).toBe('image/png');
+    expect(new Uint8Array(await got.arrayBuffer())).toEqual(icon);
+    expect((await app.request(`${BASE}/icons/${'0'.repeat(64)}.png`)).status).toBe(404);
+  });
+
+  it("refuse ce qui n'est pas une petite icône PNG", async () => {
+    expect((await send(png(257, 16))).status).toBe(400);
+    expect((await send(png(0, 16))).status).toBe(400);
+    expect((await send(PNG)).status).toBe(400);
+    expect((await send(new Uint8Array(ICON_MAX + 1))).status).toBe(413);
+  });
+
+  it('limite les envois par adresse IP et efface les icônes oubliées', async () => {
+    for (let i = 0; i < 60; i++) expect((await send(png(1, 1 + i), '203.0.113.201')).status).toBe(200);
+    expect((await send(png(2, 2), '203.0.113.201')).status).toBe(429);
+    expect(await cleanIcons(db, env.AVATARS, Date.now())).toBe(0);
+    expect(await cleanIcons(db, env.AVATARS, Date.now() + 31 * DAY)).toBe(61);
+    expect([...bucket.keys()].some((k) => k.startsWith('icons/'))).toBe(false);
+    expect(await db.select().from(schema.presenceIcons)).toHaveLength(0);
   });
 });

@@ -1,11 +1,15 @@
 //! Discord Rich Presence : « Joue à <jeu> » sur le profil Discord, via le client Discord
-//! installé sur l'appareil (tube nommé sous Windows, socket Unix sous macOS). Aucun réseau.
+//! installé sur l'appareil (tube nommé sous Windows, socket Unix sous macOS). Seul réseau : l'icône
+//! de l'exe d'un jeu sans jaquette, envoyée à l'API Hangar quand Discord est ouvert (`icon_url`).
 //!
 //! Protocole : trames `[op u32 LE][taille u32 LE][JSON]`. op 0 = poignée de main,
 //! op 1 = commande (SET_ACTIVITY). Discord répond à chaque trame : on lit la réponse.
 
+use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::Duration;
 
 /// Application Discord « Hangar » (portail développeur Discord). Identifiant public, pas un secret.
 pub const CLIENT_ID: &str = "1568201256357466132";
@@ -21,6 +25,107 @@ type Conn = std::os::unix::net::UnixStream;
 #[derive(Default)]
 pub struct Presence {
     conn: Mutex<Option<Conn>>,
+    /// Icônes d'exe déjà envoyées à l'API Hangar pendant cette session : fichier local -> adresse
+    /// publique (`None` : refusée ou envoi raté, pas de nouvel essai avant le prochain démarrage).
+    icons: Mutex<HashMap<PathBuf, Option<String>>>,
+}
+
+/// Icône d'exe de 256 Ko au plus (PNG 256 px, la limite du serveur).
+const ICON_MAX: u64 = 256 * 1024;
+
+/// Clé de l'image Hangar du portail Discord, pour un jeu sans jaquette ni icône.
+pub const LOGO_KEY: &str = HANGAR_ASSET;
+
+/// Adresse rendue par l'API pour une icône : seulement une image servie par l'API elle-même.
+fn icon_url_of(body: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(body).ok()?;
+    let url = v.get("url")?.as_str()?;
+    let rest = url.strip_prefix(&format!("{}/icons/", crate::cloud::api()))?;
+    let hash = rest.strip_suffix(".png")?;
+    (hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit())).then(|| url.to_string())
+}
+
+#[cfg(test)]
+mod icon_tests {
+    use super::*;
+
+    #[test]
+    fn adresse_d_icone_seulement_de_l_api() {
+        let hash = "a".repeat(64);
+        let ok = format!("{}/icons/{hash}.png", crate::cloud::api());
+        assert_eq!(icon_url_of(&format!(r#"{{"url":"{ok}"}}"#)), Some(ok));
+        assert!(icon_url_of(&format!(r#"{{"url":"https://ailleurs.fr/icons/{hash}.png"}}"#)).is_none());
+        assert!(icon_url_of(&format!(r#"{{"url":"{}/icons/x.png"}}"#, crate::cloud::api())).is_none());
+        assert!(icon_url_of("pas du json").is_none());
+    }
+}
+
+impl Presence {
+    /// Adresse publique de l'icône d'exe d'un jeu sans jaquette, pour Discord (qui ne lit que des
+    /// images en ligne) : le PNG est envoyé une fois à l'API Hangar (`POST /icons`, sans compte),
+    /// qui le garde sous son empreinte. Discord fermé ou envoi raté : `None` (logo Hangar).
+    pub fn icon_url(&self, file: &Path) -> Option<String> {
+        if !self.ready() {
+            return None; // Discord fermé : rien n'est envoyé.
+        }
+        if let Some(known) = self.icons.lock().unwrap_or_else(|p| p.into_inner()).get(file) {
+            return known.clone();
+        }
+        let is_png = file.extension().is_some_and(|e| e.eq_ignore_ascii_case("png"));
+        let small = std::fs::metadata(file).map(|m| m.len() <= ICON_MAX).unwrap_or(false);
+        let url = if is_png && small {
+            std::fs::read(file).ok().and_then(|bytes| {
+                let res = ureq::AgentBuilder::new()
+                    .timeout(Duration::from_secs(10))
+                    .redirects(0)
+                    .user_agent("Hangar")
+                    .build()
+                    .post(&format!("{}/icons", crate::cloud::api()))
+                    .set("Content-Type", "image/png")
+                    .send_bytes(&bytes);
+                match res {
+                    Ok(r) => r.into_string().ok().and_then(|b| icon_url_of(&b)),
+                    Err(e) => {
+                        let why = match &e {
+                            ureq::Error::Status(code, _) => format!("code {code}"),
+                            ureq::Error::Transport(t) => format!("{:?}", t.kind()),
+                        };
+                        log::info!("Discord : icône du jeu non envoyée ({why})");
+                        None
+                    }
+                }
+            })
+        } else {
+            None
+        };
+        self.icons.lock().unwrap_or_else(|p| p.into_inner()).insert(file.to_path_buf(), url.clone());
+        url
+    }
+
+    /// Discord est ouvert (connexion gardée ou établie maintenant). La présence est souvent en
+    /// cours d'envoi au même moment (début de partie) : on attend qu'elle libère la connexion,
+    /// 5 s au plus (le tube Windows n'a pas de délai de lecture, un Discord figé la garde).
+    fn ready(&self) -> bool {
+        if CLIENT_ID.is_empty() {
+            return false;
+        }
+        let mut waited = 0;
+        let mut conn = loop {
+            match self.conn.try_lock() {
+                Ok(c) => break c,
+                Err(std::sync::TryLockError::Poisoned(p)) => break p.into_inner(),
+                Err(std::sync::TryLockError::WouldBlock) if waited < 5000 => {
+                    std::thread::sleep(Duration::from_millis(50));
+                    waited += 50;
+                }
+                Err(std::sync::TryLockError::WouldBlock) => return false,
+            }
+        };
+        if conn.is_none() {
+            *conn = connect();
+        }
+        conn.is_some()
+    }
 }
 
 /// Trame IPC Discord.

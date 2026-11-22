@@ -8,6 +8,7 @@ import { BACKGROUND_WEBP } from './background';
 import { type Keys } from './admin/access';
 import { adminRoutes } from './admin/routes';
 import { bugRoute } from './bug';
+import { iconRoutes } from './icons';
 import { hashToken, pkceChallenge, randomToken, seal, unseal } from './crypto';
 import type { Db, Env, Mailer } from './env';
 import { GEIST_WOFF2 } from './font';
@@ -111,12 +112,15 @@ export function createApp(
   app.notFound((c) => c.json({ error: 'introuvable' }, 404));
   // Les jaquettes et les signalements de bug ont leur propre limite (`PUT /covers/:hash`, `POST /bug`).
   const limit = bodyLimit({ maxSize: 2 * 1024 * 1024, onError: (c) => c.json({ error: 'trop_gros' }, 413) });
-  app.use('*', (c, next) => (c.req.path.startsWith('/covers/') || c.req.path === '/bug' ? next() : limit(c, next)));
+  app.use('*', (c, next) => (c.req.path.startsWith('/covers/') || c.req.path === '/bug' || c.req.path === '/icons' ? next() : limit(c, next)));
 
   app.get('/', (c) => c.json({ name: 'Hangar', ok: true }));
 
   // Signalement de bug, avec ou sans compte (src/bug.ts).
   app.route('/bug', bugRoute(db, env));
+
+  // Icônes d'exe pour Discord Rich Presence, avec ou sans compte (src/icons.ts).
+  app.route('/icons', iconRoutes(db, env));
 
   // --- Profil (pseudo, avatar) ---
 

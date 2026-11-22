@@ -454,3 +454,11 @@ Bouton-icône à droite du logo de la barre latérale (reste visible sous 760 px
 ## Mises à jour de Hangar silencieuses (19 nov. 2026)
 
 L'updater lance l'installeur NSIS en mode `quiet` (`/S`) au lieu de `passive` (`/P`, qui montrait la fenêtre de progression de l'installeur) : l'utilisateur ne voit plus aucun setup, Hangar se ferme puis se relance seul (`/R`, passé par le plugin dans les deux modes). Installation par utilisateur (`currentUser`), donc pas d'élévation à demander. La progression du téléchargement reste affichée dans Hangar.
+
+## Icône de l'exe dans Discord et jaquette générée à sa couleur (22 nov. 2026)
+
+Discord Rich Presence ne montre que des images en ligne (Discord les télécharge lui-même) : pour un jeu sans jaquette, Hangar envoie l'icône extraite de son exe à l'API Hangar (`POST /icons`, avec ou sans compte), qui la garde dans R2 sous son empreinte SHA-256 et la sert publiquement (`GET /icons/<empreinte>.png`). Envoi seulement quand Discord est ouvert, une fois par icône et par lancement de Hangar. Côté serveur : PNG de 256 px et 256 Ko au plus, 60 envois par heure et par adresse IP (empreinte seulement), 2000 nouvelles icônes par jour, ménage 30 jours après le dernier envoi (table `presence_icons`, migration 0008). Rien ne relie une icône à un compte. Choix de l'utilisateur, au lieu de réserver l'icône aux comptes connectés.
+
+La jaquette générée prend la teinte dominante de cette icône (calculée par le backend : pixels opaques pesés par leur saturation, case de 10° la plus lourde) : dégradé de la même famille de couleurs, du clair au sombre, gris pour une icône sans couleur. Sans icône : le dégradé stable tiré de l'identifiant, comme avant.
+
+« Pas de jaquette » choisi (ou aucune image trouvée, jaquette générée montrée) : Discord montre l'icône de l'exe à la place de toute jaquette gardée en cache (SteamGridDB, store) et du portrait Steam, sinon le logo Hangar. Le frontend le signale par `presence_icon(gameId, generated)`, `set_presence` restant tel quel (réécrit sur la branche hangar-mc).
