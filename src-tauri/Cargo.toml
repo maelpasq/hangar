@@ -31,6 +31,8 @@ rusqlite = { version = "0.42", features = ["bundled"] }
 # Secret Service sous Linux : KWallet ou GNOME Keyring).
 keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service", "crypto-rust"] }
 plist = "1"
+# Icônes des exe (Discord) et teinte des jaquettes générées, sur les trois systèmes.
+png = "0.17"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-global-shortcut = "2"
@@ -39,7 +41,6 @@ tauri-plugin-global-shortcut = "2"
 winreg = "0.52"
 windows-sys = { version = "0.59", features = ["Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_System_LibraryLoader", "Win32_Security_Cryptography"] }
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_System_Com", "Win32_Storage_FileSystem", "UI_Notifications", "Data_Xml_Dom"] }
-png = "0.17"
 
 [dev-dependencies]
 tempfile = "3"
