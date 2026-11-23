@@ -33,6 +33,8 @@ keyring = { version = "3", features = ["windows-native", "apple-native", "sync-s
 plist = "1"
 # Icônes des exe (Discord) et teinte des jaquettes générées, sur les trois systèmes.
 png = "0.17"
+# Jaquette importée (JPG, PNG, WebP) réduite en PNG 256 px pour Discord Rich Presence.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-global-shortcut = "2"

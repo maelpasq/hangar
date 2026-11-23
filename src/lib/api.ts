@@ -92,7 +92,7 @@ export interface Api {
    * Discord : héberge l'icône de l'exe d'un jeu sans jaquette ; `generated` (jaquette générée
    * montrée) l'impose à la place de toute jaquette. Vrai si la présence est à renvoyer.
    */
-  presenceIcon(gameId: string, generated: boolean): Promise<boolean>;
+  presenceIcon(gameId: string, generated: boolean, custom: string | null): Promise<boolean>;
   /** `fresh` : recalculée sans le cache de 24 h. */
   folderSize(path: string, fresh?: boolean): Promise<number | null>;
   /** Genre en français (Steam), en cache côté backend. */
@@ -267,7 +267,7 @@ async function tauriApi(): Promise<Api> {
       const r = await invoke<{ path: string; tint: [number, number] | null } | null>('exe_icon', { path });
       return r ? { src: convertFileSrc(r.path), tint: r.tint } : null;
     },
-    presenceIcon: (gameId, generated) => invoke('presence_icon', { gameId, generated }),
+    presenceIcon: (gameId, generated, custom) => invoke('presence_icon', { gameId, generated, custom }),
     folderSize: (path, fresh = false) => invoke('folder_size', { path, fresh }),
     gameInfo: (gameId) => invoke('game_info', { gameId }),
     steamAchievements: (gameId, fresh = false) => invoke('steam_achievements', { gameId, fresh }),

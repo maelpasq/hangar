@@ -261,9 +261,11 @@ class Runner {
       api.setPresence(id, this.running[id]).catch(() => {});
       // Jeu montré sans jaquette (« Pas de jaquette » compris) : l'icône de son exe, hébergée pour
       // Discord, à la place de toute jaquette trouvée ailleurs, puis la présence renvoyée avec.
+      // Jaquette choisie par l'utilisateur : elle aussi, avant toute jaquette trouvée ailleurs.
       const g = library.get(id);
+      const custom = library.state.customCovers[id];
       api
-        .presenceIcon(id, !!g && art.generated(g))
+        .presenceIcon(id, !!g && art.generated(g), custom && custom !== 'none' ? custom : null)
         .then((ready) => {
           if (ready && this.current === id && library.state.prefs.discordPresence) api.setPresence(id, this.running[id]).catch(() => {});
         })

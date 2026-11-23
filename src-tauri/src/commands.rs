@@ -866,9 +866,33 @@ pub async fn steam_achievements(ctx: Ctxs<'_>, game_id: String, fresh: Option<bo
 /// (« Pas de jaquette » choisi, ou rien trouvé) ; l'icône remplace alors toute jaquette du cache et
 /// le portrait Steam, sinon le logo Hangar. Vrai si l'image a changé : le frontend renvoie alors la
 /// présence. Discord fermé : rien n'est envoyé.
+///
+/// `custom` : jaquette choisie par l'utilisateur (Changer la jaquette), qui passe avant toute
+/// jaquette trouvée automatiquement : `steam:<appid>` (portrait Steam) ou une image importée dans
+/// le dossier des jaquettes, réduite en PNG et hébergée comme l'icône.
 #[tauri::command]
-pub async fn presence_icon(ctx: Ctxs<'_>, game_id: String, generated: bool) -> Result<bool, String> {
+pub async fn presence_icon(ctx: Ctxs<'_>, game_id: String, generated: bool, custom: Option<String>) -> Result<bool, String> {
     let Some(g) = ctx.known.get(&game_id) else { return Ok(false) };
+    if let Some(c) = custom.filter(|_| !generated) {
+        if let Some(id) = c.strip_prefix("steam:").and_then(|s| s.parse::<u32>().ok()) {
+            let url = format!("https://shared.steamstatic.com/store_item_assets/steam/apps/{id}/library_600x900.jpg");
+            return Ok(ctx.artwork.set_icon(&g.id, url, true));
+        }
+        let file = std::path::PathBuf::from(&c);
+        let covers = ctx.paths.covers.clone();
+        let (art, artwork, p) = (ctx.art.clone(), ctx.artwork.clone(), ctx.presence.clone());
+        return blocking(move || {
+            // Seulement une copie faite par Hangar (`import_cover`), jamais un autre fichier.
+            let inside = matches!(
+                (file.parent().and_then(|d| d.canonicalize().ok()), covers.canonicalize()),
+                (Some(d), Ok(c)) if d == c
+            );
+            let url = inside.then(|| art.cover_thumb(&file)).flatten().and_then(|f| p.icon_url(&f));
+            // Envoi impossible : le logo Hangar plutôt qu'une jaquette que l'utilisateur a remplacée.
+            artwork.set_icon(&g.id, url.unwrap_or_else(|| crate::presence::LOGO_KEY.into()), true)
+        })
+        .await;
+    }
     if !generated {
         // Une jaquette est montrée : plus d'image imposée.
         if ctx.artwork.clear_icon(&g.id) {
@@ -886,9 +910,8 @@ pub async fn presence_icon(ctx: Ctxs<'_>, game_id: String, generated: bool) -> R
             Some(u) => artwork.set_icon(&g.id, u, generated),
             // Pas d'icône : le logo Hangar plutôt qu'une jaquette que l'utilisateur a écartée.
             None if generated => artwork.set_icon(&g.id, crate::presence::LOGO_KEY.into(), true),
-            None => return false,
+            None => false,
         }
-        true
     })
     .await
 }

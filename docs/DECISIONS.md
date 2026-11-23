@@ -462,3 +462,7 @@ Discord Rich Presence ne montre que des images en ligne (Discord les télécharg
 La jaquette générée prend la teinte dominante de cette icône (calculée par le backend : pixels opaques pesés par leur saturation, case de 10° la plus lourde) : dégradé de la même famille de couleurs, du clair au sombre, gris pour une icône sans couleur. Sans icône : le dégradé stable tiré de l'identifiant, comme avant.
 
 « Pas de jaquette » choisi (ou aucune image trouvée, jaquette générée montrée) : Discord montre l'icône de l'exe à la place de toute jaquette gardée en cache (SteamGridDB, store) et du portrait Steam, sinon le logo Hangar. Le frontend le signale par `presence_icon(gameId, generated)`, `set_presence` restant tel quel (réécrit sur la branche hangar-mc).
+
+## Discord : la jaquette choisie par l'utilisateur (23 nov. 2026)
+
+Une jaquette choisie dans « Changer la jaquette » passe avant celle trouvée automatiquement (SteamGridDB...) dans la présence Discord : choix Steam = portrait Steam de cet appid ; image importée = réduite en PNG 256 px (crate `image`) et hébergée par `POST /icons` comme les icônes d'exe. Envoi impossible : logo Hangar.

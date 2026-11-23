@@ -332,9 +332,12 @@ impl Artworks {
     }
 
     /// Retient l'image de la présence Discord d'un jeu : l'adresse publique de l'icône de son exe,
-    /// ou la clé de l'image Hangar. `forced` : à la place de toute jaquette (jaquette générée).
-    pub fn set_icon(&self, game_id: &str, url: String, forced: bool) {
-        self.icons.lock().unwrap_or_else(|p| p.into_inner()).insert(game_id.to_string(), (url, forced));
+    /// ou la clé de l'image Hangar. `forced` : à la place de toute jaquette (jaquette générée ou
+    /// choisie par l'utilisateur). Vrai si l'image retenue a changé.
+    pub fn set_icon(&self, game_id: &str, url: String, forced: bool) -> bool {
+        let new = (url, forced);
+        let old = self.icons.lock().unwrap_or_else(|p| p.into_inner()).insert(game_id.to_string(), new.clone());
+        old.as_ref() != Some(&new)
     }
 
     /// Oublie l'image retenue pour la présence d'un jeu ; vrai si elle était imposée.

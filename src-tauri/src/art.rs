@@ -459,6 +459,45 @@ impl Art {
             }
         }
     }
+
+    /// Jaquette importée par l'utilisateur, réduite en PNG opaque de 256 px de côté au plus (en
+    /// cache), pour la présence Discord (l'API Hangar n'héberge que des PNG de cette taille).
+    pub fn cover_thumb(&self, src: &Path) -> Option<PathBuf> {
+        let dest = self.icon_dir.join(format!("{}-jaquette.png", hash(&src.to_string_lossy().to_lowercase())));
+        if dest.exists() {
+            return Some(dest);
+        }
+        let png = cover_thumb_png(&fs::read(src).ok()?)?;
+        let tmp = dest.with_extension("tmp");
+        fs::write(&tmp, png).ok()?;
+        fs::rename(&tmp, &dest).ok()?;
+        Some(dest)
+    }
+}
+
+/// Image JPG, PNG ou WebP réduite pour tenir dans 256 × 256 (proportions gardées), en PNG RVB :
+/// 256 × 256 × 3 octets au plus avant compression, sous la limite de 256 Ko de l'API.
+fn cover_thumb_png(bytes: &[u8]) -> Option<Vec<u8>> {
+    let img = image::load_from_memory(bytes).ok()?;
+    let img = if img.width() > 256 || img.height() > 256 { img.thumbnail(256, 256) } else { img };
+    let mut out = std::io::Cursor::new(vec![]);
+    image::DynamicImage::ImageRgb8(img.to_rgb8()).write_to(&mut out, image::ImageFormat::Png).ok()?;
+    Some(out.into_inner())
+}
+
+#[cfg(test)]
+mod cover_thumb_tests {
+    #[test]
+    fn jaquette_reduite_en_png_256() {
+        let big = image::RgbImage::from_pixel(600, 900, image::Rgb([200, 30, 90]));
+        let mut src = std::io::Cursor::new(vec![]);
+        image::DynamicImage::ImageRgb8(big).write_to(&mut src, image::ImageFormat::Png).unwrap();
+        let png = super::cover_thumb_png(&src.into_inner()).unwrap();
+        let out = image::load_from_memory(&png).unwrap();
+        assert!(out.width() <= 256 && out.height() == 256);
+        assert!(png.len() <= 256 * 1024);
+        assert!(super::cover_thumb_png(b"pas une image").is_none());
+    }
 }
 
 /// Copie une image choisie par l'utilisateur dans le dossier des jaquettes.
