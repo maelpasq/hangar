@@ -271,6 +271,10 @@ Première version publique de Hangar 2 : interface Svelte fidèle à la maquette
 
 Une entrée par correctif (4e chiffre), le plus récent en haut, écrite avant `npm run correctif`. Ce n'est pas une patch note : la release du correctif reprend toutes les entrées de sa version de base, et Hangar les montre (celles plus récentes que la version installée) dans une fenêtre avant d'installer. Une puce par correction, courte, pour les utilisateurs.
 
+### 1.2.30.6 - 26 novembre 2026
+
+- Barre latérale : le bouton grisé « Bientôt » disparaît.
+
 ### 1.2.30.5 - 23 novembre 2026
 
 - Discord : la jaquette que tu as choisie pour un jeu (image importée ou jaquette Steam) s'affiche à la place de celle trouvée automatiquement.
