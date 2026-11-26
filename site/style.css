@@ -1,4 +1,4 @@
-/* Styles communs aux pages du site (index.html, hangar-mc.html). */
+/* Styles communs aux pages du site (index.html, confidentialite.html, 404.html). */
 /* Fichiers copiés au déploiement (voir .github/workflows/site.yml) */
 @font-face {
   font-family: 'Geist';
@@ -6,6 +6,7 @@
   font-weight: 100 900;
   font-display: swap;
 }
+/* Police pixel de la page 404 */
 @font-face {
   font-family: 'Pixelify Sans';
   src: url('fonts/pixelify-sans-latin-wght-normal.woff2') format('woff2');
@@ -95,14 +96,14 @@ main, footer { position: relative; z-index: 1; }
 }
 .nav a:hover { color: var(--text); background: var(--surface-2); }
 /* Section en cours (accueil, suivie au défilement) : texte clair et trait d'accent sous le lien */
-.nav a:not(.nav-mc) { position: relative; }
-.nav a:not(.nav-mc)::after {
+.nav a { position: relative; }
+.nav a::after {
   content: ''; position: absolute; left: .75rem; right: .75rem; bottom: 4px; height: 2px; border-radius: 2px;
   background: var(--accent-2); transform: scaleX(0); transition: transform .25s ease;
 }
-.nav a[aria-current]:not(.nav-mc) { color: var(--text); }
-.nav a[aria-current]:not(.nav-mc)::after { transform: scaleX(1); }
-@media (prefers-reduced-motion: reduce) { .nav a:not(.nav-mc)::after { transition: none; } }
+.nav a[aria-current] { color: var(--text); }
+.nav a[aria-current]::after { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .nav a::after { transition: none; } }
 .nav-dl { margin-left: 6px; }
 /* Flèche de lien externe : glisse vers son but au survol */
 .ext svg {
@@ -206,6 +207,7 @@ section { padding-top: clamp(6rem, 13vw, 10rem); }
 .tile .big { font-size: clamp(2.75rem, 5vw, 3.75rem); font-weight: 750; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
 .wide { grid-column: span 2; }
 .tall { grid-row: span 2; }
+.lg-wide { grid-column: span 2; }
 .visual { margin-top: auto; padding-top: 1.5rem; }
 
 .stores { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -262,23 +264,6 @@ kbd {
 
 .more { margin-top: auto; padding-top: .75rem; font-size: .9375rem; font-weight: 600; color: var(--accent-2); text-decoration: none; text-underline-offset: 3px; }
 .more:hover { color: var(--text); text-decoration: underline; }
-/* Bouton Hangar MC du menu : la DA pixel de Hangar MC (coins crantés, biseau, ciel violet) */
-.nav a.nav-mc {
-  --px: 2px;
-  gap: 7px; margin-left: 8px; padding: 0 .75rem 2px; border-radius: 0;
-  font-family: 'Pixelify Sans', 'Geist', system-ui, sans-serif; font-size: .9375rem; font-weight: 600; letter-spacing: 0; color: #fff;
-  background: linear-gradient(170deg, hsl(272 70% 44%), hsl(288 60% 30%));
-  clip-path: polygon(0 var(--px), var(--px) var(--px), var(--px) 0, calc(100% - var(--px)) 0, calc(100% - var(--px)) var(--px), 100% var(--px), 100% calc(100% - var(--px)), calc(100% - var(--px)) calc(100% - var(--px)), calc(100% - var(--px)) 100%, var(--px) 100%, var(--px) calc(100% - var(--px)), 0 calc(100% - var(--px)));
-  box-shadow: inset var(--px) var(--px) 0 rgba(255,255,255,.2), inset 0 calc(var(--px) * -2) 0 rgba(0,0,0,.34);
-  transition: filter .15s ease, transform .08s steps(1);
-}
-.nav a.nav-mc svg { width: 17px; height: 13px; fill: currentColor; }
-.nav a.nav-mc:hover { color: #fff; background: linear-gradient(170deg, hsl(272 70% 44%), hsl(288 60% 30%)); filter: brightness(1.15); }
-.nav a.nav-mc:active { transform: translateY(var(--px)); box-shadow: inset var(--px) var(--px) 0 rgba(0,0,0,.34), inset 0 calc(var(--px) * -1) 0 rgba(255,255,255,.2); }
-/* Le contour serait coupé par le crantage : le focus passe à l'intérieur */
-.nav a.nav-mc:focus-visible { outline: none; box-shadow: inset 0 0 0 var(--px) #fff, inset 0 0 0 calc(var(--px) * 2) var(--accent); }
-.nav a.nav-mc[aria-current="page"] { box-shadow: inset var(--px) var(--px) 0 rgba(255,255,255,.2), inset 0 calc(var(--px) * -2) 0 rgba(0,0,0,.34), inset 0 0 0 calc(var(--px) * 2) rgba(255,255,255,.5); }
-@media (prefers-reduced-motion: reduce) { .nav a.nav-mc, .nav a.nav-mc:active { transition: none; transform: none; } }
 
 /* Installer */
 .install { margin-top: 3.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 16px; }
@@ -357,6 +342,7 @@ footer a:hover { color: var(--text); }
 @media (max-width: 900px) {
   .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tall { grid-row: auto; }
+  .lg-wide { grid-column: auto; }
   .md-wide { grid-column: span 2; }
   .privacy { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.75rem; }
   .privacy .ico { flex: none; width: 4rem; height: 4rem; border-radius: 20px; margin: 0; }

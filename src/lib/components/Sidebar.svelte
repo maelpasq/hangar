@@ -8,7 +8,6 @@
   import { library, presentStores } from '../stores/library.svelte';
   import { ui } from '../stores/ui.svelte';
   import Icon, { type IconName } from './Icon.svelte';
-  import McLogo from './McLogo.svelte';
   import RunningCard from './RunningCard.svelte';
   import AccountMenu from './AccountMenu.svelte';
   import UserName from './UserName.svelte';
@@ -44,7 +43,7 @@
         : ui.screen
   );
 
-  const nav = $derived<{ key: string; label: string; icon: IconName; count?: number; soon?: boolean; go: () => void }[]>([
+  const nav = $derived<{ key: string; label: string; icon: IconName; count?: number; go: () => void }[]>([
     { key: 'home', label: 'Accueil', icon: 'home', go: () => ui.home() },
     { key: 'library', label: 'Bibliothèque', icon: 'grid', count: library.installed.length, go: () => ui.libraryAll() },
     { key: 'favorites', label: 'Favoris', icon: 'star', count: library.favorites.length, go: () => ui.favorites() },
@@ -55,8 +54,6 @@
       ? [{ key: 'updates', label: 'Mises à jour', icon: 'refresh' as const, count: library.updates.length, go: () => ui.updatesList() }]
       : []),
     ...(library.state.prefs.webGames ? [{ key: 'web', label: 'Jeux web', icon: 'globe' as const, go: () => ui.webGames() }] : []),
-    // Hangar MC pas encore ouvert : bouton grisé qui présente ce qui arrive.
-    { key: 'hangarmc', label: 'Hangar MC', icon: 'cube', soon: true, go: () => (ui.modal = { kind: 'mcSoon' }) },
     { key: 'settings', label: 'Paramètres', icon: 'sliders', go: () => ui.settings() }
   ]);
 
@@ -99,26 +96,23 @@
       <button
         class="navb"
         class:on={current === n.key}
-        class:soon={n.soon}
         {@attach contextMenu(() => {
           const items = navItems(n.key);
           return items && { label: n.label, items: () => items };
         })}
         aria-current={current === n.key ? 'page' : undefined}
         aria-label={rail || alertOn(n.key)
-          ? n.soon
-            ? `${n.label}, bientôt`
-            : alertOn(n.key)
-              ? `${n.label}, clé SteamGridDB à ajouter`
-              : n.label
+          ? alertOn(n.key)
+            ? `${n.label}, clé SteamGridDB à ajouter`
+            : n.label
           : undefined}
         title={rail ? n.label : undefined}
         onclick={n.go}
       >
-        <span class="ic">{#if n.key === 'hangarmc'}<McLogo size={19} />{:else}<Icon name={n.icon} />{/if}</span>
+        <span class="ic"><Icon name={n.icon} /></span>
         {#if !rail}
           <span>{n.label}</span>
-          {#if n.soon}<span class="soon-tag">Bientôt</span>{:else if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
+          {#if alertOn(n.key)}<span class="alert-dot" aria-hidden="true"></span>{:else}<span class="count num">{n.count ?? ''}</span>{/if}
         {:else if alertOn(n.key)}
           <span class="alert-dot rail-dot" aria-hidden="true"></span>
         {/if}
@@ -537,25 +531,6 @@
     50% {
       box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 10%, transparent);
     }
-  }
-
-  .navb.soon {
-    color: var(--muted-2);
-  }
-
-  .navb.soon .ic {
-    opacity: 0.6;
-  }
-
-  .soon-tag {
-    margin-left: auto;
-    padding: 1px 7px;
-    border: 1px solid var(--border-3);
-    border-radius: 999px;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    color: var(--muted-2);
   }
 
   .add {

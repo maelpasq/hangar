@@ -38,7 +38,6 @@
   import CropImage from './lib/modals/CropImage.svelte';
   import CloudWelcome from './lib/modals/CloudWelcome.svelte';
   import SocialReport from './lib/modals/SocialReport.svelte';
-  import HangarMcSoon from './lib/modals/HangarMcSoon.svelte';
   import Onboarding from './lib/modals/Onboarding.svelte';
   import StartPage from './lib/modals/StartPage.svelte';
   import WhatsNew from './lib/modals/WhatsNew.svelte';
@@ -339,8 +338,6 @@
     <UpdateFixes />
   {:else if ui.modal?.kind === 'bug'}
     <BugReport />
-  {:else if ui.modal?.kind === 'mcSoon'}
-    <HangarMcSoon />
   {:else if ui.modal?.kind === 'onboarding'}
     <Onboarding />
   {:else if ui.modal?.kind === 'startPage'}

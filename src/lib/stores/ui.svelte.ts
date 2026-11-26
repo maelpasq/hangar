@@ -72,7 +72,6 @@ export type Modal =
     }
   | { kind: 'bug' }
   | { kind: 'updateFixes' }
-  | { kind: 'mcSoon' }
   | { kind: 'collections'; gameId: string }
   /** Nouvelle collection (sans id) ou ajout de jeux à une collection. */
   | { kind: 'collectionEdit'; collectionId?: string };

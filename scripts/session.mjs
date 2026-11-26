@@ -40,7 +40,7 @@ if (cmd === 'start') {
   console.log(`Session « ${name} » : branche session/${name}, dossier ${resolve(dir)}`);
 } else if (cmd === 'finish') {
   const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']);
-  if (['dev', 'main', 'hangar-mc', 'HEAD'].includes(branch)) fail(`« ${branch} » n'est pas une branche de session.`);
+  if (!branch.startsWith('session/')) fail(`« ${branch} » n'est pas une branche de session.`);
   if (git(['status', '--porcelain'])) fail('Des changements ne sont pas commités : commit d\'abord, puis finish.');
   if (worktrees[0].branch !== 'dev') fail(`Le dossier principal (${main}) n'est pas sur dev : rien n'est fait.`);
   try {
